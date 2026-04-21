@@ -1,0 +1,46 @@
+
+  <section class="mt-4 rounded-2xl, border border-zinc-800 bg-zinc-900/60 p-4">
+    @if (stats().total === 0) {
+      <p class = "text-zinc-400">No todos found</p>
+    }@else{
+        <!-- Stats -->
+      <app-todo-stats></app-todo-stats>
+
+<!-- List -->
+
+  <ul role="list" class="space-y-2 max-h-80 overflow-auto pr-1">
+    @for (todo of todos(); track todo.id) {
+        <li
+          class="group flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 hover:border-zinc-700 hover:bg-zinc-900"
+          [class.bg-zinc-900/80]="!todo.completed"
+          [class.bg-zinc-900/40]="todo.completed"
+          [class.opacity-70]="todo.completed"
+          [class.hover\:opacity-1000]="todo.completed"
+          [class.hober\:bg-zinc-900/60]="todo.completed"
+          >
+        
+        <label class="flex flex-1 items-center gap-3">
+          <input type="checkbox" class="size-4 accent-inidgo-500" 
+          [checked]="todo.completed" 
+          (click)="toggleTodo(todo.id)"
+          />
+          <input 
+          class="flex-1 rounded-md bg-transparent px-2 py-1 ring-1 ring-transparent focus:outline-none focus:ring-zinc-700"
+          [value]="todo.title"
+          [class.line-through]="todo.completed"
+          [class.text-zinc-400]="todo.completed"
+          (keyup.enter)="renameTodo(todo.id, $event.target.value)"
+          />
+        </label>
+        <button
+          class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+          (click) = "removeTodos(todo.id)"
+          >
+        X
+      </button>
+       </li>
+
+      }
+     </ul>
+  
+  }
