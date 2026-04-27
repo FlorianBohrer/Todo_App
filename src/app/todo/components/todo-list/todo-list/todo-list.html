@@ -11,7 +11,7 @@
   <ul role="list" class="space-y-2 max-h-80 overflow-auto pr-1">
     @for (todo of todos(); track todo.id) {
         <li
-          class="group flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 hover:border-zinc-700 hover:bg-zinc-900"
+          class="group flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 hover:border-zinc-700 backdrop-opacity-10 hover:bg-zinc-900"
           [class.bg-zinc-900/80]="!todo.completed"
           [class.bg-zinc-900/40]="todo.completed"
           [class.opacity-70]="todo.completed"
@@ -20,7 +20,7 @@
           >
         
         <label class="flex flex-1 items-center gap-3">
-          <input type="checkbox" class="size-4 accent-inidgo-500" 
+          <input type="checkbox"  class="appearance-none h-6 w-6 border-2 border-gray-300 rounded-full cursor-pointer checked:border-blue-500 checked:bg-blue-500 hover:outline-none focus:ring-2 hover:ring-blue-500 transition-colors" 
           [checked]="todo.completed" 
           (click)="toggleTodo(todo.id)"
           />
@@ -33,7 +33,7 @@
           />
         </label>
         <button
-          class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+          class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-300 transition hover:border-zinc-900 hover:text-red-400"
           (click) = "removeTodos(todo.id)"
           >
         X

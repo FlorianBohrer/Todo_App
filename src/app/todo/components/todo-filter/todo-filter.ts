@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { TodoService } from '../../../services/todoservicestodo';
+import { TodoService } from '../../services/todo';
 
 @Component({
   selector: 'app-todo-filter',
@@ -10,6 +10,4 @@ import { TodoService } from '../../../services/todoservicestodo';
 export class TodoFilter {
   private readonly todoService = inject(TodoService);
   protected readonly filter = this.todoService.filter;
-
-  
 }

@@ -1,9 +1,9 @@
 import { computed, effect, Injectable, signal } from '@angular/core';
-import { Todo } from '../todo/model/model';
+import { Todo } from '../model/todo.model';
 
 const TODO_KEY = 'todos';
 
-type Filter = 'all' | 'active' | 'completed';
+export type Filter = 'all' | 'active' | 'completed';
 
 export interface Stats {
   total: number;

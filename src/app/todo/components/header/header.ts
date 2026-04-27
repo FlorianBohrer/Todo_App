@@ -7,5 +7,5 @@ import { Component, Input } from '@angular/core';
   styleUrl: './header.scss',
 })
 export class Header {
-  @Input() title = 'My Todos';
+  @Input() title = 'My Tasks';
 }

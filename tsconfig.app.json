@@ -9,7 +9,7 @@
   },
   "include": [
     "src/**/*.ts"
-  ],
+, "src/main.tsn.ts/main.ts"  ],
   "exclude": [
     "src/**/*.spec.ts"
   ]
