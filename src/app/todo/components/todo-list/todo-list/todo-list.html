@@ -1,5 +1,5 @@
 
-  <section class="mt-4 rounded-2xl, border border-zinc-800 bg-zinc-900/60 p-4">
+  <section class="mt-4 rounded-2xl , border border-bg-zinc-100 bg-ok p-5">
     @if (stats().total === 0) {
       <p class = "text-zinc-400">No todos found</p>
     }@else{
@@ -11,7 +11,7 @@
   <ul role="list" class="space-y-2 max-h-80 overflow-auto pr-1">
     @for (todo of todos(); track todo.id) {
         <li
-          class="group flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 hover:border-zinc-700 backdrop-opacity-10 hover:bg-zinc-900"
+          class="group flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 hover: backdrop-opacity-10 "
           [class.bg-zinc-900/80]="!todo.completed"
           [class.bg-zinc-900/40]="todo.completed"
           [class.opacity-70]="todo.completed"
@@ -20,12 +20,12 @@
           >
         
         <label class="flex flex-1 items-center gap-3">
-          <input type="checkbox"  class="appearance-none h-6 w-6 border-2 border-gray-300 rounded-full cursor-pointer checked:border-blue-500 checked:bg-blue-500 hover:outline-none focus:ring-2 hover:ring-blue-500 transition-colors" 
+          <input type="checkbox"  class=" appearance-none h-6 w-6 border-1 border-gray-300 rounded-full cursor-pointer checked: checked:bg-emerald-500 hover:outline-none focus:ring-1 transition-colors" 
           [checked]="todo.completed" 
           (click)="toggleTodo(todo.id)"
           />
           <input 
-          class="flex-1 rounded-md bg-transparent px-2 py-1 ring-1 ring-transparent focus:outline-none focus:ring-zinc-700"
+          class="flex-1 rounded-md bg-transparent px-2 py-1 ring-1 ring-transparent focus:outline-none focus:ring-zinc-100"
           [value]="todo.title"
           [class.line-through]="todo.completed"
           [class.text-zinc-400]="todo.completed"
