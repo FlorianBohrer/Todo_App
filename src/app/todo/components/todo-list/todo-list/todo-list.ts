@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { TodoStats } from '../../todo-stats/todo-stats/todo-stats';
 import { TodoService } from '../../../services/todo';
 
+
 @Component({
   selector: 'app-todo-list',
   imports: [TodoStats],
@@ -10,8 +11,10 @@ import { TodoService } from '../../../services/todo';
 })
 export class TodoList {
   private readonly todoService = inject(TodoService);
+
   protected readonly todos = this.todoService.filteredTodos;
   protected readonly stats = this.todoService.stats;
+  protected readonly filter = this.todoService.filter;
 
   renameTodo(id: string, title: string){
     this.todoService.renameTodo(id, title);

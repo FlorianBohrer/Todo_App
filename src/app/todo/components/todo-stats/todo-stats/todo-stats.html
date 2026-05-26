@@ -1,7 +1,44 @@
-    <div class="mb-3 flex items-center justify-between">
-          <h3 class=" text-sm font-semibold">Tasks</h3>
+    <!-- <div class="mb-3 flex float-right justify-between">
           <span
-          class = "inline-flex items-center gap-1">
-          {{stats().active}} active: {{ stats().completed}} done:  {{stats().total}} total: 
+          class = "inline-flex items-center gap-3">
+          {{stats().active}}  :active   {{ stats().completed}}    :done  {{stats().total}}    :total 
         </span>
+    </div> -->
+
+    <!-- <div class="flex float-right gap-3  text-sm text-zinc-400">
+      <span>{{stats().active}} active</span>
+      <span>{{stats().completed}} completed</span>
+      <span>{{stats().total}} total</span>
+
+    </div> -->
+
+<!-- <div class="grid grid-cols-3 gap-3 mt-4">
+    <div class=" roundend-xl bg-blue-600/40 p-4">
+        <div class="text-2xl font-semibold text-text">{{ stats().total}}</div>
+        <div class=" text-xs uppercase tracking-wide text-blue-400">total</div>
+    </div>  
+    <div class=" roundend-xl bg-amber-500/10 p-4">
+        <div class="text-2xl font-semibold ">{{ stats().active}}</div>
+        <div class=" text-xs uppercase tracking-wide text-amber-400">active</div>
     </div>
+    <div class=" roundend-xl bg-emerald-500/40 p-4">
+        <div class="text-2xl font-semibold text-text">{{ stats().completed}}</div>
+        <div class=" text-xs uppercase tracking-wide text-emerald-400">completed</div> -->
+
+
+<div class="space-y-2 p-4">
+  <div class="flex items-center justify-between text-sm">
+    <span class="text-muted font-medium size-sm">
+      {{ stats().completed }} of {{ stats().total }} done
+    </span>
+    <span class="font-medium text-text">
+      {{ stats().total > 0 ? ((stats().completed / stats().total) * 100 | number:'1.0-0') : 0 }}%
+    </span>
+  </div>
+  <div class="h-2 overflow-hidden rounded-full bg-slate-700/50">
+    <div
+      class="h-full rounded-full bg-emerald-500 transition-all duration-300"
+      [style.width.%]="stats().total > 0 ? (stats().completed / stats().total) * 100 : 0">
+    </div>
+  </div>
+</div>

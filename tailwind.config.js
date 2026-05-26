@@ -5,4 +5,9 @@ module.exports = {
     extend: {},
   },
   plugins: [],
+
+  colors: {
+  muted: 'var(--color-muted)',
+  // ...
+}
 }

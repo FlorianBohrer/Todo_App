@@ -1,8 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { TodoService } from '../../../services/todo';
+import { DecimalPipe } from '@angular/common';
+
 @Component({
   selector: 'app-todo-stats',
-  imports: [],
+  imports: [DecimalPipe],
   templateUrl: './todo-stats.html',
   styleUrl: './todo-stats.scss',
 })

@@ -1,46 +1,53 @@
 
-  <section class="mt-4 rounded-2xl , border border-bg-zinc-100 bg-ok p-5">
-    @if (stats().total === 0) {
-      <p class = "text-zinc-400">No todos found</p>
-    }@else{
-        <!-- Stats -->
-      <app-todo-stats></app-todo-stats>
 
-<!-- List -->
-
-  <ul role="list" class="space-y-2 max-h-80 overflow-auto pr-1">
-    @for (todo of todos(); track todo.id) {
-        <li
-          class="group flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 hover: backdrop-opacity-10 "
-          [class.bg-zinc-900/80]="!todo.completed"
-          [class.bg-zinc-900/40]="todo.completed"
-          [class.opacity-70]="todo.completed"
-          [class.hover\:opacity-1000]="todo.completed"
-          [class.hober\:bg-zinc-900/60]="todo.completed"
-          >
-        
-        <label class="flex flex-1 items-center gap-3">
-          <input type="checkbox"  class=" appearance-none h-6 w-6 border-1 border-gray-300 rounded-full cursor-pointer checked: checked:bg-emerald-500 hover:outline-none focus:ring-1 transition-colors" 
-          [checked]="todo.completed" 
-          (click)="toggleTodo(todo.id)"
-          />
-          <input 
-          class="flex-1 rounded-md bg-transparent px-2 py-1 ring-1 ring-transparent focus:outline-none focus:ring-zinc-100"
-          [value]="todo.title"
-          [class.line-through]="todo.completed"
-          [class.text-zinc-400]="todo.completed"
-          (keyup.enter)="renameTodo(todo.id, $event.target.value)"
-          />
-        </label>
-        <button
-          class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-300 transition hover:border-zinc-900 hover:text-red-400"
-          (click) = "removeTodos(todo.id)"
-          >
-        X
-      </button>
-       </li>
-
+  <section class="mt-4 rounded-2xl border bg-slate-800 p-6">
+  @if (stats().total === 0) {
+    <p class="text-zinc-400">No todos yet, add one above</p>
+  } @else if (todos().length === 0) {
+    <p class="text-zinc-400">
+      @switch (filter()) {
+        @case ('active')    { No active todos at the moment }
+        @case ('completed') { No completed todos yet }
+        @default            { No todos found }
       }
-     </ul>
-  
+    </p>
+  } @else {
+    
+
+    <ul role="list" class="space-y-2 max-h-80 overflow-auto text-muted pr-1">
+      @for (todo of todos(); track todo.id) {
+        <li
+          class="group flex items-center justify-between gap-3 rounded-xl bg-slate-600 p-3
+                 transition-colors cursor-pointer hover:bg-slate-500"
+          [class.opacity-70]="todo.completed">
+
+          <label class="flex flex-1 items-center gap-3">
+            <input
+              type="checkbox"
+              class="appearance-none h-6 w-6 rounded-full border border-gray-300 cursor-pointer
+                     checked:bg-emerald-500 checked:border-emerald-500
+                     focus:outline-none focus:ring-1
+                     transition-colors"
+              [checked]="todo.completed"
+              (change)="toggleTodo(todo.id)"
+            />
+            <input
+              class="flex-1 rounded-md bg-transparent px-2 py-1 text-text ring-1 ring-transparent
+                     focus:outline-none focus:ring-zinc-100"
+              [value]="todo.title"
+              [class.line-through]="todo.completed"
+              [class.text-zinc-400]="todo.completed"
+              (keyup.enter)="renameTodo(todo.id, $any($event.target).value)"
+            />
+          </label>
+
+          <button
+            class="rounded-md px-2 py-1 text-text transition hover:text-red-400"
+            (click)="removeTodos(todo.id)">
+            ✕
+          </button>
+        </li>
+      }
+    </ul>
   }
+</section>

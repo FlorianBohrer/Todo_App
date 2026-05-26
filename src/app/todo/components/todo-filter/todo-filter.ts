@@ -8,6 +8,7 @@ import { TodoService } from '../../services/todo';
   styleUrl: './todo-filter.scss',
 })
 export class TodoFilter {
+  
   private readonly todoService = inject(TodoService);
   protected readonly filter = this.todoService.filter;
 }
