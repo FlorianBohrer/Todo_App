@@ -1,16 +1,19 @@
 import { Component, inject } from '@angular/core';
 import { TodoStats } from '../../todo-stats/todo-stats/todo-stats';
 import { TodoService } from '../../../services/todo';
+import { Autosize } from '../../../../directives/autosize.drectives';
+import { LabelService } from '../../../services/label.service';
 
 
 @Component({
   selector: 'app-todo-list',
-  imports: [],// imports: [TodoStats],
+  imports: [Autosize],// imports: [TodoStats],
   templateUrl: './todo-list.html',
   styleUrl: './todo-list.scss',
 })
 export class TodoList {
   private readonly todoService = inject(TodoService);
+  protected readonly labelService = inject(LabelService)
 
   protected readonly todos = this.todoService.filteredTodos;
   protected readonly stats = this.todoService.stats;

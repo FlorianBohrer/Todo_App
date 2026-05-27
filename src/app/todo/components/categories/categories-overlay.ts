@@ -1,7 +1,6 @@
 import { Component, inject, HostListener } from '@angular/core';
 import { LabelService } from '../../services/label.service';
 
-
 @Component({
   selector: 'app-categories-overlay',
   templateUrl: './categories-overlay.html',
@@ -23,11 +22,11 @@ export class CategoriesOverlay {
 
   bgClass(color: string): string {
     const map: Record<string, string> = {
-      violet:  'bg-violet-500/15',
-      emerald: 'bg-emerald-500/15',
-      rose:    'bg-rose-500/15',
+      violet:  'bg-violet-600/15',
+      emerald: 'bg-emerald-600/15',
+      rose:    'bg-rose-600/15',
     };
-    return map[color] ?? 'bg-slate-700/50';
+    return map[color] ?? 'bg-highlight11';
   }
 
   textClass(color: string): string {

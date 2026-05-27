@@ -21,23 +21,29 @@ export class TodoService {
   private readonly todos = signal<Todo[]>(this.load());
   readonly filter = signal<Filter>('all');
 
+  private readonly todosInCategory = computed(() => {
+    const labelId = this.labelService.activeLabelId();
+    const items = this.todos();
+    return labelId === null ? items : items.filter(i => i.labelId === labelId);
+  });
+
   readonly filteredTodos = computed(() => {
     const f = this.filter();
-    const labelId = this.labelService.activeLabelId();
-    let items = this.todos();
+    // const labelId = this.labelService.activeLabelId();
+    let items = this.todosInCategory();
 
     // Status-Filter
     if (f === 'active')    items = items.filter(i => !i.completed);
     if (f === 'completed') items = items.filter(i => i.completed);
 
     // Label-Filter (null = alle Kategorien)
-    if (labelId !== null)  items = items.filter(i => i.labelId === labelId);
+    // if (labelId !== null)  items = items.filter(i => i.labelId === labelId);
 
     return items;
   });
 
   readonly stats = computed(() => {
-    const items = this.todos();
+    const items = this.todosInCategory();
     return {
       total: items.length,
       active: items.filter(item => !item.completed).length,

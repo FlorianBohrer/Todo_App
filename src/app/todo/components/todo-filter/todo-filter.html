@@ -1,8 +1,9 @@
-  <section class="flex gap-2 mt-6 mb-4 rounded-xl bg-bg3 p-1 ">
-    <button class="flex-1 btn " [class.btn-primary]="filter() === 'all'"
-    (click)="filter.set('all')">All </button>
-    <button class="flex-1 btn " [class.btn-primary]="filter() === 'active'" 
+  <section class="flex gap-2 mt-6 mb-4 rounded-full bg-bg3 p-1 ">
+    
+    <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'active'" 
     (click)="filter.set('active')">Active  </button>
-    <button class="flex-1 btn " [class.btn-primary]="filter() === 'completed'"
+    <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'completed'"
     (click)="filter.set('completed')">Done</button>
+    <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'all'"
+    (click)="filter.set('all')">All </button>
   </section>

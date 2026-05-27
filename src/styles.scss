@@ -48,7 +48,7 @@
     /* Surfaces */
     --color-bg:      #0E489D;
     --color-bg2:     #334F9E;
-    --color-bg3:     #19355b;
+    --color-bg3:     #f9f9f9;
 
     --color-panel1:  #334F9E;
     --color-panel2:  #031956;
@@ -71,25 +71,69 @@
 
 
 
-  :root{
+  // :root{
+  //   /* Surfaces */
+  //   --color-bg:      #bdc4d4;
+  //   --color-bg2:     #3a4e85;
+  //   --color-bg3:     #19355b;
+
+  //   --color-panel1:  #2c59d6;
+  //   --color-panel2:  #5f72b9;
+
+  //   --color-text: #98B5FF;
+  //   --color-highlight1: oklch(66.308% 0.12456 255.632); /* z.B. für Hover- und Fokuszustände */
+  //   --color-highlight2: oklch(68.94% 0.13855 255.393); /* z.B. für Hover- und Fokuszustände */
+
+  //   --color-highlight3: #334F9E;
+
+  //   --color-highlight11: #5da2ff; /* z.B. für Hover- und Fokuszustände */
+  //   --color-highlight22: oklch(68% 0.18 295); /* z.B. für aktive Elemente, Accent */
+
+  //   --color-button:  #0a83f4e4;
+  //   --color-button1:  oklch(62.853% 0.14284 260.454);
+  //    --color-button2: oklch(54.298% 0.17243 257.352); 
+
+  //   --gradient-brand: linear-gradient(180deg,
+  //   oklch(72% 0.18 260),
+  //   oklch(62% 0.20 260));/* Alternative Panelfarbe für Todo-List */
+
+
+  //     --color-text:     oklch(92% 0.005 250);
+  //      --color-muted:    oklch(70.953% 0.00005 271.152); 
+  //   /* Sekundärtext, Labels */
+  //   /* Sekundärtext, Labels */
+  //   --color-subtle:   oklch(69.198% 0.04345 247.377);   /* Disabled, Placeholder */
+
+  //   /* Brand & Semantic */
+  //   --color-brand:    oklch(68% 0.18 260);    /* Indigo – Primary Actions */
+  //   --color-brand-2:  oklch(70% 0.18 295);    /* Violett – Accent */
+  //   --color-danger:   oklch(65% 0.22 25);     /* Rot */
+  //   --color-ok:       oklch(72% 0.16 155);
+  // }
+
+
+
+    :root{
     /* Surfaces */
-    --color-bg:      oklch(42.075% 0.15012 259.202);
-    --color-bg2:     #334F9E;
+    --color-bg:      #bdc4d4;
+    --color-bg2:     #0A266E;
     --color-bg3:     #19355b;
 
-    --color-panel1:  #334F9E;
-    --color-panel2:  #031956;
+    --color-panel2:  #3450A1;
+    --color-panel1:  #5f72b9;
 
     --color-text: #98B5FF;
-    --color-highlight1: oklch(62.72% 0.12109 255.558); /* z.B. für Hover- und Fokuszustände */
-    --color-highlight2: #334F9E;
+    --color-highlight1: #6581CF; /* z.B. für Hover- und Fokuszustände */
+    --color-highlight2: oklch(68.94% 0.13855 255.393); /* z.B. für Hover- und Fokuszustände */
+
+    --color-highlight3: #334F9E;
 
     --color-highlight11: #5da2ff; /* z.B. für Hover- und Fokuszustände */
     --color-highlight22: oklch(68% 0.18 295); /* z.B. für aktive Elemente, Accent */
 
-     --color-button:  oklch(56.464% 0.14223 259.278);
-    --color-button1:  oklch(56.464% 0.14223 259.278);
-     --color-button2: oklch(62.72% 0.12109 255.558); 
+    --color-button:  #0a83f4e4;
+    --color-button1:  oklch(62.853% 0.14284 260.454);
+     --color-button2: oklch(54.298% 0.17243 257.352); 
 
     --gradient-brand: linear-gradient(180deg,
     oklch(72% 0.18 260),
@@ -97,11 +141,10 @@
 
 
       --color-text:     oklch(92% 0.005 250);
-    --color-muted:    oklch(70.953% 0.00005 271.152); 
-    --color-muted2:   green;
+       --color-muted:    oklch(70.953% 0.00005 271.152); 
     /* Sekundärtext, Labels */
     /* Sekundärtext, Labels */
-    --color-subtle:   oklch(45% 0.01 250);   /* Disabled, Placeholder */
+    --color-subtle:   oklch(69.198% 0.04345 247.377);   /* Disabled, Placeholder */
 
     /* Brand & Semantic */
     --color-brand:    oklch(68% 0.18 260);    /* Indigo – Primary Actions */
@@ -109,7 +152,6 @@
     --color-danger:   oklch(65% 0.22 25);     /* Rot */
     --color-ok:       oklch(72% 0.16 155);
   }
-
 
 
     
@@ -130,6 +172,7 @@
 
     body {
         
+<<<<<<< HEAD
         @apply bg-zinc-950 text-zinc-50 antialiased;
         // backdrop-filter: blur(24px); /* equivalent to backdrop-blur-xl */
         background: var(--panel1);
@@ -138,9 +181,15 @@
       // background: var(--bg);
       //color: var(--text);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+=======
+        @apply text-zinc-50 antialiased;
+        backdrop-filter: blur(24px); /* equivalent to backdrop-blur-xl */
+        background: var(--panel2);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+>>>>>>> 9c67373 (feat(todo): cleark signup und login setup)
     }
 
-    ::selection { background: color-mix(in oklab, var(--brand) 80%, black); color: white; }
+    ::selection { background: color-mix(in oklab, var(--brand) 80%, rgb(162, 161, 161)); color: white; }
     a { @apply text-indigo-400 hover:text-indigo-300 underline-offset-2 hover:underline; }
     code, pre { @apply font-mono text-sm; }
   }
@@ -214,3 +263,7 @@
   .checkbox {
   // @apply w-5 h-5 rounded border border-zinc-500 checked:bg-indigo-100 checked:border-indigo-600 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 focus:ring-offset-zinc-900 transition;   }
   @apply w-5 h-5 rounded border border-zinc-500 checked:bg-indigo-100 checked:border-indigo-600 focus:ring-1 focus:ring-emerald-500 ring-offset-emerald-500 transition;   }
+
+ textarea::-webkit-resizer{
+  display: none;
+ }

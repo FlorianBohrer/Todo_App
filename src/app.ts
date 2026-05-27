@@ -1,5 +1,5 @@
-import { Component, inject, computed } from '@angular/core';
-import { LucideAngularModule, FolderDown } from 'lucide-angular';
+import { Component, inject, computed, HostListener } from '@angular/core';
+import { LucideAngularModule, FolderDown, ArrowDown, Plus } from 'lucide-angular';
 import { Header } from './app/todo/components/header/header';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
@@ -50,18 +50,22 @@ export class App {
   // Hintergrund-Farbe
   protected readonly bgClass = computed(() => {
     const id = this.labelService.activeLabelId();
-    if (id === null) return 'bg-panel2';
+    if (id === null) return 'bg-panel1';
     const label = this.labelService.labels.find(l => l.id === id);
     const map: Record<string, string> = {
       violet:  'bg-violet-950',
       emerald: 'bg-emerald-950',
       rose:    'bg-rose-950',
     };
-    return map[label?.color ?? ''] ?? 'bg-panel2';
+    const result = map[label?.color ?? ''] ?? 'bg-panel2';
+    console.log('bgClass ', { id, color: label?.color, result: result });
+    return map[label?.color ?? ''] ?? 'bg-highlight11';
   });
 
   // Icons fürs Template
   protected readonly FolderDownIcon = FolderDown;
+  protected readonly ArrowDown = ArrowDown;
+  protected readonly PlusIcon = Plus;
 
   openCategories() {
     this.labelService.openOverlay();

@@ -7,12 +7,12 @@
   </div>
 
   <div
-    class="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-2xl -translate-x-1/2 -translate-y-1/2
+    class="fixed left-1/2 top-1/2  z-50 w-[90vw] max-w-2xl -translate-x-1/2 -translate-y-1/2
            rounded-2xl border border-slate-700 bg-slate-800 p-6 shadow-2xl"
     (click)="$event.stopPropagation()">
 
     <div class="mb-6 flex items-center justify-between">
-      <h2 class="text-2xl font-bold text-text">Categories</h2>
+      <h2 class="text-2xl font-bold text-text">Folders</h2>
       <button
         class="rounded-md p-1 text-muted transition hover:text-text"
         (click)="close()"
@@ -21,10 +21,10 @@
       </button>
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-2 gap-3 mt-3">
     
       <button class="flex  items-center gap-3 rounded-2xl bg-slate-700/50 p-4 text-left
-               transition hover:bg-slate-700"
+               transition hover:bg-slate-700 mt-3"
         [class.ring-2]="activeLabelId() === null"
         [class.ring-emerald-500]="activeLabelId() === null"
         (click)="select(null)">

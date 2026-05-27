@@ -1,5 +1,6 @@
 <section class="mt-4 p-4 sm:p-0">
   <div class="flex flex-col gap-2 sm:flex-row">
+<<<<<<< HEAD
     <input
       class="flex-1 rounded-lg border border-zinc-500 bg-slate-700/50 px-3 py-2 text-base ring-1 ring-zinc-800
              focus:outline-none focus:ring-indigo-500
@@ -14,6 +15,25 @@
              shadow-[0_4px_12px_-2px_oklch(60%_0.20_260/0.3)] transition
              hover:bg-highlight2"
       (click)="addTodo(newTitle)">
+=======
+   <textarea
+  rows="1"
+  class="flex-1 overflow-hidden resize-none rounded-3xl border border-zinc-300 bg-slate-700/40 px-3 py-5 text-base 
+         ring-1 ring-zinc-800 focus:outline-none focus:ring-text transition-colors
+         shadow-[0_4px_12px_-2px_oklch(60%_0.20_260/0.3)] sm:text-lg md:text-xl"
+  placeholder="What needs to be done?"
+  [(ngModel)]="newTitle"
+  (input)="autoGrow($event)"
+  (keydown.enter)="$event.preventDefault(); addTodo()"
+  aria-label="New todo"
+></textarea>
+    <button
+      class="flex items-center justify-center gap-2 rounded-full 
+      bg-button px-5 py-2.5 font-medium text-white
+             shadow-button1 transition2
+             hover:bg-button/90 focus:outline-none   disabled:bg-button/50"
+      (click)="addTodo()">
+>>>>>>> 9c67373 (feat(todo): cleark signup und login setup)
       Add
     </button>
   </div>
