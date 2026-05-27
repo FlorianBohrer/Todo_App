@@ -1,5 +1,6 @@
-import { computed, effect, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Todo } from '../model/todo.model';
+import { LabelService } from './label.service';
 
 const TODO_KEY = 'todos';
 
@@ -14,16 +15,24 @@ export interface Stats {
 @Injectable({
   providedIn: 'root',
 })
-
 export class TodoService {
+  private readonly labelService = inject(LabelService);
+
   private readonly todos = signal<Todo[]>(this.load());
   readonly filter = signal<Filter>('all');
 
   readonly filteredTodos = computed(() => {
     const f = this.filter();
-    const items = this.todos();
-    if (f === 'active') return items.filter((item) => !item.completed);
-    if (f === 'completed') return items.filter((item) => item.completed);
+    const labelId = this.labelService.activeLabelId();
+    let items = this.todos();
+
+    // Status-Filter
+    if (f === 'active')    items = items.filter(i => !i.completed);
+    if (f === 'completed') items = items.filter(i => i.completed);
+
+    // Label-Filter (null = alle Kategorien)
+    if (labelId !== null)  items = items.filter(i => i.labelId === labelId);
+
     return items;
   });
 
@@ -42,32 +51,36 @@ export class TodoService {
     });
   }
 
-
   addTodo(title: string) {
     const t = title.trim();
-    if(t === '') return;
+    if (t === '') return;
     this.todos.update(items => [
       ...items,
-      { id: crypto.randomUUID(), title, completed: false, createdAt: new Date() }
+      {
+        id: crypto.randomUUID(),
+        title: t,
+        completed: false,
+        labelId: this.labelService.activeLabelId(),   // ← aktuelle Auswahl
+        createdAt: new Date(),
+      },
     ]);
-    console.log( this.todos());
   }
 
-  renameTodo(id:string, title: string){
+  renameTodo(id: string, title: string) {
     const t = title.trim();
-    if(t === '') return;
-    this.todos.update((items) =>
-      items.map((item) => (item.id === id ? {...item, title}: item))
-   );
+    if (t === '') return;
+    this.todos.update(items =>
+      items.map(item => item.id === id ? { ...item, title: t } : item),
+    );
   }
 
   removeTodo(id: string) {
-    this.todos.update((items) => items.filter((item) => item.id !== id));
+    this.todos.update(items => items.filter(item => item.id !== id));
   }
 
   toggleTodo(id: string) {
-    this.todos.update((items) =>
-      items.map((item) => item.id === id ? { ...item, completed: !item.completed } : item)
+    this.todos.update(items =>
+      items.map(item => item.id === id ? { ...item, completed: !item.completed } : item),
     );
   }
 
@@ -75,21 +88,8 @@ export class TodoService {
     try {
       const raw = localStorage.getItem(TODO_KEY);
       return raw ? (JSON.parse(raw) as Todo[]) : [];
-       } catch {
-        return[];
-       }
+    } catch {
+      return [];
     }
   }
-
-  // clearCompleted() {
-  //   this.todos.update(items => items.filter((item) => !item.completed));
-  // }
-
-  // private saveToStorage() {
-  //   localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.todos()));
-  // }
-
-  // private loadFromStorage(): Todo[] {
-  //   const data = localStorage.getItem(this.Stor)
-  // }
-//}
+}

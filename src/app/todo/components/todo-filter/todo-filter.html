@@ -1,8 +1,8 @@
-  <section class="flex gap-2 mt-9 mb-3 rounded-xl border border-zinc-800 bg-slate-700 p-3  hover:text-white">
+  <section class="flex gap-2 mt-6 mb-4 rounded-xl bg-bg3 p-1 ">
     <button class="flex-1 btn " [class.btn-primary]="filter() === 'all'"
     (click)="filter.set('all')">All </button>
-    <button class="flex-1 btn" [class.btn-primary]="filter() === 'active'" 
+    <button class="flex-1 btn " [class.btn-primary]="filter() === 'active'" 
     (click)="filter.set('active')">Active  </button>
-    <button class="flex-1 btn" [class.btn-primary]="filter() === 'completed'"
+    <button class="flex-1 btn " [class.btn-primary]="filter() === 'completed'"
     (click)="filter.set('completed')">Done</button>
   </section>

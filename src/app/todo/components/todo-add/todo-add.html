@@ -1,12 +1,12 @@
   <section class="mt-4  p-4 ">
     <div class="flex gap-2">
-      <input class="flex-1 rounded-lg  px-3 py-2 ring-1 ring-zinc-800 text-2xl border bg-slate-800 border-zinc-500 focus:ring-indigo-500 "
+      <input class="flex-1 rounded-lg  px-3 py-2 ring-1 ring-zinc-800 text-2xl border bg-slate-700/50 border-zinc-500 focus:ring-indigo-500 "
       placeholder="Whats needs to be done?"
       [(ngModel)] = "newTitle"
       (keyup.enter)="addTodo(newTitle)"
       aria-label="New todo"
       />
-      <button class="bg-brand hover:bg-brand/90 text-white px-5 py-2.5 rounded-lg font-medium 
+      <button class="bg-highlight1 hover:bg-highlight2 text-white px-5 py-2.5 rounded-lg font-medium 
                shadow-[0_4px_12px_-2px_oklch(60%_0.20_260/0.3)]
                flex items-center gap-2 transition"
       (click)="addTodo(newTitle)"

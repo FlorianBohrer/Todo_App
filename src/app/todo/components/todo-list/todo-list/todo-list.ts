@@ -5,7 +5,7 @@ import { TodoService } from '../../../services/todo';
 
 @Component({
   selector: 'app-todo-list',
-  imports: [TodoStats],
+  imports: [],// imports: [TodoStats],
   templateUrl: './todo-list.html',
   styleUrl: './todo-list.scss',
 })

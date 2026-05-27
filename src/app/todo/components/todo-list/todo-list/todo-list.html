@@ -1,10 +1,10 @@
 
 
-  <section class="mt-4 rounded-2xl border bg-slate-800 p-6">
+  <section class="mt-4 rounded-2xl p-6">
   @if (stats().total === 0) {
-    <p class="text-zinc-400">No todos yet, add one above</p>
+    <p class="text-text">No todos yet, add one above</p>
   } @else if (todos().length === 0) {
-    <p class="text-zinc-400">
+    <p class="text-tetxt">
       @switch (filter()) {
         @case ('active')    { No active todos at the moment }
         @case ('completed') { No completed todos yet }
@@ -17,15 +17,15 @@
     <ul role="list" class="space-y-2 max-h-80 overflow-auto text-muted pr-1">
       @for (todo of todos(); track todo.id) {
         <li
-          class="group flex items-center justify-between gap-3 rounded-xl bg-slate-600 p-3
-                 transition-colors cursor-pointer hover:bg-slate-500"
+          class="group flex items-center justify-between gap-3 rounded-xl bg-panel1 p-3
+                 transition-colors cursor-pointer hover:bg-panel1/70"
           [class.opacity-70]="todo.completed">
 
           <label class="flex flex-1 items-center gap-3">
             <input
               type="checkbox"
               class="appearance-none h-6 w-6 rounded-full border border-gray-300 cursor-pointer
-                     checked:bg-emerald-500 checked:border-emerald-500
+                     checked:bg-emerald-500 checked:border-emerald-700
                      focus:outline-none focus:ring-1
                      transition-colors"
               [checked]="todo.completed"

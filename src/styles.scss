@@ -14,28 +14,92 @@
     //   --radius: 0.8rem;
     // }
 
-@theme{
+// @theme{
   // :root {
+  //   /* Surfaces */
+  //   --color-bg:      oklch(72.709% 0.03735 251.016);
+  //   --color-bg2:     #0D141A
+  //   --color-panel1:  oklch(42.662% 0.05458 251.072);
+  //   --color-panel2:  oklch(37.17% 0.0392 257.31);
+  //   --color-panel3:  oklch(21% 0.02 250);
+  //   --color-border:  oklch(30% 0.02 250);
+  //   --color-button:   oklch(62% 0.20 260);
+  //   --color-button:  oklch(62% 0.10 260);
+  //   --gradient-brand: linear-gradient(180deg,
+  //   oklch(72% 0.18 260),
+  //   oklch(62% 0.20 260));/* Alternative Panelfarbe für Todo-List 
+//    /* Text */
+//     --color-text:     oklch(92% 0.005 250);
+//     --color-muted:    oklch(70.953% 0.00005 271.152); 
+//     --color-muted2:   #2C2C2E
+// ;    /* Sekundärtext, Labels */
+//     /* Sekundärtext, Labels */
+//     --color-subtle:   oklch(45% 0.01 250);   /* Disabled, Placeholder */
+
+//     /* Brand & Semantic */
+//     --color-brand:    oklch(68% 0.18 260);    /* Indigo – Primary Actions */
+//     --color-brand-2:  oklch(70% 0.18 295);    /* Violett – Accent */
+//     --color-danger:   oklch(65% 0.22 25);     /* Rot */
+//     --color-ok:       oklch(72% 0.16 155);    /* Grün */
+//   }*/
+
+
+  @theme{
     /* Surfaces */
-    --color-bg:      oklch(72.709% 0.03735 251.016);
-    --color-bg2:     #0D141A
-    --color-panel1:  oklch(42.662% 0.05458 251.072);
-    --color-panel2:  oklch(37.17% 0.0392 257.31);
-    --color-panel3:  oklch(21% 0.02 250);
-    --color-border:  oklch(30% 0.02 250);
-    --color-button:   oklch(62% 0.20 260);
-    --color-button:  oklch(62% 0.10 260);
+    --color-bg:      #0E489D;
+    --color-bg2:     #334F9E;
+    --color-bg3:     #19355b;
+
+    --color-panel1:  #334F9E;
+    --color-panel2:  #031956;
+
+    --color-text: #98B5FF;
+    --color-highlight1: oklch(72% 0.18 260); /* z.B. für Hover- und Fokuszustände */
+    --color-highlight2: #334F9E;
+
+    --color-highlight11: oklch(72% 0.18 260); /* z.B. für Hover- und Fokuszustände */
+    --color-highlight22: oklch(68% 0.18 295); /* z.B. für aktive Elemente, Accent */
+
+     --color-button2:  oklch(61.069% 0.09272 259.762);
+     --color-button:  oklch(56.464% 0.14223 259.278);
+
+    --gradient-brand: linear-gradient(180deg,
+    oklch(72% 0.18 260),
+    oklch(62% 0.20 260));/* Alternative Panelfarbe für Todo-List */
+     /* Grün */
+  }
+
+
+
+  :root{
+    /* Surfaces */
+    --color-bg:      oklch(42.075% 0.15012 259.202);
+    --color-bg2:     #334F9E;
+    --color-bg3:     #19355b;
+
+    --color-panel1:  #334F9E;
+    --color-panel2:  #031956;
+
+    --color-text: #98B5FF;
+    --color-highlight1: oklch(62.72% 0.12109 255.558); /* z.B. für Hover- und Fokuszustände */
+    --color-highlight2: #334F9E;
+
+    --color-highlight11: #5da2ff; /* z.B. für Hover- und Fokuszustände */
+    --color-highlight22: oklch(68% 0.18 295); /* z.B. für aktive Elemente, Accent */
+
+     --color-button:  oklch(56.464% 0.14223 259.278);
+    --color-button1:  oklch(56.464% 0.14223 259.278);
+     --color-button2: oklch(62.72% 0.12109 255.558); 
+
     --gradient-brand: linear-gradient(180deg,
     oklch(72% 0.18 260),
     oklch(62% 0.20 260));/* Alternative Panelfarbe für Todo-List */
 
-  
 
-    /* Text */
-    --color-text:     oklch(92% 0.005 250);
+      --color-text:     oklch(92% 0.005 250);
     --color-muted:    oklch(70.953% 0.00005 271.152); 
-    --color-muted2:   #2C2C2E
-;    /* Sekundärtext, Labels */
+    --color-muted2:   green;
+    /* Sekundärtext, Labels */
     /* Sekundärtext, Labels */
     --color-subtle:   oklch(45% 0.01 250);   /* Disabled, Placeholder */
 
@@ -43,8 +107,15 @@
     --color-brand:    oklch(68% 0.18 260);    /* Indigo – Primary Actions */
     --color-brand-2:  oklch(70% 0.18 295);    /* Violett – Accent */
     --color-danger:   oklch(65% 0.22 25);     /* Rot */
-    --color-ok:       oklch(72% 0.16 155);    /* Grün */
+    --color-ok:       oklch(72% 0.16 155);
   }
+
+
+
+    
+  
+
+   
 
     :root { color-scheme: dark; }
     :root {
@@ -111,7 +182,7 @@
   }
 
   .btn-primary {
-    background: var(--color-button);
+    background: var(--color-button1);
     color: (var(--text));
     box-shadow:
       0 1px 0 0 oklch(100% 0 0 / 0.15) inset,

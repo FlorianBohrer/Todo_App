@@ -7,6 +7,8 @@ export interface Label {
   icon: string;    
 }
 
+
+
 @Injectable({ providedIn: 'root' })
 export class LabelService {
   readonly labels: Label[] = [
