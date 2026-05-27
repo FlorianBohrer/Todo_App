@@ -37,6 +37,19 @@ export class App {
     return label ? label.name ?? 'Tasks' : 'Tasks';
   });
 
+  protected readonly accentClass = computed(() => {
+    const id = this.labelService.activeLabelId();
+    if(id === null) return "bg-slate-500/20 text-slate-100";
+    const label = this.labelService.labels.find(l => l.id === id);
+
+    const map: Record<string, string> = {
+      'violet': 'bg-violet-500/20 text-violet-100',
+      'emerald': 'bg-emerald-500/20 text-emerald-100',
+      'rose': 'bg-rose-500/20 text-rose-100', 
+    };
+    return map[label?.color ?? ''] ?? 'bg-slate-500';
+  });
+
   // Icons, die in tmplate verwendet werden, als properties exposen
   protected readonly FolderDownIcon = FolderDown;
 
