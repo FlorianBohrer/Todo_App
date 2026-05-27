@@ -1,11 +1,13 @@
 
-
+  <div class="hidden text-violet-400 text-emerald-400 text-rose-400"></div>
 <main class=" bg-panel2 min-h-screen max-w-3xl mx-auto p-15">
  <div class="flex items-center justify-between mb-2">
   <div class="inline-block">
-    <app-header [title]="title()"></app-header>
+    <app-header [title]="title() " [accentClass]="accentClass()"></app-header>
       <div class="h-2 w-24 rounded-full transition-colors duration-300" [class]="accentClass()">
       </div>
+    
+
   </div>
    <button
     class="flex items-center gap-2 rounded-md bg-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-600"

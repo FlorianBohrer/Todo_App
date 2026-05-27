@@ -8,4 +8,5 @@ import { Component, Input } from '@angular/core';
 })
 export class Header {
   @Input() title = 'Tasks';
+  @Input() accentClass = 'text-white';
 }
