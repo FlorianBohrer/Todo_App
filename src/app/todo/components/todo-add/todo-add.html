@@ -1,18 +1,20 @@
-  <section class="mt-4  p-4 ">
-    <div class="flex gap-2">
-      <input class="flex-1 rounded-lg  px-3 py-2 ring-1 ring-zinc-800 text-2xl border bg-slate-700/50 border-zinc-500 focus:ring-indigo-500 "
-      placeholder="Whats needs to be done?"
-      [(ngModel)] = "newTitle"
+<section class="mt-4 p-4 sm:p-0">
+  <div class="flex flex-col gap-2 sm:flex-row">
+    <input
+      class="flex-1 rounded-lg border border-zinc-500 bg-slate-700/50 px-3 py-2 text-base ring-1 ring-zinc-800
+             focus:outline-none focus:ring-indigo-500
+             sm:text-lg md:text-xl"
+      placeholder="What needs to be done?"
+      [(ngModel)]="newTitle"
       (keyup.enter)="addTodo(newTitle)"
       aria-label="New todo"
-      />
-      <button class="bg-highlight1 hover:bg-highlight2 text-white px-5 py-2.5 rounded-lg font-medium 
-               shadow-[0_4px_12px_-2px_oklch(60%_0.20_260/0.3)]
-               flex items-center gap-2 transition"
-      (click)="addTodo(newTitle)"
-      >
+    />
+    <button
+      class="flex items-center justify-center gap-2 rounded-lg bg-highlight1 px-5 py-2.5 font-medium text-white
+             shadow-[0_4px_12px_-2px_oklch(60%_0.20_260/0.3)] transition
+             hover:bg-highlight2"
+      (click)="addTodo(newTitle)">
       Add
     </button>
-    
-    </div>
-  </section>
+  </div>
+</section>

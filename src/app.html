@@ -1,34 +1,35 @@
+<div class="hidden text-violet-400 text-emerald-400 text-rose-400 bg-violet-950 bg-emerald-950 bg-rose-950"></div>
 
-  <div class="hidden text-violet-400 text-emerald-400 text-rose-400"></div>
-<main class=" bg-panel2 min-h-screen max-w-3xl mx-auto p-15">
- <div class="flex items-center justify-between mb-2">
-  <div class="inline-block">
-    <app-header [title]="title() " [accentClass]="accentClass()"></app-header>
-      <div class="h-2 w-24 rounded-full transition-colors duration-300" [class]="accentClass()">
-      </div>
+<main
+  class="min-h-screen w-full transition-colors duration-500"
+  [class]="bgClass()">
+
+  <div class="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10 md:px-8 md:py-14">
+
     
+    <div class="mb-6 flex flex-wrap items-start justify-between gap-3 sm:items-center">
+      <div class="inline-block">
+        <app-header [title]="title()" [accentClass]="accentClass()"></app-header>
+        <div
+          class="mt-2 h-1.5 w-16 rounded-full transition-colors duration-300 sm:h-2 sm:w-24"
+          [class]="accentClass()">
+        </div>
+      </div>
 
-  </div>
-   <button
-    class="flex items-center gap-2 rounded-md bg-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-600"
-    (click)="openCategories()"
-    aria-label="Open categories">
-    <lucide-icon [img]="FolderDownIcon" class="h-4 w-4"></lucide-icon>
-    <span>Categories</span>
-  </button>
-</div>
-
+      <button
+        class="flex items-center gap-2 rounded-md bg-slate-700 px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-600"
+        (click)="openCategories()"
+        aria-label="Open categories">
+        <lucide-icon [img]="FolderDownIcon" class="h-4 w-4"></lucide-icon>
+        <span>Categories</span>
+      </button>
+    </div>
 
     <app-todo-stats></app-todo-stats>
+    <app-todo-filter></app-todo-filter>
+    <app-todo-add></app-todo-add>
+    <app-todo-list></app-todo-list>
+  </div>
 
-
-  <app-todo-filter></app-todo-filter>
-  <app-todo-add></app-todo-add>
-  <app-todo-list></app-todo-list>
-
- 
-   <app-categories-overlay></app-categories-overlay>
-
-
-  
+  <app-categories-overlay></app-categories-overlay>
 </main>
