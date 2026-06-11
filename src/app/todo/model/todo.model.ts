@@ -8,4 +8,6 @@ export interface Todo{
     createdAt: Date;
 }
 
+export type Filter = 'all' | 'active' | 'completed';
+
 
