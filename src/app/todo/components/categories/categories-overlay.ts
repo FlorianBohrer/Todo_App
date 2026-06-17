@@ -25,6 +25,7 @@ export class CategoriesOverlay {
       violet:  'bg-violet-600/15',
       emerald: 'bg-emerald-600/15',
       rose:    'bg-rose-600/15',
+      orange:   'bg-orange-600/15',
     };
     return map[color] ?? 'bg-highlight11';
   }
@@ -34,6 +35,7 @@ export class CategoriesOverlay {
       violet:  'text-violet-300',
       emerald: 'text-emerald-300',
       rose:    'text-rose-300',
+      orange:   'text-orange-300',
     };
     return map[color] ?? 'text-zinc-300';
   }

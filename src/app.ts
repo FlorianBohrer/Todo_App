@@ -1,5 +1,8 @@
 // src/app.ts
-import { Component, inject, computed, HostListener } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { firstValueFrom } from 'rxjs';
+import { ClerkService } from 'ngx-clerk';
 import { LucideAngularModule, FolderDown, ArrowDown,Plus} from 'lucide-angular';
 import { Header } from './app/todo/components/header/header';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
@@ -63,6 +66,7 @@ export class App {
       violet: 'text-violet-400',
       emerald: 'text-emerald-400',
       rose: 'text-rose-400',
+      orange: 'text-orange-400',
     };
     return map[label?.color ?? ''] ?? 'text-white';
   });
@@ -75,6 +79,7 @@ export class App {
       violet: 'bg-violet-950',
       emerald: 'bg-emerald-950',
       rose: 'bg-rose-950',
+      orange: 'bg-orange-950',
     };
     const resullt = map[label?.color ?? ''] ?? 'bg-panel2';
     console.log('bgClass ',{ id, color: label?.color, result: resullt });

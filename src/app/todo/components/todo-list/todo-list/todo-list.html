@@ -14,13 +14,33 @@
   } @else {
     
 
-    <ul role="list" class="space-y-2 max-h-80 overflow-auto text-muted pr-2">
+    <ul
+      role="list"
+      class="space-y-2 max-h-80 overflow-auto text-muted pr-2"
+      cdkDropList
+      (cdkDropListDropped)="drop($event)">
       @for (todo of todos(); track todo.id) {
         <li
+          cdkDrag
           class="group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4
-                 transition-colors cursor-pointer hover:bg-panel/10"
+                 transition-colors hover:bg-panel/10"
                  [class]="labelService.borderClassFor(todo.labelId)"
                  [class.opacity-70]="todo.completed">
+
+          <!-- Platzhalter beim Ziehen -->
+          <div
+            *cdkDragPlaceholder
+            class="h-12 rounded-r-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
+          </div>
+
+          <!-- Drag-Griff -->
+          <button
+            type="button"
+            cdkDragHandle
+            class="flex-shrink-0 touch-none cursor-grab text-muted/60 transition hover:text-text active:cursor-grabbing"
+            aria-label="Reorder todo">
+            <lucide-icon [img]="GripIcon" class="h-5 w-5"></lucide-icon>
+          </button>
 
           <label class="flex flex-1 items-center gap-3 min-w-0">
             <input
@@ -43,6 +63,59 @@
               (keyup.enter)="$event.preventDefault();renameTodo (todo.id, $any($event.target).value); $any($event.target).blur()"
             ></textarea>
           </label>
+
+          <!-- Gestylter Trigger -->
+          <button
+            type="button"
+            cdkOverlayOrigin #trigger="cdkOverlayOrigin"
+            class="flex flex-shrink-0 items-center gap-2 rounded-full border bg-bg2 px-3 py-1.5
+                   text-sm text-text transition hover:bg-panel/10
+                   focus:outline-none focus:ring-1 focus:ring-zinc-100"
+            [class]="labelService.borderClassFor(todo.labelId)"
+            (click)="toggleMenu(todo.id)"
+            aria-haspopup="listbox"
+            [attr.aria-expanded]="openMenuId() === todo.id"
+            aria-label="Change category">
+            <span [class]="dotClass(todo.labelId)">●</span>
+            <span class="truncate max-w-[6rem]">{{ labelName(todo.labelId) }}</span>
+            <lucide-icon [img]="ChevronDownIcon" class="h-3.5 w-3.5 text-muted"></lucide-icon>
+          </button>
+
+          <!-- Custom-Popover via CDK Overlay (kein Clipping, mit Farbpunkten) -->
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="trigger"
+            [cdkConnectedOverlayOpen]="openMenuId() === todo.id"
+            [cdkConnectedOverlayPositions]="overlayPositions"
+            [cdkConnectedOverlayHasBackdrop]="true"
+            cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+            (backdropClick)="closeMenu()"
+            (overlayKeydown)="$event.key === 'Escape' && closeMenu()">
+            <div
+              role="listbox"
+              class="w-48 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+              <button
+                type="button" role="option"
+                [attr.aria-selected]="todo.labelId === null"
+                class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-300 transition hover:bg-slate-700"
+                (click)="setLabel(todo.id, null)">
+                <span class="text-zinc-400">●</span>
+                <span>No category</span>
+                @if (todo.labelId === null) { <span class="ml-auto text-emerald-400">✓</span> }
+              </button>
+              @for (label of labels; track label.id) {
+                <button
+                  type="button" role="option"
+                  [attr.aria-selected]="todo.labelId === label.id"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  (click)="setLabel(todo.id, label.id)">
+                  <span [class]="dotClass(label.id)">●</span>
+                  <span>{{ label.name }}</span>
+                  @if (todo.labelId === label.id) { <span class="ml-auto text-emerald-400">✓</span> }
+                </button>
+              }
+            </div>
+          </ng-template>
 
           <button
             class="rounded-md px-2 py-1 text-text transition hover:text-red-400"
