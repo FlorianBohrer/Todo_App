@@ -6,6 +6,7 @@ const TODO_KEY = 'todos';
 
 export type Filter = 'all' | 'active' | 'completed';
 
+
 export interface Stats {
   total: number;
   active: number;
@@ -85,6 +86,13 @@ export class TodoService {
       items.map(item => item.id === id ? { ...item, labelId } : item),
     );
   }
+
+  clearLabel(labelId: string) {
+    this.todos.update(list =>
+      list.map(t => t.labelId === labelId ? { ...t, labelId: null } : t)
+    );
+  }
+
 
   /**
    * Sortiert die aktuell SICHTBARE (gefilterte) Liste um. Die Indizes beziehen

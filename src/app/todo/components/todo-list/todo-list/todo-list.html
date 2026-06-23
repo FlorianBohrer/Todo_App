@@ -1,6 +1,4 @@
-
-
-  <section class="mt-4 rounded-2xl p-3">
+<section class="mt-4 rounded-2xl p-3">
   @if (stats().total === 0) {
     <p class="text-text">No todos yet, add one above</p>
   } @else if (todos().length === 0) {
@@ -33,7 +31,7 @@
             class="h-12 rounded-r-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
           </div>
 
-          <!-- Drag-Griff -->
+          <!-- Drag-handle -->
           <button
             type="button"
             cdkDragHandle
@@ -55,7 +53,7 @@
             <textarea
               appAutosize
               rows = "1"
-              class="flex-1 resize-none rounded-md bg-transparent px-2 py-1 text-text ring-1 ring-transparent
+              class="flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words
                      focus:outline-none focus:ring-zinc-100"
               [value]="todo.title"
               [class.line-through]="todo.completed"
@@ -76,8 +74,9 @@
             aria-haspopup="listbox"
             [attr.aria-expanded]="openMenuId() === todo.id"
             aria-label="Change category">
+            <!--Farbpunkt-->
             <span [class]="dotClass(todo.labelId)">●</span>
-            <span class="truncate max-w-[6rem]">{{ labelName(todo.labelId) }}</span>
+            <span class="hidden sm:inline truncate max-w-[6rem]">{{ labelName(todo.labelId) }}</span>
             <lucide-icon [img]="ChevronDownIcon" class="h-3.5 w-3.5 text-muted"></lucide-icon>
           </button>
 
@@ -94,16 +93,8 @@
             <div
               role="listbox"
               class="w-48 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
-              <button
-                type="button" role="option"
-                [attr.aria-selected]="todo.labelId === null"
-                class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-300 transition hover:bg-slate-700"
-                (click)="setLabel(todo.id, null)">
-                <span class="text-zinc-400">●</span>
-                <span>No category</span>
-                @if (todo.labelId === null) { <span class="ml-auto text-emerald-400">✓</span> }
-              </button>
-              @for (label of labels; track label.id) {
+             
+              @for (label of labels(); track label.id) {
                 <button
                   type="button" role="option"
                   [attr.aria-selected]="todo.labelId === label.id"
@@ -111,14 +102,15 @@
                   (click)="setLabel(todo.id, label.id)">
                   <span [class]="dotClass(label.id)">●</span>
                   <span>{{ label.name }}</span>
-                  @if (todo.labelId === label.id) { <span class="ml-auto text-emerald-400">✓</span> }
+                  @if (todo.labelId === label.id) { <span class=" text-emerald-400">✓</span> }
+                  <lucide-icon [img]="ChevronDownIcon" class="hidden sm:block h-3.5 w-3.5 text-muted"></lucide-icon>
                 </button>
               }
             </div>
           </ng-template>
 
           <button
-            class="rounded-md px-2 py-1 text-text transition hover:text-red-400"
+            class="rounded-md px-2 py-1 flex-none text-text transition hover:text-red-400"
             (click)="removeTodos(todo.id)">
             ✕
           </button>
