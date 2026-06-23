@@ -38,6 +38,10 @@ export class TodoList {
     emerald: 'text-emerald-400',
     rose: 'text-rose-400',
     orange: 'text-orange-400',
+    amber:   'text-amber-400',
+    teal:    'text-teal-400',
+    sky:     'text-sky-400',
+    fuchsia: 'text-fuchsia-400',
   };
 
   toggleMenu(id: string) {
@@ -55,12 +59,12 @@ export class TodoList {
 
   labelName(labelId: string | null): string {
     if (labelId === null) return 'No category';
-    return this.labels.find(l => l.id === labelId)?.name ?? 'No category';
+    return this.labels().find(l => l.id === labelId)?.name ?? 'No category';
   }
 
   dotClass(labelId: string | null): string {
     if (labelId === null) return 'text-zinc-400';
-    const label = this.labels.find(l => l.id === labelId);
+    const label = this.labels().find(l => l.id === labelId);
     return this.colorToDot[label?.color ?? ''] ?? 'text-zinc-400';
   }
 
