@@ -6,7 +6,7 @@
 
   <div
     class="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-2xl -translate-x-1/2 -translate-y-1/2
-           rounded-2xl border border-slate-700 bg-slate-800 p-6 shadow-2xl"
+           rounded-2xl border border-white/5 bg-panel1 p-6 shadow-2xl"
     (click)="$event.stopPropagation()">
 
     <div class="mb-6 flex items-center justify-between">
@@ -21,8 +21,9 @@
 
     <div class="grid grid-cols-2 gap-3 mt-3">
 
-      <button class="flex items-center gap-3 rounded-2xl bg-slate-700/50 p-4 text-left
-               transition hover:bg-slate-700 mt-3"
+      <!-- All-Karte -->
+      <button class="flex items-center gap-3 rounded-2xl bg-bg2 p-4 text-left
+               transition hover:bg-panel2"
         [class.ring-2]="activeLabelId() === null"
         [class.ring-emerald-500]="activeLabelId() === null"
         (click)="select(null)">
@@ -30,22 +31,39 @@
         <span class="font-semibold text-zinc-200">All</span>
       </button>
 
+      <!-- Label-Karten mit Löschen -->
       @for (label of labels(); track label.id) {
-        <button
-          class="flex items-center gap-3 rounded-2xl p-4 text-left transition hover:scale-[1.02]"
+        <div
+          class="group relative flex items-center gap-3 rounded-2xl p-4 text-left cursor-pointer transition hover:scale-[1.02]"
           [class]="bgClass(label.color)"
           [class.ring-2]="activeLabelId() === label.id"
           [class.ring-emerald-500]="activeLabelId() === label.id"
           (click)="select(label.id)">
+
           <span [class]="textClass(label.color)">●</span>
-          <span [class]="'font-semibold ' + textClass(label.color)">
-            {{ label.name }}
-          </span>
-        </button>
+          <span [class]="'font-semibold ' + textClass(label.color)">{{ label.name }}</span>
+
+          @if (confirmDeleteId() === label.id) {
+            <!-- Rückfrage -->
+            <div class="ml-auto flex items-center gap-2">
+              <span class="text-xs text-zinc-300">Löschen?</span>
+              <button type="button" class="text-xs text-rose-400 hover:text-rose-300"
+                      (click)="confirmDelete(label.id, $event)">Ja</button>
+              <button type="button" class="text-xs text-zinc-400 hover:text-zinc-200"
+                      (click)="cancelDelete($event)">Nein</button>
+            </div>
+          } @else {
+            <!-- ✕ erscheint bei Hover -->
+            <button type="button"
+                    class="ml-auto opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-400 transition"
+                    (click)="askDelete(label.id, $event)"
+                    aria-label="Kategorie löschen">✕</button>
+          }
+        </div>
       }
     </div>
 
-    <!-- Add-Zeile: eine einzige, innerhalb des Panels -->
+    <!-- Add-Zeile: NUR Input + Swatches + Button. Keine Label-Karten hier! -->
     <div class="mt-3 flex items-center gap-3">
       <input
         #newCat
@@ -73,36 +91,6 @@
         (click)="add(newCat.value); newCat.value = ''">
         Hinzufügen
       </button>
-
-      @for (label of labels(); track label.id) {
-  <div
-    class="group relative flex items-center gap-3 rounded-2xl p-4 text-left cursor-pointer transition hover:scale-[1.02]"
-    [class]="bgClass(label.color)"
-    [class.ring-2]="activeLabelId() === label.id"
-    [class.ring-emerald-500]="activeLabelId() === label.id"
-    (click)="select(label.id)">
-
-    <span [class]="textClass(label.color)">●</span>
-    <span [class]="'font-semibold ' + textClass(label.color)">{{ label.name }}</span>
-
-    @if (confirmDeleteId() === label.id) {
-      <!-- Rückfrage -->
-      <div class="ml-auto flex items-center gap-2">
-        <span class="text-xs text-zinc-300">Löschen?</span>
-        <button type="button" class="text-xs text-rose-400 hover:text-rose-300"
-                (click)="confirmDelete(label.id, $event)">Ja</button>
-        <button type="button" class="text-xs text-zinc-400 hover:text-zinc-200"
-                (click)="cancelDelete($event)">Nein</button>
-      </div>
-    } @else {
-      <!-- ✕ erscheint bei Hover -->
-      <button type="button"
-              class="ml-auto opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-400 transition"
-              (click)="askDelete(label.id, $event)"
-              aria-label="Kategorie löschen">✕</button>
-    }
-  </div>
-}
     </div>
   </div>
 }
