@@ -1,0 +1,24 @@
+@if (account$ | async; as account) {
+  <div
+    class="flex max-w-xs items-center gap-3 rounded-xl border border-border bg-panel1 px-3 py-2 shadow-lg"
+  >
+    <img
+      [src]="account.avatarUrl"
+      [alt]="account.username"
+      referrerpolicy="no-referrer"
+      class="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-highlight1/50"
+    />
+
+    <div class="min-w-0 leading-tight">
+      <p class="truncate text-sm font-semibold text-text">
+        {{ account.username }}
+      </p>
+      <p class="truncate text-xs text-muted">
+        {{ account.email }}
+      </p>
+      <p class="truncate font-mono text-[10px] text-subtle" [title]="account.userId">
+        {{ account.userId }}
+      </p>
+    </div>
+  </div>
+}

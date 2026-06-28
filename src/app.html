@@ -1,8 +1,16 @@
 @if (clerk.user$ | async; as user) {
   <div class="flex items-center justify-end gap-3 p-4">
-    <span class="text-slate-300 text-sm">{{ user.firstName }}</span>
-    <button (click)="logToken()">Token loggen</button>
-    <button (click)="signOut()">Logout</button>
+    <app-user-account />
+    <button
+      class="text-xs text-muted transition hover:text-text"
+      (click)="logToken()">
+      Token
+    </button>
+    <button
+      class="text-xs text-danger transition hover:opacity-80"
+      (click)="signOut()">
+      Logout
+    </button>
   </div>
 
   <div class="text-violet-400 text-emerald-400 text-rose-400 text-orange-400 bg-violet-950 bg-emerald-950 bg-rose-950 bg-orange-950"></div>

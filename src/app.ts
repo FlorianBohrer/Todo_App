@@ -3,13 +3,14 @@ import { Component, inject, computed } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { ClerkService } from 'ngx-clerk';
-import { LucideAngularModule, FolderDown, ArrowDown,Plus} from 'lucide-angular';
+import { LucideAngularModule, FolderDown, ArrowDown, Plus } from 'lucide-angular';
 import { Header } from './app/todo/components/header/header';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
 import { TodoList } from './app/todo/components/todo-list/todo-list/todo-list';
 import { TodoStats } from './app/todo/components/todo-stats/todo-stats/todo-stats';
 import { CategoriesOverlay } from './app/todo/components/categories/categories-overlay';
+import { UserAccount } from './app/todo/components/user-account/user-account';
 import { LabelService } from './app/todo/services/label.service';
 
 @Component({
@@ -22,6 +23,7 @@ import { LabelService } from './app/todo/services/label.service';
     TodoList,
     TodoStats,
     CategoriesOverlay,
+    UserAccount,
     LucideAngularModule,
   ],
   templateUrl: './app.html',
@@ -81,13 +83,8 @@ export class App {
       rose: 'bg-rose-950',
       orange: 'bg-orange-950',
     };
-    const resullt = map[label?.color ?? ''] ?? 'bg-panel2';
-    console.log('bgClass ',{ id, color: label?.color, result: resullt });
     return map[label?.color ?? ''] ?? 'bg-highlight11';
-  
   });
-
- 
 
   // Icons fürs Template
   protected readonly FolderDownIcon = FolderDown;

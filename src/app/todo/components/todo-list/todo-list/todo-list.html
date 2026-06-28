@@ -21,7 +21,7 @@
         <li
           cdkDrag
           class="group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4
-                 transition-colors hover:bg-panel/10"
+                 transition-colors hover:bg-panel/50"
                  [class]="labelService.borderClassFor(todo.labelId)"
                  [class.opacity-70]="todo.completed">
 
@@ -98,7 +98,7 @@
                 <button
                   type="button" role="option"
                   [attr.aria-selected]="todo.labelId === label.id"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-cyna-700"
                   (click)="setLabel(todo.id, label.id)">
                   <span [class]="dotClass(label.id)">●</span>
                   <span>{{ label.name }}</span>
