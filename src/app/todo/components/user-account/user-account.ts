@@ -17,7 +17,7 @@ export class UserAccount {
       return {
         avatarUrl: user.imageUrl,
         username: user.username ?? user.fullName ?? user.firstName ?? 'Unbenannt',
-        email: user.primaryEmailAddress?.emailAddress ?? '—',
+        email: user.primaryEmailAddress?.emailAddress ?? 'no email',
         userId: user.id,
       };
     }),
