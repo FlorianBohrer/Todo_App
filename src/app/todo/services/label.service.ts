@@ -50,8 +50,8 @@ borderClassFor(labelId:  string | null): string {
   addLabel(name: string, color: string){
     const trimmed = name.trim();
     if(!trimmed) return;
-    this.labels.update(list=>[
-      ...list,
+    this.labels.update(list=>
+      [...list,
       { id:crypto.randomUUID(), name: trimmed, color, icon: 'tag'},
     ]);
   }
