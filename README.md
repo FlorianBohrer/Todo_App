@@ -5,86 +5,69 @@
 ![PostgreSQL](https://img.shields.io/badge/Neon_Postgres-336791?logo=postgresql&logoColor=white)
 ![Clerk](https://img.shields.io/badge/Clerk_Auth-6c47ff?logo=clerk&logoColor=white)
 
-Ja, noch eine Todo-App. Aber die hier hat einen Zweck: Ich wollte nicht das hundertste Tutorial nachklicken, sondern einmal komplett durch einen echten Stack. Vom Klick im Browser bis zur Zeile in der Datenbank, mit Login, eigener API und allem Ärger dazwischen.
 
-Der Ärger war der lehrreichste Teil. Dazu weiter unten mehr.
+Todo App
+Yes, another todo app. But this one has actually a purpose: I didn't want to click through the hundredth tutorial, 
+I wanted to go through a real stack once, end to end. From the click in the browser to the row in the database, with login, my own API, and all the trouble in between.
 
-Das Backend liegt in einem eigenen Repo: [myTodoApi](https://github.com/FlorianBohrer/myTodoApi).
+The trouble turned out to be the most educational part. More on that below.
 
-## Was die App kann
+The backend lives in its own repo: myTodoApi.
 
-- Login mit Clerk, jeder Nutzer sieht nur seine eigenen Todos
-- Todos anlegen, abhaken, per Drag & Drop sortieren, löschen
-- Eigene Kategorien mit Farbe und Icon, gespeichert pro Nutzer
-- Filtern nach Status und Kategorie, dazu eine kleine Statistik
-- Gespeichert wird in Postgres (Neon), nicht mehr im localStorage
-
-## Aufbau
-
-```mermaid
+What the app does
+Login with Clerk, every user only sees their own todos
+Create todos, check them off, sort them via drag & drop, delete them
+Custom categories with color and icon, stored per user
+Filter by status and category, plus a small stats bar
+Everything is stored in Postgres (Neon), not in localStorage anymore
+How it's built
 flowchart LR
-    FE[Angular-Frontend] -->|HTTP mit Bearer-Token| API[NestJS-API]
+    FE[Angular frontend] -->|HTTP with bearer token| API[NestJS API]
     API -->|Drizzle ORM| DB[(Neon Postgres)]
     FE -.->|Login| Clerk[Clerk]
-    API -.->|Token prüfen| Clerk
-```
+    API -.->|Verify token| Clerk
+On the frontend: Angular with standalone components and signals, Angular CDK for drag & drop, ngx-clerk, Lucide icons. On the backend: NestJS with Drizzle ORM on a Neon Postgres database.
 
-Im Frontend: Angular mit Standalone Components und Signals, Angular CDK für Drag & Drop, ngx-clerk, Lucide-Icons. Im Backend: NestJS mit Drizzle ORM auf einer Neon-Postgres-Datenbank.
+What happens on every request: an HTTP interceptor on the frontend attaches the Clerk session token. On the backend, a global guard verifies the token and puts the user ID on the request. Every database query filters on that ID. No valid token, no data, just a 401.
 
-Der Ablauf bei jedem Request: Ein HTTP-Interceptor im Frontend hängt das Clerk-Session-Token an. Im Backend prüft ein globaler Guard das Token und legt die User-ID in den Request. Jede Datenbankabfrage filtert auf diese ID. Ohne gültiges Token gibt es eine 401.
+What I learned
+localStorage is not a data store
+The first version stored everything in localStorage. Worked great. Until I logged in from a second browser and my list was empty. Obvious in hindsight: localStorage belongs to the browser, not to the user. So a backend it was. The app migrates old local todos once on first load, by the way, so nothing gets lost.
 
-## Was ich dabei gelernt habe
+When "nothing works", it's usually the config
+My most frustrating bug so far: database unreachable, every request a 401, and I spent ages digging through the code. The code was fine. The .env contained a database URL that was still the placeholder from a tutorial, and a secret key I had copied along with the angle brackets from the example. Two lines, two mistakes. These days I check the configuration first and the code second.
 
-### localStorage ist kein Datenspeicher
+Logged in is not authenticated
+The backend doesn't care that someone is logged in on the frontend. It only trusts the token that gets sent along and verified server-side. I only really understood that separation once I had built the whole chain myself: interceptor on the frontend, guard on the backend, token verification against Clerk, user ID on the request.
 
-Die erste Version hat alles im localStorage gespeichert. Funktionierte super. Bis ich mich in einem zweiten Browser eingeloggt habe und meine Liste leer war. Im Nachhinein logisch: localStorage gehört dem Browser, nicht dem Nutzer. Also kam ein Backend her. Alte lokale Todos nimmt die App beim ersten Start übrigens einmalig mit, damit nichts verloren geht.
+Git with two repos
+Frontend and backend live in separate repos, and both cost me some nerves. Once it was "remote origin already exists" because an old URL was still configured. Once it was a push to the branch "mast", which, thanks to a typo, obviously didn't exist. None of it was a big deal, but I now know what git remote set-url does.
 
-### Wenn "nichts funktioniert", ist es oft die Config
+The UI must not wait for the server
+When you check off a todo, the UI updates immediately and the server is told in the background. If the request fails, the list reloads. Without this, every interaction feels sluggish; with it, you can barely tell the difference from the old localStorage version.
 
-Mein bisher frustrierendster Bug: Datenbank nicht erreichbar, jeder Request 401, und ich habe lange im Code gesucht. Der Code war in Ordnung. In der .env stand eine Datenbank-URL, die noch der Platzhalter aus einer Anleitung war, und ein Secret Key, den ich mitsamt der spitzen Klammern aus dem Beispiel kopiert hatte. Zwei Zeilen, zwei Fehler. Seitdem prüfe ich zuerst die Konfiguration und dann den Code.
+Schema changes as migrations
+Categories and sort order were added later. Instead of changing the tables by hand, drizzle-kit generates migrations that stay traceable in the repo. The first time it feels like overhead; by the third schema update you're grateful.
 
-### Eingeloggt heißt nicht authentifiziert
+Running it locally
+You need Node.js, a free account at Neon for the database, and one at Clerk for the login.
 
-Dass im Frontend jemand eingeloggt ist, interessiert das Backend erstmal nicht. Es glaubt nur dem Token, das mitgeschickt und serverseitig geprüft wird. Diese Trennung habe ich erst wirklich verstanden, als ich die Kette selbst gebaut habe: Interceptor im Frontend, Guard im Backend, Token-Prüfung gegen Clerk, User-ID an den Request.
+Backend first:
 
-### Git mit zwei Repos
-
-Frontend und Backend liegen getrennt, und beide haben mich Nerven gekostet. Einmal "remote origin already exists", weil noch eine alte URL eingetragen war. Einmal ein Push auf den Branch "mast", den es dank Tippfehler natürlich nicht gab. Nichts davon war schlimm, aber ich weiß jetzt, was `git remote set-url` macht.
-
-### Die UI darf nicht auf den Server warten
-
-Beim Abhaken eines Todos wird die Oberfläche sofort aktualisiert und der Server im Hintergrund informiert. Schlägt der Request fehl, lädt die Liste neu. Ohne das fühlt sich jede Interaktion zäh an, mit ist der Unterschied zur alten localStorage-Version kaum spürbar.
-
-### Schema-Änderungen als Migration
-
-Kategorien und Sortier-Reihenfolge kamen erst später dazu. Statt die Tabellen von Hand zu ändern, erzeugt drizzle-kit Migrationen, die im Repo nachvollziehbar bleiben. Beim ersten Mal fühlt sich das nach Overhead an, beim dritten Schema-Update ist man dankbar.
-
-## Lokal starten
-
-Man braucht Node.js, einen kostenlosen Account bei [Neon](https://neon.tech) für die Datenbank und einen bei [Clerk](https://clerk.com) für den Login.
-
-Zuerst das Backend:
-
-```bash
 git clone https://github.com/FlorianBohrer/myTodoApi.git
 cd myTodoApi
 npm install
-```
+Then create a .env in the backend folder with three variables: DATABASE_URL (the full connection URL from the Neon console), CLERK_SECRET_KEY (from the Clerk dashboard under API Keys), and CLERK_AUTHORIZED_PARTIES (can stay empty). Copy the values straight from the dashboards and don't bring any angle brackets along from tutorials. Don't ask.
 
-Dann im Backend-Ordner eine `.env` anlegen mit drei Variablen: `DATABASE_URL` (die komplette Connection-URL aus der Neon-Konsole), `CLERK_SECRET_KEY` (aus dem Clerk-Dashboard unter API Keys) und `CLERK_AUTHORIZED_PARTIES` (darf leer bleiben). Die Werte 1:1 aus den Dashboards kopieren und keine spitzen Klammern aus Anleitungen übernehmen. Frag nicht.
-
-```bash
 npm run db:migrate
 npm run start:dev
-```
+The API then runs on port 3000. Now the frontend:
 
-Die API läuft dann auf Port 3000. Jetzt das Frontend:
-
-```bash
 git clone https://github.com/FlorianBohrer/Todo_App.git
 cd Todo_App
 npm install
 npm start
-```
+Open the app at http://localhost:4200. 
+The Clerk publishable key lives in src/app.ts and has to match your own Clerk instance.
 
-App im Browser öffnen: http://localhost:4200. Der Clerk Publishable Key steht in `src/app.ts` und muss zur eigenen Clerk-Instanz passen.
+
