@@ -71,6 +71,21 @@ export class TodoService {
     };
   });
 
+  /**
+   * Fortschritt eines einzelnen Folders (für die Favoriten-Kacheln).
+   * Liest das todos-Signal, ist im Template also automatisch reaktiv.
+   */
+  progressFor(labelId: string): { total: number; completed: number; percent: number } {
+    const items = this.todos().filter(t => t.labelId === labelId);
+    const completed = items.filter(t => t.completed).length;
+    const total = items.length;
+    return {
+      total,
+      completed,
+      percent: total === 0 ? 0 : Math.round((completed / total) * 100),
+    };
+  }
+
   private readonly clerk = inject(ClerkService);
 
   constructor() {
