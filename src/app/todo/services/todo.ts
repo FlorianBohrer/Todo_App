@@ -6,7 +6,7 @@ import { environment } from '../../../environments/enviroment';
 import { Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 
-export type Filter = 'all' | 'active' | 'completed';
+export type Filter = 'all' | 'active' | 'completed'| 'favorites';
 
 
 export interface Stats {
@@ -20,6 +20,7 @@ interface TodoDto {
   id: string;
   title: string;
   completed: boolean;
+  isFavorite: boolean;
   categoryId: string | null;
   createdAt: string;
 }
@@ -56,6 +57,7 @@ export class TodoService {
     // Status-Filter
     if (f === 'active')    items = items.filter(i => !i.completed);
     if (f === 'completed') items = items.filter(i => i.completed);
+    if (f === 'favorites') items = items.filter(i => i.isFavorite);
 
     return items;
   });
@@ -171,15 +173,32 @@ export class TodoService {
     importOne(0);
   }
 
+
   private toTodo(dto: TodoDto): Todo {
-    return {
-      id: dto.id,
-      title: dto.title,
-      completed: dto.completed,
-      labelId: dto.categoryId,
-      createdAt: new Date(dto.createdAt),
-    };
-  }
+  return {
+    id: dto.id,
+    title: dto.title,
+    completed: dto.completed,
+    isFavorite: dto.isFavorite ?? false,
+    labelId: dto.categoryId,
+    createdAt: new Date(dto.createdAt),
+  };
+}
+
+toggleFavorite(id: string) {
+  const current = this.todos().find(todo => todo.id === id);
+  if (!current) return;
+
+  const isFavorite = !current.isFavorite;
+
+  this.todos.update(items =>
+    items.map(item =>
+      item.id === id ? { ...item, isFavorite } : item
+    ),
+  );
+
+  this.updateOnServer(id, { isFavorite });
+}
 
   // ---- Schreiben ----
   // Änderungen werden sofort lokal angezeigt (optimistic update) und ans
@@ -278,8 +297,12 @@ export class TodoService {
 
   private updateOnServer(
     id: string,
-    changes: Partial<{ title: string; completed: boolean; categoryId: string | null }>,
-  ) {
+    changes: Partial<{
+      title: string;
+      completed: boolean;
+      categoryId: string | null;
+      isFavorite: boolean;
+    }>  ) {
     this.http.put<TodoDto>(`${this.apiUrl}/${id}`, changes).subscribe({
       error: (err) => {
         console.error('Todo aktualisieren fehlgeschlagen', err);

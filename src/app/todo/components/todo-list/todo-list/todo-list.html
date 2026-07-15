@@ -6,6 +6,7 @@
       @switch (filter()) {
         @case ('active')    { No active todos at the moment }
         @case ('completed') { No completed todos yet }
+        @case ('favorites') { No favorites yet, tap the star on a todo }
         @default            { No todos found }
       }
     </p>
@@ -31,6 +32,23 @@
             class="h-12 rounded-r-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
           </div>
 
+          <button
+            type="button"
+            class="rounded-full p-2 text-zinc-500 transition hover:text-amber-400"
+            [class.text-amber-400]="todo.isFavorite"
+            [attr.aria-pressed]="todo.isFavorite"
+            [attr.aria-label]="todo.isFavorite
+              ? 'Remove from favorites'
+              : 'Add to favorites'"
+            (click)="toggleFavorite(todo.id)">
+
+            <lucide-icon
+              [img]="StarIcon"
+              class="h-5 w-5"
+              [class.fill-amber-400]="todo.isFavorite">
+            </lucide-icon>
+          </button>
+
           <!-- Drag-handle -->
           <button
             type="button"
@@ -39,6 +57,7 @@
             aria-label="Reorder todo">
             <lucide-icon [img]="GripIcon" class="h-5 w-5"></lucide-icon>
           </button>
+
 
           <label class="flex flex-1 items-center gap-3 min-w-0">
             <input
