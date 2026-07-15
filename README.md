@@ -21,11 +21,15 @@ Custom categories with color and icon, stored per user
 Filter by status and category, plus a small stats bar
 Everything is stored in Postgres (Neon), not in localStorage anymore
 How it's built
-flowchart LR
+```mermaid
+graph TD;
+
     FE[Angular frontend] -->|HTTP with bearer token| API[NestJS API]
     API -->|Drizzle ORM| DB[(Neon Postgres)]
     FE -.->|Login| Clerk[Clerk]
     API -.->|Verify token| Clerk
+```
+
 On the frontend: Angular with standalone components and signals, Angular CDK for drag & drop, ngx-clerk, Lucide icons. On the backend: NestJS with Drizzle ORM on a Neon Postgres database.
 
 What happens on every request: an HTTP interceptor on the frontend attaches the Clerk session token. On the backend, a global guard verifies the token and puts the user ID on the request. Every database query filters on that ID. No valid token, no data, just a 401.
