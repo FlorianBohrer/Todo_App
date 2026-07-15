@@ -4,6 +4,8 @@
     (click)="filter.set('active')">Active  </button>
     <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'completed'"
     (click)="filter.set('completed')">Done</button>
+    <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'favorites'"
+    (click)="filter.set('favorites')">Favorites</button>
     <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'all'"
     (click)="filter.set('all')">All </button>
   </section>
