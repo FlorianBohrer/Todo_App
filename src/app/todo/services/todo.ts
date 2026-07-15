@@ -1,8 +1,8 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/enviroment';
 import { Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
-
-const TODO_KEY = 'todos';
 
 export type Filter = 'all' | 'active' | 'completed';
 
@@ -13,13 +13,32 @@ export interface Stats {
   completed: number;
 }
 
+// So liefert das Backend ein Todo (zusätzliche Felder ignorieren wir).
+interface TodoDto {
+  id: string;
+  title: string;
+  completed: boolean;
+  categoryId: string | null;
+  createdAt: string;
+}
+
+interface TodoListResponse {
+  todo: TodoDto[];
+  total: number;
+}
+
+// Schlüssel der alten, rein lokalen Speicherung (vor der Server-Anbindung).
+const LEGACY_TODO_KEY = 'todos';
+
 @Injectable({
   providedIn: 'root',
 })
 export class TodoService {
+  private readonly http = inject(HttpClient);
   private readonly labelService = inject(LabelService);
+  private readonly apiUrl = `${environment.apiUrl}/todo`;
 
-  private readonly todos = signal<Todo[]>(this.load());
+  private readonly todos = signal<Todo[]>([]);
   readonly filter = signal<Filter>('all');
 
   private readonly todosInCategory = computed(() => {
@@ -30,15 +49,11 @@ export class TodoService {
 
   readonly filteredTodos = computed(() => {
     const f = this.filter();
-    // const labelId = this.labelService.activeLabelId();
     let items = this.todosInCategory();
 
     // Status-Filter
     if (f === 'active')    items = items.filter(i => !i.completed);
     if (f === 'completed') items = items.filter(i => i.completed);
-
-    // Label-Filter (null = alle Kategorien)
-    // if (labelId !== null)  items = items.filter(i => i.labelId === labelId);
 
     return items;
   });
@@ -53,24 +68,117 @@ export class TodoService {
   });
 
   constructor() {
-    effect(() => {
-      localStorage.setItem(TODO_KEY, JSON.stringify(this.todos()));
+    // Erst den Serverstand laden, dann evtl. vorhandene Alt-Daten aus dem
+    // localStorage einmalig übernehmen.
+    this.http.get<TodoListResponse>(this.apiUrl).subscribe({
+      next: (res) => {
+        this.todos.set(res.todo.map((t) => this.toTodo(t)));
+        this.importLegacyTodos();
+      },
+      error: (err) => console.error('Todos laden fehlgeschlagen', err),
     });
   }
 
+  // ---- Laden ----
+  private loadTodos() {
+    this.http.get<TodoListResponse>(this.apiUrl).subscribe({
+      next: (res) => this.todos.set(res.todo.map((t) => this.toTodo(t))),
+      error: (err) => console.error('Todos laden fehlgeschlagen', err),
+    });
+  }
+
+  /**
+   * Übernimmt einmalig die früher nur lokal (localStorage) gespeicherten Todos
+   * ans Backend. Läuft sequenziell, damit die ursprüngliche Reihenfolge erhalten
+   * bleibt. Danach wird der localStorage-Eintrag gelöscht, sodass die Übernahme
+   * nicht erneut passiert.
+   */
+  private importLegacyTodos() {
+    const raw = localStorage.getItem(LEGACY_TODO_KEY);
+    if (!raw) return;
+
+    let legacy: Array<Partial<Todo>>;
+    try {
+      legacy = JSON.parse(raw);
+    } catch {
+      localStorage.removeItem(LEGACY_TODO_KEY);
+      return;
+    }
+    if (!Array.isArray(legacy) || legacy.length === 0) {
+      localStorage.removeItem(LEGACY_TODO_KEY);
+      return;
+    }
+
+    // Alte labelId nur übernehmen, wenn sie zu einer aktuellen Server-Kategorie
+    // passt — sonst landet das Todo ohne Kategorie (verhindert FK-Fehler).
+    const validLabelIds = new Set(this.labelService.labels().map((l) => l.id));
+
+    const importOne = (index: number) => {
+      if (index >= legacy.length) {
+        localStorage.removeItem(LEGACY_TODO_KEY);
+        this.loadTodos();
+        return;
+      }
+
+      const item = legacy[index];
+      const title = (item.title ?? '').trim();
+      if (!title) {
+        importOne(index + 1);
+        return;
+      }
+
+      const categoryId =
+        item.labelId && validLabelIds.has(item.labelId) ? item.labelId : null;
+
+      this.http.post<TodoDto>(this.apiUrl, { title, categoryId }).subscribe({
+        next: (dto) => {
+          // Erledigt-Status nachziehen (POST legt Todos immer als offen an).
+          if (item.completed) {
+            this.http
+              .put<TodoDto>(`${this.apiUrl}/${dto.id}`, { completed: true })
+              .subscribe({
+                next: () => importOne(index + 1),
+                error: () => importOne(index + 1),
+              });
+          } else {
+            importOne(index + 1);
+          }
+        },
+        error: (err) => {
+          console.error('Alt-Todo übernehmen fehlgeschlagen', err);
+          importOne(index + 1);
+        },
+      });
+    };
+
+    importOne(0);
+  }
+
+  private toTodo(dto: TodoDto): Todo {
+    return {
+      id: dto.id,
+      title: dto.title,
+      completed: dto.completed,
+      labelId: dto.categoryId,
+      createdAt: new Date(dto.createdAt),
+    };
+  }
+
+  // ---- Schreiben ----
+  // Änderungen werden sofort lokal angezeigt (optimistic update) und ans
+  // Backend geschickt. Schlägt der Request fehl, laden wir den Serverstand neu.
   addTodo(title: string) {
     const t = title.trim();
     if (t === '') return;
-    this.todos.update(items => [
-      ...items,
-      {
-        id: crypto.randomUUID(),
+    this.http
+      .post<TodoDto>(this.apiUrl, {
         title: t,
-        completed: false,
-        labelId: this.labelService.activeLabelId(),   // ← aktuelle Auswahl
-        createdAt: new Date(),
-      },
-    ]);
+        categoryId: this.labelService.activeLabelId(), // ← aktuelle Auswahl
+      })
+      .subscribe({
+        next: (dto) => this.todos.update(items => [...items, this.toTodo(dto)]),
+        error: (err) => console.error('Todo anlegen fehlgeschlagen', err),
+      });
   }
 
   renameTodo(id: string, title: string) {
@@ -79,15 +187,19 @@ export class TodoService {
     this.todos.update(items =>
       items.map(item => item.id === id ? { ...item, title: t } : item),
     );
+    this.updateOnServer(id, { title: t });
   }
 
   setTodoLabel(id: string, labelId: string | null) {
     this.todos.update(items =>
       items.map(item => item.id === id ? { ...item, labelId } : item),
     );
+    this.updateOnServer(id, { categoryId: labelId });
   }
 
   clearLabel(labelId: string) {
+    // Die DB setzt category_id beim Löschen der Kategorie selbst auf null
+    // (ON DELETE SET NULL) — hier nur den lokalen Zustand angleichen.
     this.todos.update(list =>
       list.map(t => t.labelId === labelId ? { ...t, labelId: null } : t)
     );
@@ -115,24 +227,47 @@ export class TodoService {
     this.todos.update(all =>
       all.map(item => (visibleIds.has(item.id) ? reordered[qi++] : item)),
     );
+
+    // Komplette neue Reihenfolge persistieren (Index = Position).
+    this.http
+      .put<void>(`${this.apiUrl}/reorder`, { ids: this.todos().map(t => t.id) })
+      .subscribe({
+        error: (err) => {
+          console.error('Sortierung speichern fehlgeschlagen', err);
+          this.loadTodos();
+        },
+      });
   }
 
   removeTodo(id: string) {
     this.todos.update(items => items.filter(item => item.id !== id));
+    this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
+      error: (err) => {
+        console.error('Todo löschen fehlgeschlagen', err);
+        this.loadTodos();
+      },
+    });
   }
 
   toggleTodo(id: string) {
+    const current = this.todos().find(item => item.id === id);
+    if (!current) return;
+    const completed = !current.completed;
     this.todos.update(items =>
-      items.map(item => item.id === id ? { ...item, completed: !item.completed } : item),
+      items.map(item => item.id === id ? { ...item, completed } : item),
     );
+    this.updateOnServer(id, { completed });
   }
 
-  private load(): Todo[] {
-    try {
-      const raw = localStorage.getItem(TODO_KEY);
-      return raw ? (JSON.parse(raw) as Todo[]) : [];
-    } catch {
-      return [];
-    }
+  private updateOnServer(
+    id: string,
+    changes: Partial<{ title: string; completed: boolean; categoryId: string | null }>,
+  ) {
+    this.http.put<TodoDto>(`${this.apiUrl}/${id}`, changes).subscribe({
+      error: (err) => {
+        console.error('Todo aktualisieren fehlgeschlagen', err);
+        this.loadTodos();
+      },
+    });
   }
 }
