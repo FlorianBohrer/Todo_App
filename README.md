@@ -39,7 +39,7 @@ localStorage is not a data store
 The first version stored everything in localStorage. Worked great. Until I logged in from a second browser and my list was empty. Obvious in hindsight: localStorage belongs to the browser, not to the user. So a backend it was. The app migrates old local todos once on first load, by the way, so nothing gets lost.
 
 When "nothing works", it's usually the config
-My most frustrating bug so far: database unreachable, every request a 401, and I spent ages digging through the code. The code was fine. The .env contained a database URL that was still the placeholder from a tutorial, and a secret key I had copied along with the angle brackets from the example. Two lines, two mistakes. These days I check the configuration first and the code second.
+My most frustrating bug so far: database unreachable, every request a 401, and I spent quiet some time digging through the code. The code was fine. The .env contained a database URL that was still the placeholder from a tutorial, and a secret key I had copied along with the angle brackets from the example.
 
 Logged in is not authenticated
 The backend doesn't care that someone is logged in on the frontend. It only trusts the token that gets sent along and verified server-side. I only really understood that separation once I had built the whole chain myself: interceptor on the frontend, guard on the backend, token verification against Clerk, user ID on the request.
