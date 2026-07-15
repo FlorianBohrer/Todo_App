@@ -15,8 +15,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     take(1),
     switchMap((c) => from(c?.session?.getToken() ?? Promise.resolve(null))),
     switchMap((token) => {
-      console.log('[authInterceptor]', req.method, req.url, '| token?', !!token);
-
       const authReq = token
         ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
         : req;
