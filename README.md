@@ -6,7 +6,7 @@
 ![Clerk](https://img.shields.io/badge/Clerk_Auth-6c47ff?logo=clerk&logoColor=white)
 
 
-Todo App
+
 Yes, another todo app. But this one has actually a purpose: I didn't want to click through the hundredth tutorial, 
 I wanted to go through a real stack once, end to end. From the click in the browser to the row in the database, with login, my own API, and all the trouble in between.
 
