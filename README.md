@@ -16,6 +16,7 @@ The backend lives in its own repo: [myTodoApi](https://github.com/FlorianBohrer/
 - Login with Clerk, every user only sees their own todos
 - Create todos, check them off, sort them via drag & drop, delete them
 - Custom categories with color and icon, stored per user
+- Mark todos and folders as favorites; favorite folders show up as quick-access tiles above the list
 - Filter by status and category, plus a small stats bar
 - Everything is stored in Postgres (Neon), not in localStorage anymore
 

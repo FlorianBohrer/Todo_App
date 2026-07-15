@@ -43,9 +43,23 @@
           <span [class]="textClass(label.color)">●</span>
           <span [class]="'font-semibold ' + textClass(label.color)">{{ label.name }}</span>
 
+          <!-- Favoriten-Stern: sichtbar wenn aktiv, sonst bei Hover -->
+          <button type="button"
+                  class="ml-auto text-lg leading-none transition hover:scale-110"
+                  [class]="label.isFavorite
+                    ? 'text-amber-400'
+                    : 'opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-300'"
+                  (click)="toggleFavorite(label.id, $event)"
+                  [attr.aria-pressed]="label.isFavorite"
+                  [attr.aria-label]="label.isFavorite
+                    ? 'Folder aus Favoriten entfernen'
+                    : 'Folder als Favorit markieren'">
+            {{ label.isFavorite ? '★' : '☆' }}
+          </button>
+
           @if (confirmDeleteId() === label.id) {
             <!-- Rückfrage -->
-            <div class="ml-auto flex items-center gap-2">
+            <div class="flex items-center gap-2">
               <span class="text-xs text-zinc-300">Löschen?</span>
               <button type="button" class="text-xs text-rose-400 hover:text-rose-300"
                       (click)="confirmDelete(label.id, $event)">Ja</button>
@@ -55,7 +69,7 @@
           } @else {
             <!-- ✕ erscheint bei Hover -->
             <button type="button"
-                    class="ml-auto opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-400 transition"
+                    class="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-400 transition"
                     (click)="askDelete(label.id, $event)"
                     aria-label="Kategorie löschen">✕</button>
           }

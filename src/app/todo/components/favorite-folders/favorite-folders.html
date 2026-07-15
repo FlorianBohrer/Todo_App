@@ -1,0 +1,20 @@
+@if (favorites().length > 0) {
+  <section class="mx-auto mb-4 w-full max-w-3xl" aria-label="Favorite folders">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      @for (label of favorites(); track label.id) {
+        <button
+          type="button"
+          class="flex items-center gap-3 rounded-2xl p-4 text-left transition hover:scale-[1.02]"
+          [class]="bgClass(label.color)"
+          [class.ring-2]="activeLabelId() === label.id"
+          [class.ring-emerald-500]="activeLabelId() === label.id"
+          [attr.aria-pressed]="activeLabelId() === label.id"
+          (click)="select(label.id)">
+          <span [class]="textClass(label.color)">●</span>
+          <span [class]="'flex-1 truncate font-semibold ' + textClass(label.color)">{{ label.name }}</span>
+          <span class="text-amber-400" aria-hidden="true">★</span>
+        </button>
+      }
+    </div>
+  </section>
+}

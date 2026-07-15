@@ -29,6 +29,11 @@ export class CategoriesOverlay {
     this.labelService.selectLabel(id);
   }
 
+  toggleFavorite(id: string, event: Event) {
+    event.stopPropagation(); // verhindert, dass select(id) feuert
+    this.labelService.toggleFavorite(id);
+  }
+
   bgClass(color: string): string {
     const map: Record<string, string> = {
       violet:  'bg-violet-600/15',
