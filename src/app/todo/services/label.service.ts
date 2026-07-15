@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
 import { distinctUntilChanged, map } from 'rxjs';
@@ -9,6 +9,7 @@ export interface Label {
   name: string;
   color: string;
   icon: string;
+  isFavorite: boolean;
 }
 
 // So liefert das Backend eine Kategorie (zusätzliche Felder ignorieren wir).
@@ -17,6 +18,7 @@ interface CategoryDto {
   name: string;
   color: string;
   icon: string;
+  isFavorite: boolean;
 }
 
 interface CategoryListResponse {
@@ -40,6 +42,11 @@ export class LabelService {
   readonly labels = signal<Label[]>([]);
   readonly isOverlayOpen = signal(false);
   readonly activeLabelId = signal<string | null>(null); // null = alle
+
+  /** Favorisierte Folder — werden als Kacheln über der Todo-Liste angezeigt. */
+  readonly favoriteLabels = computed(() =>
+    this.labels().filter((l) => l.isFavorite),
+  );
 
   constructor() {
     // Erst laden, wenn ein Nutzer eingeloggt ist — vorher liefe der Request
@@ -79,7 +86,13 @@ export class LabelService {
   }
 
   private toLabel(c: CategoryDto): Label {
-    return { id: c.id, name: c.name, color: c.color, icon: c.icon };
+    return {
+      id: c.id,
+      name: c.name,
+      color: c.color,
+      icon: c.icon,
+      isFavorite: c.isFavorite ?? false,
+    };
   }
 
   // ---- Schreiben ----
@@ -91,6 +104,26 @@ export class LabelService {
       .subscribe({
         next: (c) => this.labels.update((list) => [...list, this.toLabel(c)]),
         error: (err) => console.error('Kategorie anlegen fehlgeschlagen', err),
+      });
+  }
+
+  /** Favorit umschalten — sofort lokal anzeigen, bei Fehler Serverstand laden. */
+  toggleFavorite(id: string) {
+    const current = this.labels().find((l) => l.id === id);
+    if (!current) return;
+    const isFavorite = !current.isFavorite;
+
+    this.labels.update((list) =>
+      list.map((l) => (l.id === id ? { ...l, isFavorite } : l)),
+    );
+
+    this.http
+      .put<CategoryDto>(`${this.apiUrl}/${id}`, { isFavorite })
+      .subscribe({
+        error: (err) => {
+          console.error('Folder-Favorit speichern fehlgeschlagen', err);
+          this.loadLabels();
+        },
       });
   }
 
