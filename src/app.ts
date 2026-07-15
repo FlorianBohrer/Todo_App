@@ -1,7 +1,7 @@
 // src/app.ts
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, take } from 'rxjs';
 import { ClerkService } from 'ngx-clerk';
 import { LucideAngularModule, FolderDown, ArrowDown, Plus } from 'lucide-angular';
 import { Header } from './app/todo/components/header/header';
@@ -34,12 +34,27 @@ export class App {
   private readonly labelService = inject(LabelService);
   protected readonly clerk = inject(ClerkService);
 
+  /** true, wenn das Clerk-Script nicht geladen werden konnte (Netzwerk/Limit). */
+  protected readonly clerkFailed = signal(false);
+
   constructor() {
     this.clerk.__init({ publishableKey: 'pk_test_d2lzZS1za3lsYXJrLTY3LmNsZXJrLmFjY291bnRzLmRldiQ' });
+
+    // Schlägt der Script-Load fehl, gibt es keinen Retry — ohne diesen Hinweis
+    // bliebe nur ein toter Anmelden-Button ohne jede Fehlermeldung übrig.
+    const timeout = setTimeout(() => this.clerkFailed.set(true), 8000);
+    this.clerk.clerk$.pipe(take(1)).subscribe(() => {
+      clearTimeout(timeout);
+      this.clerkFailed.set(false);
+    });
   }
 
   signIn() {
     this.clerk.openSignIn();
+  }
+
+  reloadPage() {
+    location.reload();
   }
 
   async signOut() {
