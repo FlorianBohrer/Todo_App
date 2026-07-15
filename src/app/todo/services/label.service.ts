@@ -1,4 +1,6 @@
-import { effect, Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/enviroment'
 
 export interface Label {
   id: string;
@@ -7,37 +9,87 @@ export interface Label {
   icon: string;
 }
 
-const LABELS_KEY = 'labels';
+// So liefert das Backend eine Kategorie (zusätzliche Felder ignorieren wir).
+interface CategoryDto {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+}
 
-const DEFAULT_LABELS: Label[] = [
-  { id: 'work',     name: 'Work',     color: 'rose',    icon: 'briefcase' },
-  { id: 'freetime', name: 'Freetime', color: 'emerald', icon: 'mountain' },
-  { id: 'holiday',  name: 'Holiday',  color: 'orange',  icon: 'sun' },
-  { id: 'other',    name: 'Other',    color: 'violet',  icon: 'question-mark-circle' },
+interface CategoryListResponse {
+  categories: CategoryDto[];
+  total: number;
+}
+
+const DEFAULT_LABELS: Array<{ name: string; color: string; icon: string }> = [
+  { name: 'Work',     color: 'rose',    icon: 'briefcase' },
+  { name: 'Freetime', color: 'emerald', icon: 'mountain' },
+  { name: 'Holiday',  color: 'orange',  icon: 'sun' },
+  { name: 'Other',    color: 'violet',  icon: 'question-mark-circle' },
 ];
 
 @Injectable({ providedIn: 'root' })
 export class LabelService {
-  // TEMPORÄR: localStorage-Cache. Wird in Schritt 3 durch Backend-Calls ersetzt.
-  readonly labels = signal<Label[]>(this.load());
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/category`;
+
+  readonly labels = signal<Label[]>([]);
+  readonly isOverlayOpen = signal(false);
+  readonly activeLabelId = signal<string | null>(null); // null = alle
 
   constructor() {
-    effect(() => {
-      localStorage.setItem(LABELS_KEY, JSON.stringify(this.labels()));
+    this.loadLabels();
+  }
+
+  // ---- Laden ----
+  private loadLabels() {
+    this.http.get<CategoryListResponse>(this.apiUrl).subscribe({
+      next: (res) => {
+        const labels = res.categories.map((c) => this.toLabel(c));
+        if (labels.length === 0) {
+          this.seedDefaults(); // neuer Account -> Standard-Kategorien anlegen
+        } else {
+          this.labels.set(labels);
+        }
+      },
+      error: (err) => console.error('Kategorien laden fehlgeschlagen', err),
     });
   }
 
-  private load(): Label[] {
-    try {
-      const raw = localStorage.getItem(LABELS_KEY);
-      if (!raw) return DEFAULT_LABELS;
-      const parsed = JSON.parse(raw) as Label[];
-      return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_LABELS;
-    } catch {
-      return DEFAULT_LABELS;
-    }
+  private seedDefaults() {
+    DEFAULT_LABELS.forEach((d) => this.addLabel(d.name, d.color, d.icon));
   }
 
+  private toLabel(c: CategoryDto): Label {
+    return { id: c.id, name: c.name, color: c.color, icon: c.icon };
+  }
+
+  // ---- Schreiben ----
+  addLabel(name: string, color: string, icon: string = 'tag') {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    this.http
+      .post<CategoryDto>(this.apiUrl, { name: trimmed, color, icon })
+      .subscribe({
+        next: (c) => this.labels.update((list) => [...list, this.toLabel(c)]),
+        error: (err) => console.error('Kategorie anlegen fehlgeschlagen', err),
+      });
+  }
+
+  removeLabel(id: string) {
+    this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
+      next: () => {
+        this.labels.update((list) => list.filter((l) => l.id !== id));
+        if (this.activeLabelId() === id) {
+          this.activeLabelId.set(null);
+        }
+      },
+      error: (err) => console.error('Kategorie löschen fehlgeschlagen', err),
+    });
+  }
+
+  // ---- UI-State / Helfer (unverändert) ----
   private readonly colorToBorder: Record<string, string> = {
     violet:  'border-violet-500',
     emerald: 'border-emerald-500',
@@ -55,30 +107,11 @@ export class LabelService {
     return this.colorToBorder[label?.color ?? ''] ?? 'border-zinc-600';
   }
 
-  readonly isOverlayOpen = signal(false);
-  readonly activeLabelId = signal<string | null>(null); // null = alle
-
   openOverlay()  { this.isOverlayOpen.set(true); }
   closeOverlay() { this.isOverlayOpen.set(false); }
 
   selectLabel(id: string | null) {
     this.activeLabelId.set(id);
     this.closeOverlay();
-  }
-
-  addLabel(name: string, color: string) {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    this.labels.update((list) => [
-      ...list,
-      { id: crypto.randomUUID(), name: trimmed, color, icon: 'tag' },
-    ]);
-  }
-
-  removeLabel(id: string) {
-    this.labels.update((list) => list.filter((l) => l.id !== id));
-    if (this.activeLabelId() === id) {
-      this.activeLabelId.set(null);
-    }
   }
 }

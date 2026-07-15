@@ -1,8 +1,8 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { ClerkService } from 'ngx-clerk';
-import { from, of, switchMap, take } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { from, switchMap, take } from 'rxjs';
+import { environment } from '../../environments/enviroment';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith(environment.apiUrl)) {
@@ -11,10 +11,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   const clerk = inject(ClerkService);
 
-  return clerk.session$.pipe(
+  return clerk.clerk$.pipe(
     take(1),
-    switchMap((session) => (session ? from(session.getToken()) : of(null))),
+    switchMap((c) => from(c?.session?.getToken() ?? Promise.resolve(null))),
     switchMap((token) => {
+      console.log('[authInterceptor]', req.method, req.url, '| token?', !!token);
+
       const authReq = token
         ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
         : req;
