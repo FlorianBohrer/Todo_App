@@ -1,5 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { ClerkService } from 'ngx-clerk';
+import { distinctUntilChanged, map } from 'rxjs';
 import { environment } from '../../../environments/enviroment'
 
 export interface Label {
@@ -32,6 +34,7 @@ const DEFAULT_LABELS: Array<{ name: string; color: string; icon: string }> = [
 @Injectable({ providedIn: 'root' })
 export class LabelService {
   private readonly http = inject(HttpClient);
+  private readonly clerk = inject(ClerkService);
   private readonly apiUrl = `${environment.apiUrl}/category`;
 
   readonly labels = signal<Label[]>([]);
@@ -39,7 +42,21 @@ export class LabelService {
   readonly activeLabelId = signal<string | null>(null); // null = alle
 
   constructor() {
-    this.loadLabels();
+    // Erst laden, wenn ein Nutzer eingeloggt ist — vorher liefe der Request
+    // ohne Token ins Leere (401). Bei Logout/Userwechsel Zustand zurücksetzen.
+    this.clerk.user$
+      .pipe(
+        map((user) => user?.id ?? null),
+        distinctUntilChanged(),
+      )
+      .subscribe((userId) => {
+        if (userId) {
+          this.loadLabels();
+        } else {
+          this.labels.set([]);
+          this.activeLabelId.set(null);
+        }
+      });
   }
 
   // ---- Laden ----
