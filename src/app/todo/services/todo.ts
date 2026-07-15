@@ -1,5 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { ClerkService } from 'ngx-clerk';
+import { distinctUntilChanged, map } from 'rxjs';
 import { environment } from '../../../environments/enviroment';
 import { Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
@@ -67,16 +69,31 @@ export class TodoService {
     };
   });
 
+  private readonly clerk = inject(ClerkService);
+
   constructor() {
-    // Erst den Serverstand laden, dann evtl. vorhandene Alt-Daten aus dem
-    // localStorage einmalig übernehmen.
-    this.http.get<TodoListResponse>(this.apiUrl).subscribe({
-      next: (res) => {
-        this.todos.set(res.todo.map((t) => this.toTodo(t)));
-        this.importLegacyTodos();
-      },
-      error: (err) => console.error('Todos laden fehlgeschlagen', err),
-    });
+    // Todos erst laden, wenn ein Nutzer eingeloggt ist. Bei Logout/Userwechsel
+    // den lokalen Zustand leeren, damit keine fremden Todos stehen bleiben.
+    // Nach dem ersten Laden werden evtl. vorhandene Alt-Daten aus dem
+    // localStorage einmalig übernommen.
+    this.clerk.user$
+      .pipe(
+        map((user) => user?.id ?? null),
+        distinctUntilChanged(),
+      )
+      .subscribe((userId) => {
+        if (!userId) {
+          this.todos.set([]);
+          return;
+        }
+        this.http.get<TodoListResponse>(this.apiUrl).subscribe({
+          next: (res) => {
+            this.todos.set(res.todo.map((t) => this.toTodo(t)));
+            this.importLegacyTodos();
+          },
+          error: (err) => console.error('Todos laden fehlgeschlagen', err),
+        });
+      });
   }
 
   // ---- Laden ----

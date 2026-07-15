@@ -47,12 +47,6 @@ export class App {
     await clerk.signOut();
   }
 
-  async logToken() {
-    const session = await firstValueFrom(this.clerk.session$);
-    const token = await session?.getToken();
-    console.log(token);
-  }
-
   protected readonly title = computed(() => {
     const id = this.labelService.activeLabelId();
     if (id === null) return 'All Tasks';
