@@ -25,7 +25,15 @@
             <span [class]="'min-w-0 flex-1 truncate font-semibold ' + textClass(label.color)">
               {{ label.name }}
             </span>
-            <span class="flex-none text-amber-400" aria-hidden="true">★</span>
+            <span
+              class="flex-none rounded-full p-1 text-amber-400 transition hover:scale-110"
+              role="button"
+              tabindex="0"
+              aria-label="Folder aus Favoriten entfernen"
+              (click)="toggleFavorite(label.id, $event)"
+              (keydown.enter)="toggleFavorite(label.id, $event)">
+              <lucide-icon [img]="StarIcon" class="h-4 w-4 fill-amber-400"></lucide-icon>
+            </span>
           </div>
 
           <div class="w-full">
