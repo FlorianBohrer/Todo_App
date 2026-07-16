@@ -32,16 +32,16 @@
             class="h-12 rounded-r-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
           </div>
 
+          <!-- Favoriten-Stern -->
           <button
             type="button"
-            class="rounded-full p-2 text-zinc-500 transition hover:text-amber-400"
+            class="flex-shrink-0 rounded-full p-1 text-zinc-500 transition hover:text-amber-400"
             [class.text-amber-400]="todo.isFavorite"
             [attr.aria-pressed]="todo.isFavorite"
             [attr.aria-label]="todo.isFavorite
               ? 'Remove from favorites'
               : 'Add to favorites'"
             (click)="toggleFavorite(todo.id)">
-
             <lucide-icon
               [img]="StarIcon"
               class="h-5 w-5"
