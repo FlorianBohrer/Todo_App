@@ -1,15 +1,22 @@
 import { LabelService } from '../../services/label.service';
 import { Component, inject, HostListener, signal } from '@angular/core';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
-
+import {
+  LucideAngularModule,
+  Star,
+} from 'lucide-angular';
 
 @Component({
   selector: 'app-categories-overlay',
+  imports: [LucideAngularModule],
   templateUrl: './categories-overlay.html',
 })
 export class CategoriesOverlay {
   private readonly labelService = inject(LabelService);
   private readonly todoService = inject(TodoService);
+
+  protected readonly StarIcon = Star;
+  protected readonly favoritesFull = this.labelService.favoritesFull;
 
   protected readonly labels        = this.labelService.labels;
   protected readonly isOpen        = this.labelService.isOverlayOpen;

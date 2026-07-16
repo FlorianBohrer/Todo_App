@@ -5,18 +5,14 @@ import {
   Briefcase,
   Mountain,
   Sun,
+  Star,
   CircleQuestionMark,
   Tag,
 } from 'lucide-angular';
 import { LabelService } from '../../services/label.service';
 import { TodoService } from '../../services/todo';
 
-/**
- * Kacheln der favorisierten Folder — werden in jeder Ansicht über der
- * Todo-Liste angezeigt, inklusive Fortschrittsbalken des Folders.
- * Klick wählt den Folder aus, erneuter Klick hebt die Auswahl wieder
- * auf (zurück zu "All Tasks").
- */
+
 @Component({
   selector: 'app-favorite-folders',
   imports: [LucideAngularModule],
@@ -28,6 +24,12 @@ export class FavoriteFolders {
 
   protected readonly favorites = this.labelService.favoriteLabels;
   protected readonly activeLabelId = this.labelService.activeLabelId;
+protected readonly StarIcon = Star;
+
+toggleFavorite(id: string, event: Event) {
+  event.stopPropagation();
+  this.labelService.toggleFavorite(id);
+}
 
   select(id: string) {
     this.labelService.selectLabel(this.activeLabelId() === id ? null : id);

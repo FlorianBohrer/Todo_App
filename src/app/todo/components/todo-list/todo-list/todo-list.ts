@@ -1,10 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder, CdkDragDrop } from '@angular/cdk/drag-drop';
-import { LucideAngularModule, ChevronDown, GripVertical, Star } from 'lucide-angular';
 import { TodoService } from '../../../services/todo';
 import { Autosize } from '../../../../directives/autosize.drectives';
 import { LabelService } from '../../../services/label.service';
+import {
+  LucideAngularModule,
+  ChevronDown,
+  GripVertical,
+  Star,
+} from 'lucide-angular';
 
 
 @Component({

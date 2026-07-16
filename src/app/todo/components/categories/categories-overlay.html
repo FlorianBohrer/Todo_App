@@ -43,18 +43,27 @@
           <span [class]="textClass(label.color)">●</span>
           <span [class]="'font-semibold ' + textClass(label.color)">{{ label.name }}</span>
 
-          <!-- Favoriten-Stern: sichtbar wenn aktiv, sonst bei Hover -->
+          <!-- Favoriten-Stern: sichtbar wenn aktiv, sonst bei Hover.
+               Sind alle drei Plätze belegt, sind weitere Sterne gesperrt. -->
           <button type="button"
-                  class="ml-auto text-lg leading-none transition hover:scale-110"
+                  class="ml-auto rounded-full p-1 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
                   [class]="label.isFavorite
                     ? 'text-amber-400'
                     : 'opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-300'"
+                  [disabled]="!label.isFavorite && favoritesFull()"
+                  [attr.title]="!label.isFavorite && favoritesFull()
+                    ? 'Maximal drei Favoriten — entferne zuerst einen Stern'
+                    : null"
                   (click)="toggleFavorite(label.id, $event)"
                   [attr.aria-pressed]="label.isFavorite"
                   [attr.aria-label]="label.isFavorite
                     ? 'Folder aus Favoriten entfernen'
                     : 'Folder als Favorit markieren'">
-            {{ label.isFavorite ? '★' : '☆' }}
+            <lucide-icon
+              [img]="StarIcon"
+              class="h-4 w-4"
+              [class.fill-amber-400]="label.isFavorite">
+            </lucide-icon>
           </button>
 
           @if (confirmDeleteId() === label.id) {
