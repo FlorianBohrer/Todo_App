@@ -92,7 +92,8 @@
         #newCat
         type="text"
         placeholder="Neue Kategorie…"
-        class="input flex-1" />
+        class="input flex-1"
+        (keydown.enter)="$event.preventDefault(); add(newCat.value); newCat.value = ''" />
 
       <div class="flex items-center gap-1.5">
         @for (c of palette; track c) {
