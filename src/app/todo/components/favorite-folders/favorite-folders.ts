@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -17,6 +17,7 @@ import { TodoService } from '../../services/todo';
   selector: 'app-favorite-folders',
   imports: [LucideAngularModule],
   templateUrl: './favorite-folders.html',
+  styleUrl: './favorite-folders.scss',
 })
 export class FavoriteFolders {
   private readonly labelService = inject(LabelService);
@@ -25,6 +26,44 @@ export class FavoriteFolders {
   protected readonly favorites = this.labelService.favoriteLabels;
   protected readonly activeLabelId = this.labelService.activeLabelId;
 protected readonly StarIcon = Star;
+
+  /** Folder, deren 100%-Animation gerade läuft. */
+  private readonly celebrating = signal<ReadonlySet<string>>(new Set());
+
+  /** Letzter bekannter Stand pro Folder, um den Übergang auf 100% zu erkennen. */
+  private readonly lastCompleted = new Map<string, boolean>();
+
+  constructor() {
+    // Feuert nur beim ÜBERGANG auf 100% — nicht für Folder, die beim Laden
+    // schon fertig sind, und nicht in Dauerschleife, solange 100% bestehen.
+    effect(() => {
+      for (const label of this.favorites()) {
+        const p = this.todoService.progressFor(label.id);
+        const isComplete = p.total > 0 && p.completed === p.total;
+        const wasComplete = this.lastCompleted.get(label.id);
+
+        if (wasComplete === false && isComplete) {
+          this.celebrate(label.id);
+        }
+        this.lastCompleted.set(label.id, isComplete);
+      }
+    });
+  }
+
+  private celebrate(id: string) {
+    this.celebrating.update((set) => new Set(set).add(id));
+    setTimeout(() => {
+      this.celebrating.update((set) => {
+        const next = new Set(set);
+        next.delete(id);
+        return next;
+      });
+    }, 1800);
+  }
+
+  isCelebrating(id: string): boolean {
+    return this.celebrating().has(id);
+  }
 
 toggleFavorite(id: string, event: Event) {
   event.stopPropagation();

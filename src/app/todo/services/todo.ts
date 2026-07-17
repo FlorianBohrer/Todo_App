@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
 import { distinctUntilChanged, map } from 'rxjs';
@@ -23,7 +23,12 @@ interface TodoDto {
   isFavorite: boolean;
   categoryId: string | null;
   createdAt: string;
+  timerStartedAt: string | null;
+  timerDurationSeconds: number | null;
 }
+
+/** Auswählbare Längen für einen Zeitblock (Minuten). */
+export const TIMER_PRESETS_MINUTES = [5, 15, 25, 50] as const;
 
 interface TodoListResponse {
   todo: TodoDto[];
@@ -89,6 +94,12 @@ export class TodoService {
   private readonly clerk = inject(ClerkService);
 
   constructor() {
+    // Ticker starten/stoppen, sobald sich die Timer-Lage ändert.
+    effect(() => {
+      this.todos();
+      this.ensureTicking();
+    });
+
     // Todos erst laden, wenn ein Nutzer eingeloggt ist. Bei Logout/Userwechsel
     // den lokalen Zustand leeren, damit keine fremden Todos stehen bleiben.
     // Nach dem ersten Laden werden evtl. vorhandene Alt-Daten aus dem
@@ -110,6 +121,79 @@ export class TodoService {
           },
           error: (err) => console.error('Todos laden fehlgeschlagen', err),
         });
+      });
+  }
+
+  // ---- Zeitblock (Timer) ----
+  // Der Server speichert Startzeit + Dauer; die Restzeit rechnen wir hier aus.
+  // `now` tickt nur, solange irgendwo ein Block läuft.
+  private readonly now = signal(Date.now());
+  private tickHandle: ReturnType<typeof setInterval> | null = null;
+
+  private ensureTicking() {
+    const anyRunning = this.todos().some((item) => item.timerStartedAt !== null);
+
+    if (anyRunning && this.tickHandle === null) {
+      // Sofort nachziehen: `now` ist stehen geblieben, solange kein Block lief —
+      // sonst zeigt die erste Sekunde eine zu hohe Restzeit an.
+      this.now.set(Date.now());
+      this.tickHandle = setInterval(() => this.now.set(Date.now()), 1000);
+    } else if (!anyRunning && this.tickHandle !== null) {
+      clearInterval(this.tickHandle);
+      this.tickHandle = null;
+    }
+  }
+
+  /** Restsekunden des Zeitblocks. 0 = abgelaufen oder kein Timer aktiv. */
+  remainingSeconds(todo: Todo): number {
+    if (todo.timerStartedAt === null || todo.timerDurationSeconds === null) {
+      return 0;
+    }
+    const elapsedSeconds = (this.now() - todo.timerStartedAt.getTime()) / 1000;
+    return Math.max(0, Math.ceil(todo.timerDurationSeconds - elapsedSeconds));
+  }
+
+  startTimer(id: string, durationSeconds: number) {
+    // Optimistisch mit lokaler Zeit starten, danach die Serverzeit übernehmen.
+    const startedAt = new Date();
+    this.todos.update((items) =>
+      items.map((item) =>
+        item.id === id
+          ? { ...item, timerStartedAt: startedAt, timerDurationSeconds: durationSeconds }
+          : item,
+      ),
+    );
+
+    this.http
+      .patch<TodoDto>(`${this.apiUrl}/${id}/timer`, { durationSeconds })
+      .subscribe({
+        next: (dto) =>
+          this.todos.update((items) =>
+            items.map((item) => (item.id === id ? this.toTodo(dto) : item)),
+          ),
+        error: (err) => {
+          console.error('Zeitblock starten fehlgeschlagen', err);
+          this.loadTodos();
+        },
+      });
+  }
+
+  stopTimer(id: string) {
+    this.todos.update((items) =>
+      items.map((item) =>
+        item.id === id
+          ? { ...item, timerStartedAt: null, timerDurationSeconds: null }
+          : item,
+      ),
+    );
+
+    this.http
+      .patch<TodoDto>(`${this.apiUrl}/${id}/timer`, { durationSeconds: null })
+      .subscribe({
+        error: (err) => {
+          console.error('Zeitblock beenden fehlgeschlagen', err);
+          this.loadTodos();
+        },
       });
   }
 
@@ -197,6 +281,8 @@ export class TodoService {
     isFavorite: dto.isFavorite ?? false,
     labelId: dto.categoryId,
     createdAt: new Date(dto.createdAt),
+    timerStartedAt: dto.timerStartedAt ? new Date(dto.timerStartedAt) : null,
+    timerDurationSeconds: dto.timerDurationSeconds ?? null,
   };
 }
 

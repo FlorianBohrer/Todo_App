@@ -169,6 +169,33 @@ export class LabelService {
       });
   }
 
+  /**
+   * Verschiebt einen Folder in der Übersicht. Die Indizes beziehen sich auf die
+   * vollständige, unsortierte Liste (beim Suchen ist Sortieren deaktiviert).
+   */
+  reorderLabels(previousIndex: number, currentIndex: number) {
+    if (previousIndex === currentIndex) return;
+
+    const list = [...this.labels()];
+    if (
+      previousIndex < 0 || currentIndex < 0 ||
+      previousIndex >= list.length || currentIndex >= list.length
+    ) return;
+
+    const [moved] = list.splice(previousIndex, 1);
+    list.splice(currentIndex, 0, moved);
+    this.labels.set(list);
+
+    this.http
+      .put<void>(`${this.apiUrl}/reorder`, { ids: list.map((l) => l.id) })
+      .subscribe({
+        error: (err) => {
+          console.error('Folder-Reihenfolge speichern fehlgeschlagen', err);
+          this.loadLabels();
+        },
+      });
+  }
+
   removeLabel(id: string) {
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       next: () => {

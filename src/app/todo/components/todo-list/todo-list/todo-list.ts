@@ -1,7 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder, CdkDragDrop } from '@angular/cdk/drag-drop';
-import { TodoService } from '../../../services/todo';
+import { TodoService, TIMER_PRESETS_MINUTES } from '../../../services/todo';
+import { Todo } from '../../../model/todo.model';
 import { Autosize } from '../../../../directives/autosize.drectives';
 import { LabelService } from '../../../services/label.service';
 import {
@@ -9,6 +10,7 @@ import {
   ChevronDown,
   GripVertical,
   Star,
+  Timer,
 } from 'lucide-angular';
 
 
@@ -29,9 +31,14 @@ export class TodoList {
   protected readonly ChevronDownIcon = ChevronDown;
   protected readonly GripIcon = GripVertical;
   protected readonly StarIcon = Star;
+  protected readonly TimerIcon = Timer;
+  protected readonly timerPresets = TIMER_PRESETS_MINUTES;
 
   // Welches Todo-Menü ist gerade offen (null = keins)
   protected readonly openMenuId = signal<string | null>(null);
+
+  // Welches Timer-Menü ist gerade offen (null = keins)
+  protected readonly openTimerMenuId = signal<string | null>(null);
 
   // Menü rechtsbündig unter dem Trigger, nach oben als Fallback
   protected readonly overlayPositions: ConnectedPosition[] = [
@@ -92,5 +99,39 @@ export class TodoList {
 
   drop(event: CdkDragDrop<unknown>){
     this.todoService.reorder(event.previousIndex, event.currentIndex);
+  }
+
+  // ---- Zeitblock ----
+  toggleTimerMenu(id: string) {
+    this.openTimerMenuId.update(cur => (cur === id ? null : id));
+  }
+
+  closeTimerMenu() {
+    this.openTimerMenuId.set(null);
+  }
+
+  startTimer(id: string, minutes: number) {
+    this.todoService.startTimer(id, minutes * 60);
+    this.closeTimerMenu();
+  }
+
+  stopTimer(id: string) {
+    this.todoService.stopTimer(id);
+  }
+
+  hasTimer(todo: Todo): boolean {
+    return todo.timerStartedAt !== null;
+  }
+
+  isTimerDone(todo: Todo): boolean {
+    return this.hasTimer(todo) && this.todoService.remainingSeconds(todo) === 0;
+  }
+
+  /** Restzeit als mm:ss. */
+  remainingLabel(todo: Todo): string {
+    const total = this.todoService.remainingSeconds(todo);
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
   }
 }

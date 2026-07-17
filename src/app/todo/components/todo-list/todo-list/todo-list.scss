@@ -22,3 +22,26 @@
 .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
+
+// --- Zeitblock ---
+
+// Abgelaufener Block atmet ruhig, bis man ihn wegklickt.
+.timer-chip.timer-done {
+  animation: timer-done-pulse 2s ease-in-out infinite;
+}
+
+@keyframes timer-done-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-chip.timer-done {
+    animation: none;
+  }
+}

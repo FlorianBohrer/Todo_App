@@ -81,6 +81,62 @@
             ></textarea>
           </label>
 
+          <!-- Zeitblock: läuft -> Restzeit + Stopp, sonst -> Presets wählen -->
+          @if (hasTimer(todo)) {
+            <button
+              type="button"
+              class="timer-chip flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1
+                     font-mono text-xs tabular-nums transition
+                     focus:outline-none focus:ring-1 focus:ring-zinc-100"
+              [class]="isTimerDone(todo)
+                ? 'border-emerald-500 text-emerald-300 timer-done'
+                : 'border-indigo-500/60 text-indigo-300 hover:border-indigo-400'"
+              (click)="stopTimer(todo.id)"
+              [attr.aria-label]="isTimerDone(todo)
+                ? 'Zeitblock abgeschlossen, zum Ausblenden klicken'
+                : 'Zeitblock abbrechen'">
+              <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5"></lucide-icon>
+              <span>{{ isTimerDone(todo) ? 'fertig' : remainingLabel(todo) }}</span>
+            </button>
+          } @else {
+            <button
+              type="button"
+              cdkOverlayOrigin #timerTrigger="cdkOverlayOrigin"
+              class="flex flex-shrink-0 items-center rounded-full border border-transparent p-1.5
+                     text-muted/60 transition hover:border-indigo-500/60 hover:text-indigo-300
+                     focus:outline-none focus:ring-1 focus:ring-zinc-100"
+              (click)="toggleTimerMenu(todo.id)"
+              aria-haspopup="listbox"
+              [attr.aria-expanded]="openTimerMenuId() === todo.id"
+              aria-label="Zeitblock starten">
+              <lucide-icon [img]="TimerIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+
+            <ng-template
+              cdkConnectedOverlay
+              [cdkConnectedOverlayOrigin]="timerTrigger"
+              [cdkConnectedOverlayOpen]="openTimerMenuId() === todo.id"
+              [cdkConnectedOverlayPositions]="overlayPositions"
+              [cdkConnectedOverlayHasBackdrop]="true"
+              cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+              (backdropClick)="closeTimerMenu()"
+              (overlayKeydown)="$event.key === 'Escape' && closeTimerMenu()">
+              <div
+                role="listbox"
+                class="w-36 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+                @for (minutes of timerPresets; track minutes) {
+                  <button
+                    type="button" role="option" [attr.aria-selected]="false"
+                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                    (click)="startTimer(todo.id, minutes)">
+                    <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5 text-indigo-300"></lucide-icon>
+                    <span>{{ minutes }} Minuten</span>
+                  </button>
+                }
+              </div>
+            </ng-template>
+          }
+
           <!-- Gestylter Trigger -->
           <button
             type="button"
