@@ -24,6 +24,7 @@
           class="group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4
                  transition-colors hover:bg-panel/50"
                  [class]="labelService.borderClassFor(todo.labelId)"
+                 [class.todo-expanded-row]="isExpanded(todo.id)"
                  [class.opacity-70]="todo.completed">
 
           <!-- Platzhalter beim Ziehen -->
@@ -70,16 +71,34 @@
               (change)="toggleTodo(todo.id)"
             />
             <textarea
+              #todoText
               appAutosize
               rows = "1"
               class="flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words
                      focus:outline-none focus:ring-zinc-100"
+              [class.todo-collapsed]="canExpand(todo.title) && !isExpanded(todo.id)"
               [value]="todo.title"
               [class.line-through]="todo.completed"
               [class.text-zinc-400]="todo.completed"
               (keyup.enter)="$event.preventDefault();renameTodo (todo.id, $any($event.target).value); $any($event.target).blur()"
             ></textarea>
           </label>
+
+          <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
+          @if (canExpand(todo.title)) {
+            <button
+              type="button"
+              class="flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
+                     focus:outline-none focus:ring-1 focus:ring-zinc-100"
+              [class.text-text]="isExpanded(todo.id)"
+              (click)="toggleExpanded(todo.id, todoText)"
+              [attr.aria-expanded]="isExpanded(todo.id)"
+              [attr.aria-label]="isExpanded(todo.id)
+                ? 'Todo einklappen'
+                : 'Todo aufklappen, ganzen Text lesen'">
+              <lucide-icon [img]="ExpandIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+          }
 
           <!-- Zeitblock: läuft -> Restzeit + Stopp, sonst -> Presets wählen -->
           @if (hasTimer(todo)) {

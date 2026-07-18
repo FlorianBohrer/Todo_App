@@ -9,6 +9,7 @@ import { LabelService } from '../../../services/label.service';
 import {
   LucideAngularModule,
   ChevronDown,
+  ChevronsUpDown,
   GripVertical,
   Star,
   Timer,
@@ -40,6 +41,45 @@ export class TodoList {
 
   // Welches Timer-Menü ist gerade offen (null = keins)
   protected readonly openTimerMenuId = signal<string | null>(null);
+
+  protected readonly ExpandIcon = ChevronsUpDown;
+
+  // Aufgeklappte Todos: voller Text statt einer geklemmten Zeile.
+  private readonly expandedIds = signal<ReadonlySet<string>>(new Set());
+
+  /** Ab dieser Länge lohnt sich Aufklappen (mobil wrappt Text früh). */
+  private readonly EXPAND_THRESHOLD = 40;
+
+  canExpand(title: string): boolean {
+    return title.length > this.EXPAND_THRESHOLD || title.includes('\n');
+  }
+
+  isExpanded(id: string): boolean {
+    return this.expandedIds().has(id);
+  }
+
+  toggleExpanded(id: string, textarea?: HTMLTextAreaElement) {
+    const expanding = !this.isExpanded(id);
+
+    this.expandedIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+
+    // Höhe frisch messen: der Wert der Autosize-Direktive stammt vom Init und
+    // kann veraltet sein (z.B. gemessen, bevor das Layout stand).
+    if (expanding && textarea) {
+      requestAnimationFrame(() => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+      });
+    }
+  }
 
   // Menü rechtsbündig unter dem Trigger, nach oben als Fallback
   protected readonly overlayPositions: ConnectedPosition[] = [

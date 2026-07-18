@@ -23,6 +23,41 @@
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
+// --- Aufklappbare Todos ---
+
+// Zugeklappt: eine Zeile, Rest abgeschnitten. Die Autosize-Direktive setzt die
+// volle Höhe inline — max-height klemmt nur die Anzeige, beim Aufklappen fällt
+// die Klammer weg und die volle Höhe wird wieder sichtbar.
+textarea.todo-collapsed {
+  max-height: 1.75rem;
+}
+
+// Aufgeklappt bekommt der Text eine eigene, volle Zeile unter den Buttons.
+li.todo-expanded-row {
+  flex-wrap: wrap;
+}
+
+li.todo-expanded-row label {
+  order: 10;
+  flex-basis: 100%;
+}
+
+// Mobil ist die Zeile mit allen Buttons so voll, dass für den Text 0px Breite
+// übrig bleiben (er war schlicht unsichtbar). Darum bekommt der Text auf
+// schmalen Screens IMMER die volle Breite unter den Bedienelementen —
+// zugeklappt eine Zeile, aufgeklappt der ganze Inhalt.
+@media (max-width: 639px) {
+  ul li {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+
+  ul li label {
+    order: 10;
+    flex-basis: 100%;
+  }
+}
+
 // --- Zeitblock ---
 
 // Abgelaufener Block atmet ruhig, bis man ihn wegklickt.
