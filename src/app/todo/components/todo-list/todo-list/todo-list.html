@@ -33,10 +33,10 @@
             class="h-12 rounded-r-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
           </div>
 
-          <!-- Favoriten-Stern -->
+          <!-- Favoriten-Stern (mobil im 3-Punkte-Menü) -->
           <button
             type="button"
-            class="flex-shrink-0 rounded-full p-1 text-zinc-500 transition hover:text-amber-400"
+            class="hidden sm:block flex-shrink-0 rounded-full p-1 text-zinc-500 transition hover:text-amber-400"
             [class.text-amber-400]="todo.isFavorite"
             [attr.aria-pressed]="todo.isFavorite"
             [attr.aria-label]="todo.isFavorite
@@ -121,7 +121,7 @@
             <button
               type="button"
               cdkOverlayOrigin #timerTrigger="cdkOverlayOrigin"
-              class="flex flex-shrink-0 items-center rounded-full border border-transparent p-1.5
+              class="hidden sm:flex flex-shrink-0 items-center rounded-full border border-transparent p-1.5
                      text-muted/60 transition hover:border-indigo-500/60 hover:text-indigo-300
                      focus:outline-none focus:ring-1 focus:ring-zinc-100"
               (click)="toggleTimerMenu(todo.id)"
@@ -204,10 +204,85 @@
           </ng-template>
 
           <button
-            class="rounded-md px-2 py-1 flex-none text-text transition hover:text-red-400"
+            class="hidden sm:block rounded-md px-2 py-1 flex-none text-text transition hover:text-red-400"
             (click)="removeTodos(todo.id)">
             ✕
           </button>
+
+          <!-- Mobil: 3-Punkte-Menü bündelt Favorit, Zeitblock und Löschen -->
+          <button
+            type="button"
+            cdkOverlayOrigin #optionsTrigger="cdkOverlayOrigin"
+            class="sm:hidden flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
+                   focus:outline-none focus:ring-1 focus:ring-zinc-100"
+            (click)="toggleOptionsMenu(todo.id)"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="openOptionsId() === todo.id"
+            aria-label="Weitere Optionen">
+            <lucide-icon [img]="OptionsIcon" class="h-5 w-5"></lucide-icon>
+          </button>
+
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="optionsTrigger"
+            [cdkConnectedOverlayOpen]="openOptionsId() === todo.id"
+            [cdkConnectedOverlayPositions]="overlayPositions"
+            [cdkConnectedOverlayHasBackdrop]="true"
+            cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+            (backdropClick)="closeOptionsMenu()"
+            (overlayKeydown)="$event.key === 'Escape' && closeOptionsMenu()">
+            <div
+              role="menu"
+              class="w-56 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+
+              <button
+                type="button" role="menuitem"
+                class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                (click)="toggleFavorite(todo.id); closeOptionsMenu()">
+                <lucide-icon
+                  [img]="StarIcon"
+                  class="h-4 w-4"
+                  [class.text-amber-400]="todo.isFavorite"
+                  [class.fill-amber-400]="todo.isFavorite">
+                </lucide-icon>
+                <span>{{ todo.isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren' }}</span>
+              </button>
+
+              @if (hasTimer(todo)) {
+                <button
+                  type="button" role="menuitem"
+                  class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  (click)="stopTimer(todo.id); closeOptionsMenu()">
+                  <lucide-icon [img]="TimerIcon" class="h-4 w-4 text-indigo-300"></lucide-icon>
+                  <span>Zeitblock beenden</span>
+                </button>
+              } @else {
+                <div class="flex items-center gap-2.5 px-3 pb-1 pt-2.5 text-xs text-zinc-400">
+                  <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5"></lucide-icon>
+                  <span>Zeitblock starten</span>
+                </div>
+                <div class="flex gap-1.5 px-3 pb-2.5">
+                  @for (minutes of timerPresets; track minutes) {
+                    <button
+                      type="button"
+                      class="flex-1 rounded-full border border-slate-600 px-1 py-1 text-xs text-zinc-200
+                             transition hover:border-indigo-400 hover:text-indigo-300"
+                      (click)="startTimer(todo.id, minutes); closeOptionsMenu()">
+                      {{ minutes }}m
+                    </button>
+                  }
+                </div>
+              }
+
+              <button
+                type="button" role="menuitem"
+                class="flex w-full items-center gap-2.5 border-t border-slate-700 px-3 py-2.5 text-left text-sm text-rose-400 transition hover:bg-slate-700"
+                (click)="removeTodos(todo.id); closeOptionsMenu()">
+                <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
+                <span>Löschen</span>
+              </button>
+            </div>
+          </ng-template>
         </li>
       }
     </ul>

@@ -10,9 +10,11 @@ import {
   LucideAngularModule,
   ChevronDown,
   ChevronsUpDown,
+  EllipsisVertical,
   GripVertical,
   Star,
   Timer,
+  Trash2,
 } from 'lucide-angular';
 
 
@@ -43,6 +45,19 @@ export class TodoList {
   protected readonly openTimerMenuId = signal<string | null>(null);
 
   protected readonly ExpandIcon = ChevronsUpDown;
+  protected readonly OptionsIcon = EllipsisVertical;
+  protected readonly TrashIcon = Trash2;
+
+  // Mobil: Drei-Punkte-Menü statt einzelner Buttons (null = keins offen)
+  protected readonly openOptionsId = signal<string | null>(null);
+
+  toggleOptionsMenu(id: string) {
+    this.openOptionsId.update(cur => (cur === id ? null : id));
+  }
+
+  closeOptionsMenu() {
+    this.openOptionsId.set(null);
+  }
 
   // Aufgeklappte Todos: voller Text statt einer geklemmten Zeile.
   private readonly expandedIds = signal<ReadonlySet<string>>(new Set());
