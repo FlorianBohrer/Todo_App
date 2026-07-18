@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
 import { distinctUntilChanged, map } from 'rxjs';
 import { environment } from '../../../environments/enviroment'
+import { folderColorClass } from '../shared/folder-color';
 
 export interface Label {
   id: string;
@@ -208,22 +209,11 @@ export class LabelService {
     });
   }
 
-  // ---- UI-State / Helfer (unverändert) ----
-  private readonly colorToBorder: Record<string, string> = {
-    violet:  'border-violet-500',
-    emerald: 'border-emerald-500',
-    rose:    'border-rose-500',
-    orange:  'border-orange-500',
-    amber:   'border-amber-500',
-    teal:    'border-teal-500',
-    sky:     'border-sky-500',
-    fuchsia: 'border-fuchsia-500',
-  };
-
+  // ---- UI-State / Helfer ----
   borderClassFor(labelId: string | null): string {
     if (labelId === null) return 'border-zinc-600';
     const label = this.labels().find((l) => l.id === labelId);
-    return this.colorToBorder[label?.color ?? ''] ?? 'border-zinc-600';
+    return folderColorClass(label?.color, 'border');
   }
 
   openOverlay()  { this.isOverlayOpen.set(true); }

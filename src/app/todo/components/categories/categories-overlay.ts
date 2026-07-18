@@ -2,6 +2,7 @@ import { LabelService } from '../../services/label.service';
 import { Component, computed, inject, HostListener, signal } from '@angular/core';
 import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
+import { folderColorClass } from '../../shared/folder-color';
 import {
   LucideAngularModule,
   GripVertical,
@@ -68,33 +69,11 @@ export class CategoriesOverlay {
   }
 
   bgClass(color: string): string {
-    const map: Record<string, string> = {
-      violet:  'bg-violet-600/15',
-      emerald: 'bg-emerald-600/15',
-      rose:    'bg-rose-600/15',
-      orange:   'bg-orange-600/15',
-
-      amber:   'bg-amber-600/15',
-      teal:    'bg-teal-600/15',
-      sky:     'bg-sky-600/15',
-      fuchsia: 'bg-fuchsia-600/15',
-    };
-    return map[color] ?? 'bg-highlight11';
+    return folderColorClass(color, 'bg');
   }
 
   textClass(color: string): string {
-    const map: Record<string, string> = {
-      violet:  'text-violet-300',
-      emerald: 'text-emerald-300',
-      rose:    'text-rose-300',
-      orange:   'text-orange-300',
-
-      amber:   'text-amber-300',
-      teal:    'text-teal-300',
-      sky:     'text-sky-300',
-      fuchsia: 'text-fuchsia-300',
-    };
-    return map[color] ?? 'text-zinc-300';
+    return folderColorClass(color, 'text');
   }
 
   @HostListener('document:keydown.escape')

@@ -4,6 +4,7 @@ import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder, CdkDragDrop } 
 import { TodoService, TIMER_PRESETS_MINUTES } from '../../../services/todo';
 import { Todo } from '../../../model/todo.model';
 import { Autosize } from '../../../../directives/autosize.drectives';
+import { folderColorClass } from '../../../shared/folder-color';
 import { LabelService } from '../../../services/label.service';
 import {
   LucideAngularModule,
@@ -46,17 +47,6 @@ export class TodoList {
     { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -4 },
   ];
 
-  private readonly colorToDot: Record<string, string> = {
-    violet: 'text-violet-400',
-    emerald: 'text-emerald-400',
-    rose: 'text-rose-400',
-    orange: 'text-orange-400',
-    amber:   'text-amber-400',
-    teal:    'text-teal-400',
-    sky:     'text-sky-400',
-    fuchsia: 'text-fuchsia-400',
-  };
-
   toggleMenu(id: string) {
     this.openMenuId.update(cur => (cur === id ? null : id));
   }
@@ -78,7 +68,7 @@ export class TodoList {
   dotClass(labelId: string | null): string {
     if (labelId === null) return 'text-zinc-400';
     const label = this.labels().find(l => l.id === labelId);
-    return this.colorToDot[label?.color ?? ''] ?? 'text-zinc-400';
+    return folderColorClass(label?.color, 'dot');
   }
 
   renameTodo(id: string, title: string){

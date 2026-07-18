@@ -11,6 +11,7 @@ import {
 } from 'lucide-angular';
 import { LabelService } from '../../services/label.service';
 import { TodoService } from '../../services/todo';
+import { folderColorClass } from '../../shared/folder-color';
 
 
 @Component({
@@ -91,60 +92,18 @@ toggleFavorite(id: string, event: Event) {
   }
 
   textClass(color: string): string {
-    const map: Record<string, string> = {
-      violet:  'text-violet-300',
-      emerald: 'text-emerald-300',
-      rose:    'text-rose-300',
-      orange:  'text-orange-300',
-      amber:   'text-amber-300',
-      teal:    'text-teal-300',
-      sky:     'text-sky-300',
-      fuchsia: 'text-fuchsia-300',
-    };
-    return map[color] ?? 'text-zinc-300';
+    return folderColorClass(color, 'text');
   }
 
   bgClass(color: string): string {
-    const map: Record<string, string> = {
-      violet:  'bg-violet-600/15',
-      emerald: 'bg-emerald-600/15',
-      rose:    'bg-rose-600/15',
-      orange:  'bg-orange-600/15',
-      amber:   'bg-amber-600/15',
-      teal:    'bg-teal-600/15',
-      sky:     'bg-sky-600/15',
-      fuchsia: 'bg-fuchsia-600/15',
-    };
-    return map[color] ?? 'bg-highlight11';
+    return folderColorClass(color, 'bg');
   }
 
-  /** Hintergrund des kleinen Icon-Quadrats — etwas kräftiger als die Kachel. */
   iconBoxClass(color: string): string {
-    const map: Record<string, string> = {
-      violet:  'bg-violet-500/25',
-      emerald: 'bg-emerald-500/25',
-      rose:    'bg-rose-500/25',
-      orange:  'bg-orange-500/25',
-      amber:   'bg-amber-500/25',
-      teal:    'bg-teal-500/25',
-      sky:     'bg-sky-500/25',
-      fuchsia: 'bg-fuchsia-500/25',
-    };
-    return map[color] ?? 'bg-zinc-500/25';
+    return folderColorClass(color, 'iconBox');
   }
 
-  /** Füllung des Fortschrittsbalkens in der Folder-Farbe. */
   barClass(color: string): string {
-    const map: Record<string, string> = {
-      violet:  'bg-violet-400',
-      emerald: 'bg-emerald-400',
-      rose:    'bg-rose-400',
-      orange:  'bg-orange-400',
-      amber:   'bg-amber-400',
-      teal:    'bg-teal-400',
-      sky:     'bg-sky-400',
-      fuchsia: 'bg-fuchsia-400',
-    };
-    return map[color] ?? 'bg-zinc-400';
+    return folderColorClass(color, 'bar');
   }
 }
