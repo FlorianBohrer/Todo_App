@@ -6,6 +6,9 @@ import { environment } from '../../../environments/enviroment'
 import { folderColorClass } from '../shared/folder-color';
 import { ToastService } from '../../shared/toast.service';
 
+/** Maximale Anzahl favorisierter Folder (Kacheln über der Todo-Liste). */
+export const MAX_FAVORITE_LABELS = 4;
+
 export interface Label {
   id: string;
   name: string;
@@ -50,7 +53,7 @@ export class LabelService {
   readonly activeLabelId = signal<string | null>(null); // null = alle
 
   /**
-   * Favorisierte Folder in der Reihenfolge ihrer Plätze (0–2) — werden als
+   * Favorisierte Folder in der Reihenfolge ihrer Plätze (0–3) — werden als
    * Kacheln über der Todo-Liste angezeigt.
    */
   readonly favoriteLabels = computed(() =>
@@ -59,8 +62,10 @@ export class LabelService {
       .sort((a, b) => (a.favoritePosition ?? 0) - (b.favoritePosition ?? 0)),
   );
 
-  /** true, wenn alle drei Favoriten-Plätze belegt sind. */
-  readonly favoritesFull = computed(() => this.favoriteLabels().length >= 3);
+  /** true, wenn alle vier Favoriten-Plätze belegt sind. */
+  readonly favoritesFull = computed(
+    () => this.favoriteLabels().length >= MAX_FAVORITE_LABELS,
+  );
 
   constructor() {
     // Erst laden, wenn ein Nutzer eingeloggt ist — vorher liefe der Request
@@ -141,8 +146,12 @@ export class LabelService {
 
     const shouldBeFavorite = !label.isFavorite;
 
-    if (shouldBeFavorite && this.favoriteLabels().length >= 3) {
-      this.toast.show('Maximal drei Favoriten — entferne zuerst einen Stern');
+    if (
+      shouldBeFavorite &&
+      this.favoriteLabels().length >= MAX_FAVORITE_LABELS
+    ) {
+      this.toast.show('Maximal vier Favoriten — entferne zuerst einen Stern');
+
       return;
     }
 
@@ -171,7 +180,6 @@ export class LabelService {
       });
   }
 
-  
   /**
    * Verschiebt einen Folder in der Übersicht. Die Indizes beziehen sich auf die
    * vollständige, unsortierte Liste (beim Suchen ist Sortieren deaktiviert).
@@ -200,7 +208,6 @@ export class LabelService {
       });
   }
 
-  
   removeLabel(id: string) {
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       next: () => {
@@ -213,29 +220,14 @@ export class LabelService {
         console.error('Kategorie löschen fehlgeschlagen', err);
         this.toast.error('Folder konnte nicht gelöscht werden');
       },
-      error: (err) => {
-        console.error('Kategorie löschen fehlgeschlagen', err);
-        this.toast.error('Folder konnte nicht gelöscht werden');
-      },
     });
   }
 
-  // ---- UI-State / Helfer (unverändert) ----
-  private readonly colorToBorder: Record<string, string> = {
-    violet:  'border-violet-500',
-    emerald: 'border-emerald-500',
-    rose:    'border-rose-500',
-    orange:  'border-orange-500',
-    amber:   'border-amber-500',
-    teal:    'border-teal-500',
-    sky:     'border-sky-500',
-    fuchsia: 'border-fuchsia-500',
-  };
-
+  // ---- UI-State / Helfer ----
   borderClassFor(labelId: string | null): string {
     if (labelId === null) return 'border-zinc-600';
     const label = this.labels().find((l) => l.id === labelId);
-    return this.colorToBorder[label?.color ?? ''] ?? 'border-zinc-600';
+    return folderColorClass(label?.color, 'border');
   }
 
   openOverlay()  { this.isOverlayOpen.set(true); }

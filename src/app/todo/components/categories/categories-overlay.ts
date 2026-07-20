@@ -1,14 +1,18 @@
 import { LabelService } from '../../services/label.service';
-import { Component, inject, HostListener, signal } from '@angular/core';
+import { Component, computed, inject, HostListener, signal } from '@angular/core';
+import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
+import { folderColorClass } from '../../shared/folder-color';
 import {
   LucideAngularModule,
+  GripVertical,
+  Search,
   Star,
 } from 'lucide-angular';
 
 @Component({
   selector: 'app-categories-overlay',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, CdkDropList, CdkDrag, CdkDragHandle],
   templateUrl: './categories-overlay.html',
 })
 export class CategoriesOverlay {
@@ -16,6 +20,8 @@ export class CategoriesOverlay {
   private readonly todoService = inject(TodoService);
 
   protected readonly StarIcon = Star;
+  protected readonly GripIcon = GripVertical;
+  protected readonly SearchIcon = Search;
   protected readonly favoritesFull = this.labelService.favoritesFull;
 
   protected readonly labels        = this.labelService.labels;
@@ -23,6 +29,27 @@ export class CategoriesOverlay {
   protected readonly activeLabelId = this.labelService.activeLabelId;
   protected readonly palette = ['rose', 'orange', 'amber', 'emerald', 'teal', 'sky', 'violet', 'fuchsia'];
   protected readonly draftColor = signal('rose');
+
+  // ---- Suche ----
+  protected readonly searchTerm = signal('');
+  protected readonly isSearching = computed(() => this.searchTerm().trim().length > 0);
+
+  protected readonly visibleLabels = computed(() => {
+    const term = this.searchTerm().trim().toLowerCase();
+    if (!term) return this.labels();
+    return this.labels().filter((l) => l.name.toLowerCase().includes(term));
+  });
+
+  clearSearch() {
+    this.searchTerm.set('');
+  }
+
+  // ---- Sortieren ----
+  // Beim Suchen ist Sortieren gesperrt, sonst würden sich die Indizes der
+  // gefilterten Liste nicht auf die echte Reihenfolge übertragen lassen.
+  drop(event: CdkDragDrop<unknown>) {
+    this.labelService.reorderLabels(event.previousIndex, event.currentIndex);
+  }
 
   add(name: string) {
     this.labelService.addLabel(name, this.draftColor());
@@ -42,33 +69,11 @@ export class CategoriesOverlay {
   }
 
   bgClass(color: string): string {
-    const map: Record<string, string> = {
-      violet:  'bg-violet-600/15',
-      emerald: 'bg-emerald-600/15',
-      rose:    'bg-rose-600/15',
-      orange:   'bg-orange-600/15',
-
-      amber:   'bg-amber-600/15',
-      teal:    'bg-teal-600/15',
-      sky:     'bg-sky-600/15',
-      fuchsia: 'bg-fuchsia-600/15',
-    };
-    return map[color] ?? 'bg-highlight11';
+    return folderColorClass(color, 'bg');
   }
 
   textClass(color: string): string {
-    const map: Record<string, string> = {
-      violet:  'text-violet-300',
-      emerald: 'text-emerald-300',
-      rose:    'text-rose-300',
-      orange:   'text-orange-300',
-
-      amber:   'text-amber-300',
-      teal:    'text-teal-300',
-      sky:     'text-sky-300',
-      fuchsia: 'text-fuchsia-300',
-    };
-    return map[color] ?? 'text-zinc-300';
+    return folderColorClass(color, 'text');
   }
 
   @HostListener('document:keydown.escape')

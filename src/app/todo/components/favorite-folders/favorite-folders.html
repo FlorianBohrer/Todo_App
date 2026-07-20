@@ -1,14 +1,19 @@
 @if (favorites().length > 0) {
   <section class="mx-auto mb-4 w-full max-w-3xl" aria-label="Favorite folders">
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <!-- Mobil: Kacheln untereinander; ab sm nebeneinander.
+         Bei vier Favoriten eine Reihe mit vier Kacheln. -->
+    <div
+      class="grid grid-cols-1 gap-3"
+      [class]="favorites().length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'">
       @for (label of favorites(); track label.id) {
         <button
           type="button"
-          class="group flex flex-col gap-3 rounded-2xl border border-white/5 p-4 text-left shadow-lg
+          class="folder-card group flex flex-col gap-3 rounded-2xl border border-white/5 p-4 text-left shadow-lg
                  backdrop-blur-md transition duration-200 hover:-translate-y-0.5 hover:shadow-xl"
           [class]="bgClass(label.color)"
           [class.ring-2]="activeLabelId() === label.id"
           [class.ring-emerald-500]="activeLabelId() === label.id"
+          [class.celebrate]="isCelebrating(label.id)"
           [attr.aria-pressed]="activeLabelId() === label.id"
           (click)="select(label.id)">
 
@@ -47,7 +52,7 @@
             </div>
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-700/50">
               <div
-                class="h-full rounded-full transition-all duration-300"
+                class="folder-progress h-full rounded-full transition-all duration-300"
                 [class]="barClass(label.color)"
                 [style.width.%]="progress(label.id).percent">
               </div>
