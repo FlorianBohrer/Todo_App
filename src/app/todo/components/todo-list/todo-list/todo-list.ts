@@ -24,6 +24,7 @@ export class TodoList {
 
   protected readonly todos = this.todoService.filteredTodos;
   protected readonly stats = this.todoService.stats;
+  protected readonly loading = this.todoService.loading;
   protected readonly filter = this.todoService.filter;
   protected readonly labels = this.labelService.labels;
   protected readonly ChevronDownIcon = ChevronDown;

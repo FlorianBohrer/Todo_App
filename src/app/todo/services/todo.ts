@@ -5,6 +5,7 @@ import { distinctUntilChanged, map } from 'rxjs';
 import { environment } from '../../../environments/enviroment';
 import { Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
+import { ToastService } from '../../shared/toast.service';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
 
@@ -87,6 +88,10 @@ export class TodoService {
   }
 
   private readonly clerk = inject(ClerkService);
+  private readonly toast = inject(ToastService);
+
+  /** true während des initialen Ladens nach dem Login. */
+  readonly loading = signal(false);
 
   constructor() {
     // Todos erst laden, wenn ein Nutzer eingeloggt ist. Bei Logout/Userwechsel
@@ -103,16 +108,100 @@ export class TodoService {
           this.todos.set([]);
           return;
         }
+        this.loading.set(true);
         this.http.get<TodoListResponse>(this.apiUrl).subscribe({
           next: (res) => {
             this.todos.set(res.todo.map((t) => this.toTodo(t)));
+            this.loading.set(false);
             this.importLegacyTodos();
           },
-          error: (err) => console.error('Todos laden fehlgeschlagen', err),
+          error: (err) => {
+            console.error('Todos laden fehlgeschlagen', err);
+            this.loading.set(false);
+            this.toast.error('Todos konnten nicht geladen werden — bitte Seite neu laden');
+          },
         });
       });
   }
 
+<<<<<<< Updated upstream
+=======
+  // ---- Zeitblock (Timer) ----
+  // Der Server speichert Startzeit + Dauer; die Restzeit rechnen wir hier aus.
+  // `now` tickt nur, solange irgendwo ein Block läuft.
+  private readonly now = signal(Date.now());
+  private tickHandle: ReturnType<typeof setInterval> | null = null;
+
+  private ensureTicking() {
+    const anyRunning = this.todos().some((item) => item.timerStartedAt !== null);
+
+    if (anyRunning && this.tickHandle === null) {
+      // Sofort nachziehen: `now` ist stehen geblieben, solange kein Block lief —
+      // sonst zeigt die erste Sekunde eine zu hohe Restzeit an.
+      this.now.set(Date.now());
+      this.tickHandle = setInterval(() => this.now.set(Date.now()), 1000);
+    } else if (!anyRunning && this.tickHandle !== null) {
+      clearInterval(this.tickHandle);
+      this.tickHandle = null;
+    }
+  }
+
+  /** Restsekunden des Zeitblocks. 0 = abgelaufen oder kein Timer aktiv. */
+  remainingSeconds(todo: Todo): number {
+    if (todo.timerStartedAt === null || todo.timerDurationSeconds === null) {
+      return 0;
+    }
+    const elapsedSeconds = (this.now() - todo.timerStartedAt.getTime()) / 1000;
+    return Math.max(0, Math.ceil(todo.timerDurationSeconds - elapsedSeconds));
+  }
+
+  startTimer(id: string, durationSeconds: number) {
+    // Optimistisch mit lokaler Zeit starten, danach die Serverzeit übernehmen.
+    const startedAt = new Date();
+    this.todos.update((items) =>
+      items.map((item) =>
+        item.id === id
+          ? { ...item, timerStartedAt: startedAt, timerDurationSeconds: durationSeconds }
+          : item,
+      ),
+    );
+
+    this.http
+      .patch<TodoDto>(`${this.apiUrl}/${id}/timer`, { durationSeconds })
+      .subscribe({
+        next: (dto) =>
+          this.todos.update((items) =>
+            items.map((item) => (item.id === id ? this.toTodo(dto) : item)),
+          ),
+        error: (err) => {
+          console.error('Zeitblock starten fehlgeschlagen', err);
+          this.toast.error('Zeitblock konnte nicht gestartet werden');
+          this.loadTodos();
+        },
+      });
+  }
+
+  stopTimer(id: string) {
+    this.todos.update((items) =>
+      items.map((item) =>
+        item.id === id
+          ? { ...item, timerStartedAt: null, timerDurationSeconds: null }
+          : item,
+      ),
+    );
+
+    this.http
+      .patch<TodoDto>(`${this.apiUrl}/${id}/timer`, { durationSeconds: null })
+      .subscribe({
+        error: (err) => {
+          console.error('Zeitblock beenden fehlgeschlagen', err);
+          this.toast.error('Zeitblock konnte nicht beendet werden');
+          this.loadTodos();
+        },
+      });
+  }
+
+>>>>>>> Stashed changes
   // ---- Laden ----
   private loadTodos() {
     this.http.get<TodoListResponse>(this.apiUrl).subscribe({
@@ -228,7 +317,10 @@ toggleFavorite(id: string) {
       })
       .subscribe({
         next: (dto) => this.todos.update(items => [...items, this.toTodo(dto)]),
-        error: (err) => console.error('Todo anlegen fehlgeschlagen', err),
+        error: (err) => {
+          console.error('Todo anlegen fehlgeschlagen', err);
+          this.toast.error('Todo konnte nicht angelegt werden');
+        },
       });
   }
 
@@ -285,16 +377,52 @@ toggleFavorite(id: string) {
       .subscribe({
         error: (err) => {
           console.error('Sortierung speichern fehlgeschlagen', err);
+          this.toast.error('Sortierung konnte nicht gespeichert werden');
           this.loadTodos();
         },
       });
   }
 
+  /**
+   * Löschen mit Undo: sofort aus der Liste nehmen, aber das DELETE erst nach
+   * 5 s senden. "Rückgängig" bricht den Timer ab und stellt das Todo an der
+   * alten Position wieder her — es war dann nie weg vom Server.
+   */
   removeTodo(id: string) {
-    this.todos.update(items => items.filter(item => item.id !== id));
+    const items = this.todos();
+    const index = items.findIndex(item => item.id === id);
+    if (index === -1) return;
+    const removed = items[index];
+
+    this.todos.update(list => list.filter(item => item.id !== id));
+
+    const shortTitle =
+      removed.title.length > 30 ? `${removed.title.slice(0, 30)}…` : removed.title;
+
+    const deleteTimeout = setTimeout(() => {
+      this.toast.dismiss(toastId);
+      this.deleteOnServer(id);
+    }, 5000);
+
+    const toastId = this.toast.show(`„${shortTitle}“ gelöscht`, {
+      actionLabel: 'Rückgängig',
+      action: () => {
+        clearTimeout(deleteTimeout);
+        this.todos.update(list => {
+          const next = [...list];
+          next.splice(Math.min(index, next.length), 0, removed);
+          return next;
+        });
+      },
+      durationMs: 5000,
+    });
+  }
+
+  private deleteOnServer(id: string) {
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       error: (err) => {
         console.error('Todo löschen fehlgeschlagen', err);
+        this.toast.error('Todo konnte nicht gelöscht werden');
         this.loadTodos();
       },
     });
@@ -321,6 +449,7 @@ toggleFavorite(id: string) {
     this.http.put<TodoDto>(`${this.apiUrl}/${id}`, changes).subscribe({
       error: (err) => {
         console.error('Todo aktualisieren fehlgeschlagen', err);
+        this.toast.error('Änderung konnte nicht gespeichert werden');
         this.loadTodos();
       },
     });

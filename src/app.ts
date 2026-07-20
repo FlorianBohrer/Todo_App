@@ -13,6 +13,7 @@ import { CategoriesOverlay } from './app/todo/components/categories/categories-o
 import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite-folders';
 import { UserAccount } from './app/todo/components/user-account/user-account';
 import { LabelService } from './app/todo/services/label.service';
+import { ToastContainer } from './app/shared/toast-container';
 
 @Component({
   selector: 'app-root',
@@ -27,6 +28,7 @@ import { LabelService } from './app/todo/services/label.service';
     FavoriteFolders,
     UserAccount,
     LucideAngularModule,
+    ToastContainer,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
