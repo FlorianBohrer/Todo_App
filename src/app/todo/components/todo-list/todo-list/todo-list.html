@@ -1,11 +1,5 @@
 <section class="mt-4 rounded-2xl p-3">
-  @if (loading()) {
-    <!-- Ohne diesen Zustand stünde beim Laden fälschlich "No todos yet" -->
-    <p class="flex items-center gap-2 text-muted" role="status">
-      <span class="h-4 w-4 flex-none animate-spin rounded-full border-2 border-zinc-500 border-t-transparent"></span>
-      Lade Todos…
-    </p>
-  } @else if (stats().total === 0) {
+  @if (stats().total === 0) {
     <p class="text-text">No todos yet, add one above</p>
   } @else if (todos().length === 0) {
     <p class="text-tetxt">
@@ -30,6 +24,7 @@
           class="group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4
                  transition-colors hover:bg-panel/50"
                  [class]="labelService.borderClassFor(todo.labelId)"
+                 [class.todo-expanded-row]="isExpanded(todo.id)"
                  [class.opacity-70]="todo.completed">
 
           <!-- Platzhalter beim Ziehen -->
@@ -38,10 +33,10 @@
             class="h-12 rounded-r-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
           </div>
 
-          <!-- Favoriten-Stern -->
+          <!-- Favoriten-Stern (mobil im 3-Punkte-Menü) -->
           <button
             type="button"
-            class="flex-shrink-0 rounded-full p-1 text-zinc-500 transition hover:text-amber-400"
+            class="hidden sm:block flex-shrink-0 rounded-full p-1 text-zinc-500 transition hover:text-amber-400"
             [class.text-amber-400]="todo.isFavorite"
             [attr.aria-pressed]="todo.isFavorite"
             [attr.aria-label]="todo.isFavorite
@@ -76,16 +71,90 @@
               (change)="toggleTodo(todo.id)"
             />
             <textarea
+              #todoText
               appAutosize
               rows = "1"
               class="flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words
                      focus:outline-none focus:ring-zinc-100"
+              [class.todo-collapsed]="canExpand(todo.title) && !isExpanded(todo.id)"
               [value]="todo.title"
               [class.line-through]="todo.completed"
               [class.text-zinc-400]="todo.completed"
               (keyup.enter)="$event.preventDefault();renameTodo (todo.id, $any($event.target).value); $any($event.target).blur()"
             ></textarea>
           </label>
+
+          <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
+          @if (canExpand(todo.title)) {
+            <button
+              type="button"
+              class="flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
+                     focus:outline-none focus:ring-1 focus:ring-zinc-100"
+              [class.text-text]="isExpanded(todo.id)"
+              (click)="toggleExpanded(todo.id, todoText)"
+              [attr.aria-expanded]="isExpanded(todo.id)"
+              [attr.aria-label]="isExpanded(todo.id)
+                ? 'Todo einklappen'
+                : 'Todo aufklappen, ganzen Text lesen'">
+              <lucide-icon [img]="ExpandIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+          }
+
+          <!-- Zeitblock: läuft -> Restzeit + Stopp, sonst -> Presets wählen -->
+          @if (hasTimer(todo)) {
+            <button
+              type="button"
+              class="timer-chip flex flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1
+                     font-mono text-xs tabular-nums transition
+                     focus:outline-none focus:ring-1 focus:ring-zinc-100"
+              [class]="isTimerDone(todo)
+                ? 'border-emerald-500 text-emerald-300 timer-done'
+                : 'border-indigo-500/60 text-indigo-300 hover:border-indigo-400'"
+              (click)="stopTimer(todo.id)"
+              [attr.aria-label]="isTimerDone(todo)
+                ? 'Zeitblock abgeschlossen, zum Ausblenden klicken'
+                : 'Zeitblock abbrechen'">
+              <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5"></lucide-icon>
+              <span>{{ isTimerDone(todo) ? 'fertig' : remainingLabel(todo) }}</span>
+            </button>
+          } @else {
+            <button
+              type="button"
+              cdkOverlayOrigin #timerTrigger="cdkOverlayOrigin"
+              class="hidden sm:flex flex-shrink-0 items-center rounded-full border border-transparent p-1.5
+                     text-muted/60 transition hover:border-indigo-500/60 hover:text-indigo-300
+                     focus:outline-none focus:ring-1 focus:ring-zinc-100"
+              (click)="toggleTimerMenu(todo.id)"
+              aria-haspopup="listbox"
+              [attr.aria-expanded]="openTimerMenuId() === todo.id"
+              aria-label="Zeitblock starten">
+              <lucide-icon [img]="TimerIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+
+            <ng-template
+              cdkConnectedOverlay
+              [cdkConnectedOverlayOrigin]="timerTrigger"
+              [cdkConnectedOverlayOpen]="openTimerMenuId() === todo.id"
+              [cdkConnectedOverlayPositions]="overlayPositions"
+              [cdkConnectedOverlayHasBackdrop]="true"
+              cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+              (backdropClick)="closeTimerMenu()"
+              (overlayKeydown)="$event.key === 'Escape' && closeTimerMenu()">
+              <div
+                role="listbox"
+                class="w-36 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+                @for (minutes of timerPresets; track minutes) {
+                  <button
+                    type="button" role="option" [attr.aria-selected]="false"
+                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                    (click)="startTimer(todo.id, minutes)">
+                    <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5 text-indigo-300"></lucide-icon>
+                    <span>{{ minutes }} Minuten</span>
+                  </button>
+                }
+              </div>
+            </ng-template>
+          }
 
           <!-- Gestylter Trigger -->
           <button
@@ -135,10 +204,85 @@
           </ng-template>
 
           <button
-            class="rounded-md px-2 py-1 flex-none text-text transition hover:text-red-400"
+            class="hidden sm:block rounded-md px-2 py-1 flex-none text-text transition hover:text-red-400"
             (click)="removeTodos(todo.id)">
             ✕
           </button>
+
+          <!-- Mobil: 3-Punkte-Menü bündelt Favorit, Zeitblock und Löschen -->
+          <button
+            type="button"
+            cdkOverlayOrigin #optionsTrigger="cdkOverlayOrigin"
+            class="sm:hidden flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
+                   focus:outline-none focus:ring-1 focus:ring-zinc-100"
+            (click)="toggleOptionsMenu(todo.id)"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="openOptionsId() === todo.id"
+            aria-label="Weitere Optionen">
+            <lucide-icon [img]="OptionsIcon" class="h-5 w-5"></lucide-icon>
+          </button>
+
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="optionsTrigger"
+            [cdkConnectedOverlayOpen]="openOptionsId() === todo.id"
+            [cdkConnectedOverlayPositions]="overlayPositions"
+            [cdkConnectedOverlayHasBackdrop]="true"
+            cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+            (backdropClick)="closeOptionsMenu()"
+            (overlayKeydown)="$event.key === 'Escape' && closeOptionsMenu()">
+            <div
+              role="menu"
+              class="w-56 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+
+              <button
+                type="button" role="menuitem"
+                class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                (click)="toggleFavorite(todo.id); closeOptionsMenu()">
+                <lucide-icon
+                  [img]="StarIcon"
+                  class="h-4 w-4"
+                  [class.text-amber-400]="todo.isFavorite"
+                  [class.fill-amber-400]="todo.isFavorite">
+                </lucide-icon>
+                <span>{{ todo.isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren' }}</span>
+              </button>
+
+              @if (hasTimer(todo)) {
+                <button
+                  type="button" role="menuitem"
+                  class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  (click)="stopTimer(todo.id); closeOptionsMenu()">
+                  <lucide-icon [img]="TimerIcon" class="h-4 w-4 text-indigo-300"></lucide-icon>
+                  <span>Zeitblock beenden</span>
+                </button>
+              } @else {
+                <div class="flex items-center gap-2.5 px-3 pb-1 pt-2.5 text-xs text-zinc-400">
+                  <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5"></lucide-icon>
+                  <span>Zeitblock starten</span>
+                </div>
+                <div class="flex gap-1.5 px-3 pb-2.5">
+                  @for (minutes of timerPresets; track minutes) {
+                    <button
+                      type="button"
+                      class="flex-1 rounded-full border border-slate-600 px-1 py-1 text-xs text-zinc-200
+                             transition hover:border-indigo-400 hover:text-indigo-300"
+                      (click)="startTimer(todo.id, minutes); closeOptionsMenu()">
+                      {{ minutes }}m
+                    </button>
+                  }
+                </div>
+              }
+
+              <button
+                type="button" role="menuitem"
+                class="flex w-full items-center gap-2.5 border-t border-slate-700 px-3 py-2.5 text-left text-sm text-rose-400 transition hover:bg-slate-700"
+                (click)="removeTodos(todo.id); closeOptionsMenu()">
+                <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
+                <span>Löschen</span>
+              </button>
+            </div>
+          </ng-template>
         </li>
       }
     </ul>

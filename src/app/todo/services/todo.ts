@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
 import { distinctUntilChanged, map } from 'rxjs';
@@ -24,9 +24,12 @@ interface TodoDto {
   isFavorite: boolean;
   categoryId: string | null;
   createdAt: string;
-  timerStartedAt?: string | null;
-  timerDurationSeconds?: number | null;
+  timerStartedAt: string | null;
+  timerDurationSeconds: number | null;
 }
+
+/** Auswählbare Längen für einen Zeitblock (Minuten). */
+export const TIMER_PRESETS_MINUTES = [5, 15, 25, 50] as const;
 
 interface TodoListResponse {
   todo: TodoDto[];
@@ -96,6 +99,12 @@ export class TodoService {
   readonly loading = signal(false);
 
   constructor() {
+    // Ticker starten/stoppen, sobald sich die Timer-Lage ändert.
+    effect(() => {
+      this.todos();
+      this.ensureTicking();
+    });
+
     // Todos erst laden, wenn ein Nutzer eingeloggt ist. Bei Logout/Userwechsel
     // den lokalen Zustand leeren, damit keine fremden Todos stehen bleiben.
     // Nach dem ersten Laden werden evtl. vorhandene Alt-Daten aus dem
@@ -125,7 +134,6 @@ export class TodoService {
         });
       });
   }
-
 
   // ---- Zeitblock (Timer) ----
   // Der Server speichert Startzeit + Dauer; die Restzeit rechnen wir hier aus.
@@ -180,22 +188,7 @@ export class TodoService {
           this.loadTodos();
         },
       });
-      this.todos.update((items) =>
-  items.map((item) =>
-    item.id === id
-      ? {
-          ...item,
-          timerStartedAt: startedAt,
-          timerDurationSeconds: durationSeconds,
-        }
-      : item,
-  ),
-);
-
-this.ensureTicking();
   }
-
-  
 
   stopTimer(id: string) {
     this.todos.update((items) =>
@@ -215,23 +208,7 @@ this.ensureTicking();
           this.loadTodos();
         },
       });
-      this.todos.update((items) =>
-  items.map((item) =>
-    item.id === id
-      ? {
-          ...item,
-          timerStartedAt: null,
-          timerDurationSeconds: null,
-        }
-      : item,
-  ),
-);
-
-this.ensureTicking();
   }
-
-  
-
 
   // ---- Laden ----
   private loadTodos() {
@@ -309,7 +286,7 @@ this.ensureTicking();
   }
 
 
-private toTodo(dto: TodoDto): Todo {
+  private toTodo(dto: TodoDto): Todo {
   return {
     id: dto.id,
     title: dto.title,
@@ -317,9 +294,7 @@ private toTodo(dto: TodoDto): Todo {
     isFavorite: dto.isFavorite ?? false,
     labelId: dto.categoryId,
     createdAt: new Date(dto.createdAt),
-    timerStartedAt: dto.timerStartedAt
-      ? new Date(dto.timerStartedAt)
-      : null,
+    timerStartedAt: dto.timerStartedAt ? new Date(dto.timerStartedAt) : null,
     timerDurationSeconds: dto.timerDurationSeconds ?? null,
   };
 }

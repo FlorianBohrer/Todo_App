@@ -1,0 +1,98 @@
+/* Feier-Animation, wenn ein Folder 100% erreicht: sanftes Anheben mit
+   goldenem Schimmer, ein Lichtstreifen zieht einmal über die Kachel,
+   der volle Balken glimmt kurz auf. Bewusst ruhig gehalten. */
+
+.folder-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Lichtstreifen — unsichtbar, bis .celebrate ihn einmal durchlaufen lässt */
+.folder-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.06) 42%,
+    rgba(255, 245, 210, 0.22) 50%,
+    rgba(255, 255, 255, 0.06) 58%,
+    transparent 70%
+  );
+  transform: translateX(-130%) skewX(-12deg);
+}
+
+.folder-card.celebrate {
+  animation: card-glow 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.folder-card.celebrate::after {
+  animation: shine-sweep 1.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.folder-card.celebrate .folder-progress {
+  animation: bar-gleam 1.6s ease-in-out both;
+}
+
+@keyframes card-glow {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+  30% {
+    transform: translateY(-3px) scale(1.015);
+    box-shadow:
+      0 14px 36px -10px rgba(251, 191, 36, 0.35),
+      0 0 0 1px rgba(251, 191, 36, 0.28);
+  }
+  70% {
+    transform: translateY(-1px) scale(1.005);
+    box-shadow:
+      0 8px 24px -10px rgba(251, 191, 36, 0.2),
+      0 0 0 1px rgba(251, 191, 36, 0.12);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+}
+
+@keyframes shine-sweep {
+  0% {
+    opacity: 1;
+    transform: translateX(-130%) skewX(-12deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(130%) skewX(-12deg);
+  }
+}
+
+@keyframes bar-gleam {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  35% {
+    filter: brightness(1.65) saturate(1.3);
+  }
+  65% {
+    filter: brightness(1.25);
+  }
+}
+
+/* Nutzer mit reduzierter Bewegung bekommen nur den ruhigen Schimmer,
+   kein Anheben und keinen Lichtstreifen. */
+@media (prefers-reduced-motion: reduce) {
+  .folder-card.celebrate,
+  .folder-card.celebrate::after {
+    animation: none;
+  }
+  .folder-card.celebrate .folder-progress {
+    animation: bar-gleam 1.6s ease-in-out both;
+  }
+}
