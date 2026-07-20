@@ -1,5 +1,11 @@
 <section class="mt-4 rounded-2xl p-3">
-  @if (stats().total === 0) {
+  @if (loading()) {
+    <!-- Ohne diesen Zustand stünde beim Laden fälschlich "No todos yet" -->
+    <p class="flex items-center gap-2 text-muted" role="status">
+      <span class="h-4 w-4 flex-none animate-spin rounded-full border-2 border-zinc-500 border-t-transparent"></span>
+      Lade Todos…
+    </p>
+  } @else if (stats().total === 0) {
     <p class="text-text">No todos yet, add one above</p>
   } @else if (todos().length === 0) {
     <p class="text-tetxt">

@@ -3,6 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
 import { distinctUntilChanged, map } from 'rxjs';
 import { environment } from '../../../environments/enviroment'
+<<<<<<< Updated upstream
+=======
+import { folderColorClass } from '../shared/folder-color';
+import { ToastService } from '../../shared/toast.service';
+>>>>>>> Stashed changes
 
 export interface Label {
   id: string;
@@ -40,6 +45,8 @@ const DEFAULT_LABELS: Array<{ name: string; color: string; icon: string }> = [
 export class LabelService {
   private readonly http = inject(HttpClient);
   private readonly clerk = inject(ClerkService);
+  private readonly toast = inject(ToastService);
+  private readonly toast = inject(ToastService);
   private readonly apiUrl = `${environment.apiUrl}/category`;
 
   readonly labels = signal<Label[]>([]);
@@ -88,7 +95,14 @@ export class LabelService {
           this.labels.set(labels);
         }
       },
-      error: (err) => console.error('Kategorien laden fehlgeschlagen', err),
+      error: (err) => {
+        console.error('Kategorien laden fehlgeschlagen', err);
+        this.toast.error('Folder konnten nicht geladen werden');
+      },
+      error: (err) => {
+        console.error('Kategorien laden fehlgeschlagen', err);
+        this.toast.error('Folder konnten nicht geladen werden');
+      },
     });
   }
 
@@ -116,7 +130,14 @@ export class LabelService {
       .post<CategoryDto>(this.apiUrl, { name: trimmed, color, icon })
       .subscribe({
         next: (c) => this.labels.update((list) => [...list, this.toLabel(c)]),
-        error: (err) => console.error('Kategorie anlegen fehlgeschlagen', err),
+        error: (err) => {
+          console.error('Kategorie anlegen fehlgeschlagen', err);
+          this.toast.error('Folder konnte nicht angelegt werden');
+        },
+        error: (err) => {
+          console.error('Kategorie anlegen fehlgeschlagen', err);
+          this.toast.error('Folder konnte nicht angelegt werden');
+        },
       });
   }
 
@@ -136,9 +157,8 @@ export class LabelService {
       shouldBeFavorite &&
       this.favoriteLabels().length >= 3
     ) {
-      console.error(
-        'Es können maximal drei Folder favorisiert werden',
-      );
+      this.toast.show('Maximal drei Favoriten — entferne zuerst einen Stern');
+      this.toast.show('Maximal drei Favoriten — entferne zuerst einen Stern');
 
       return;
     }
@@ -161,14 +181,48 @@ export class LabelService {
           );
         },
         error: (error) => {
-          console.error(
-            'Folder-Favorit speichern fehlgeschlagen',
-            error,
-          );
+          console.error('Folder-Favorit speichern fehlgeschlagen', error);
+          this.toast.error('Favorit konnte nicht gespeichert werden');
+          this.loadLabels();
+          console.error('Folder-Favorit speichern fehlgeschlagen', error);
+          this.toast.error('Favorit konnte nicht gespeichert werden');
+          this.loadLabels();
         },
       });
   }
 
+<<<<<<< Updated upstream
+=======
+  /**
+   * Verschiebt einen Folder in der Übersicht. Die Indizes beziehen sich auf die
+   * vollständige, unsortierte Liste (beim Suchen ist Sortieren deaktiviert).
+   */
+  reorderLabels(previousIndex: number, currentIndex: number) {
+    if (previousIndex === currentIndex) return;
+
+    const list = [...this.labels()];
+    if (
+      previousIndex < 0 || currentIndex < 0 ||
+      previousIndex >= list.length || currentIndex >= list.length
+    ) return;
+
+    const [moved] = list.splice(previousIndex, 1);
+    list.splice(currentIndex, 0, moved);
+    this.labels.set(list);
+
+    this.http
+      .put<void>(`${this.apiUrl}/reorder`, { ids: list.map((l) => l.id) })
+      .subscribe({
+        error: (err) => {
+          console.error('Folder-Reihenfolge speichern fehlgeschlagen', err);
+          this.toast.error('Reihenfolge konnte nicht gespeichert werden');
+          this.toast.error('Reihenfolge konnte nicht gespeichert werden');
+          this.loadLabels();
+        },
+      });
+  }
+
+>>>>>>> Stashed changes
   removeLabel(id: string) {
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       next: () => {
@@ -177,7 +231,14 @@ export class LabelService {
           this.activeLabelId.set(null);
         }
       },
-      error: (err) => console.error('Kategorie löschen fehlgeschlagen', err),
+      error: (err) => {
+        console.error('Kategorie löschen fehlgeschlagen', err);
+        this.toast.error('Folder konnte nicht gelöscht werden');
+      },
+      error: (err) => {
+        console.error('Kategorie löschen fehlgeschlagen', err);
+        this.toast.error('Folder konnte nicht gelöscht werden');
+      },
     });
   }
 
