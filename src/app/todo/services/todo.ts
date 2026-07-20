@@ -24,6 +24,8 @@ interface TodoDto {
   isFavorite: boolean;
   categoryId: string | null;
   createdAt: string;
+  timerStartedAt?: string | null;
+  timerDurationSeconds?: number | null;
 }
 
 interface TodoListResponse {
@@ -124,8 +126,7 @@ export class TodoService {
       });
   }
 
-<<<<<<< Updated upstream
-=======
+
   // ---- Zeitblock (Timer) ----
   // Der Server speichert Startzeit + Dauer; die Restzeit rechnen wir hier aus.
   // `now` tickt nur, solange irgendwo ein Block läuft.
@@ -179,7 +180,22 @@ export class TodoService {
           this.loadTodos();
         },
       });
+      this.todos.update((items) =>
+  items.map((item) =>
+    item.id === id
+      ? {
+          ...item,
+          timerStartedAt: startedAt,
+          timerDurationSeconds: durationSeconds,
+        }
+      : item,
+  ),
+);
+
+this.ensureTicking();
   }
+
+  
 
   stopTimer(id: string) {
     this.todos.update((items) =>
@@ -199,9 +215,24 @@ export class TodoService {
           this.loadTodos();
         },
       });
+      this.todos.update((items) =>
+  items.map((item) =>
+    item.id === id
+      ? {
+          ...item,
+          timerStartedAt: null,
+          timerDurationSeconds: null,
+        }
+      : item,
+  ),
+);
+
+this.ensureTicking();
   }
 
->>>>>>> Stashed changes
+  
+
+
   // ---- Laden ----
   private loadTodos() {
     this.http.get<TodoListResponse>(this.apiUrl).subscribe({
@@ -278,7 +309,7 @@ export class TodoService {
   }
 
 
-  private toTodo(dto: TodoDto): Todo {
+private toTodo(dto: TodoDto): Todo {
   return {
     id: dto.id,
     title: dto.title,
@@ -286,6 +317,10 @@ export class TodoService {
     isFavorite: dto.isFavorite ?? false,
     labelId: dto.categoryId,
     createdAt: new Date(dto.createdAt),
+    timerStartedAt: dto.timerStartedAt
+      ? new Date(dto.timerStartedAt)
+      : null,
+    timerDurationSeconds: dto.timerDurationSeconds ?? null,
   };
 }
 

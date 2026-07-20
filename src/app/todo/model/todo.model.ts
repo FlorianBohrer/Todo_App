@@ -1,14 +1,14 @@
+export interface Todo {
+  id: string;
+  title: string;
+  completed: boolean;
+  isFavorite: boolean;
+  labelId: string | null;
+  createdAt: Date;
 
+  /** Zeitpunkt, an dem der Timer gestartet wurde. */
+  timerStartedAt: Date | null;
 
-export interface Todo{
-    id: string;
-    title: string;
-    completed: boolean;
-    isFavorite: boolean;
-    labelId: string | null;  // null = keine Kategorie
-    createdAt: Date;
+  /** Eingestellte Dauer des Timers in Sekunden. */
+  timerDurationSeconds: number | null;
 }
-
-export type Filter = 'all' | 'active' | 'completed' | 'favorites';
-
-
