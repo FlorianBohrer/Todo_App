@@ -9,7 +9,7 @@
         @case ('favorites') { No favorites yet, tap the star on a todo }
         @default            { No todos found }
       }
-    </p>
+    </p><input type="checkbox">
   } @else {
     
 
@@ -19,13 +19,15 @@
       cdkDropList
       (cdkDropListDropped)="drop($event)">
       @for (todo of todos(); track todo.id) {
-        <li
-          cdkDrag
-          class="group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4
-                 transition-colors hover:bg-panel/50"
-                 [class]="labelService.borderClassFor(todo.labelId)"
-                 [class.todo-expanded-row]="isExpanded(todo.id)"
-                 [class.opacity-70]="todo.completed">
+      <li
+        cdkDrag
+        class="todo-card group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4"
+        [class]="labelService.borderClassFor(todo.labelId)"
+        [class.todo-expanded-row]="isExpanded(todo.id)"
+        [class.todo-card--completed]="todo.completed"
+        [class.todo-card--leaving]="leavingTodoIds().has(todo.id)"
+        [class.todo-card--new]="newTodoId() === todo.id"
+>
 
           <!-- Platzhalter beim Ziehen -->
           <div
@@ -58,31 +60,52 @@
             aria-label="Reorder todo">
             <lucide-icon [img]="GripIcon" class="h-5 w-5"></lucide-icon>
           </button>
-
-
+          
           <label class="flex flex-1 items-center gap-3 min-w-0">
-            <input
-              type="checkbox"
-              class="m-1.5 flex-shrink-0 
-              appearance-none h-6 w-6 rounded-full border-3 border-gray-300 cursor-pointer
-                     checked:bg-zinc-200 checked:border-zinc-300
-                     focus:outline-none focus:ring-1 transition-colors"
-              [checked]="todo.completed"
-              (change)="toggleTodo(todo.id)"
-            />
-            <textarea
-              #todoText
-              appAutosize
-              rows = "1"
-              class="flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words
-                     focus:outline-none focus:ring-zinc-100"
-              [class.todo-collapsed]="canExpand(todo.title) && !isExpanded(todo.id)"
-              [value]="todo.title"
-              [class.line-through]="todo.completed"
-              [class.text-zinc-400]="todo.completed"
-              (keyup.enter)="$event.preventDefault();renameTodo (todo.id, $any($event.target).value); $any($event.target).blur()"
-            ></textarea>
-          </label>
+          <button
+            type="button"
+            class="todo-checkbox"
+            [class.todo-checkbox--checked]="todo.completed"
+            [attr.aria-pressed]="todo.completed"
+            [attr.aria-label]="
+              todo.completed
+                ? 'Todo wieder öffnen'
+                : 'Todo als erledigt markieren'
+            "
+            (click)="handleToggleTodo(todo)"
+          >
+            <svg
+              class="todo-checkmark"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 12.5L9.5 17L19 7"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+
+          <textarea
+            #todoText
+            appAutosize
+            rows="1"
+            class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words
+                  focus:outline-none focus:ring-zinc-100"
+            [class.todo-collapsed]="canExpand(todo.title) && !isExpanded(todo.id)"
+            [value]="todo.title"
+            [class.todo-title--completed]="todo.completed"
+            (keyup.enter)="
+              $event.preventDefault();
+              renameTodo(todo.id, $any($event.target).value);
+              $any($event.target).blur()
+            "
+          ></textarea>
+        </label>
 
           <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
           @if (canExpand(todo.title)) {
@@ -174,7 +197,7 @@
             <lucide-icon [img]="ChevronDownIcon" class="h-3.5 w-3.5 text-muted"></lucide-icon>
           </button>
 
-          <!-- Custom-Popover via CDK Overlay (kein Clipping, mit Farbpunkten) -->
+          <!-- Custom-Popover via CDK Overlay -->
           <ng-template
             cdkConnectedOverlay
             [cdkConnectedOverlayOrigin]="trigger"
