@@ -5,6 +5,9 @@
     rows="1"
     class="min-h-11 flex-1 resize-none overflow-hidden rounded-xl bg-bg2 px-4 py-3 text-text"
     placeholder="Add a todo..."
+    [(ngModel)]="newTitle"
+    (keydown.enter)="$event.preventDefault(); addTodo()"
+    aria-label="New todo"
   ></textarea>
 
   <button
