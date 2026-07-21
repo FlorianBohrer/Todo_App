@@ -517,3 +517,75 @@ textarea::-webkit-resizer { display: none; }
     transform: translateY(0) scale(1);
   }
 }
+
+.cdk-drag-preview {
+  border-radius: 0 0.75rem 0.75rem 0;
+
+  background: var(--color-bg2);
+
+  box-shadow:
+    0 22px 45px rgb(0 0 0 / 38%);
+
+  transform: rotate(1deg) scale(1.025);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.18;
+}
+
+.cdk-drag-animating {
+  transition:
+    transform 250ms
+    cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cdk-drop-list-dragging
+.todo-card:not(.cdk-drag-placeholder) {
+  transition:
+    transform 250ms
+    cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.todo-card.cdk-drag-disabled {
+  cursor: default;
+}
+
+.timer-done {
+  animation:
+    timer-complete 700ms
+    cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  box-shadow:
+    0 0 18px rgb(16 185 129 / 22%);
+}
+
+@keyframes timer-complete {
+  0% {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(1.12);
+  }
+
+  65% {
+    transform: scale(0.97);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+
+    transition-duration: 0.01ms !important;
+  }
+}
