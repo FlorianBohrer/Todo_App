@@ -4,12 +4,14 @@
     (click)="close()">
   </div>
 
+  <!-- Spalten-Layout: Header + Suche oben fix, Folder-Liste scrollt, Add-Form
+       bleibt als Footer immer sichtbar — so ist Anlegen auch mobil sofort da. -->
   <div
-     class="fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2
+    class="fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2
            flex-col rounded-2xl border border-white/5 bg-panel1 shadow-2xl"
     (click)="$event.stopPropagation()">
 
-    <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center justify-between px-4 pt-4 sm:px-6 sm:pt-6">
       <h2 class="text-2xl font-bold text-text">Folders</h2>
       <button
         class="rounded-md p-1 text-muted transition hover:text-text"
@@ -20,10 +22,10 @@
     </div>
 
     <!-- Suche -->
-    <div class="relative mb-3">
+    <div class="relative mt-4 px-4 sm:px-6">
       <lucide-icon
         [img]="SearchIcon"
-        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted">
+        class="pointer-events-none absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-muted sm:left-9">
       </lucide-icon>
       <input
         #search
@@ -37,7 +39,7 @@
       @if (isSearching()) {
         <button
           type="button"
-          class="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-text"
+          class="absolute right-7 top-1/2 -translate-y-1/2 text-muted transition hover:text-text sm:right-9"
           (click)="clearSearch(); search.value = ''"
           aria-label="Suche zurücksetzen">
           ✕
@@ -45,8 +47,8 @@
       }
     </div>
 
-    <!-- All-Karte: nicht sortierbar, daher außerhalb des Grids -->
-     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6">
+    <!-- Scrollbereich: nur die Folder-Liste scrollt -->
+    <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6">
 
       <!-- All-Karte: nicht sortierbar, daher außerhalb des Grids -->
       <button class="mb-3 flex w-full items-center gap-3 rounded-2xl bg-bg2 p-4 text-left
@@ -58,107 +60,111 @@
         <span class="font-semibold text-zinc-200">All</span>
       </button>
 
-    <div
-      class="grid grid-cols-2 gap-3 mt-3"
-      cdkDropList
-      cdkDropListOrientation="mixed"
-      (cdkDropListDropped)="drop($event)">
+      <div
+        class="grid grid-cols-2 gap-3"
+        cdkDropList
+        cdkDropListOrientation="mixed"
+        (cdkDropListDropped)="drop($event)">
 
-      <!-- Label-Karten mit Löschen -->
-      @for (label of visibleLabels(); track label.id) {
-        <div
-          cdkDrag
-          [cdkDragDisabled]="isSearching()"
-          class="group relative flex items-center gap-2 rounded-2xl p-4 text-left cursor-pointer transition hover:scale-[1.02]"
-          [class]="bgClass(label.color)"
-          [class.ring-2]="activeLabelId() === label.id"
-          [class.ring-emerald-500]="activeLabelId() === label.id"
-          (click)="select(label.id)">
+        <!-- Label-Karten mit Löschen -->
+        @for (label of visibleLabels(); track label.id) {
+          <div
+            cdkDrag
+            [cdkDragDisabled]="isSearching()"
+            class="group relative flex items-center gap-2 rounded-2xl p-4 text-left cursor-pointer transition hover:scale-[1.02]"
+            [class]="bgClass(label.color)"
+            [class.ring-2]="activeLabelId() === label.id"
+            [class.ring-emerald-500]="activeLabelId() === label.id"
+            (click)="select(label.id)">
 
-          <!-- Drag-Griff: beim Suchen ausgeblendet, weil dann nicht sortiert wird -->
-          @if (!isSearching()) {
-            <button
-              type="button"
-              cdkDragHandle
-              class="flex-none cursor-grab touch-none text-zinc-500 opacity-0 transition
-                     hover:text-zinc-300 group-hover:opacity-100 active:cursor-grabbing"
-              (click)="$event.stopPropagation()"
-              aria-label="Folder verschieben">
-              <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
-            </button>
-          }
+            <!-- Drag-Griff: beim Suchen ausgeblendet, weil dann nicht sortiert wird -->
+            @if (!isSearching()) {
+              <button
+                type="button"
+                cdkDragHandle
+                class="flex-none cursor-grab touch-none text-zinc-500 opacity-60 transition
+                       hover:text-zinc-300 active:cursor-grabbing sm:opacity-0 sm:group-hover:opacity-100"
+                (click)="$event.stopPropagation()"
+                aria-label="Folder verschieben">
+                <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+            }
 
-          <span [class]="textClass(label.color)">●</span>
-          <span [class]="'min-w-0 flex-1 truncate font-semibold ' + textClass(label.color)">{{ label.name }}</span>
+            <span [class]="textClass(label.color)">●</span>
+            <span [class]="'min-w-0 flex-1 truncate font-semibold ' + textClass(label.color)">{{ label.name }}</span>
 
-          <!-- Favoriten-Stern: sichtbar wenn aktiv, sonst bei Hover.
-               Sind alle vier Plätze belegt, sind weitere Sterne gesperrt. -->
-          <button type="button"
-                  class="flex-none rounded-full p-1 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
-                  [class]="label.isFavorite
-                    ? 'text-amber-400'
-                    : 'opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-300'"
-                  [disabled]="!label.isFavorite && favoritesFull()"
-                  [attr.title]="!label.isFavorite && favoritesFull()
-                    ? 'Maximal vier Favoriten — entferne zuerst einen Stern'
-                    : null"
-                  (click)="toggleFavorite(label.id, $event)"
-                  [attr.aria-pressed]="label.isFavorite"
-                  [attr.aria-label]="label.isFavorite
-                    ? 'Folder aus Favoriten entfernen'
-                    : 'Folder als Favorit markieren'">
-            <lucide-icon
-              [img]="StarIcon"
-              class="h-4 w-4"
-              [class.fill-amber-400]="label.isFavorite">
-            </lucide-icon>
-          </button>
-
-          @if (confirmDeleteId() === label.id) {
-            <!-- Rückfrage -->
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-zinc-300">Löschen?</span>
-              <button type="button" class="text-xs text-rose-400 hover:text-rose-300"
-                      (click)="confirmDelete(label.id, $event)">Ja</button>
-              <button type="button" class="text-xs text-zinc-400 hover:text-zinc-200"
-                      (click)="cancelDelete($event)">Nein</button>
-            </div>
-          } @else {
-            <!-- ✕ erscheint bei Hover -->
+            <!-- Favoriten-Stern: sichtbar wenn aktiv, sonst bei Hover.
+                 Sind alle vier Plätze belegt, sind weitere Sterne gesperrt. -->
             <button type="button"
-                    class="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-400 transition"
-                    (click)="askDelete(label.id, $event)"
-                    aria-label="Kategorie löschen">✕</button>
-          }
-        </div>
+                    class="flex-none rounded-full p-1 transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
+                    [class]="label.isFavorite
+                      ? 'text-amber-400'
+                      : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-zinc-400 hover:text-amber-300'"
+                    [disabled]="!label.isFavorite && favoritesFull()"
+                    [attr.title]="!label.isFavorite && favoritesFull()
+                      ? 'Maximal vier Favoriten — entferne zuerst einen Stern'
+                      : null"
+                    (click)="toggleFavorite(label.id, $event)"
+                    [attr.aria-pressed]="label.isFavorite"
+                    [attr.aria-label]="label.isFavorite
+                      ? 'Folder aus Favoriten entfernen'
+                      : 'Folder als Favorit markieren'">
+              <lucide-icon
+                [img]="StarIcon"
+                class="h-4 w-4"
+                [class.fill-amber-400]="label.isFavorite">
+              </lucide-icon>
+            </button>
+
+            @if (confirmDeleteId() === label.id) {
+              <!-- Rückfrage -->
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-zinc-300">Löschen?</span>
+                <button type="button" class="text-xs text-rose-400 hover:text-rose-300"
+                        (click)="confirmDelete(label.id, $event)">Ja</button>
+                <button type="button" class="text-xs text-zinc-400 hover:text-zinc-200"
+                        (click)="cancelDelete($event)">Nein</button>
+              </div>
+            } @else {
+              <!-- ✕ erscheint bei Hover -->
+              <button type="button"
+                      class="p-1 text-zinc-400 transition hover:text-rose-400 sm:opacity-0 sm:group-hover:opacity-100"
+                      (click)="askDelete(label.id, $event)"
+                      aria-label="Kategorie löschen">✕</button>
+            }
+          </div>
+        }
+      </div>
+
+      @if (isSearching() && visibleLabels().length === 0) {
+        <p class="py-6 text-center text-sm text-muted">
+          Kein Folder gefunden für „{{ searchTerm() }}“
+        </p>
       }
     </div>
 
-    @if (isSearching() && visibleLabels().length === 0) {
-      <p class="py-6 text-center text-sm text-muted">
-        Kein Folder gefunden für „{{ searchTerm() }}“
-      </p>
-    }
-</div>
-
-    <!-- Add-Zeile: NUR Input + Swatches + Button. Keine Label-Karten hier! -->
+    <!-- Neuen Folder anlegen: als fester Footer immer sichtbar. Mobil gestapelt
+         (volle Breite, große Touch-Ziele), ab sm einzeilig. -->
     <div class="flex flex-col gap-3 rounded-b-2xl border-t border-white/10 bg-panel1 px-4 py-4 sm:flex-row sm:items-center sm:px-6">
       <input
         #newCat
         type="text"
-        placeholder="Neue Kategorie…"
-         class="input flex-1 h-10 px-3 rounded-md border border-white/10 bg-bg2 text-text focus:outline-none focus:ring-2 focus:ring-emerald-500"
-    (keydown.enter)="$event.preventDefault(); add(newCat.value); newCat.value=''"
-  />
-      <div class="flex items-center gap-1.5">
+        placeholder="Neuer Folder…"
+        class="input h-11 w-full rounded-md border border-white/10 bg-bg2 px-3 text-text
+               focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:h-10 sm:flex-1"
+        (keydown.enter)="$event.preventDefault(); add(newCat.value); newCat.value=''"
+      />
+      <div class="flex flex-wrap items-center justify-between gap-1 sm:justify-start sm:gap-1.5">
         @for (c of palette; track c) {
           <button
             type="button"
             (click)="draftColor.set(c)"
             [class]="textClass(c)"
             [class.ring-2]="draftColor() === c"
-            class="grid h-7 w-7 place-items-center rounded-full text-lg leading-none
-                   ring-white/70 transition hover:bg-white/5">
+            class="grid h-9 w-9 place-items-center rounded-full text-lg leading-none
+                   ring-white/70 transition hover:bg-white/5 sm:h-7 sm:w-7"
+            [attr.aria-label]="'Farbe ' + c"
+            [attr.aria-pressed]="draftColor() === c">
             ●
           </button>
         }
@@ -166,7 +172,7 @@
 
       <button
         type="button"
-        class="btn btn-primary flex-none"
+        class="btn btn-primary w-full sm:w-auto sm:flex-none"
         (click)="add(newCat.value); newCat.value = ''">
         Hinzufügen
       </button>
