@@ -1,210 +1,316 @@
 import { Component, inject, signal } from '@angular/core';
-import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
-import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder, CdkDragDrop } from '@angular/cdk/drag-drop';
-import { TodoService, TIMER_PRESETS_MINUTES } from '../../../services/todo';
+import {
+  ConnectedPosition,
+  OverlayModule,
+} from '@angular/cdk/overlay';
+import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragHandle,
+  CdkDragPlaceholder,
+  CdkDropList,
+} from '@angular/cdk/drag-drop';
+
+import {
+  TodoService,
+  TIMER_PRESETS_MINUTES,
+} from '../../../services/todo';
 import { Todo } from '../../../model/todo.model';
 import { Autosize } from '../../../../directives/autosize.drectives';
 import { folderColorClass } from '../../../shared/folder-color';
 import { LabelService } from '../../../services/label.service';
+
 import {
-  LucideAngularModule,
   ChevronDown,
   ChevronsUpDown,
   EllipsisVertical,
   GripVertical,
+  LucideAngularModule,
   Star,
   Timer,
   Trash2,
 } from 'lucide-angular';
 
-
-
-
 @Component({
   selector: 'app-todo-list',
-  imports: [Autosize, LucideAngularModule, OverlayModule, CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder],
+  imports: [
+    Autosize,
+    LucideAngularModule,
+    OverlayModule,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
+    CdkDragPlaceholder,
+  ],
   templateUrl: './todo-list.html',
   styleUrl: './todo-list.scss',
 })
 export class TodoList {
   private readonly todoService = inject(TodoService);
-  protected readonly labelService = inject(LabelService)
+
+  protected readonly labelService = inject(LabelService);
 
   protected readonly todos = this.todoService.filteredTodos;
   protected readonly stats = this.todoService.stats;
   protected readonly filter = this.todoService.filter;
   protected readonly labels = this.labelService.labels;
+
   protected readonly ChevronDownIcon = ChevronDown;
   protected readonly GripIcon = GripVertical;
   protected readonly StarIcon = Star;
   protected readonly TimerIcon = Timer;
-  protected readonly timerPresets = TIMER_PRESETS_MINUTES;
-
-  // Welches Todo-Menü ist gerade offen (null = keins)
-  protected readonly openMenuId = signal<string | null>(null);
-
-  // Welches Timer-Menü ist gerade offen (null = keins)
-  protected readonly openTimerMenuId = signal<string | null>(null);
-
   protected readonly ExpandIcon = ChevronsUpDown;
   protected readonly OptionsIcon = EllipsisVertical;
   protected readonly TrashIcon = Trash2;
 
-  readonly leavingTodoIds = signal<Set<string>>(new Set());
-  readonly newTodoId = signal<string | null>(null);
-  
+  protected readonly timerPresets = TIMER_PRESETS_MINUTES;
 
-  // Mobil: Drei-Punkte-Menü statt einzelner Buttons (null = keins offen)
-  protected readonly openOptionsId = signal<string | null>(null);
+  protected readonly openMenuId =
+    signal<string | null>(null);
 
-  toggleOptionsMenu(id: string) {
-    this.openOptionsId.update(cur => (cur === id ? null : id));
+  protected readonly openTimerMenuId =
+    signal<string | null>(null);
+
+  protected readonly openOptionsId =
+    signal<string | null>(null);
+
+  protected readonly completingTodoIds =
+    signal<ReadonlySet<string>>(new Set());
+
+  protected readonly leavingTodoIds =
+    signal<ReadonlySet<string>>(new Set());
+
+  protected readonly newTodoId =
+    signal<string | null>(null);
+
+  private readonly expandedIds =
+    signal<ReadonlySet<string>>(new Set());
+
+  private readonly EXPAND_THRESHOLD = 40;
+
+  protected readonly overlayPositions: ConnectedPosition[] = [
+    {
+      originX: 'end',
+      originY: 'bottom',
+      overlayX: 'end',
+      overlayY: 'top',
+      offsetY: 4,
+    },
+    {
+      originX: 'end',
+      originY: 'top',
+      overlayX: 'end',
+      overlayY: 'bottom',
+      offsetY: -4,
+    },
+  ];
+
+  handleToggleTodo(todo: Todo): void {
+    if (this.leavingTodoIds().has(todo.id)) {
+      return;
+    }
+
+    if (todo.completed) {
+      this.todoService.toggleTodo(todo.id);
+      return;
+    }
+
+    this.updateIdSet(
+      this.completingTodoIds,
+      todo.id,
+      true,
+    );
+
+    window.setTimeout(() => {
+      this.updateIdSet(
+        this.leavingTodoIds,
+        todo.id,
+        true,
+      );
+    }, 280);
+
+    window.setTimeout(() => {
+      try {
+        this.todoService.toggleTodo(todo.id);
+      } finally {
+        this.clearTodoAnimationState(todo.id);
+      }
+    }, 540);
   }
 
-  
+  private clearTodoAnimationState(todoId: string): void {
+    this.updateIdSet(
+      this.completingTodoIds,
+      todoId,
+      false,
+    );
 
-  closeOptionsMenu() {
+    this.updateIdSet(
+      this.leavingTodoIds,
+      todoId,
+      false,
+    );
+  }
+
+  private updateIdSet(
+    target:
+      | typeof this.completingTodoIds
+      | typeof this.leavingTodoIds,
+    todoId: string,
+    add: boolean,
+  ): void {
+    target.update((current) => {
+      const updated = new Set(current);
+
+      if (add) {
+        updated.add(todoId);
+      } else {
+        updated.delete(todoId);
+      }
+
+      return updated;
+    });
+  }
+
+  toggleOptionsMenu(id: string): void {
+    this.openOptionsId.update(
+      current => current === id ? null : id,
+    );
+  }
+
+  closeOptionsMenu(): void {
     this.openOptionsId.set(null);
   }
 
-  // Aufgeklappte Todos: voller Text statt einer geklemmten Zeile.
-  private readonly expandedIds = signal<ReadonlySet<string>>(new Set());
+  toggleMenu(id: string): void {
+    this.openMenuId.update(
+      current => current === id ? null : id,
+    );
+  }
 
-  /** Ab dieser Länge lohnt sich Aufklappen (mobil wrappt Text früh). */
-  private readonly EXPAND_THRESHOLD = 40;
+  closeMenu(): void {
+    this.openMenuId.set(null);
+  }
+
+  toggleTimerMenu(id: string): void {
+    this.openTimerMenuId.update(
+      current => current === id ? null : id,
+    );
+  }
+
+  closeTimerMenu(): void {
+    this.openTimerMenuId.set(null);
+  }
 
   canExpand(title: string): boolean {
-    return title.length > this.EXPAND_THRESHOLD || title.includes('\n');
+    return (
+      title.length > this.EXPAND_THRESHOLD ||
+      title.includes('\n')
+    );
   }
 
   isExpanded(id: string): boolean {
     return this.expandedIds().has(id);
   }
 
-  toggleExpanded(id: string, textarea?: HTMLTextAreaElement) {
+  toggleExpanded(
+    id: string,
+    textarea?: HTMLTextAreaElement,
+  ): void {
     const expanding = !this.isExpanded(id);
 
-    this.expandedIds.update((set) => {
-      const next = new Set(set);
-      if (next.has(id)) {
-        next.delete(id);
+    this.expandedIds.update((current) => {
+      const updated = new Set(current);
+
+      if (updated.has(id)) {
+        updated.delete(id);
       } else {
-        next.add(id);
+        updated.add(id);
       }
-      return next;
+
+      return updated;
     });
 
-    // Höhe frisch messen: der Wert der Autosize-Direktive stammt vom Init und
-    // kann veraltet sein (z.B. gemessen, bevor das Layout stand).
     if (expanding && textarea) {
       requestAnimationFrame(() => {
         textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height =
+          `${textarea.scrollHeight}px`;
       });
     }
   }
 
-
-
-  // Menü rechtsbündig unter dem Trigger, nach oben als Fallback
-  protected readonly overlayPositions: ConnectedPosition[] = [
-    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 4 },
-    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -4 },
-  ];
-
-
-handleToggleTodo(todo: Todo): void {
-  if (todo.completed) {
-    this.toggleTodo(todo.id);
-    return;
-  }
-
-  this.addLeavingTodo(todo.id);
-
-  window.setTimeout(() => {
-    this.toggleTodo(todo.id);
-
-    window.setTimeout(() => {
-      this.removeLeavingTodo(todo.id);
-    }, 100);
-  }, 420);
-}
-
-private addLeavingTodo(todoId: string): void {
-  this.leavingTodoIds.update((current) => {
-    const updated = new Set(current);
-    updated.add(todoId);
-    return updated;
-  });
-}
-
-private removeLeavingTodo(todoId: string): void {
-  this.leavingTodoIds.update((current) => {
-    const updated = new Set(current);
-    updated.delete(todoId);
-    return updated;
-  });
-}
-
-  toggleMenu(id: string) {
-    this.openMenuId.update(cur => (cur === id ? null : id));
-  }
-
-  closeMenu() {
-    this.openMenuId.set(null);
-  }
-
-  setLabel(id: string, labelId: string | null) {
+  setLabel(
+    id: string,
+    labelId: string | null,
+  ): void {
     this.todoService.setTodoLabel(id, labelId);
     this.closeMenu();
   }
 
   labelName(labelId: string | null): string {
-    if (labelId === null) return 'No category';
-    return this.labels().find(l => l.id === labelId)?.name ?? 'No category';
+    if (labelId === null) {
+      return 'No category';
+    }
+
+    return (
+      this.labels().find(
+        label => label.id === labelId,
+      )?.name ?? 'No category'
+    );
   }
 
   dotClass(labelId: string | null): string {
-    if (labelId === null) return 'text-zinc-400';
-    const label = this.labels().find(l => l.id === labelId);
+    if (labelId === null) {
+      return 'text-zinc-400';
+    }
+
+    const label = this.labels().find(
+      item => item.id === labelId,
+    );
+
     return folderColorClass(label?.color, 'dot');
   }
 
-  renameTodo(id: string, title: string){
+  renameTodo(
+    id: string,
+    title: string,
+  ): void {
     this.todoService.renameTodo(id, title);
   }
 
-  removeTodos(id: string){
+  removeTodos(id: string): void {
     this.todoService.removeTodo(id);
   }
 
-  toggleTodo(id: string){
+  toggleTodo(id: string): void {
     this.todoService.toggleTodo(id);
   }
 
-  toggleFavorite(id: string){
+  toggleFavorite(id: string): void {
     this.todoService.toggleFavorite(id);
   }
 
-  drop(event: CdkDragDrop<unknown>){
-    this.todoService.reorder(event.previousIndex, event.currentIndex);
+  drop(event: CdkDragDrop<unknown>): void {
+    this.todoService.reorder(
+      event.previousIndex,
+      event.currentIndex,
+    );
   }
 
-  // ---- Zeitblock ----
-  toggleTimerMenu(id: string) {
-    this.openTimerMenuId.update(cur => (cur === id ? null : id));
-  }
+  startTimer(
+    id: string,
+    minutes: number,
+  ): void {
+    this.todoService.startTimer(
+      id,
+      minutes * 60,
+    );
 
-  closeTimerMenu() {
-    this.openTimerMenuId.set(null);
-  }
-
-  startTimer(id: string, minutes: number) {
-    this.todoService.startTimer(id, minutes * 60);
     this.closeTimerMenu();
   }
 
-  stopTimer(id: string) {
+  stopTimer(id: string): void {
     this.todoService.stopTimer(id);
   }
 
@@ -213,26 +319,22 @@ private removeLeavingTodo(todoId: string): void {
   }
 
   isTimerDone(todo: Todo): boolean {
-    return this.hasTimer(todo) && this.todoService.remainingSeconds(todo) === 0;
+    return (
+      this.hasTimer(todo) &&
+      this.todoService.remainingSeconds(todo) === 0
+    );
   }
 
-  /** Restzeit als mm:ss. */
   remainingLabel(todo: Todo): string {
-    const total = this.todoService.remainingSeconds(todo);
-    const minutes = Math.floor(total / 60);
-    const seconds = total % 60;
+    const total =
+      this.todoService.remainingSeconds(todo);
+
+    const minutes =
+      Math.floor(total / 60);
+
+    const seconds =
+      total % 60;
+
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   }
-  createTodo(title: string): void {
-  const createdTodo = (this.todoService as any).createTodo({ title });
-  this.newTodoId.set(createdTodo.id);
-
-  window.setTimeout(() => {
-    if (this.newTodoId() === createdTodo.id) {
-      this.newTodoId.set(null);
-    }
-  }, 300);
 }
-}
-
-
