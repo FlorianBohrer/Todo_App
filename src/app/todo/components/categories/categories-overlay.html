@@ -60,11 +60,10 @@
         <span class="font-semibold text-zinc-200">All</span>
       </button>
 
-      <div
-        class="grid grid-cols-2 gap-3"
-        cdkDropList
-        cdkDropListOrientation="mixed"
-        (cdkDropListDropped)="drop($event)">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2"
+         cdkDropList
+         cdkDropListOrientation="mixed"
+         (cdkDropListDropped)="drop($event)">
 
         <!-- Label-Karten mit Löschen -->
         @for (label of visibleLabels(); track label.id) {
