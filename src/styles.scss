@@ -397,3 +397,123 @@
 }
 
 textarea::-webkit-resizer { display: none; }
+
+
+.todo-card {
+  position: relative;
+
+  opacity: 1;
+  transform: translateY(0) scale(1);
+
+  transition:
+    opacity 260ms ease,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.todo-card--completed {
+  opacity: 0.68;
+}
+
+.todo-card--leaving {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(18px) scale(0.97);
+}
+
+.todo-card--new {
+  animation: todo-enter 420ms
+    cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.todo-checkbox {
+  display: grid;
+  place-items: center;
+
+  width: 1.5rem;
+  height: 1.5rem;
+
+  flex-shrink: 0;
+
+  padding: 0;
+  border: 2px solid rgb(212 212 216);
+  border-radius: 999px;
+
+  color: white;
+  background: transparent;
+
+  cursor: pointer;
+
+  transition:
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.todo-checkbox:hover {
+  border-color: rgb(129 140 248);
+}
+
+.todo-checkbox:active {
+  transform: scale(0.82);
+}
+
+.todo-checkbox:focus-visible {
+  outline: 2px solid rgb(129 140 248);
+  outline-offset: 3px;
+}
+
+.todo-checkbox--checked {
+  border-color: rgb(99 102 241);
+  background: rgb(99 102 241);
+
+  box-shadow:
+    0 0 0 4px rgb(99 102 241 / 16%);
+
+  transform: scale(1.08);
+}
+
+.todo-checkmark {
+  width: 1rem;
+  height: 1rem;
+}
+
+.todo-checkmark path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+
+  transition:
+    stroke-dashoffset 240ms ease 70ms;
+}
+
+.todo-checkbox--checked .todo-checkmark path {
+  stroke-dashoffset: 0;
+}
+
+.todo-title {
+  transition:
+    color 220ms ease,
+    opacity 220ms ease,
+    text-decoration-color 220ms ease;
+}
+
+.todo-title--completed {
+  color: rgb(161 161 170);
+  text-decoration-line: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgb(161 161 170);
+}
+
+@keyframes todo-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -18,6 +18,8 @@ import {
 } from 'lucide-angular';
 
 
+
+
 @Component({
   selector: 'app-todo-list',
   imports: [Autosize, LucideAngularModule, OverlayModule, CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder],
@@ -47,6 +49,10 @@ export class TodoList {
   protected readonly ExpandIcon = ChevronsUpDown;
   protected readonly OptionsIcon = EllipsisVertical;
   protected readonly TrashIcon = Trash2;
+
+  readonly leavingTodoIds = signal<Set<string>>(new Set());
+  readonly newTodoId = signal<string | null>(null);
+  
 
   // Mobil: Drei-Punkte-Menü statt einzelner Buttons (null = keins offen)
   protected readonly openOptionsId = signal<string | null>(null);
@@ -96,11 +102,47 @@ export class TodoList {
     }
   }
 
+
+
   // Menü rechtsbündig unter dem Trigger, nach oben als Fallback
   protected readonly overlayPositions: ConnectedPosition[] = [
     { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 4 },
     { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -4 },
   ];
+
+
+handleToggleTodo(todo: Todo): void {
+  if (todo.completed) {
+    this.toggleTodo(todo.id);
+    return;
+  }
+
+  this.addLeavingTodo(todo.id);
+
+  window.setTimeout(() => {
+    this.toggleTodo(todo.id);
+
+    window.setTimeout(() => {
+      this.removeLeavingTodo(todo.id);
+    }, 100);
+  }, 420);
+}
+
+private addLeavingTodo(todoId: string): void {
+  this.leavingTodoIds.update((current) => {
+    const updated = new Set(current);
+    updated.add(todoId);
+    return updated;
+  });
+}
+
+private removeLeavingTodo(todoId: string): void {
+  this.leavingTodoIds.update((current) => {
+    const updated = new Set(current);
+    updated.delete(todoId);
+    return updated;
+  });
+}
 
   toggleMenu(id: string) {
     this.openMenuId.update(cur => (cur === id ? null : id));
