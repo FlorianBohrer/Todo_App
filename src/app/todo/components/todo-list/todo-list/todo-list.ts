@@ -231,7 +231,7 @@ private removeLeavingTodo(todoId: string): void {
     if (this.newTodoId() === createdTodo.id) {
       this.newTodoId.set(null);
     }
-  }, 500);
+  }, 300);
 }
 }
 
