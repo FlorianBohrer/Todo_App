@@ -61,6 +61,8 @@ export class TodoList {
     this.openOptionsId.update(cur => (cur === id ? null : id));
   }
 
+  
+
   closeOptionsMenu() {
     this.openOptionsId.set(null);
   }
@@ -221,4 +223,16 @@ private removeLeavingTodo(todoId: string): void {
     const seconds = total % 60;
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   }
+  createTodo(title: string): void {
+  const createdTodo = (this.todoService as any).createTodo({ title });
+  this.newTodoId.set(createdTodo.id);
+
+  window.setTimeout(() => {
+    if (this.newTodoId() === createdTodo.id) {
+      this.newTodoId.set(null);
+    }
+  }, 500);
 }
+}
+
+
