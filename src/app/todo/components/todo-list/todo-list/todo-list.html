@@ -9,7 +9,7 @@
         @case ('favorites') { No favorites yet, tap the star on a todo }
         @default            { No todos found }
       }
-    </p><input type="checkbox">
+    </p>
   } @else {
     
 
@@ -19,16 +19,17 @@
       cdkDropList
       (cdkDropListDropped)="drop($event)">
       @for (todo of todos(); track todo.id) {
-      <li
-        cdkDrag
-        class="todo-card group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4"
-        [class]="labelService.borderClassFor(todo.labelId)"
-        [class.todo-expanded-row]="isExpanded(todo.id)"
-        [class.todo-card--completed]="todo.completed"
-        [class.todo-card--leaving]="leavingTodoIds().has(todo.id)"
-        [class.todo-card--new]="newTodoId() === todo.id"
->
-
+     <li
+      cdkDrag
+      class="todo-card group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4"
+      [class]="labelService.borderClassFor(todo.labelId)"
+      [class.todo-expanded-row]="isExpanded(todo.id)"
+      [class.todo-card--completed]="
+        todo.completed || completingTodoIds().has(todo.id)
+      "
+      [class.todo-card--leaving]="leavingTodoIds().has(todo.id)"
+      [class.todo-card--new]="newTodoId() === todo.id"
+    >
           <!-- Platzhalter beim Ziehen -->
           <div
             *cdkDragPlaceholder
@@ -53,59 +54,36 @@
           </button>
 
           <!-- Drag-handle -->
-          <button
-            type="button"
-            cdkDragHandle
-            class="flex-shrink-0 touch-none cursor-grab text-muted/60 transition hover:text-text active:cursor-grabbing"
-            aria-label="Reorder todo">
-            <lucide-icon [img]="GripIcon" class="h-5 w-5"></lucide-icon>
-          </button>
-          
-          <label class="flex flex-1 items-center gap-3 min-w-0">
-          <button
-            type="button"
-            class="todo-checkbox"
-            [class.todo-checkbox--checked]="todo.completed"
-            [attr.aria-pressed]="todo.completed"
-            [attr.aria-label]="
-              todo.completed
-                ? 'Todo wieder öffnen'
-                : 'Todo als erledigt markieren'
-            "
-            (click)="handleToggleTodo(todo)"
-          >
-            <svg
-              class="todo-checkmark"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
+           <div class="flex flex-1 items-center gap-3 min-w-0">
+            <button
+              type="button"
+              class="todo-checkbox"
+              [class.todo-checkbox--checked]="
+                todo.completed ||
+                completingTodoIds().has(todo.id)
+              "
+              [disabled]="leavingTodoIds().has(todo.id)"
+              (click)="handleToggleTodo(todo)"
             >
-              <path
-                d="M5 12.5L9.5 17L19 7"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
+              <!-- SVG -->
+            </button>
 
-          <textarea
-            #todoText
-            appAutosize
-            rows="1"
-            class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words
-                  focus:outline-none focus:ring-zinc-100"
-            [class.todo-collapsed]="canExpand(todo.title) && !isExpanded(todo.id)"
-            [value]="todo.title"
-            [class.todo-title--completed]="todo.completed"
-            (keyup.enter)="
-              $event.preventDefault();
-              renameTodo(todo.id, $any($event.target).value);
-              $any($event.target).blur()
-            "
-          ></textarea>
-        </label>
+            <textarea
+              #todoText
+              appAutosize
+              rows="1"
+              class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-zinc-100"
+              [class.todo-collapsed]="
+                canExpand(todo.title) &&
+                !isExpanded(todo.id)
+              "
+              [class.todo-title--completed]="
+                todo.completed ||
+                completingTodoIds().has(todo.id)
+              "
+              [value]="todo.title"
+            ></textarea>
+          </div>
 
           <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
           @if (canExpand(todo.title)) {
