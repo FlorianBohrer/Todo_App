@@ -49,6 +49,7 @@ export class TodoService {
 
   private readonly todos = signal<Todo[]>([]);
   readonly filter = signal<Filter>('all');
+   readonly searchTerm = signal('');
 
   private readonly todosInCategory = computed(() => {
     const labelId = this.labelService.activeLabelId();
@@ -64,6 +65,12 @@ export class TodoService {
     if (f === 'active')    items = items.filter(i => !i.completed);
     if (f === 'completed') items = items.filter(i => i.completed);
     if (f === 'favorites') items = items.filter(i => i.isFavorite);
+
+        // Titel-Suche (case-insensitive)
+    const term = this.searchTerm().trim().toLowerCase();
+    if (term) {
+      items = items.filter(i => i.title.toLowerCase().includes(term));
+    }
 
     return items;
   });

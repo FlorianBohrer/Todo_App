@@ -2,7 +2,7 @@
   @if (stats().total === 0) {
     <p class="text-text">No todos yet, add one above</p>
   } @else if (todos().length === 0) {
-    <p class="text-tetxt">
+    <p class="text-text">
       @switch (filter()) {
         @case ('active')    { No active todos at the moment }
         @case ('completed') { No completed todos yet }
