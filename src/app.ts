@@ -7,8 +7,8 @@ import { LucideAngularModule, FolderDown, ArrowDown, Plus } from 'lucide-angular
 import { Header } from './app/todo/components/header/header';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
-import { TodoList } from './app/todo/components/todo-list/todo-list/todo-list';
-import { TodoStats } from './app/todo/components/todo-stats/todo-stats/todo-stats';
+import { TodoList } from './app/todo/components/todo-list/todo-list';
+import { TodoStats } from './app/todo/components/todo-stats/todo-stats';
 import { CategoriesOverlay } from './app/todo/components/categories/categories-overlay';
 import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite-folders';
 import { UserAccount } from './app/todo/components/user-account/user-account';

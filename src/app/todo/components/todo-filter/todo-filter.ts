@@ -5,7 +5,6 @@ import { TodoService } from '../../services/todo';
   selector: 'app-todo-filter',
   imports: [],
   templateUrl: './todo-filter.html',
-  styleUrl: './todo-filter.scss',
 })
 export class TodoFilter {
   
