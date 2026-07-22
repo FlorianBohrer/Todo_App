@@ -210,7 +210,14 @@
               }
             </div>
           </ng-template>
-
+          <button
+            type="button"
+            class="hidden sm:block flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
+                   focus:outline-none focus:ring-1 focus:ring-zinc-100"
+            (click)="startEditing(todo, todoText)"
+            aria-label="Text bearbeiten">
+            <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
+          </button>
           <button
             class="hidden sm:block rounded-md px-2 py-1 flex-none text-text transition hover:text-red-400"
             (click)="removeTodos(todo.id)">
