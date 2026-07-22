@@ -27,6 +27,7 @@ import {
   GripVertical,
   LucideAngularModule,
   Star,
+  Pencil,
   Timer,
   Trash2,
 } from 'lucide-angular';
@@ -85,6 +86,8 @@ export class TodoList {
 
   private readonly expandedIds =
     signal<ReadonlySet<string>>(new Set());
+
+    protected readonly editingId = signal<string | null>(null);
 
   private readonly EXPAND_THRESHOLD = 40;
 
@@ -151,6 +154,37 @@ export class TodoList {
       todoId,
       false,
     );
+  }
+
+  startEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
+    this.editingId.set(todo.id);
+    if (this.canExpand(todo.title) && !this.isExpanded(todo.id)) {
+      this.toggleExpanded(todo.id, textarea);
+    }
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const end = textarea.value.length;
+      textarea.setSelectionRange(end, end);
+    });
+  }
+
+  /** Beim Verlassen des Felds speichern; leerer Text wird verworfen. */
+  finishEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
+    if (this.editingId() !== todo.id) return;
+    this.editingId.set(null);
+    const title = textarea.value.trim();
+    if (title && title !== todo.title) {
+      this.renameTodo(todo.id, title);
+    } else {
+      textarea.value = todo.title;
+    }
+  }
+
+  /** Escape: Änderung verwerfen. */
+  cancelEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
+    textarea.value = todo.title;
+    this.editingId.set(null);
+    textarea.blur();
   }
 
   private updateIdSet(

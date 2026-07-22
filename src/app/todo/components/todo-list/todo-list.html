@@ -15,7 +15,7 @@
 
     <ul
       role="list"
-      class="space-y-2 max-h-80 overflow-auto text-muted pr-2"
+      class="space-y-2 max-h-80 overflow-auto text-muted pr-1 sm:pr-2"
       cdkDropList
       (cdkDropListDropped)="drop($event)">
       @for (todo of todos(); track todo.id) {
@@ -39,6 +39,7 @@
           </div>
 
           <!-- Favoriten-Stern (mobil im 3-Punkte-Menü) -->
+
           <button
             type="button"
             class="hidden sm:block flex-shrink-0 rounded-full p-1 text-zinc-500 transition hover:text-amber-400"
