@@ -7,7 +7,6 @@ import { Plus,LucideAngularModule } from "lucide-angular";
   selector: 'app-todo-add',
   imports: [FormsModule, LucideAngularModule],
   templateUrl: './todo-add.html',
-  styleUrl: './todo-add.scss',
 })
 export class TodoAdd {
   protected readonly todoService = inject(TodoService);

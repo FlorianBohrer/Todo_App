@@ -14,11 +14,11 @@ import {
 import {
   TodoService,
   TIMER_PRESETS_MINUTES,
-} from '../../../services/todo';
-import { Todo } from '../../../model/todo.model';
-import { Autosize } from '../../../../directives/autosize.drectives';
-import { folderColorClass } from '../../../shared/folder-color';
-import { LabelService } from '../../../services/label.service';
+} from '../../services/todo';
+import { Todo } from '../../model/todo.model';
+import { Autosize } from '../../../directives/autosize.directive';
+import { folderColorClass } from '../../shared/folder-color';
+import { LabelService } from '../../services/label.service';
 
 import {
   ChevronDown,
