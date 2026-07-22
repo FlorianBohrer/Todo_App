@@ -22,30 +22,46 @@
     </div>
 
     <!-- Suche -->
-    <div class="relative mt-4 px-4 sm:px-6">
-      <lucide-icon
-        [img]="SearchIcon"
-        class="pointer-events-none absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-muted sm:left-9">
-      </lucide-icon>
-      <input
-        #search
-        type="text"
-        placeholder="Folder suchen…"
-        class="input w-full pl-9 pr-9"
-        [value]="searchTerm()"
-        (input)="searchTerm.set(search.value)"
-        (keydown.escape)="$event.stopPropagation(); clearSearch()"
-        aria-label="Folder suchen" />
-      @if (isSearching()) {
-        <button
-          type="button"
-          class="absolute right-7 top-1/2 -translate-y-1/2 text-muted transition hover:text-text sm:right-9"
-          (click)="clearSearch(); search.value = ''"
-          aria-label="Suche zurücksetzen">
-          ✕
-        </button>
-      }
-    </div>
+<div class="mt-4 px-4 sm:px-6">
+  <div
+    class="flex h-11 w-full items-center gap-3 rounded-lg bg-bg2 px-3
+           ring-1 ring-white/10 transition
+           focus-within:ring-2 focus-within:ring-indigo-500">
+
+    <lucide-icon
+      [img]="SearchIcon"
+      class="h-4 w-4 flex-none text-muted"
+      aria-hidden="true">
+    </lucide-icon>
+
+    <input
+      #search
+      type="text"
+      placeholder="Folder suchen…"
+      class="min-w-0 flex-1 bg-transparent text-text outline-none
+             placeholder:text-muted"
+      [value]="searchTerm()"
+      (input)="searchTerm.set(search.value)"
+      (keydown.escape)="
+        $event.stopPropagation();
+        clearSearch();
+        search.value = ''
+      "
+      aria-label="Folder suchen"
+    />
+
+    @if (isSearching()) {
+      <button
+        type="button"
+        class="grid h-7 w-7 flex-none place-items-center rounded-md
+               text-muted transition hover:bg-white/5 hover:text-text"
+        (click)="clearSearch(); search.value = ''"
+        aria-label="Suche zurücksetzen">
+        ✕
+      </button>
+    }
+  </div>
+</div>
 
     <!-- Scrollbereich: nur die Folder-Liste scrollt -->
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6">
