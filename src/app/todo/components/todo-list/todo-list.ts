@@ -108,7 +108,7 @@ export class TodoList {
       offsetY: -4,
     },
   ];
-  protected readonly dragStartDelay = { touch: 300, mouse: 0 };
+  protected readonly dragStartDelay = { touch: 300, mouse: 200 };
 
   handleToggleTodo(todo: Todo): void {
     if (this.leavingTodoIds().has(todo.id)) {
