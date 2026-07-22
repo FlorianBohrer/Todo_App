@@ -1,3 +1,21 @@
+  <div class="mt-6 mb-3">
+  <div class="flex h-11 w-full items-center gap-3 rounded-full bg-bg3 px-4
+              ring-1 ring-white/10 transition focus-within:ring-2 focus-within:ring-indigo-500">
+    <lucide-icon [img]="SearchIcon" class="h-4 w-4 flex-none text-muted" aria-hidden="true"></lucide-icon>
+    <input #todoSearch type="text" placeholder="Todos durchsuchen…"
+      class="min-w-0 flex-1 bg-transparent text-text outline-none placeholder:text-muted"
+      [value]="searchTerm()"
+      (input)="searchTerm.set(todoSearch.value)"
+      (keydown.escape)="clearSearch(); todoSearch.value = ''"
+      aria-label="Todos durchsuchen" />
+    @if (searchTerm()) {
+      <button type="button"
+        class="grid h-7 w-7 flex-none place-items-center rounded-md text-muted transition hover:bg-white/5 hover:text-text"
+        (click)="clearSearch(); todoSearch.value = ''" aria-label="Suche zurücksetzen">✕</button>
+    }
+  </div>
+</div>
+  
   <section class="flex gap-2 mt-6 mb-4 rounded-full bg-bg3 p-1 ">
     
     <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'active'" 
