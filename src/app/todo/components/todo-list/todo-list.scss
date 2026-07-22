@@ -1,6 +1,5 @@
 // --- Drag & Drop Animationen (CDK) ---
 
-// Schwebende Vorschau am Mauszeiger
 .cdk-drag-preview {
   box-sizing: border-box;
   border-radius: 0.75rem;
@@ -8,7 +7,6 @@
   opacity: 0.95;
 }
 
-// Lücke, an der das Item gerade liegt
 .cdk-drag-placeholder {
   opacity: 1;
 }
@@ -18,26 +16,21 @@ li.cdk-drag {
 }
 
 
-// Sanftes Zurückgleiten nach dem Loslassen
 .cdk-drag-animating {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
-// Während gezogen wird: die anderen Items weich verschieben
 .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 // --- Aufklappbare Todos ---
 
-// Zugeklappt: eine Zeile, Rest abgeschnitten. Die Autosize-Direktive setzt die
-// volle Höhe inline — max-height klemmt nur die Anzeige, beim Aufklappen fällt
-// die Klammer weg und die volle Höhe wird wieder sichtbar.
+
 textarea.todo-collapsed {
   max-height: 1.75rem;
 }
 
-// Aufgeklappt bekommt der Text eine eigene, volle Zeile unter den Buttons.
 li.todo-expanded-row {
   flex-wrap: wrap;
 }
@@ -47,10 +40,7 @@ li.todo-expanded-row label {
   flex-basis: 100%;
 }
 
-// Mobil ist die Zeile mit allen Buttons so voll, dass für den Text 0px Breite
-// übrig bleiben (er war schlicht unsichtbar). Darum bekommt der Text auf
-// schmalen Screens IMMER die volle Breite unter den Bedienelementen —
-// zugeklappt eine Zeile, aufgeklappt der ganze Inhalt.
+
 @media (max-width: 639px) {
   ul li {
     flex-wrap: wrap;
@@ -65,7 +55,6 @@ li.todo-expanded-row label {
 
 // --- Zeitblock ---
 
-// Abgelaufener Block atmet ruhig, bis man ihn wegklickt.
 .timer-chip.timer-done {
   animation: timer-done-pulse 2s ease-in-out infinite;
 }
