@@ -63,6 +63,7 @@ export class TodoList {
   protected readonly ExpandIcon = ChevronsUpDown;
   protected readonly OptionsIcon = EllipsisVertical;
   protected readonly TrashIcon = Trash2;
+    protected readonly PencilIcon = Pencil;
 
   protected readonly timerPresets = TIMER_PRESETS_MINUTES;
 
