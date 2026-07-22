@@ -19,8 +19,10 @@
       cdkDropList
       (cdkDropListDropped)="drop($event)">
       @for (todo of todos(); track todo.id) {
-     <li
+        
+        <li
       cdkDrag
+      [cdkDragStartDelay]="dragStartDelay"
       class="todo-card group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4"
       [class]="labelService.borderClassFor(todo.labelId)"
       [class.todo-expanded-row]="isExpanded(todo.id)"
