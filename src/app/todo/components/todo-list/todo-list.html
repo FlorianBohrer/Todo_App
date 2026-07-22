@@ -75,6 +75,10 @@
               #todoText
               appAutosize
               rows="1"
+                            [readOnly]="editingId() !== todo.id"
+              [class.pointer-events-none]="editingId() !== todo.id"
+              (blur)="finishEditing(todo, todoText)"
+              (keydown.escape)="cancelEditing(todo, todoText)"
               class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-zinc-100"
               [class.todo-collapsed]="
                 canExpand(todo.title) &&
