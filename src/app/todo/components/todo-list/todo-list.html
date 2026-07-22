@@ -252,6 +252,14 @@
                 <span>{{ todo.isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren' }}</span>
               </button>
 
+                            <button
+                type="button" role="menuitem"
+                class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                (click)="startEditing(todo, todoText); closeOptionsMenu()">
+                <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
+                <span>Text bearbeiten</span>
+              </button>
+
               @if (hasTimer(todo)) {
                 <button
                   type="button" role="menuitem"
