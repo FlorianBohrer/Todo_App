@@ -1,10 +1,47 @@
-@if (favorites().length > 0) {
+@if (tileCount() > 0) {
   <section class="mx-auto mb-4 w-full max-w-3xl" aria-label="Favorite folders">
     <!-- Mobil: Kacheln untereinander; ab sm nebeneinander.
-         Bei vier Favoriten eine Reihe mit vier Kacheln. -->
+         Bei vier Kacheln eine Reihe mit vier. -->
     <div
       class="grid grid-cols-1 gap-3"
-      [class]="favorites().length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'">
+      [class]="tileCount() === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'">
+
+      <!-- Virtuelle Favoriten-Kachel: Fortschritt aller favorisierten Todos -->
+      @if (favoriteProgress().total > 0) {
+        <button
+          type="button"
+          class="favorite-tile folder-card group flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-left shadow-lg
+                 backdrop-blur-md transition duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+          [class.ring-2]="favoritesActive()"
+          [class.ring-amber-400]="favoritesActive()"
+          [class.celebrate-fav]="isCelebrating(FAVORITE_TODOS_KEY)"
+          [attr.aria-pressed]="favoritesActive()"
+          (click)="selectFavorites()">
+
+          <div class="flex w-full items-center gap-2.5">
+            <span class="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-amber-500/25">
+              <lucide-icon [img]="StarIcon" class="fav-star h-4 w-4 fill-amber-300 text-amber-300"></lucide-icon>
+            </span>
+            <span class="min-w-0 flex-1 truncate font-semibold text-amber-200">Favoriten</span>
+          </div>
+
+          <div class="w-full">
+            <div class="mb-1 flex items-center justify-between text-xs">
+              <span class="text-amber-200 opacity-80">
+                {{ favoriteProgress().completed }} of {{ favoriteProgress().total }} done
+              </span>
+              <span class="font-medium text-amber-200">{{ favoriteProgress().percent }}%</span>
+            </div>
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-700/50">
+              <div
+                class="folder-progress h-full rounded-full bg-amber-400 transition-all duration-300"
+                [style.width.%]="favoriteProgress().percent">
+              </div>
+            </div>
+          </div>
+        </button>
+      }
+
       @for (label of favorites(); track label.id) {
         <button
           type="button"

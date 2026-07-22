@@ -99,6 +99,21 @@ export class TodoService {
     };
   }
 
+  /**
+   * Fortschritt über ALLE favorisierten Todos — speist die virtuelle
+   * "Favoriten"-Kachel über der Liste.
+   */
+  readonly favoriteProgress = computed(() => {
+    const items = this.todos().filter(t => t.isFavorite);
+    const completed = items.filter(t => t.completed).length;
+    const total = items.length;
+    return {
+      total,
+      completed,
+      percent: total === 0 ? 0 : Math.round((completed / total) * 100),
+    };
+  });
+
   private readonly clerk = inject(ClerkService);
   private readonly toast = inject(ToastService);
 

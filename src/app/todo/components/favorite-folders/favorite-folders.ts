@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -26,7 +26,22 @@ export class FavoriteFolders {
 
   protected readonly favorites = this.labelService.favoriteLabels;
   protected readonly activeLabelId = this.labelService.activeLabelId;
-protected readonly StarIcon = Star;
+  protected readonly StarIcon = Star;
+
+  /** Fortschritt aller favorisierten Todos (virtuelle "Favoriten"-Kachel). */
+  protected readonly favoriteProgress = this.todoService.favoriteProgress;
+  /** Aktiv, solange die Liste auf "favorites" gefiltert ist. */
+  protected readonly favoritesActive = computed(
+    () => this.todoService.filter() === 'favorites',
+  );
+
+  /** Fester Schlüssel der Favoriten-Todos-Kachel in celebrating/lastCompleted. */
+  protected readonly FAVORITE_TODOS_KEY = '__favorite_todos__';
+
+  /** Anzahl Kacheln (Folder-Favoriten + evtl. die Favoriten-Todos-Kachel). */
+  protected readonly tileCount = computed(
+    () => this.favorites().length + (this.favoriteProgress().total > 0 ? 1 : 0),
+  );
 
   /** Folder, deren 100%-Animation gerade läuft. */
   private readonly celebrating = signal<ReadonlySet<string>>(new Set());
@@ -48,7 +63,21 @@ protected readonly StarIcon = Star;
         }
         this.lastCompleted.set(label.id, isComplete);
       }
+
+      // Dieselbe Übergangs-Logik für die Favoriten-Todos-Kachel.
+      const fav = this.favoriteProgress();
+      const favComplete = fav.total > 0 && fav.completed === fav.total;
+      const favWas = this.lastCompleted.get(this.FAVORITE_TODOS_KEY);
+      if (favWas === false && favComplete) {
+        this.celebrate(this.FAVORITE_TODOS_KEY);
+      }
+      this.lastCompleted.set(this.FAVORITE_TODOS_KEY, favComplete);
     });
+  }
+
+  /** Favoriten-Kachel an/aus: filtert die Liste auf favorisierte Todos. */
+  selectFavorites(): void {
+    this.todoService.filter.set(this.favoritesActive() ? 'all' : 'favorites');
   }
 
   private celebrate(id: string) {

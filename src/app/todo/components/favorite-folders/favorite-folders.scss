@@ -96,3 +96,81 @@
     animation: bar-gleam 1.6s ease-in-out both;
   }
 }
+
+/* --- Spezial-Feier: ALLE Favoriten-Todos erledigt ---
+   Bewusst kräftiger als die Folder-Feier: ein federnder "Pop" mit
+   pulsierendem Goldring, der Lichtstreifen zieht zweimal, der Stern dreht
+   sich einmal groß. */
+
+.favorite-tile.celebrate-fav {
+  animation: fav-pop 1.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 1;
+}
+
+.favorite-tile.celebrate-fav::after {
+  animation: shine-sweep 0.85s cubic-bezier(0.4, 0, 0.2, 1) 0.15s 2 both;
+}
+
+.favorite-tile.celebrate-fav .folder-progress {
+  animation: bar-gleam 1.6s ease-in-out both;
+}
+
+/* Der Stern muss inline-block sein, damit die Rotation greift. */
+.favorite-tile .fav-star {
+  display: inline-block;
+  transform-origin: center;
+}
+
+.favorite-tile.celebrate-fav .fav-star {
+  animation: star-spin 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fav-pop {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+  15% {
+    transform: translateY(-7px) scale(1.05);
+    box-shadow:
+      0 0 0 4px rgba(251, 191, 36, 0.5),
+      0 20px 46px -10px rgba(251, 191, 36, 0.55);
+  }
+  40% {
+    transform: translateY(-2px) scale(0.99);
+    box-shadow:
+      0 0 0 10px rgba(251, 191, 36, 0),
+      0 14px 36px -12px rgba(251, 191, 36, 0.4);
+  }
+  60% {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.32);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+}
+
+@keyframes star-spin {
+  0% {
+    transform: rotate(0) scale(1);
+  }
+  45% {
+    transform: rotate(360deg) scale(1.6);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .favorite-tile.celebrate-fav,
+  .favorite-tile.celebrate-fav::after,
+  .favorite-tile.celebrate-fav .fav-star {
+    animation: none;
+  }
+  .favorite-tile.celebrate-fav .folder-progress {
+    animation: bar-gleam 1.6s ease-in-out both;
+  }
+}
