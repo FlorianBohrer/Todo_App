@@ -15,11 +15,25 @@ export class TodoAdd {
   newTitle = '';
   
   addTodo() {
-    const title = this.newTitle.trim();
-    if(!title) return;
-    this.todoService.addTodo(title);
-    this.newTitle = '';
-  } 
+      const titles = this.parseTitles(this.newTitle);
+      if (titles.length === 0) return;
+      this.todoService.addTodos(titles);
+      this.newTitle = '';
+    }
+
+     private parseTitles(raw: string): string[] {
+    return raw
+      .split('\n')
+      .map((line) => line.replace(/^\s*(?:[-*•–—]|\d+[.)])\s+/, '').trim())
+      .filter((line) => line.length > 0);
+  }
+
+  /** Enter legt an; Shift+Enter fügt eine neue Zeile ein. */
+  onEnterKey(event: Event) {
+    if ((event as KeyboardEvent).shiftKey) return;
+    event.preventDefault();
+    this.addTodo();
+  }
 
   autoGrow(event: Event){
     const el = event.target as HTMLTextAreaElement;
