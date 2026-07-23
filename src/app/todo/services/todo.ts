@@ -84,10 +84,7 @@ export class TodoService {
     };
   });
 
-  /**
-   * Fortschritt eines einzelnen Folders (für die Favoriten-Kacheln).
-   * Liest das todos-Signal, ist im Template also automatisch reaktiv.
-   */
+  
   progressFor(labelId: string): { total: number; completed: number; percent: number } {
     const items = this.todos().filter(t => t.labelId === labelId);
     const completed = items.filter(t => t.completed).length;
@@ -99,10 +96,7 @@ export class TodoService {
     };
   }
 
-  /**
-   * Fortschritt über ALLE favorisierten Todos — speist die virtuelle
-   * "Favoriten"-Kachel über der Liste.
-   */
+ 
   readonly favoriteProgress = computed(() => {
     const items = this.todos().filter(t => t.isFavorite);
     const completed = items.filter(t => t.completed).length;
@@ -127,9 +121,9 @@ export class TodoService {
       this.ensureTicking();
     });
 
-    // Todos erst laden, wenn ein Nutzer eingeloggt ist. Bei Logout/Userwechsel
-    // den lokalen Zustand leeren, damit keine fremden Todos stehen bleiben.
-    // Nach dem ersten Laden werden evtl. vorhandene Alt-Daten aus dem
+    // Todos erst laden, wenn ein Nutzer eingeloggt ist. Bei logout/userwechsel
+    // den lokalen zustand leeren, damit keine fremden todos stehen bleiben.
+    // Nach dem ersten laden werden evtl. vorhandene alt-daten aus dem
     // localStorage einmalig übernommen.
     this.clerk.user$
       .pipe(
@@ -354,6 +348,42 @@ toggleFavorite(id: string) {
           this.toast.error('Todo konnte nicht angelegt werden');
         },
       });
+
+  }
+  addTodos(titles: string[]) {
+    const clean = titles.map((t) => t.trim()).filter((t) => t.length > 0);
+    if (clean.length === 0) return;
+    if (clean.length === 1) {
+      this.addTodo(clean[0]);
+      return;
+    }
+
+    const categoryId = this.labelService.activeLabelId();
+    let hadError = false;
+
+    const postNext = (index: number) => {
+      if (index >= clean.length) {
+        if (hadError) {
+          this.toast.error('Einige Todos konnten nicht angelegt werden');
+        }
+        return;
+      }
+      this.http
+        .post<TodoDto>(this.apiUrl, { title: clean[index], categoryId })
+        .subscribe({
+          next: (dto) => {
+            this.todos.update((items) => [...items, this.toTodo(dto)]);
+            postNext(index + 1);
+          },
+          error: (err) => {
+            console.error('Todo anlegen fehlgeschlagen', err);
+            hadError = true;
+            postNext(index + 1);
+          },
+        });
+    };
+
+    postNext(0);
   }
 
   renameTodo(id: string, title: string) {
