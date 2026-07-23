@@ -5,7 +5,9 @@ export interface Todo{
     title: string;
     completed: boolean;
     isFavorite: boolean;
-    labelId: string | null;  // null = keine Kategorie
+    // Alle zugewiesenen Labels (n:m). Leeres Array = keine Kategorie.
+    // labelIds[0] ist das "primäre" Label (Farbe von Rand/Punkt).
+    labelIds: string[];
     createdAt: Date;
 
     // Zeitblock: beide null = kein Timer aktiv.
