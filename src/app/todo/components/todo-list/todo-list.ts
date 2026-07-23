@@ -276,12 +276,24 @@ export class TodoList {
     }
   }
 
-  setLabel(
-    id: string,
-    labelId: string | null,
-  ): void {
-    this.todoService.setTodoLabel(id, labelId);
+  /** Label an-/abwählen — Menü bleibt offen (Mehrfachauswahl). */
+  toggleLabel(id: string, labelId: string): void {
+    this.todoService.toggleLabel(id, labelId);
+  }
+
+  /** Alle Labels eines Todos entfernen. */
+  clearLabels(id: string): void {
+    this.todoService.setLabels(id, []);
     this.closeMenu();
+  }
+
+  /** Primäres Label (erste ID) — bestimmt Rand-/Punktfarbe. */
+  primaryLabelId(labelIds: string[]): string | null {
+    return labelIds[0] ?? null;
+  }
+
+  isLabelActive(labelIds: string[], labelId: string): boolean {
+    return labelIds.includes(labelId);
   }
 
   labelName(labelId: string | null): string {
@@ -294,6 +306,12 @@ export class TodoList {
         label => label.id === labelId,
       )?.name ?? 'No category'
     );
+  }
+
+  /** Namen aller Labels als Tooltip-Text (Punkte in der Zeile zeigen keine Namen). */
+  labelTitle(labelIds: string[]): string {
+    if (labelIds.length === 0) return 'Kein Label';
+    return labelIds.map(id => this.labelName(id)).join(', ');
   }
 
   dotClass(labelId: string | null): string {

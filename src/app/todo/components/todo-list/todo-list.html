@@ -24,7 +24,7 @@
       cdkDrag
       [cdkDragStartDelay]="dragStartDelay"
       class="todo-card group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4"
-      [class]="labelService.borderClassFor(todo.labelId)"
+      [class]="labelService.borderClassFor(primaryLabelId(todo.labelIds))"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
         todo.completed || completingTodoIds().has(todo.id)
@@ -168,21 +168,27 @@
           <button
             type="button"
             cdkOverlayOrigin #trigger="cdkOverlayOrigin"
-            class="flex flex-shrink-0 items-center gap-2 rounded-full border bg-bg2 px-3 py-1.5
+            class="flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-3 py-1.5
                    text-sm text-text transition hover:bg-panel/10
                    focus:outline-none focus:ring-1 focus:ring-zinc-100"
-            [class]="labelService.borderClassFor(todo.labelId)"
+            [class]="labelService.borderClassFor(primaryLabelId(todo.labelIds))"
             (click)="toggleMenu(todo.id)"
             aria-haspopup="listbox"
             [attr.aria-expanded]="openMenuId() === todo.id"
-            aria-label="Change category">
-            <!--Farbpunkt-->
-            <span [class]="dotClass(todo.labelId)">●</span>
-            <span class="hidden sm:inline truncate max-w-[6rem]">{{ labelName(todo.labelId) }}</span>
+            [attr.title]="labelTitle(todo.labelIds)"
+            [attr.aria-label]="'Labels: ' + labelTitle(todo.labelIds)">
+            <!-- Farbpunkte: einer je Label; kein Label = grauer Punkt -->
+            @if (todo.labelIds.length === 0) {
+              <span class="text-zinc-500">●</span>
+            } @else {
+              @for (lid of todo.labelIds; track lid) {
+                <span [class]="dotClass(lid)">●</span>
+              }
+            }
             <lucide-icon [img]="ChevronDownIcon" class="h-3.5 w-3.5 text-muted"></lucide-icon>
           </button>
 
-          <!-- Custom-Popover via CDK Overlay -->
+          <!-- Mehrfachauswahl via CDK Overlay -->
           <ng-template
             cdkConnectedOverlay
             [cdkConnectedOverlayOrigin]="trigger"
@@ -193,19 +199,31 @@
             (backdropClick)="closeMenu()"
             (overlayKeydown)="$event.key === 'Escape' && closeMenu()">
             <div
-              role="listbox"
-              class="w-48 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
-             
+              role="listbox" aria-multiselectable="true"
+              class="w-52 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+
+              <div class="px-3 pb-1 pt-2 text-xs text-zinc-400">Labels (mehrere möglich)</div>
+
               @for (label of labels(); track label.id) {
                 <button
                   type="button" role="option"
-                  [attr.aria-selected]="todo.labelId === label.id"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-cyna-700"
-                  (click)="setLabel(todo.id, label.id)">
+                  [attr.aria-selected]="isLabelActive(todo.labelIds, label.id)"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  (click)="toggleLabel(todo.id, label.id)">
                   <span [class]="dotClass(label.id)">●</span>
-                  <span>{{ label.name }}</span>
-                  @if (todo.labelId === label.id) { <span class=" text-emerald-400">✓</span> }
-                  <lucide-icon [img]="ChevronDownIcon" class="hidden sm:block h-3.5 w-3.5 text-muted"></lucide-icon>
+                  <span class="flex-1 truncate">{{ label.name }}</span>
+                  @if (isLabelActive(todo.labelIds, label.id)) {
+                    <span class="text-emerald-400">✓</span>
+                  }
+                </button>
+              }
+
+              @if (todo.labelIds.length > 0) {
+                <button
+                  type="button"
+                  class="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
+                  (click)="clearLabels(todo.id)">
+                  Alle entfernen
                 </button>
               }
             </div>

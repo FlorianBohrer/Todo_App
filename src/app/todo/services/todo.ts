@@ -22,7 +22,8 @@ interface TodoDto {
   title: string;
   completed: boolean;
   isFavorite: boolean;
-  categoryId: string | null;
+  categoryId: string | null;   // primäres Label (Farb-Fallback)
+  categoryIds: string[];       // alle Labels (n:m)
   createdAt: string;
   timerStartedAt: string | null;
   timerDurationSeconds: number | null;
@@ -39,6 +40,18 @@ interface TodoListResponse {
 // Schlüssel der alten, rein lokalen Speicherung (vor der Server-Anbindung).
 const LEGACY_TODO_KEY = 'todos';
 
+/**
+ * Sortier-Priorität anhand eines Titel-Präfixes:
+ * /must-have -> 0 (ganz oben), /could-have -> 1, sonst -> 2.
+ * Führende Leerzeichen werden ignoriert, Groß-/Kleinschreibung egal.
+ */
+function titlePriority(title: string): number {
+  const t = title.trimStart().toLowerCase();
+  if (t.startsWith('/must-have')) return 0;
+  if (t.startsWith('/could-have')) return 1;
+  return 2;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -54,7 +67,7 @@ export class TodoService {
   private readonly todosInCategory = computed(() => {
     const labelId = this.labelService.activeLabelId();
     const items = this.todos();
-    return labelId === null ? items : items.filter(i => i.labelId === labelId);
+    return labelId === null ? items : items.filter(i => i.labelIds.includes(labelId));
   });
 
   readonly filteredTodos = computed(() => {
@@ -72,6 +85,10 @@ export class TodoService {
       items = items.filter(i => i.title.toLowerCase().includes(term));
     }
 
+    // Priorität per Titel-Präfix: /must-have zuerst, /could-have danach.
+    // Stabile Sortierung -> Reihenfolge innerhalb jeder Gruppe bleibt erhalten.
+    items = [...items].sort((a, b) => titlePriority(a.title) - titlePriority(b.title));
+
     return items;
   });
 
@@ -86,7 +103,7 @@ export class TodoService {
 
   
   progressFor(labelId: string): { total: number; completed: number; percent: number } {
-    const items = this.todos().filter(t => t.labelId === labelId);
+    const items = this.todos().filter(t => t.labelIds.includes(labelId));
     const completed = items.filter(t => t.completed).length;
     const total = items.length;
     return {
@@ -244,7 +261,8 @@ export class TodoService {
     const raw = localStorage.getItem(LEGACY_TODO_KEY);
     if (!raw) return;
 
-    let legacy: Array<Partial<Todo>>;
+    // Altes localStorage-Format: einzelnes labelId, kein labelIds.
+    let legacy: Array<{ title?: string; completed?: boolean; labelId?: string | null }>;
     try {
       legacy = JSON.parse(raw);
     } catch {
@@ -308,7 +326,7 @@ export class TodoService {
     title: dto.title,
     completed: dto.completed,
     isFavorite: dto.isFavorite ?? false,
-    labelId: dto.categoryId,
+    labelIds: dto.categoryIds ?? (dto.categoryId ? [dto.categoryId] : []),
     createdAt: new Date(dto.createdAt),
     timerStartedAt: dto.timerStartedAt ? new Date(dto.timerStartedAt) : null,
     timerDurationSeconds: dto.timerDurationSeconds ?? null,
@@ -395,18 +413,46 @@ toggleFavorite(id: string) {
     this.updateOnServer(id, { title: t });
   }
 
-  setTodoLabel(id: string, labelId: string | null) {
+  /** Ein Label an-/abwählen (Mehrfach-Zuweisung). Optimistisch + Server. */
+  toggleLabel(id: string, labelId: string) {
+    const current = this.todos().find(item => item.id === id);
+    if (!current) return;
+
+    const labelIds = current.labelIds.includes(labelId)
+      ? current.labelIds.filter(l => l !== labelId)
+      : [...current.labelIds, labelId];
+
+    this.setLabels(id, labelIds);
+  }
+
+  /** Komplette Label-Menge eines Todos setzen. */
+  setLabels(id: string, labelIds: string[]) {
     this.todos.update(items =>
-      items.map(item => item.id === id ? { ...item, labelId } : item),
+      items.map(item => item.id === id ? { ...item, labelIds } : item),
     );
-    this.updateOnServer(id, { categoryId: labelId });
+
+    this.http
+      .put<TodoDto>(`${this.apiUrl}/${id}/categories`, { categoryIds: labelIds })
+      .subscribe({
+        // Server sortiert die IDs (nach Folder-Position) — Antwort übernehmen.
+        next: (dto) => this.todos.update(items =>
+          items.map(item => item.id === id ? this.toTodo(dto) : item),
+        ),
+        error: (err) => {
+          console.error('Labels speichern fehlgeschlagen', err);
+          this.toast.error('Labels konnten nicht gespeichert werden');
+          this.loadTodos();
+        },
+      });
   }
 
   clearLabel(labelId: string) {
-    // Die DB setzt category_id beim Löschen der Kategorie selbst auf null
-    // (ON DELETE SET NULL) — hier nur den lokalen Zustand angleichen.
+    // Die DB räumt die Zuweisung beim Löschen der Kategorie selbst auf
+    // (ON DELETE CASCADE) — hier nur den lokalen Zustand angleichen.
     this.todos.update(list =>
-      list.map(t => t.labelId === labelId ? { ...t, labelId: null } : t)
+      list.map(t => t.labelIds.includes(labelId)
+        ? { ...t, labelIds: t.labelIds.filter(l => l !== labelId) }
+        : t)
     );
   }
 
@@ -505,7 +551,6 @@ toggleFavorite(id: string) {
     changes: Partial<{
       title: string;
       completed: boolean;
-      categoryId: string | null;
       isFavorite: boolean;
     }>  ) {
     this.http.put<TodoDto>(`${this.apiUrl}/${id}`, changes).subscribe({
