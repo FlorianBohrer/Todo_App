@@ -22,7 +22,7 @@
             <span class="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-amber-500/25">
               <lucide-icon [img]="StarIcon" class="fav-star h-4 w-4 fill-amber-300 text-amber-300"></lucide-icon>
             </span>
-            <span class="min-w-0 flex-1 truncate font-semibold text-amber-200">Favoriten</span>
+            <span class="min-w-0 flex-1 truncate font-semibold text-amber-200">Favorites</span>
           </div>
 
           <div class="w-full">
@@ -71,7 +71,7 @@
               class="flex-none rounded-full p-1 text-amber-400 transition hover:scale-110"
               role="button"
               tabindex="0"
-              aria-label="Folder aus Favoriten entfernen"
+              aria-label="Remove folder from favorites"
               (click)="toggleFavorite(label.id, $event)"
               (keydown.enter)="toggleFavorite(label.id, $event)">
               <lucide-icon [img]="StarIcon" class="h-4 w-4 fill-amber-400"></lucide-icon>

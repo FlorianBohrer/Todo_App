@@ -98,7 +98,7 @@ export class LabelService {
       },
       error: (err) => {
         console.error('Kategorien laden fehlgeschlagen', err);
-        this.toast.error('Folder konnten nicht geladen werden');
+        this.toast.error('Could not load folders');
       },
     });
   }
@@ -129,7 +129,7 @@ export class LabelService {
         next: (c) => this.labels.update((list) => [...list, this.toLabel(c)]),
         error: (err) => {
           console.error('Kategorie anlegen fehlgeschlagen', err);
-          this.toast.error('Folder konnte nicht angelegt werden');
+          this.toast.error('Could not create folder');
         },
       });
   }
@@ -150,7 +150,7 @@ export class LabelService {
       shouldBeFavorite &&
       this.favoriteLabels().length >= MAX_FAVORITE_LABELS
     ) {
-      this.toast.show('Maximal vier Favoriten — entferne zuerst einen Stern');
+      this.toast.show('Maximum four favorites — remove a star first');
 
       return;
     }
@@ -174,7 +174,7 @@ export class LabelService {
         },
         error: (error) => {
           console.error('Folder-Favorit speichern fehlgeschlagen', error);
-          this.toast.error('Favorit konnte nicht gespeichert werden');
+          this.toast.error('Could not save favorite');
           this.loadLabels();
         },
       });
@@ -202,7 +202,7 @@ export class LabelService {
       .subscribe({
         error: (err) => {
           console.error('Folder-Reihenfolge speichern fehlgeschlagen', err);
-          this.toast.error('Reihenfolge konnte nicht gespeichert werden');
+          this.toast.error('Could not save order');
           this.loadLabels();
         },
       });
@@ -218,7 +218,7 @@ export class LabelService {
       },
       error: (err) => {
         console.error('Kategorie löschen fehlgeschlagen', err);
-        this.toast.error('Folder konnte nicht gelöscht werden');
+        this.toast.error('Could not delete folder');
       },
     });
   }
