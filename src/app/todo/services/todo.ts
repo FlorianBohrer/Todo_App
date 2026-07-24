@@ -6,6 +6,7 @@ import { environment } from '../../../environments/enviroment';
 import { Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
+import { titlePriority } from '../shared/title-priority';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
 
@@ -39,18 +40,6 @@ interface TodoListResponse {
 
 // Schlüssel der alten, rein lokalen Speicherung (vor der Server-Anbindung).
 const LEGACY_TODO_KEY = 'todos';
-
-/**
- * Sortier-Priorität anhand eines Titel-Präfixes:
- * /must-have -> 0 (ganz oben), /could-have -> 1, sonst -> 2.
- * Führende Leerzeichen werden ignoriert, Groß-/Kleinschreibung egal.
- */
-function titlePriority(title: string): number {
-  const t = title.trimStart().toLowerCase();
-  if (t.startsWith('/must-have')) return 0;
-  if (t.startsWith('/could-have')) return 1;
-  return 2;
-}
 
 @Injectable({
   providedIn: 'root',

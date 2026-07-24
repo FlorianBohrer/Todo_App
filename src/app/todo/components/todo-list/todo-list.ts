@@ -18,6 +18,7 @@ import {
 import { Todo } from '../../model/todo.model';
 import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
+import { stripPriorityPrefix, priorityBadge } from '../../shared/title-priority';
 import { LabelService } from '../../services/label.service';
 
 import {
@@ -155,6 +156,16 @@ export class TodoList {
       todoId,
       false,
     );
+  }
+
+  /** Titel für die Ansicht — ohne das Prioritäts-Präfix. */
+  displayTitle(title: string): string {
+    return stripPriorityPrefix(title);
+  }
+
+  /** 'must' | 'could' | null — für das Prioritäts-Badge. */
+  priorityBadge(title: string): 'must' | 'could' | null {
+    return priorityBadge(title);
   }
 
   startEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
