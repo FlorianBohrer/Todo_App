@@ -78,7 +78,7 @@
                 [class]="badge === 'must'
                   ? 'bg-rose-500/20 text-rose-300'
                   : 'bg-amber-500/20 text-amber-300'">
-                {{ badge === 'must' ? 'Muss' : 'Kann' }}
+                {{ badge === 'must' ? 'Must' : 'Could' }}
               </span>
             }
 
@@ -131,8 +131,8 @@
                 : 'border-indigo-500/60 text-indigo-300 hover:border-indigo-400'"
               (click)="stopTimer(todo.id)"
               [attr.aria-label]="isTimerDone(todo)
-                ? 'Zeitblock abgeschlossen, zum Ausblenden klicken'
-                : 'Zeitblock abbrechen'">
+                ? 'Time block finished, click to hide'
+                : 'Cancel time block'">
               <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5"></lucide-icon>
               <span>{{ isTimerDone(todo) ? 'fertig' : remainingLabel(todo) }}</span>
             </button>
@@ -146,7 +146,7 @@
               (click)="toggleTimerMenu(todo.id)"
               aria-haspopup="listbox"
               [attr.aria-expanded]="openTimerMenuId() === todo.id"
-              aria-label="Zeitblock starten">
+              aria-label="Start time block">
               <lucide-icon [img]="TimerIcon" class="h-4 w-4"></lucide-icon>
             </button>
 
@@ -168,7 +168,7 @@
                     class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
                     (click)="startTimer(todo.id, minutes)">
                     <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5 text-indigo-300"></lucide-icon>
-                    <span>{{ minutes }} Minuten</span>
+                    <span>{{ minutes }} min</span>
                   </button>
                 }
               </div>
@@ -213,7 +213,7 @@
               role="listbox" aria-multiselectable="true"
               class="w-52 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
 
-              <div class="px-3 pb-1 pt-2 text-xs text-zinc-400">Labels (mehrere möglich)</div>
+              <div class="px-3 pb-1 pt-2 text-xs text-zinc-400">Labels (multiple allowed)</div>
 
               @for (label of labels(); track label.id) {
                 <button
@@ -234,7 +234,7 @@
                   type="button"
                   class="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
                   (click)="clearLabels(todo.id)">
-                  Alle entfernen
+                  Remove all
                 </button>
               }
             </div>
@@ -244,7 +244,7 @@
             class="hidden sm:block flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
                    focus:outline-none focus:ring-1 focus:ring-zinc-100"
             (click)="startEditing(todo, todoText)"
-            aria-label="Text bearbeiten">
+            aria-label="Edit text">
             <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
           </button>
           <button
@@ -262,7 +262,7 @@
             (click)="toggleOptionsMenu(todo.id)"
             aria-haspopup="menu"
             [attr.aria-expanded]="openOptionsId() === todo.id"
-            aria-label="Weitere Optionen">
+            aria-label="More options">
             <lucide-icon [img]="OptionsIcon" class="h-5 w-5"></lucide-icon>
           </button>
 
@@ -289,7 +289,7 @@
                   [class.text-amber-400]="todo.isFavorite"
                   [class.fill-amber-400]="todo.isFavorite">
                 </lucide-icon>
-                <span>{{ todo.isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren' }}</span>
+                <span>{{ todo.isFavorite ? 'Remove favorite' : 'Mark as favorite' }}</span>
               </button>
 
                             <button
@@ -306,12 +306,12 @@
                   class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
                   (click)="stopTimer(todo.id); closeOptionsMenu()">
                   <lucide-icon [img]="TimerIcon" class="h-4 w-4 text-indigo-300"></lucide-icon>
-                  <span>Zeitblock beenden</span>
+                  <span>Stop time block</span>
                 </button>
               } @else {
                 <div class="flex items-center gap-2.5 px-3 pb-1 pt-2.5 text-xs text-zinc-400">
                   <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5"></lucide-icon>
-                  <span>Zeitblock starten</span>
+                  <span>Start time block</span>
                 </div>
                 <div class="flex gap-1.5 px-3 pb-2.5">
                   @for (minutes of timerPresets; track minutes) {
@@ -331,7 +331,7 @@
                 class="flex w-full items-center gap-2.5 border-t border-slate-700 px-3 py-2.5 text-left text-sm text-rose-400 transition hover:bg-slate-700"
                 (click)="removeTodos(todo.id); closeOptionsMenu()">
                 <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
-                <span>Löschen</span>
+                <span>Delete</span>
               </button>
             </div>
           </ng-template>

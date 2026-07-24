@@ -151,7 +151,7 @@ export class TodoService {
           error: (err) => {
             console.error('Todos laden fehlgeschlagen', err);
             this.loading.set(false);
-            this.toast.error('Todos konnten nicht geladen werden — bitte Seite neu laden');
+            this.toast.error('Could not load todos — please reload the page');
           },
         });
       });
@@ -206,7 +206,7 @@ export class TodoService {
           ),
         error: (err) => {
           console.error('Zeitblock starten fehlgeschlagen', err);
-          this.toast.error('Zeitblock konnte nicht gestartet werden');
+          this.toast.error('Could not start time block');
           this.loadTodos();
         },
       });
@@ -226,7 +226,7 @@ export class TodoService {
       .subscribe({
         error: (err) => {
           console.error('Zeitblock beenden fehlgeschlagen', err);
-          this.toast.error('Zeitblock konnte nicht beendet werden');
+          this.toast.error('Could not stop time block');
           this.loadTodos();
         },
       });
@@ -352,7 +352,7 @@ toggleFavorite(id: string) {
         next: (dto) => this.todos.update(items => [...items, this.toTodo(dto)]),
         error: (err) => {
           console.error('Todo anlegen fehlgeschlagen', err);
-          this.toast.error('Todo konnte nicht angelegt werden');
+          this.toast.error('Could not create todo');
         },
       });
 
@@ -371,7 +371,7 @@ toggleFavorite(id: string) {
     const postNext = (index: number) => {
       if (index >= clean.length) {
         if (hadError) {
-          this.toast.error('Einige Todos konnten nicht angelegt werden');
+          this.toast.error('Could not create some todos');
         }
         return;
       }
@@ -429,7 +429,7 @@ toggleFavorite(id: string) {
         ),
         error: (err) => {
           console.error('Labels speichern fehlgeschlagen', err);
-          this.toast.error('Labels konnten nicht gespeichert werden');
+          this.toast.error('Could not save labels');
           this.loadTodos();
         },
       });
@@ -474,7 +474,7 @@ toggleFavorite(id: string) {
       .subscribe({
         error: (err) => {
           console.error('Sortierung speichern fehlgeschlagen', err);
-          this.toast.error('Sortierung konnte nicht gespeichert werden');
+          this.toast.error('Could not save order');
           this.loadTodos();
         },
       });
@@ -501,8 +501,8 @@ toggleFavorite(id: string) {
       this.deleteOnServer(id);
     }, 5000);
 
-    const toastId = this.toast.show(`„${shortTitle}“ gelöscht`, {
-      actionLabel: 'Rückgängig',
+    const toastId = this.toast.show(`“${shortTitle}” deleted`, {
+      actionLabel: 'Undo',
       action: () => {
         clearTimeout(deleteTimeout);
         this.todos.update(list => {
@@ -519,7 +519,7 @@ toggleFavorite(id: string) {
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       error: (err) => {
         console.error('Todo löschen fehlgeschlagen', err);
-        this.toast.error('Todo konnte nicht gelöscht werden');
+        this.toast.error('Could not delete todo');
         this.loadTodos();
       },
     });
@@ -545,7 +545,7 @@ toggleFavorite(id: string) {
     this.http.put<TodoDto>(`${this.apiUrl}/${id}`, changes).subscribe({
       error: (err) => {
         console.error('Todo aktualisieren fehlgeschlagen', err);
-        this.toast.error('Änderung konnte nicht gespeichert werden');
+        this.toast.error('Could not save change');
         this.loadTodos();
       },
     });
