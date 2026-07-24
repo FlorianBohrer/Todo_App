@@ -71,6 +71,17 @@
               <!-- SVG -->
             </button>
 
+            <!-- Prioritäts-Badge (Präfix /must-have bzw. /could-have) -->
+            @if (priorityBadge(todo.title); as badge) {
+              <span
+                class="flex-none rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
+                [class]="badge === 'must'
+                  ? 'bg-rose-500/20 text-rose-300'
+                  : 'bg-amber-500/20 text-amber-300'">
+                {{ badge === 'must' ? 'Muss' : 'Kann' }}
+              </span>
+            }
+
             <textarea
               #todoText
               appAutosize
@@ -88,7 +99,7 @@
                 todo.completed ||
                 completingTodoIds().has(todo.id)
               "
-              [value]="todo.title"
+              [value]="editingId() === todo.id ? todo.title : displayTitle(todo.title)"
             ></textarea>
           </div>
 
