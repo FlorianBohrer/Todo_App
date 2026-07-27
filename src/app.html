@@ -18,24 +18,44 @@
     [class]="accentClass()">
   </div>
 
-<button
-    class="inline-flex mb-6 items-center gap-2 rounded-full border px-6 py-2 text-base text-slate-200 transition hover:bg-text hover:text-slate-700"
+<div class="mb-6 flex flex-wrap items-center gap-2">
+      <button
+        class="inline-flex items-center gap-2 rounded-full border px-6 py-2 text-base text-slate-200 transition hover:bg-text hover:text-slate-700"
         (click)="openCategories()"
         aria-label="Open categories">
         <lucide-icon [img]="FolderDownIcon" class="h-4 w-4"></lucide-icon>
         <span>Folders</span>
         <lucide-icon [img]="ArrowDown" class="h-4 w-4"></lucide-icon>
       </button>
+
+      <!-- Ansicht umschalten: Liste ↔ Woche -->
+      <div class="inline-flex rounded-full border border-white/10 p-1 text-sm">
+        <button
+          class="rounded-full px-4 py-1.5 transition"
+          [class]="view() === 'list' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
+          [attr.aria-pressed]="view() === 'list'"
+          (click)="setView('list')">List</button>
+        <button
+          class="rounded-full px-4 py-1.5 transition"
+          [class]="view() === 'week' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
+          [attr.aria-pressed]="view() === 'week'"
+          (click)="setView('week')">Week</button>
+      </div>
+    </div>
     </div>
 
-    <app-favorite-folders></app-favorite-folders>
+    @if (view() === 'week') {
+      <app-week-view></app-week-view>
+    } @else {
+      <app-favorite-folders></app-favorite-folders>
 
-    <section class="mx-auto max-w-3xl rounded-2xl bg-panel2 backdrop-blur-md border border-white/10 shadow-2xl p-3 sm:p-6">
-      <app-todo-stats></app-todo-stats>
-      <app-todo-add></app-todo-add>
-      <app-todo-filter></app-todo-filter>
-      <app-todo-list></app-todo-list>
-    </section>
+      <section class="mx-auto max-w-3xl rounded-2xl bg-panel2 backdrop-blur-md border border-white/10 shadow-2xl p-3 sm:p-6">
+        <app-todo-stats></app-todo-stats>
+        <app-todo-add></app-todo-add>
+        <app-todo-filter></app-todo-filter>
+        <app-todo-list></app-todo-list>
+      </section>
+    }
 
     <app-categories-overlay></app-categories-overlay>
   </main>

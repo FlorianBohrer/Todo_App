@@ -28,6 +28,7 @@ interface TodoDto {
   createdAt: string;
   timerStartedAt: string | null;
   timerDurationSeconds: number | null;
+  scheduledDate: string | null;
 }
 
 /** Auswählbare Längen für einen Zeitblock (Minuten). */
@@ -319,8 +320,26 @@ export class TodoService {
     createdAt: new Date(dto.createdAt),
     timerStartedAt: dto.timerStartedAt ? new Date(dto.timerStartedAt) : null,
     timerDurationSeconds: dto.timerDurationSeconds ?? null,
+    scheduledDate: dto.scheduledDate ?? null,
   };
 }
+
+  // ---- Wochenansicht ----
+  /** Liste vs. Woche. */
+  readonly view = signal<'list' | 'week'>('list');
+
+  /** Todo einem Tag zuordnen ('YYYY-MM-DD') oder in den Backlog zurück (null). */
+  scheduleTodo(id: string, scheduledDate: string | null) {
+    this.todos.update(items =>
+      items.map(item => item.id === id ? { ...item, scheduledDate } : item),
+    );
+    this.updateOnServer(id, { scheduledDate });
+  }
+
+  /** Todos eines Tags ('YYYY-MM-DD'). null = ungeplante (Backlog). */
+  todosForDate(date: string | null) {
+    return this.todos().filter(t => t.scheduledDate === date);
+  }
 
 toggleFavorite(id: string) {
   const current = this.todos().find(todo => todo.id === id);
@@ -340,13 +359,14 @@ toggleFavorite(id: string) {
   // ---- Schreiben ----
   // Änderungen werden sofort lokal angezeigt (optimistic update) und ans
   // Backend geschickt. Schlägt der Request fehl, laden wir den Serverstand neu.
-  addTodo(title: string) {
+  addTodo(title: string, scheduledDate: string | null = null) {
     const t = title.trim();
     if (t === '') return;
     this.http
       .post<TodoDto>(this.apiUrl, {
         title: t,
         categoryId: this.labelService.activeLabelId(), // ← aktuelle Auswahl
+        scheduledDate,                                  // Woche: direkt auf einen Tag
       })
       .subscribe({
         next: (dto) => this.todos.update(items => [...items, this.toTodo(dto)]),
@@ -541,6 +561,7 @@ toggleFavorite(id: string) {
       title: string;
       completed: boolean;
       isFavorite: boolean;
+      scheduledDate: string | null;
     }>  ) {
     this.http.put<TodoDto>(`${this.apiUrl}/${id}`, changes).subscribe({
       error: (err) => {
