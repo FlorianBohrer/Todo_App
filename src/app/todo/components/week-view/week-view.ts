@@ -6,6 +6,7 @@ import { LabelService } from '../../services/label.service';
 import { Todo } from '../../model/todo.model';
 import { buildWeek, weekRangeLabel } from '../../shared/week';
 import { stripPriorityPrefix } from '../../shared/title-priority';
+import { folderColorClass } from '../../shared/folder-color';
 
 @Component({
   selector: 'app-week-view',
@@ -26,10 +27,36 @@ export class WeekView {
   protected readonly rangeLabel = computed(() => weekRangeLabel(this.week()));
   protected readonly isCurrentWeek = computed(() => this.weekOffset() === 0);
 
-  // Backlog = ungeplante Todos (kein Datum).
-  protected readonly backlog = computed(() =>
-    this.todoService.todosForDate(null),
+  // ---- Backlog (ungeplante Todos) mit eigenen Filtern ----
+  protected readonly labels = this.labelService.labels;
+  protected readonly backlogStatus = signal<'all' | 'active'>('all');
+  /** null = alle Kategorien. */
+  protected readonly backlogCategory = signal<string | null>(null);
+
+  /** Gibt es überhaupt ungeplante Todos (vor dem Filtern)? */
+  protected readonly hasUnscheduled = computed(
+    () => this.todoService.todosForDate(null).length > 0,
   );
+
+  /** Gefilterter Backlog: Status + Kategorie. */
+  protected readonly backlog = computed(() => {
+    let items = this.todoService.todosForDate(null);
+    if (this.backlogStatus() === 'active') {
+      items = items.filter((t) => !t.completed);
+    }
+    const cat = this.backlogCategory();
+    if (cat !== null) {
+      items = items.filter((t) => t.labelIds.includes(cat));
+    }
+    return items;
+  });
+
+  setBacklogStatus(status: 'all' | 'active') { this.backlogStatus.set(status); }
+  setBacklogCategory(id: string | null) { this.backlogCategory.set(id); }
+
+  dotClass(color: string): string {
+    return folderColorClass(color, 'dot');
+  }
 
   todosForDay(iso: string): Todo[] {
     return this.todoService.todosForDate(iso);
