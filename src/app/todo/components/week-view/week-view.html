@@ -97,12 +97,50 @@
     </div>
     </div>
 
-    <!-- Backlog: ungeplante Todos, in Tage ziehbar -->
-    @if (backlog().length > 0) {
+    <!-- Backlog: ungeplante Todos, in Tage ziehbar. Zeigt sich, sobald es
+         überhaupt ungeplante Todos gibt (unabhängig vom Filter). -->
+    @if (hasUnscheduled()) {
       <div class="mt-4">
-        <h3 class="mb-2 text-sm font-medium text-muted">Unscheduled</h3>
+        <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h3 class="text-sm font-medium text-muted">Unscheduled</h3>
+
+          <!-- Status: All / Active -->
+          <div class="inline-flex rounded-full border border-white/10 p-0.5 text-xs">
+            <button type="button"
+              class="rounded-full px-2.5 py-1 transition"
+              [class]="backlogStatus() === 'all' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
+              [attr.aria-pressed]="backlogStatus() === 'all'"
+              (click)="setBacklogStatus('all')">All</button>
+            <button type="button"
+              class="rounded-full px-2.5 py-1 transition"
+              [class]="backlogStatus() === 'active' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
+              [attr.aria-pressed]="backlogStatus() === 'active'"
+              (click)="setBacklogStatus('active')">Active</button>
+          </div>
+        </div>
+
+        <!-- Kategorie-Filter: horizontal scrollbare Chips (mobiltauglich) -->
+        @if (labels().length > 0) {
+          <div class="mb-2 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter by category">
+            <button type="button"
+              class="flex-none rounded-full border px-3 py-1 text-xs transition"
+              [class]="backlogCategory() === null ? 'border-white/40 text-text' : 'border-white/10 text-muted hover:text-text'"
+              [attr.aria-pressed]="backlogCategory() === null"
+              (click)="setBacklogCategory(null)">All categories</button>
+            @for (label of labels(); track label.id) {
+              <button type="button"
+                class="flex flex-none items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition"
+                [class]="backlogCategory() === label.id ? 'border-white/40 text-text' : 'border-white/10 text-muted hover:text-text'"
+                [attr.aria-pressed]="backlogCategory() === label.id"
+                (click)="setBacklogCategory(label.id)">
+                <span [class]="dotClass(label.color)">●</span>{{ label.name }}
+              </button>
+            }
+          </div>
+        }
+
         <div
-          class="flex flex-wrap gap-1.5 rounded-xl border border-white/5 bg-bg2 p-2"
+          class="flex min-h-12 flex-wrap gap-1.5 rounded-xl border border-white/5 bg-bg2 p-2"
           cdkDropList
           [cdkDropListData]="null"
           (cdkDropListDropped)="drop($event)">
@@ -116,6 +154,8 @@
                 {{ displayTitle(todo.title) }}
               </span>
             </div>
+          } @empty {
+            <p class="px-1 py-0.5 text-xs text-muted">No unscheduled todos match this filter</p>
           }
         </div>
       </div>
