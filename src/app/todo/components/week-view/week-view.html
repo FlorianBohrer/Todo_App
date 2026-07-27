@@ -1,0 +1,124 @@
+<section class="mx-auto w-full max-w-6xl px-1">
+
+  <!-- Wochen-Navigation -->
+  <div class="mb-4 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-muted transition hover:border-white/30 hover:text-text"
+        (click)="prevWeek()" aria-label="Previous week">
+        <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
+      </button>
+      <button
+        type="button"
+        class="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-muted transition hover:border-white/30 hover:text-text"
+        (click)="nextWeek()" aria-label="Next week">
+        <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
+      </button>
+      <span class="ml-1 text-lg font-medium text-text">{{ rangeLabel() }}</span>
+    </div>
+
+    @if (!isCurrentWeek()) {
+      <button
+        type="button"
+        class="rounded-full border border-indigo-500/60 px-3 py-1.5 text-sm text-indigo-300 transition hover:border-indigo-400"
+        (click)="goToday()">
+        Today
+      </button>
+    }
+  </div>
+
+  <!-- Alle Drop-Listen (7 Tage + Backlog) in EINER Gruppe, sonst kein Ziehen dazwischen -->
+  <div cdkDropListGroup>
+
+    <!-- 7 Tage: mobil gestapelt; ab sm sieben Spalten, die bei zu wenig Platz
+         horizontal scrollen statt unleserlich schmal zu werden. -->
+    <div class="overflow-x-auto pb-1">
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-7 sm:min-w-[900px]">
+      @for (day of week(); track day.iso) {
+        <div
+          class="flex flex-col rounded-xl border p-2 transition"
+          [class]="day.isToday ? 'border-indigo-500/70 bg-indigo-500/10' : 'border-white/5 bg-bg2'">
+
+          <!-- Tageskopf -->
+          <div class="mb-1 flex items-baseline justify-between px-1">
+            <span class="text-xs font-medium uppercase tracking-wide"
+              [class]="day.isToday ? 'text-indigo-300' : (day.isWeekend ? 'text-muted/60' : 'text-muted')">
+              {{ day.weekdayShort }}
+            </span>
+            <span class="text-lg font-semibold"
+              [class]="day.isToday ? 'text-indigo-200' : 'text-text'">
+              {{ day.dayNum }}
+            </span>
+          </div>
+
+          <!-- Signatur: Mini-Fortschritt pro Tag (gleiche Sprache wie die Statistik) -->
+          <div class="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-white/10">
+            <div class="h-full rounded-full bg-emerald-400/80 transition-all duration-300"
+              [style.width.%]="dayProgress(day.iso).percent"></div>
+          </div>
+
+          <!-- Todos des Tages: Drop-Ziel -->
+          <div
+            class="flex min-h-16 flex-1 flex-col gap-1.5"
+            cdkDropList
+            [cdkDropListData]="day.iso"
+            (cdkDropListDropped)="drop($event)">
+
+            @for (todo of todosForDay(day.iso); track todo.id) {
+              <div
+                cdkDrag [cdkDragData]="todo"
+                class="week-card group flex items-start gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
+                [class]="borderClass(todo)"
+                [class.opacity-60]="todo.completed">
+                <button
+                  type="button"
+                  class="mt-0.5 h-4 w-4 flex-none rounded-full border-2 transition"
+                  [class]="todo.completed ? 'border-emerald-400 bg-emerald-400' : 'border-zinc-500 hover:border-zinc-300'"
+                  (click)="toggle(todo.id)"
+                  [attr.aria-label]="todo.completed ? 'Mark as active' : 'Mark as done'"></button>
+                <span class="min-w-0 flex-1 break-words leading-snug" [class.line-through]="todo.completed">
+                  {{ displayTitle(todo.title) }}
+                </span>
+              </div>
+            }
+
+            <!-- Schnell-Eingabe direkt in den Tag -->
+            <input
+              #q
+              type="text"
+              placeholder="+ Add"
+              class="mt-auto w-full rounded-md bg-transparent px-2 py-1 text-sm text-text placeholder:text-muted/50 focus:bg-white/5 focus:outline-none"
+              (keydown.enter)="quickAdd(day.iso, q)"
+              [attr.aria-label]="'Add todo for ' + day.weekdayShort + ' ' + day.dayNum" />
+          </div>
+        </div>
+      }
+    </div>
+    </div>
+
+    <!-- Backlog: ungeplante Todos, in Tage ziehbar -->
+    @if (backlog().length > 0) {
+      <div class="mt-4">
+        <h3 class="mb-2 text-sm font-medium text-muted">Unscheduled</h3>
+        <div
+          class="flex flex-wrap gap-1.5 rounded-xl border border-white/5 bg-bg2 p-2"
+          cdkDropList
+          [cdkDropListData]="null"
+          (cdkDropListDropped)="drop($event)">
+          @for (todo of backlog(); track todo.id) {
+            <div
+              cdkDrag [cdkDragData]="todo"
+              class="week-card flex items-center gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
+              [class]="borderClass(todo)"
+              [class.opacity-60]="todo.completed">
+              <span class="break-words leading-snug" [class.line-through]="todo.completed">
+                {{ displayTitle(todo.title) }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</section>

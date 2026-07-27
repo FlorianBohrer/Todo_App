@@ -11,8 +11,10 @@ import { TodoList } from './app/todo/components/todo-list/todo-list';
 import { TodoStats } from './app/todo/components/todo-stats/todo-stats';
 import { CategoriesOverlay } from './app/todo/components/categories/categories-overlay';
 import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite-folders';
+import { WeekView } from './app/todo/components/week-view/week-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
 import { LabelService } from './app/todo/services/label.service';
+import { TodoService } from './app/todo/services/todo';
 import { ToastContainer } from './app/shared/toast-container';
 
 @Component({
@@ -26,6 +28,7 @@ import { ToastContainer } from './app/shared/toast-container';
     TodoStats,
     CategoriesOverlay,
     FavoriteFolders,
+    WeekView,
     UserAccount,
     LucideAngularModule,
     ToastContainer,
@@ -36,7 +39,14 @@ import { ToastContainer } from './app/shared/toast-container';
 })
 export class App {
   private readonly labelService = inject(LabelService);
+  private readonly todoService = inject(TodoService);
   protected readonly clerk = inject(ClerkService);
+
+  /** Aktive Ansicht: Liste oder Woche. */
+  protected readonly view = this.todoService.view;
+  setView(view: 'list' | 'week') {
+    this.todoService.view.set(view);
+  }
 
   /** true, wenn das Clerk-Script nicht geladen werden konnte (Netzwerk/Limit). */
   protected readonly clerkFailed = signal(false);
