@@ -33,13 +33,25 @@
     <!-- Blöcke -->
     <div class="space-y-3">
       @for (block of plan.content; track block.id) {
-        <div class="group relative rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-3 backdrop-blur-sm">
+        <div class="block relative rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-3 backdrop-blur-sm">
 
-          <!-- Block-Werkzeuge (bei Hover) -->
-          <div class="absolute right-2 top-2 flex gap-1 opacity-0 transition group-hover:opacity-100">
-            <button type="button" class="rounded p-1 text-muted hover:text-text" (click)="moveBlock(block.id, -1)" aria-label="Move up">↑</button>
-            <button type="button" class="rounded p-1 text-muted hover:text-text" (click)="moveBlock(block.id, 1)" aria-label="Move down">↓</button>
-            <button type="button" class="rounded p-1 text-muted hover:text-rose-400" (click)="deleteBlock(block.id)" aria-label="Delete block">
+          <!-- Block-Werkzeuge. Auf Zeigergeraeten treten sie zurueck, bis der
+               Block angefasst wird; auf Touch stehen sie dauerhaft da, sonst
+               waeren Verschieben und Loeschen dort nicht erreichbar. -->
+          <div class="block-tools absolute right-2 top-2 flex gap-0.5">
+            <button type="button"
+              class="block-tool grid place-items-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-text focus-visible:bg-white/10 focus-visible:text-text"
+              (click)="moveBlock(block.id, -1)" aria-label="Move block up">
+              <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+            <button type="button"
+              class="block-tool grid place-items-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-text focus-visible:bg-white/10 focus-visible:text-text"
+              (click)="moveBlock(block.id, 1)" aria-label="Move block down">
+              <lucide-icon [img]="DownIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+            <button type="button"
+              class="block-tool grid place-items-center rounded-lg text-muted transition-colors hover:bg-danger/15 hover:text-danger focus-visible:bg-danger/15 focus-visible:text-danger"
+              (click)="deleteBlock(block.id)" aria-label="Delete block">
               <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
             </button>
           </div>
@@ -52,7 +64,7 @@
               placeholder="Write your notes…"
               [value]="block.text"
               (input)="updateText(block.id, $any($event.target).value)"></textarea>
-          } @else {
+          } @else if (block.type === 'table') {
             <!-- Tabelle -->
             <div class="overflow-x-auto pr-16">
               <table class="w-full border-collapse text-sm">
@@ -103,6 +115,36 @@
               <button type="button" class="rounded-full border border-white/10 px-3 py-1 text-xs text-muted transition hover:text-text" (click)="addRow(block.id)">+ Row</button>
               <button type="button" class="rounded-full border border-white/10 px-3 py-1 text-xs text-muted transition hover:text-text" (click)="addColumn(block.id)">+ Column</button>
             </div>
+          } @else {
+            <!-- Ablaufdiagramm: Quelltext und Zeichnung nebeneinander.
+                 Am Handy steht die Zeichnung oben — dort wird gelesen,
+                 nicht getippt. -->
+            <div class="grid gap-3 md:grid-cols-2 md:items-start">
+              <div class="order-2 min-w-0 md:order-1">
+                <label class="mb-1.5 block text-xs font-medium text-muted"
+                  [attr.for]="'diagram-code-' + block.id">
+                  Flow
+                </label>
+                <textarea
+                  appAutosize
+                  rows="4"
+                  spellcheck="false"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  [id]="'diagram-code-' + block.id"
+                  class="w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 font-mono text-[13px]/[1.6] text-text placeholder:text-muted focus:border-white/25 focus:outline-none"
+                  placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
+                  [value]="asDiagram(block).code"
+                  (input)="updateCode(block.id, $any($event.target).value)"></textarea>
+                <p class="mt-1.5 text-xs text-muted">
+                  Mermaid syntax — <code class="font-mono">A --&gt; B</code> draws an arrow.
+                </p>
+              </div>
+
+              <div class="order-1 min-w-0 md:order-2">
+                <app-mermaid-diagram [code]="asDiagram(block).code"></app-mermaid-diagram>
+              </div>
+            </div>
           }
         </div>
       }
@@ -119,6 +161,11 @@
         class="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-white/30"
         (click)="addTableBlock()">
         <lucide-icon [img]="TableIcon" class="h-4 w-4"></lucide-icon> Table
+      </button>
+      <button type="button"
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-white/30"
+        (click)="addDiagramBlock()">
+        <lucide-icon [img]="DiagramIcon" class="h-4 w-4"></lucide-icon> Diagram
       </button>
     </div>
 

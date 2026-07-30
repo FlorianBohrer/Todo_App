@@ -11,7 +11,14 @@ export interface PlanTableBlock {
   rows: string[][];
 }
 
-export type PlanBlock = PlanTextBlock | PlanTableBlock;
+/** Ablaufdiagramm als Mermaid-Quelltext — gerendert wird erst im Browser. */
+export interface PlanDiagramBlock {
+  id: string;
+  type: 'diagram';
+  code: string;
+}
+
+export type PlanBlock = PlanTextBlock | PlanTableBlock | PlanDiagramBlock;
 
 export interface Plan {
   id: string;
