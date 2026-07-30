@@ -1,6 +1,7 @@
 @if (clerk.user$ | async; as user) {
   <div class="flex items-center justify-end gap-3 p-4">
     <app-user-account />
+    <app-device-pairing />
     <button
       class="text-xs text-danger transition hover:opacity-80"
       (click)="signOut()">

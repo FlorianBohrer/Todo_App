@@ -13,6 +13,7 @@ import { CategoriesOverlay } from './app/todo/components/categories/categories-o
 import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite-folders';
 import { WeekView } from './app/todo/components/week-view/week-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
+import { DevicePairing } from './app/todo/components/device-pairing/device-pairing';
 import { LabelService } from './app/todo/services/label.service';
 import { TodoService } from './app/todo/services/todo';
 import { ToastContainer } from './app/shared/toast-container';
@@ -30,6 +31,7 @@ import { ToastContainer } from './app/shared/toast-container';
     FavoriteFolders,
     WeekView,
     UserAccount,
+    DevicePairing,
     LucideAngularModule,
     ToastContainer,
   ],

@@ -23,8 +23,7 @@
         <li
       cdkDrag
       [cdkDragStartDelay]="dragStartDelay"
-      class="todo-card group flex items-center justify-between gap-3 rounded-r-xl bg-bg2 p-3 border-l-4"
-      [class]="labelService.borderClassFor(primaryLabelId(todo.labelIds))"
+      class="todo-card group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-3 backdrop-blur-sm transition hover:border-white/20"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
         todo.completed || completingTodoIds().has(todo.id)
@@ -35,7 +34,7 @@
           <!-- Platzhalter beim Ziehen -->
           <div
             *cdkDragPlaceholder
-            class="h-12 rounded-r-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
+            class="h-12 rounded-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
           </div>
 
           <!-- Favoriten-Stern (mobil im 3-Punkte-Menü) -->
@@ -58,6 +57,16 @@
 
           <!-- Drag-handle -->
            <div class="flex flex-1 items-center gap-3 min-w-0">
+            <!-- Gradient-Icon-Kachel in Label-Farbe (Farb-Identität der Zeile) -->
+            <span
+              class="flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
+              [class]="tileClass(todo.labelIds)">
+              <lucide-icon
+                [img]="tileIcon(todo.labelIds)"
+                class="h-4 w-4"
+                [class]="tileTextClass(todo.labelIds)"></lucide-icon>
+            </span>
+
             <button
               type="button"
               class="todo-checkbox"

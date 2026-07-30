@@ -129,7 +129,7 @@ toggleFavorite(id: string, event: Event) {
   }
 
   iconBoxClass(color: string): string {
-    return folderColorClass(color, 'iconBox');
+    return folderColorClass(color, 'tile');
   }
 
   barClass(color: string): string {
