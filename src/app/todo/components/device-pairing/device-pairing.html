@@ -1,0 +1,85 @@
+<div class="relative">
+  <button
+    type="button"
+    class="rounded-lg border border-border px-3 py-2 text-xs text-muted transition hover:bg-panel1 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight1"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()">
+    Mac koppeln
+  </button>
+
+  @if (open()) {
+    <div
+      class="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-border bg-panel1 p-4 shadow-2xl"
+      role="dialog"
+      aria-label="Geräte koppeln">
+      <p class="text-sm font-semibold text-text">Menüleisten-Timer</p>
+      <p class="mt-1 text-xs text-muted">
+        Erzeuge einen Code und tippe ihn im Timer auf deinem Mac ein.
+      </p>
+
+      @if (pairingCode(); as code) {
+        <div class="mt-4 rounded-lg border border-border bg-bg2 px-3 py-4 text-center">
+          <p
+            class="font-mono text-2xl font-semibold tracking-[0.3em] text-text"
+            [class.opacity-40]="expired()">
+            {{ code.code }}
+          </p>
+
+          @if (expired()) {
+            <p class="mt-2 text-xs text-danger">
+              Abgelaufen — erzeuge einen neuen Code.
+            </p>
+          } @else {
+            <p class="mt-2 text-xs text-muted" aria-live="polite">
+              Gültig noch {{ formatCountdown(secondsLeft()) }}
+            </p>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="mt-3 w-full rounded-lg border border-border px-3 py-2 text-xs text-muted transition hover:bg-panel2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight1"
+          [disabled]="busy()"
+          (click)="createCode()">
+          Neuen Code erzeugen
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="btn btn-primary mt-4 w-full text-sm"
+          [disabled]="busy()"
+          (click)="createCode()">
+          {{ busy() ? 'Code wird erzeugt …' : 'Kopplungscode erzeugen' }}
+        </button>
+      }
+
+      <div class="mt-5 border-t border-border pt-4">
+        <p class="text-xs font-semibold text-muted">Gekoppelte Geräte</p>
+
+        @if (deviceList().length === 0) {
+          <p class="mt-2 text-xs text-muted">Noch keins.</p>
+        } @else {
+          <ul class="mt-2 space-y-2">
+            @for (device of deviceList(); track device.id) {
+              <li class="flex items-center gap-2">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-xs text-text">{{ device.name }}</p>
+                  <p class="truncate text-[10px] text-muted">
+                    Zuletzt: {{ formatDate(device.lastUsedAt) }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="shrink-0 rounded-md px-2 py-1 text-[10px] text-danger transition hover:bg-panel2 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+                  [attr.aria-label]="'Gerät ' + device.name + ' entkoppeln'"
+                  (click)="revoke(device)">
+                  Entkoppeln
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  }
+</div>

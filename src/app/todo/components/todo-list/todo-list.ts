@@ -19,6 +19,7 @@ import { Todo } from '../../model/todo.model';
 import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
 import { stripPriorityPrefix, priorityBadge } from '../../shared/title-priority';
+import { folderIcon } from '../../shared/folder-icon';
 import { LabelService } from '../../services/label.service';
 
 import {
@@ -301,6 +302,22 @@ export class TodoList {
   /** Primäres Label (erste ID) — bestimmt Rand-/Punktfarbe. */
   primaryLabelId(labelIds: string[]): string | null {
     return labelIds[0] ?? null;
+  }
+
+  private primaryLabel(labelIds: string[]) {
+    const id = labelIds[0];
+    return id ? this.labels().find((l) => l.id === id) ?? null : null;
+  }
+
+  /** Gradient-Icon-Kachel in der Farbe des primären Labels. */
+  tileClass(labelIds: string[]): string {
+    return folderColorClass(this.primaryLabel(labelIds)?.color, 'tile');
+  }
+  tileTextClass(labelIds: string[]): string {
+    return folderColorClass(this.primaryLabel(labelIds)?.color, 'text');
+  }
+  tileIcon(labelIds: string[]) {
+    return folderIcon(this.primaryLabel(labelIds)?.icon);
   }
 
   isLabelActive(labelIds: string[], labelId: string): boolean {
