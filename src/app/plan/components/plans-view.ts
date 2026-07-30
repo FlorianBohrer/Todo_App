@@ -6,17 +6,29 @@ import {
   Trash2,
   Type,
   Table as TableIcon,
+  Workflow,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
 import { folderColorClass } from '../../todo/shared/folder-color';
 import { PlanService } from '../plan.service';
-import { Plan, PlanBlock, PlanTableBlock } from '../plan.model';
+import { Plan, PlanBlock, PlanDiagramBlock, PlanTableBlock } from '../plan.model';
+import { MermaidDiagram } from './mermaid-diagram';
+
+/** Startvorlage: ein neuer Diagrammblock zeigt sofort etwas Gezeichnetes,
+ *  statt den Nutzer vor ein leeres Feld und eine fremde Syntax zu setzen. */
+const DIAGRAM_TEMPLATE = `flowchart TD
+  idea[Idea] --> spike[Spike]
+  spike --> build[Build]
+  build --> demo[Demo]`;
 
 @Component({
   selector: 'app-plans-view',
-  imports: [LucideAngularModule, Autosize],
+  imports: [LucideAngularModule, Autosize, MermaidDiagram],
   templateUrl: './plans-view.html',
+  styleUrl: './plans-view.scss',
 })
 export class PlansView {
   private readonly planService = inject(PlanService);
@@ -27,6 +39,9 @@ export class PlansView {
   protected readonly TrashIcon = Trash2;
   protected readonly TextIcon = Type;
   protected readonly TableIcon = TableIcon;
+  protected readonly DiagramIcon = Workflow;
+  protected readonly UpIcon = ChevronUp;
+  protected readonly DownIcon = ChevronDown;
 
   protected readonly plans = this.planService.plans;
   protected readonly loading = this.planService.loading;
@@ -84,6 +99,12 @@ export class PlansView {
       { id: this.newId(), type: 'table', columns: ['Column 1', 'Column 2'], rows: [['', '']] },
     ]);
   }
+  addDiagramBlock() {
+    this.updateContent((b) => [
+      ...b,
+      { id: this.newId(), type: 'diagram', code: DIAGRAM_TEMPLATE },
+    ]);
+  }
   deleteBlock(blockId: string) {
     this.updateContent((b) => b.filter((x) => x.id !== blockId));
   }
@@ -102,6 +123,16 @@ export class PlansView {
     this.updateContent((b) =>
       b.map((x) => (x.id === blockId && x.type === 'text' ? { ...x, text } : x)),
     );
+  }
+
+  // ---- Editor: Diagramm ----
+  updateCode(blockId: string, code: string) {
+    this.updateContent((b) =>
+      b.map((x) => (x.id === blockId && x.type === 'diagram' ? { ...x, code } : x)),
+    );
+  }
+  asDiagram(block: PlanBlock): PlanDiagramBlock {
+    return block as PlanDiagramBlock;
   }
 
   // ---- Editor: Tabelle ----
