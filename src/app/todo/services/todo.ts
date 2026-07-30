@@ -326,7 +326,7 @@ export class TodoService {
 
   // ---- Wochenansicht ----
   /** Liste vs. Woche. */
-  readonly view = signal<'list' | 'week'>('list');
+  readonly view = signal<'list' | 'week' | 'plans'>('list');
 
   /** Todo einem Tag zuordnen ('YYYY-MM-DD') oder in den Backlog zurück (null). */
   scheduleTodo(id: string, scheduledDate: string | null) {

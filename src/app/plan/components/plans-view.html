@@ -1,0 +1,171 @@
+<section class="mx-auto w-full max-w-3xl">
+
+  @if (selected(); as plan) {
+    <!-- ===== Editor ===== -->
+    <div class="mb-4 flex items-center gap-2">
+      <button
+        type="button"
+        class="grid h-9 w-9 flex-none place-items-center rounded-full border border-white/10 text-muted transition hover:border-white/30 hover:text-text"
+        (click)="back()" aria-label="Back to plans">
+        <lucide-icon [img]="BackIcon" class="h-4 w-4"></lucide-icon>
+      </button>
+
+      <input
+        type="text"
+        class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-2xl font-bold text-text focus:bg-white/5 focus:outline-none"
+        [value]="plan.title"
+        (input)="setTitle(plan.id, $any($event.target).value)"
+        aria-label="Plan title" />
+
+      <!-- Folder-Bindung: eigenständig oder an einen Folder -->
+      <select
+        class="flex-none rounded-lg border border-white/10 bg-bg2 px-2 py-1.5 text-sm text-text focus:outline-none"
+        [value]="plan.categoryId ?? ''"
+        (change)="setFolder(plan.id, $any($event.target).value)"
+        aria-label="Attach to folder">
+        <option value="">Standalone</option>
+        @for (label of labels(); track label.id) {
+          <option [value]="label.id">{{ label.name }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Blöcke -->
+    <div class="space-y-3">
+      @for (block of plan.content; track block.id) {
+        <div class="group relative rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-3 backdrop-blur-sm">
+
+          <!-- Block-Werkzeuge (bei Hover) -->
+          <div class="absolute right-2 top-2 flex gap-1 opacity-0 transition group-hover:opacity-100">
+            <button type="button" class="rounded p-1 text-muted hover:text-text" (click)="moveBlock(block.id, -1)" aria-label="Move up">↑</button>
+            <button type="button" class="rounded p-1 text-muted hover:text-text" (click)="moveBlock(block.id, 1)" aria-label="Move down">↓</button>
+            <button type="button" class="rounded p-1 text-muted hover:text-rose-400" (click)="deleteBlock(block.id)" aria-label="Delete block">
+              <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+          </div>
+
+          @if (block.type === 'text') {
+            <textarea
+              appAutosize
+              rows="2"
+              class="w-full resize-none bg-transparent pr-16 text-text placeholder:text-muted/50 focus:outline-none"
+              placeholder="Write your notes…"
+              [value]="block.text"
+              (input)="updateText(block.id, $any($event.target).value)"></textarea>
+          } @else {
+            <!-- Tabelle -->
+            <div class="overflow-x-auto pr-16">
+              <table class="w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    @for (col of asTable(block).columns; track $index; let ci = $index) {
+                      <th class="border border-white/10 p-0">
+                        <div class="flex items-center">
+                          <input
+                            type="text"
+                            class="min-w-24 flex-1 bg-white/5 px-2 py-1 font-semibold text-text focus:outline-none"
+                            [value]="col"
+                            (input)="setColumn(block.id, ci, $any($event.target).value)"
+                            aria-label="Column name" />
+                          <button type="button"
+                            class="px-1.5 text-muted/60 hover:text-rose-400"
+                            (click)="deleteColumn(block.id, ci)" aria-label="Delete column">✕</button>
+                        </div>
+                      </th>
+                    }
+                    <th class="w-8 border border-white/10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of asTable(block).rows; track $index; let ri = $index) {
+                    <tr>
+                      @for (cell of row; track $index; let ci = $index) {
+                        <td class="border border-white/10 p-0">
+                          <input
+                            type="text"
+                            class="min-w-24 w-full bg-transparent px-2 py-1 text-text focus:bg-white/5 focus:outline-none"
+                            [value]="cell"
+                            (input)="setCell(block.id, ri, ci, $any($event.target).value)"
+                            aria-label="Cell" />
+                        </td>
+                      }
+                      <td class="border border-white/10 text-center">
+                        <button type="button"
+                          class="px-1.5 text-muted/60 hover:text-rose-400"
+                          (click)="deleteRow(block.id, ri)" aria-label="Delete row">✕</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-2 flex gap-2">
+              <button type="button" class="rounded-full border border-white/10 px-3 py-1 text-xs text-muted transition hover:text-text" (click)="addRow(block.id)">+ Row</button>
+              <button type="button" class="rounded-full border border-white/10 px-3 py-1 text-xs text-muted transition hover:text-text" (click)="addColumn(block.id)">+ Column</button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Block hinzufügen -->
+    <div class="mt-3 flex gap-2">
+      <button type="button"
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-white/30"
+        (click)="addTextBlock()">
+        <lucide-icon [img]="TextIcon" class="h-4 w-4"></lucide-icon> Text
+      </button>
+      <button type="button"
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-white/30"
+        (click)="addTableBlock()">
+        <lucide-icon [img]="TableIcon" class="h-4 w-4"></lucide-icon> Table
+      </button>
+    </div>
+
+  } @else {
+    <!-- ===== Übersicht ===== -->
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-lg font-medium text-text">Plans</h2>
+      <button type="button"
+        class="inline-flex items-center gap-2 rounded-full bg-button px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+        (click)="newPlan()">
+        <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon> New plan
+      </button>
+    </div>
+
+    @if (loading()) {
+      <p class="flex items-center gap-2 text-muted" role="status">
+        <span class="h-4 w-4 flex-none animate-spin rounded-full border-2 border-zinc-500 border-t-transparent"></span>
+        Loading plans…
+      </p>
+    } @else if (plans().length === 0) {
+      <p class="rounded-xl border border-white/5 bg-bg2 p-6 text-center text-muted">
+        No plans yet. Create one for your hackathon, a trip, or a software idea.
+      </p>
+    } @else {
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        @for (plan of plans(); track plan.id) {
+          <button type="button"
+            class="group flex flex-col gap-2 rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-4 text-left backdrop-blur-sm transition hover:border-white/25"
+            (click)="open(plan.id)">
+            <div class="flex items-start justify-between gap-2">
+              <span class="min-w-0 flex-1 truncate font-semibold text-text">{{ plan.title }}</span>
+              <span
+                class="flex-none rounded p-1 text-muted/60 opacity-0 transition hover:text-rose-400 group-hover:opacity-100"
+                (click)="deletePlan(plan.id, $event)"
+                role="button" aria-label="Delete plan">
+                <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs text-muted">
+              <span [class]="dotClass(plan.categoryId)">●</span>
+              {{ folderName(plan.categoryId) }}
+              <span class="text-muted/40">·</span>
+              {{ plan.content.length }} {{ plan.content.length === 1 ? 'block' : 'blocks' }}
+            </div>
+          </button>
+        }
+      </div>
+    }
+  }
+</section>
