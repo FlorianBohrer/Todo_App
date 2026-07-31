@@ -32,6 +32,16 @@
             "styles": [
               "node_modules/@angular/cdk/overlay-prebuilt.css",
               "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "@braintree/sanitize-url",
+              "cytoscape-cose-bilkent",
+              "cytoscape-fcose",
+              "dayjs",
+              "dayjs/plugin/advancedFormat.js",
+              "dayjs/plugin/customParseFormat.js",
+              "dayjs/plugin/duration.js",
+              "dayjs/plugin/isoWeek.js"
             ]
           },
           "configurations": {

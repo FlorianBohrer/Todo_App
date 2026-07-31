@@ -12,6 +12,7 @@ import { TodoStats } from './app/todo/components/todo-stats/todo-stats';
 import { CategoriesOverlay } from './app/todo/components/categories/categories-overlay';
 import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite-folders';
 import { WeekView } from './app/todo/components/week-view/week-view';
+import { PlansView } from './app/plan/components/plans-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
 import { DevicePairing } from './app/todo/components/device-pairing/device-pairing';
 import { LabelService } from './app/todo/services/label.service';
@@ -30,6 +31,7 @@ import { ToastContainer } from './app/shared/toast-container';
     CategoriesOverlay,
     FavoriteFolders,
     WeekView,
+    PlansView,
     UserAccount,
     DevicePairing,
     LucideAngularModule,
@@ -44,9 +46,9 @@ export class App {
   private readonly todoService = inject(TodoService);
   protected readonly clerk = inject(ClerkService);
 
-  /** Aktive Ansicht: Liste oder Woche. */
+  /** Aktive Ansicht: Liste, Woche oder Pläne. */
   protected readonly view = this.todoService.view;
-  setView(view: 'list' | 'week') {
+  setView(view: 'list' | 'week' | 'plans') {
     this.todoService.view.set(view);
   }
 
