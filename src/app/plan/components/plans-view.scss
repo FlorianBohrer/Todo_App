@@ -1,0 +1,36 @@
+// Block-Werkzeuge: auf Maus-Geraeten treten sie zurueck, damit der Plan ruhig
+// bleibt — auf Touch gibt es kein Hover, dort muessen sie stehen bleiben,
+// sonst laesst sich ein Block am Handy weder verschieben noch loeschen.
+.block-tools {
+  opacity: 1;
+}
+
+.block-tool {
+  // 44px Mindest-Trefferflaeche auf Touch (WCAG 2.5.5), am Zeigergeraet
+  // darf es kompakter sein.
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .block-tools {
+    opacity: 0;
+    transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .block:hover .block-tools,
+  .block:focus-within .block-tools {
+    opacity: 1;
+  }
+
+  .block-tool {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-tools {
+    transition: none;
+  }
+}
