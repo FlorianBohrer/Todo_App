@@ -3,12 +3,17 @@ import { Component, computed, inject, HostListener, signal } from '@angular/core
 import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
 import { folderColorClass } from '../../shared/folder-color';
+import { viewChild, ElementRef } from '@angular/core';
+
 import {
   LucideAngularModule,
   GripVertical,
   Search,
   Star,
 } from 'lucide-angular';
+
+
+
 
 @Component({
   selector: 'app-categories-overlay',
@@ -39,6 +44,49 @@ export class CategoriesOverlay {
     if (!term) return this.labels();
     return this.labels().filter((l) => l.name.toLowerCase().includes(term));
   });
+
+
+protected readonly editingId     = signal<string | null>(null);
+protected readonly colorPickerId = signal<string | null>(null);
+
+private readonly renameInput = viewChild<ElementRef<HTMLInputElement>>('rename');
+
+
+
+startRename(id: string, event: Event) {
+  event.stopPropagation();
+  this.colorPickerId.set(null);        // never both at once
+  this.editingId.set(id);
+  requestAnimationFrame(() => {
+    const el = this.renameInput()?.nativeElement;
+    el?.focus();
+    el?.select();
+  });
+}
+
+commitRename(id: string, value: string, event: Event) {
+  event.stopPropagation();
+  if (this.editingId() !== id) return; // blur after Enter must not fire twice
+  this.editingId.set(null);
+  this.labelService.updateLabel(id, { name: value });
+}
+
+cancelRename(event: Event) {
+  event.stopPropagation();             // keeps Escape from closing the overlay
+  this.editingId.set(null);
+}
+
+toggleColorPicker(id: string, event: Event) {
+  event.stopPropagation();
+  this.editingId.set(null);
+  this.colorPickerId.update((current) => (current === id ? null : id));
+}
+
+pickColor(id: string, color: string, event: Event) {
+  event.stopPropagation();
+  this.labelService.updateLabel(id, { color });
+  this.colorPickerId.set(null);
+}
 
   clearSearch() {
     this.searchTerm.set('');

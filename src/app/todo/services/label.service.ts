@@ -223,6 +223,40 @@ export class LabelService {
     });
   }
 
+  /** Rename or recolor a folder. Applied optimistically, reverted on error. */
+updateLabel(id: string, changes: { name?: string; color?: string; icon?: string }) {
+  const snapshot = this.labels();
+
+  const patch: Record<string, string> = {};
+  if (changes.name !== undefined) {
+    const name = changes.name.trim();
+    if (!name) return;                 // empty name discards the edit
+    patch['name'] = name;
+  }
+  if (changes.color !== undefined) patch['color'] = changes.color;
+  if (changes.icon !== undefined) patch['icon'] = changes.icon;
+  if (Object.keys(patch).length === 0) return;
+
+  // Show it right away — the folder colour is used all over the app.
+  this.labels.update((list) =>
+    list.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+  );
+
+  this.http.put<CategoryDto>(`${this.apiUrl}/${id}`, patch).subscribe({
+    next: (c) =>
+      this.labels.update((list) =>
+        list.map((l) =>
+          l.id === id ? { ...l, name: c.name, color: c.color, icon: c.icon } : l,
+        ),
+      ),
+    error: (err) => {
+      console.error('Folder speichern fehlgeschlagen', err);
+      this.toast.error('Could not save folder');
+      this.labels.set(snapshot);       // roll back
+    },
+  });
+}
+
   // ---- UI-State / Helfer ----
   borderClassFor(labelId: string | null): string {
     if (labelId === null) return 'border-zinc-600';
