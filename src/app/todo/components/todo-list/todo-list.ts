@@ -20,7 +20,7 @@ import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
 import { stripPriorityPrefix, priorityBadge } from '../../shared/title-priority';
 import { folderIcon } from '../../shared/folder-icon';
-import { LabelService } from '../../services/label.service';
+import { LabelService, Label} from '../../services/label.service';
 
 import {
   ChevronDown,
@@ -32,6 +32,7 @@ import {
   Pencil,
   Timer,
   Trash2,
+  Folder,
 } from 'lucide-angular';
 
 @Component({
@@ -57,6 +58,7 @@ export class TodoList {
   protected readonly stats = this.todoService.stats;
   protected readonly filter = this.todoService.filter;
   protected readonly labels = this.labelService.labels;
+  protected readonly FolderIcon = Folder;
 
   protected readonly ChevronDownIcon = ChevronDown;
   protected readonly GripIcon = GripVertical;
@@ -307,6 +309,14 @@ export class TodoList {
   private primaryLabel(labelIds: string[]) {
     const id = labelIds[0];
     return id ? this.labels().find((l) => l.id === id) ?? null : null;
+  }
+
+  labelIcon(label: Label){
+    return folderIcon(label.icon);
+  }
+
+  labelTitleClass(label: Label): string {
+    return folderColorClass(label.color, 'text');
   }
 
   /** Gradient-Icon-Kachel in der Farbe des primären Labels. */

@@ -188,7 +188,9 @@
           <button
             type="button"
             cdkOverlayOrigin #trigger="cdkOverlayOrigin"
-            class="flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-3 py-1.5
+
+          
+            class="hidden sm:flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-3 py-1.5
                    text-sm text-text transition hover:bg-panel/10
                    focus:outline-none focus:ring-1 focus:ring-zinc-100"
             [class]="labelService.borderClassFor(primaryLabelId(todo.labelIds))"
@@ -308,6 +310,43 @@
                 <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
                 <span>Text bearbeiten</span>
               </button>
+
+
+              <div class="flex items-center gap-2.5 border-t border-slate-700 px-3 pb-1 pt-2.5 text-xs text-zinc-400">
+                <lucide-icon [img]="FolderIcon" class="h-3.5 w-3.5"></lucide-icon>
+                <span>Folder</span>
+              </div>
+
+              @for (label of labels(); track label.id) {
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  [attr.aria-checked]="isLabelActive(todo.labelIds, label.id)"
+                  class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  (click)="toggleLabel(todo.id, label.id)">
+                  <span
+                    class="flex h-6 w-6 flex-none items-center justify-center rounded-md ring-1 ring-inset"
+                    [class]="labelTitleClass(label)">
+                    <lucide-icon
+                      [img]="labelIcon(label)"
+                      class="h-3.5 w-3.5"
+                      [class]="labelTitleClass(label)"></lucide-icon>
+                  </span>
+                  <span class="flex-1 truncate">{{ label.name }}</span>
+                  @if (isLabelActive(todo.labelIds, label.id)) {
+                    <span class="text-emerald-400">✓</span>
+                  }
+                </button>
+              }
+
+              @if (todo.labelIds.length > 0) {
+                <button
+                  type="button" role="menuitem"
+                  class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
+                  (click)="clearLabels(todo.id)">
+                  Remove all
+                </button>
+              }
 
               @if (hasTimer(todo)) {
                 <button
