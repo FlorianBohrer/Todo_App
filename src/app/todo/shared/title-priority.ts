@@ -9,8 +9,8 @@ interface PriorityPrefix {
 }
 
 const PREFIXES: PriorityPrefix[] = [
-  { match: '/must-have',  priority: 0, badge: 'must' },
-  { match: '/could-have', priority: 1, badge: 'could' },
+  { match: '/must ',  priority: 0, badge: 'must' },
+  { match: '/could ', priority: 1, badge: 'could' },
 ];
 
 const NORMAL_PRIORITY = 2;
