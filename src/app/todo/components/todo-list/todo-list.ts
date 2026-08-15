@@ -15,6 +15,7 @@ import {
   TodoService,
   TIMER_PRESETS_MINUTES,
 } from '../../services/todo';
+import { NgClass } from '@angular/common';
 import { Todo } from '../../model/todo.model';
 import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
@@ -229,15 +230,15 @@ toggleFolderList(): void {
     });
   }
 
-  toggleOptionsMenu(id: string): void {
-    this.openOptionsId.update(
-      current => current === id ? null : id,
-    );
-  }
+ toggleOptionsMenu(id: string): void {
+  this.openOptionsId.update(current => current === id ? null : id);
+  this.folderListOpen.set(false);
+}
 
-  closeOptionsMenu(): void {
-    this.openOptionsId.set(null);
-  }
+closeOptionsMenu(): void {
+  this.openOptionsId.set(null);
+  this.folderListOpen.set(false);
+}
 
   toggleMenu(id: string): void {
     this.openMenuId.update(
