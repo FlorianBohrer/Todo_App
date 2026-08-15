@@ -26,6 +26,13 @@ li.cdk-drag {
 
 // --- Aufklappbare Todos ---
 
+.folder-collapse { grid-template-rows: 0fr; }
+.folder-collapse.is-open { grid-template-rows: 1fr; }
+
+.folder-scroll {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent 100%);
+}
 
 textarea.todo-collapsed {
   max-height: 1.75rem;

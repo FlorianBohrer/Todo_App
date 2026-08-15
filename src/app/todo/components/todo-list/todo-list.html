@@ -311,43 +311,73 @@
                 <span>Text bearbeiten</span>
               </button>
 
+<!-- Folders: collapsible and scrollable. Multi-select keeps the menu open. -->
+<div class="border-t border-slate-700">
+  <button
+    type="button"
+    class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+    (click)="toggleFolderList()"
+    [attr.aria-expanded]="folderListOpen()"
+    [attr.aria-controls]="'folders-' + todo.id">
+    <lucide-icon [img]="FolderIcon" class="h-4 w-4 flex-none"></lucide-icon>
+    <span class="flex-none">Folder</span>
 
-              <div class="flex items-center gap-2.5 border-t border-slate-700 px-3 pb-1 pt-2.5 text-xs text-zinc-400">
-                <lucide-icon [img]="FolderIcon" class="h-3.5 w-3.5"></lucide-icon>
-                <span>Folder</span>
-              </div>
+    <!-- Current selection stays readable while collapsed -->
+    <span class="ml-auto min-w-0 truncate text-right text-xs text-zinc-400">
+      {{ todo.labelIds.length ? labelTitle(todo.labelIds) : 'None' }}
+    </span>
 
-              @for (label of labels(); track label.id) {
-                <button
-                  type="button"
-                  role="menuitemcheckbox"
-                  [attr.aria-checked]="isLabelActive(todo.labelIds, label.id)"
-                  class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
-                  (click)="toggleLabel(todo.id, label.id)">
-                  <span
-                    class="flex h-6 w-6 flex-none items-center justify-center rounded-md ring-1 ring-inset"
-                    [class]="labelTitleClass(label)">
-                    <lucide-icon
-                      [img]="labelIcon(label)"
-                      class="h-3.5 w-3.5"
-                      [class]="labelTitleClass(label)"></lucide-icon>
-                  </span>
-                  <span class="flex-1 truncate">{{ label.name }}</span>
-                  @if (isLabelActive(todo.labelIds, label.id)) {
-                    <span class="text-emerald-400">✓</span>
-                  }
-                </button>
-              }
+    <lucide-icon
+      [img]="ChevronDownIcon"
+      class="h-4 w-4 flex-none transition-transform duration-200"
+      [class.rotate-180]="folderListOpen()"></lucide-icon>
+  </button>
 
-              @if (todo.labelIds.length > 0) {
-                <button
-                  type="button" role="menuitem"
-                  class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
-                  (click)="clearLabels(todo.id)">
-                  Remove all
-                </button>
-              }
+  <!-- grid-rows 0fr -> 1fr animates to the natural height, no magic pixel value -->
+  <div
+    [id]="'folders-' + todo.id"
+    role="group"
+    aria-label="Folders"
+    class="folder-collapse grid transition-[grid-template-rows] duration-200 ease-out"
+    [class.is-open]="folderListOpen()">
+    <div class="min-h-0 overflow-hidden">
+      <div class="folder-scroll max-h-48 overflow-y-auto overscroll-contain pb-1">
+        @for (label of labels(); track label.id) {
+          <button
+            type="button"
+            role="menuitemcheckbox"
+            [attr.aria-checked]="isLabelActive(todo.labelIds, label.id)"
+            class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+            (click)="toggleLabel(todo.id, label.id)">
+            <span
+              class="flex h-6 w-6 flex-none items-center justify-center rounded-md ring-1 ring-inset"
+              [class]="labelTitleClass(label)">
+              <lucide-icon
+                [img]="labelIcon(label)"
+                class="h-3.5 w-3.5"
+                [class]="labelTitleClass(label)"></lucide-icon>
+            </span>
+            <span class="flex-1 truncate">{{ label.name }}</span>
+            @if (isLabelActive(todo.labelIds, label.id)) {
+              <span class="flex-none text-emerald-400">✓</span>
+            }
+          </button>
+        } @empty {
+          <p class="px-3 py-2 text-xs text-zinc-400">No folders yet</p>
+        }
 
+        @if (todo.labelIds.length > 0) {
+          <button
+            type="button" role="menuitem"
+            class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
+            (click)="clearLabels(todo.id)">
+            Remove all
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+</div>
               @if (hasTimer(todo)) {
                 <button
                   type="button" role="menuitem"
