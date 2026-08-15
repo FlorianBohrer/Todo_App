@@ -10,6 +10,7 @@ import {
   GripVertical,
   Search,
   Star,
+  Pencil,
 } from 'lucide-angular';
 
 
@@ -27,6 +28,7 @@ export class CategoriesOverlay {
   protected readonly StarIcon = Star;
   protected readonly GripIcon = GripVertical;
   protected readonly SearchIcon = Search;
+  protected readonly PencilIcon = Pencil;
   protected readonly favoritesFull = this.labelService.favoritesFull;
 
   protected readonly labels        = this.labelService.labels;
@@ -45,42 +47,68 @@ export class CategoriesOverlay {
     return this.labels().filter((l) => l.name.toLowerCase().includes(term));
   });
 
+  protected readonly editingId     = signal<string | null>(null);
+  protected readonly colorPickerId = signal<string | null>(null);
+  protected readonly confirmDeleteId = signal<string | null>(null);
 
-protected readonly editingId     = signal<string | null>(null);
-protected readonly colorPickerId = signal<string | null>(null);
+  private readonly renameInput = viewChild<ElementRef<HTMLInputElement>>('rename');
 
-private readonly renameInput = viewChild<ElementRef<HTMLInputElement>>('rename');
-
-
-
-startRename(id: string, event: Event) {
+/** The pencil is the only way in and out of edit mode. */
+toggleEdit(id: string, event: Event) {
   event.stopPropagation();
-  this.colorPickerId.set(null);        // never both at once
-  this.editingId.set(id);
-  requestAnimationFrame(() => {
-    const el = this.renameInput()?.nativeElement;
-    el?.focus();
-    el?.select();
-  });
+  const opening = this.editingId() !== id;
+  this.editingId.set(opening ? id : null);
+
+  if (opening) {
+    requestAnimationFrame(() => {
+      const el = this.renameInput()?.nativeElement;
+      el?.focus();
+      el?.select();
+    });
+  }
 }
 
-commitRename(id: string, value: string, event: Event) {
+stopEditing(event: Event) {
   event.stopPropagation();
-  if (this.editingId() !== id) return; // blur after Enter must not fire twice
   this.editingId.set(null);
-  this.labelService.updateLabel(id, { name: value });
 }
+
+/** Saves on blur and on Enter — but only when the name really changed. */
+commitRename(id: string, current: string, value: string, event: Event) {
+  event.stopPropagation();
+  const next = value.trim();
+  if (!next || next === current) return;
+  this.labelService.updateLabel(id, { name: next });
+}
+
+cancelEdit(input: HTMLInputElement, original: string, event: Event) {
+  event.stopPropagation();
+  input.value = original;
+  this.editingId.set(null);
+}
+
+
+
+/** While editing, a click on the card must not switch the filter. */
+onCardClick(id: string) {
+  if (this.editingId() === id) return;
+  this.select(id);
+}
+
+
+
+
+
+
+
+
 
 cancelRename(event: Event) {
   event.stopPropagation();             // keeps Escape from closing the overlay
   this.editingId.set(null);
 }
 
-toggleColorPicker(id: string, event: Event) {
-  event.stopPropagation();
-  this.editingId.set(null);
-  this.colorPickerId.update((current) => (current === id ? null : id));
-}
+
 
 pickColor(id: string, color: string, event: Event) {
   event.stopPropagation();
@@ -131,7 +159,6 @@ pickColor(id: string, color: string, event: Event) {
     }
   }
 
-  protected readonly confirmDeleteId = signal<string | null>(null);
 
 askDelete(id: string, event: Event) {
   event.stopPropagation();          // verhindert, dass select(id) feuert
