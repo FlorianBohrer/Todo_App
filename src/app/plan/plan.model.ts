@@ -18,7 +18,23 @@ export interface PlanDiagramBlock {
   code: string;
 }
 
-export type PlanBlock = PlanTextBlock | PlanTableBlock | PlanDiagramBlock;
+/**
+ * Aufklappbarer Container, der mehrere Blöcke bündelt (z. B. Überschrift als
+ * Titel + Ablaufdiagramm + Beschreibungstext). Verschachtelung möglich.
+ */
+export interface PlanGroupBlock {
+  id: string;
+  type: 'group';
+  title: string;
+  collapsed: boolean;
+  blocks: PlanBlock[];
+}
+
+export type PlanBlock =
+  | PlanTextBlock
+  | PlanTableBlock
+  | PlanDiagramBlock
+  | PlanGroupBlock;
 
 export interface Plan {
   id: string;

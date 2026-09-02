@@ -30,9 +30,76 @@
       </select>
     </div>
 
-    <!-- Blöcke -->
+    <!-- Blöcke — über ein geteiltes Template gerendert, damit dieselben Blöcke
+         auch verschachtelt in einer Section erscheinen (Rekursion via Outlet). -->
     <div class="space-y-3">
       @for (block of plan.content; track block.id) {
+        <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: block }"></ng-container>
+      }
+    </div>
+
+    <ng-template #blockTpl let-block>
+      @if (block.type === 'group') {
+        <!-- Section: aufklappbarer Container mit Titel + beliebigen Blöcken -->
+        <div class="section-block rounded-xl border border-white/15 bg-white/[0.03] backdrop-blur-sm">
+          <div class="flex items-center gap-1 border-b border-white/10 px-2 py-1.5">
+            <button type="button"
+              class="grid h-7 w-7 flex-none place-items-center rounded-lg text-muted transition hover:bg-white/10 hover:text-text"
+              (click)="toggleGroup(block.id)"
+              [attr.aria-expanded]="!asGroup(block).collapsed"
+              aria-label="Toggle section">
+              <lucide-icon [img]="DownIcon" class="h-4 w-4 transition-transform"
+                [class.-rotate-90]="asGroup(block).collapsed"></lucide-icon>
+            </button>
+            <input type="text"
+              class="min-w-0 flex-1 bg-transparent font-semibold text-text focus:outline-none"
+              [value]="asGroup(block).title"
+              (input)="setGroupTitle(block.id, $any($event.target).value)"
+              placeholder="Section title" aria-label="Section title" />
+            <button type="button"
+              class="grid h-7 w-7 flex-none place-items-center rounded-lg text-muted transition hover:bg-white/10 hover:text-text"
+              (click)="moveBlock(block.id, -1)" aria-label="Move section up">
+              <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+            <button type="button"
+              class="grid h-7 w-7 flex-none place-items-center rounded-lg text-muted transition hover:bg-white/10 hover:text-text"
+              (click)="moveBlock(block.id, 1)" aria-label="Move section down">
+              <lucide-icon [img]="DownIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+            <button type="button"
+              class="grid h-7 w-7 flex-none place-items-center rounded-lg text-muted transition hover:bg-danger/15 hover:text-danger"
+              (click)="deleteBlock(block.id)" aria-label="Delete section">
+              <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
+            </button>
+          </div>
+
+          @if (!asGroup(block).collapsed) {
+            <div class="space-y-3 p-3">
+              @for (child of asGroup(block).blocks; track child.id) {
+                <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: child }"></ng-container>
+              }
+
+              <div class="flex flex-wrap gap-2 pt-1">
+                <button type="button"
+                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-muted transition hover:border-white/30 hover:text-text"
+                  (click)="addToGroup(block.id, 'text')">
+                  <lucide-icon [img]="TextIcon" class="h-3.5 w-3.5"></lucide-icon> Text
+                </button>
+                <button type="button"
+                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-muted transition hover:border-white/30 hover:text-text"
+                  (click)="addToGroup(block.id, 'diagram')">
+                  <lucide-icon [img]="DiagramIcon" class="h-3.5 w-3.5"></lucide-icon> Diagram
+                </button>
+                <button type="button"
+                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-xs text-muted transition hover:border-white/30 hover:text-text"
+                  (click)="addToGroup(block.id, 'table')">
+                  <lucide-icon [img]="TableIcon" class="h-3.5 w-3.5"></lucide-icon> Table
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
         <div class="block relative rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-3 backdrop-blur-sm">
 
           <!-- Block-Werkzeuge. Auf Zeigergeraeten treten sie zurueck, bis der
@@ -148,7 +215,7 @@
           }
         </div>
       }
-    </div>
+    </ng-template>
 
     <!-- Block hinzufügen -->
     <div class="mt-3 flex gap-2">
@@ -166,6 +233,11 @@
         class="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-white/30"
         (click)="addDiagramBlock()">
         <lucide-icon [img]="DiagramIcon" class="h-4 w-4"></lucide-icon> Diagram
+      </button>
+      <button type="button"
+        class="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-white/30"
+        (click)="addGroupBlock()">
+        <lucide-icon [img]="SectionIcon" class="h-4 w-4"></lucide-icon> Section
       </button>
     </div>
 

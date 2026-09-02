@@ -1,4 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import {
   LucideAngularModule,
   ChevronLeft,
@@ -7,6 +8,7 @@ import {
   Type,
   Table as TableIcon,
   Workflow,
+  Layers,
   ChevronUp,
   ChevronDown,
 } from 'lucide-angular';
@@ -14,8 +16,10 @@ import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
 import { folderColorClass } from '../../todo/shared/folder-color';
 import { PlanService } from '../plan.service';
-import { Plan, PlanBlock, PlanDiagramBlock, PlanTableBlock } from '../plan.model';
+import { Plan, PlanBlock, PlanDiagramBlock, PlanTableBlock, PlanGroupBlock } from '../plan.model';
 import { MermaidDiagram } from './mermaid-diagram';
+
+type BlockKind = 'text' | 'diagram' | 'table';
 
 /** Startvorlage: ein neuer Diagrammblock zeigt sofort etwas Gezeichnetes,
  *  statt den Nutzer vor ein leeres Feld und eine fremde Syntax zu setzen. */
@@ -26,7 +30,7 @@ const DIAGRAM_TEMPLATE = `flowchart TD
 
 @Component({
   selector: 'app-plans-view',
-  imports: [LucideAngularModule, Autosize, MermaidDiagram],
+  imports: [LucideAngularModule, Autosize, MermaidDiagram, NgTemplateOutlet],
   templateUrl: './plans-view.html',
   styleUrl: './plans-view.scss',
 })
@@ -40,6 +44,7 @@ export class PlansView {
   protected readonly TextIcon = Type;
   protected readonly TableIcon = TableIcon;
   protected readonly DiagramIcon = Workflow;
+  protected readonly SectionIcon = Layers;
   protected readonly UpIcon = ChevronUp;
   protected readonly DownIcon = ChevronDown;
 
@@ -90,45 +95,121 @@ export class PlansView {
     return crypto.randomUUID();
   }
 
-  addTextBlock() {
-    this.updateContent((b) => [...b, { id: this.newId(), type: 'text', text: '' }]);
+  private makeBlock(kind: BlockKind): PlanBlock {
+    switch (kind) {
+      case 'text':
+        return { id: this.newId(), type: 'text', text: '' };
+      case 'diagram':
+        return { id: this.newId(), type: 'diagram', code: DIAGRAM_TEMPLATE };
+      case 'table':
+        return {
+          id: this.newId(),
+          type: 'table',
+          columns: ['Column 1', 'Column 2'],
+          rows: [['', '']],
+        };
+    }
   }
-  addTableBlock() {
-    this.updateContent((b) => [
-      ...b,
-      { id: this.newId(), type: 'table', columns: ['Column 1', 'Column 2'], rows: [['', '']] },
-    ]);
+
+  // --- Rekursive Helfer: wirken auf jeden Block, egal wie tief in Gruppen ---
+  private mapById(
+    blocks: PlanBlock[],
+    id: string,
+    fn: (b: PlanBlock) => PlanBlock,
+  ): PlanBlock[] {
+    return blocks.map((b) => {
+      if (b.id === id) return fn(b);
+      if (b.type === 'group') return { ...b, blocks: this.mapById(b.blocks, id, fn) };
+      return b;
+    });
   }
-  addDiagramBlock() {
-    this.updateContent((b) => [
-      ...b,
-      { id: this.newId(), type: 'diagram', code: DIAGRAM_TEMPLATE },
-    ]);
+  private removeById(blocks: PlanBlock[], id: string): PlanBlock[] {
+    return blocks
+      .filter((b) => b.id !== id)
+      .map((b) => (b.type === 'group' ? { ...b, blocks: this.removeById(b.blocks, id) } : b));
   }
-  deleteBlock(blockId: string) {
-    this.updateContent((b) => b.filter((x) => x.id !== blockId));
-  }
-  moveBlock(blockId: string, dir: -1 | 1) {
-    this.updateContent((b) => {
-      const i = b.findIndex((x) => x.id === blockId);
+  /** Verschiebt den Block innerhalb SEINER Geschwister (oben/unten). */
+  private moveInTree(blocks: PlanBlock[], id: string, dir: -1 | 1): PlanBlock[] {
+    const i = blocks.findIndex((b) => b.id === id);
+    if (i >= 0) {
       const j = i + dir;
-      if (i < 0 || j < 0 || j >= b.length) return b;
-      const copy = [...b];
+      if (j < 0 || j >= blocks.length) return blocks;
+      const copy = [...blocks];
       [copy[i], copy[j]] = [copy[j], copy[i]];
       return copy;
-    });
+    }
+    return blocks.map((b) =>
+      b.type === 'group' ? { ...b, blocks: this.moveInTree(b.blocks, id, dir) } : b,
+    );
+  }
+
+  // ---- Blöcke auf oberster Ebene anlegen ----
+  addTextBlock() {
+    this.updateContent((b) => [...b, this.makeBlock('text')]);
+  }
+  addTableBlock() {
+    this.updateContent((b) => [...b, this.makeBlock('table')]);
+  }
+  addDiagramBlock() {
+    this.updateContent((b) => [...b, this.makeBlock('diagram')]);
+  }
+
+  // ---- Section (aufklappbarer Container) ----
+  /** Neue Section, vorbefüllt mit Diagramm + Beschreibungstext. */
+  addGroupBlock() {
+    this.updateContent((b) => [
+      ...b,
+      {
+        id: this.newId(),
+        type: 'group',
+        title: 'Section',
+        collapsed: false,
+        blocks: [this.makeBlock('diagram'), this.makeBlock('text')],
+      },
+    ]);
+  }
+  toggleGroup(groupId: string) {
+    this.updateContent((b) =>
+      this.mapById(b, groupId, (x) =>
+        x.type === 'group' ? { ...x, collapsed: !x.collapsed } : x,
+      ),
+    );
+  }
+  setGroupTitle(groupId: string, title: string) {
+    this.updateContent((b) =>
+      this.mapById(b, groupId, (x) =>
+        x.type === 'group' ? { ...x, title: title.trim() || 'Section' } : x,
+      ),
+    );
+  }
+  addToGroup(groupId: string, kind: BlockKind) {
+    this.updateContent((b) =>
+      this.mapById(b, groupId, (x) =>
+        x.type === 'group' ? { ...x, blocks: [...x.blocks, this.makeBlock(kind)] } : x,
+      ),
+    );
+  }
+  asGroup(block: PlanBlock): PlanGroupBlock {
+    return block as PlanGroupBlock;
+  }
+
+  deleteBlock(blockId: string) {
+    this.updateContent((b) => this.removeById(b, blockId));
+  }
+  moveBlock(blockId: string, dir: -1 | 1) {
+    this.updateContent((b) => this.moveInTree(b, blockId, dir));
   }
 
   updateText(blockId: string, text: string) {
     this.updateContent((b) =>
-      b.map((x) => (x.id === blockId && x.type === 'text' ? { ...x, text } : x)),
+      this.mapById(b, blockId, (x) => (x.type === 'text' ? { ...x, text } : x)),
     );
   }
 
   // ---- Editor: Diagramm ----
   updateCode(blockId: string, code: string) {
     this.updateContent((b) =>
-      b.map((x) => (x.id === blockId && x.type === 'diagram' ? { ...x, code } : x)),
+      this.mapById(b, blockId, (x) => (x.type === 'diagram' ? { ...x, code } : x)),
     );
   }
   asDiagram(block: PlanBlock): PlanDiagramBlock {
@@ -138,7 +219,7 @@ export class PlansView {
   // ---- Editor: Tabelle ----
   private mapTable(blockId: string, fn: (t: PlanTableBlock) => PlanTableBlock) {
     this.updateContent((b) =>
-      b.map((x) => (x.id === blockId && x.type === 'table' ? fn(x) : x)),
+      this.mapById(b, blockId, (x) => (x.type === 'table' ? fn(x) : x)),
     );
   }
   setColumn(blockId: string, c: number, value: string) {
