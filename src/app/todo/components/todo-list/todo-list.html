@@ -16,7 +16,7 @@
 
     <ul
       role="list"
-      class="space-y-2 max-h-80 overflow-auto text-muted pr-1 sm:pr-2"
+      class="space-y-2 max-h-80 overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
       cdkDropList
       (cdkDropListDropped)="drop($event)">
       @for (todo of todos(); track todo.id) {
