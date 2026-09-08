@@ -66,33 +66,58 @@
 }
 
 // ---- Drag & Drop ----
+//
+// Federkurven statt fester Beschleunigung: eine cubic-bezier hat eine
+// vorgeschriebene Form, eine Feder eine Charakteristik. Erzeugt aus Apples
+// Parametrisierung (Daempfung + Response) und als linear() abgetastet, weil
+// CSS keine echten Federn kennt. Die cubic-bezier davor bleibt als Rueckfall
+// fuer Browser ohne linear() stehen.
+:host {
+  --spring-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring-settle: linear(0.0000, 0.0153, 0.0558, 0.1142, 0.1845, 0.2617, 0.3421, 0.4223, 0.5002, 0.5741, 0.6426, 0.7051, 0.7613, 0.8109, 0.8542, 0.8913, 0.9227, 0.9488, 0.9701, 0.9872, 1.0005, 1.0107, 1.0180, 1.0231, 1.0263, 1.0279, 1.0284, 1.0279, 1.0267, 1.0250, 1.0230, 1.0208, 1.0185, 1.0162, 1.0140, 1.0119, 1.0100, 1.0082, 1.0067, 1.0053, 1.0040, 1.0030, 1.0021, 1.0014, 1.0000);
+  --spring-shift: cubic-bezier(0.2, 0, 0, 1);
+  --spring-shift: linear(0.0000, 0.0193, 0.0673, 0.1325, 0.2066, 0.2838, 0.3603, 0.4336, 0.5021, 0.5650, 0.6220, 0.6730, 0.7183, 0.7582, 0.7931, 0.8234, 0.8497, 0.8724, 0.8919, 0.9086, 0.9228, 0.9349, 0.9453, 0.9540, 0.9614, 0.9676, 0.9729, 0.9773, 0.9811, 0.9842, 0.9868, 0.9890, 0.9908, 0.9924, 0.9937, 0.9947, 0.9956, 0.9964, 0.9970, 0.9975, 0.9979, 0.9983, 0.9986, 0.9988, 1.0000);
+  --settle-ms: 385ms;
+  --shift-ms: 295ms;
+}
 
-// Platzhalter an der Stelle, an der der Block landen wuerde.
+// Der Platzhalter zeigt, wo der Block landet — als Umriss, nicht als Loch.
 .drop-preview {
   height: 2.25rem;
   border-radius: 0.5rem;
-  border: 1px dashed rgb(255 255 255 / 0.25);
-  background: rgb(255 255 255 / 0.04);
+  border: 1px dashed rgb(255 255 255 / 0.28);
+  background: rgb(255 255 255 / 0.05);
+  animation: drop-preview-in 430ms linear(0.0000, 0.0249, 0.0890, 0.1780, 0.2809, 0.3887, 0.4951, 0.5955, 0.6867, 0.7670, 0.8357, 0.8929, 0.9390, 0.9750, 1.0021, 1.0214, 1.0343, 1.0419, 1.0454, 1.0458, 1.0439, 1.0405, 1.0361, 1.0312, 1.0263, 1.0215, 1.0170, 1.0130, 1.0095, 1.0065, 1.0041, 1.0021, 1.0006, 0.9995, 0.9988, 0.9983, 0.9980, 0.9979, 0.9979, 0.9980, 0.9982, 0.9984, 0.9986, 0.9989, 1.0000) both;
 }
 
-// Der mitgezogene Block bleibt lesbar, statt als Rohtext zu erscheinen.
-.cdk-drag-preview {
-  border-radius: 0.5rem;
-  background: var(--panel1, #171d2d);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
-  opacity: 0.95;
+@keyframes drop-preview-in {
+  from { opacity: 0; transform: scaleY(0.6); }
+  to { opacity: 1; transform: scaleY(1); }
 }
 
-.cdk-drag-animating,
+// Das Zurueckschnappen nach dem Loslassen — die Geste hatte Schwung, also
+// darf es minimal ueberschwingen.
+.cdk-drag-animating {
+  transition: transform var(--settle-ms) var(--spring-settle);
+}
+
+// Nachbarn, die Platz machen, hatten keinen Schwung: straff und ohne Nachfedern.
 .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
-  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+  transition: transform var(--shift-ms) var(--spring-shift);
 }
 
-// Zielliste hervorheben, damit sichtbar ist, wo der Block landet.
+// Zielliste dezent hervorheben, statt sie hart zu umranden.
 .cdk-drop-list-receiving {
   border-radius: 0.5rem;
-  outline: 1px dashed rgb(255 255 255 / 0.18);
-  outline-offset: 2px;
+  outline: 1px dashed rgb(255 255 255 / 0.16);
+  outline-offset: 3px;
+  transition: outline-color 140ms ease-out;
+}
+
+// Rueckmeldung auf den Druck, nicht erst auf das Loslassen.
+.drag-handle:active {
+  scale: 0.92;
+  transition: scale 90ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -100,6 +125,8 @@
   .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
     transition: none;
   }
+  .drop-preview { animation: none; }
+  .drag-handle:active { scale: 1; }
 }
 
 // Aktiver Eintrag im Slash-Menü (Tastatur-/Maus-Auswahl).
