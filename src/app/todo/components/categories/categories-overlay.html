@@ -7,7 +7,7 @@
   <!-- Spalten-Layout: Header + Suche oben fix, Folder-Liste scrollt, Add-Form
        bleibt als Footer immer sichtbar. -->
   <div
-    class="fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2
+    class="fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[92vw] max-w-3xl -translate-x-1/2 -translate-y-1/2
            flex-col rounded-2xl border border-white/5 bg-panel1 shadow-2xl"
     (click)="$event.stopPropagation()">
 
@@ -61,8 +61,8 @@
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6">
 
       <!-- All-Karte: nicht sortierbar, daher außerhalb des Grids -->
-      <button class="mb-3 flex w-full items-center gap-3 rounded-2xl bg-bg2 p-4 text-left
-               transition hover:bg-panel2"
+      <button class="mb-3 flex w-full items-center gap-3 rounded-2xl border border-white/10
+               bg-white/[0.03] p-4 text-left transition hover:border-white/20 hover:bg-white/[0.06]"
         [class.ring-2]="activeLabelId() === null"
         [class.ring-emerald-500]="activeLabelId() === null"
         (click)="select(null)">
@@ -70,7 +70,7 @@
         <span class="font-semibold text-zinc-200">All</span>
       </button>
 
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2"
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2"
            cdkDropList
            cdkDropListOrientation="mixed"
            (cdkDropListDropped)="drop($event)">
@@ -91,8 +91,8 @@
               <button
                 type="button"
                 cdkDragHandle
-                class="flex-none cursor-grab touch-none text-zinc-500 opacity-60 transition
-                       hover:text-zinc-300 active:cursor-grabbing sm:opacity-0 sm:group-hover:opacity-100"
+                class="flex-none cursor-grab touch-none text-zinc-500 opacity-50 transition
+                       hover:text-zinc-300 hover:opacity-100 active:cursor-grabbing"
                 (click)="$event.stopPropagation()"
                 aria-label="Move folder">
                 <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
@@ -114,59 +114,72 @@
                 (keydown.escape)="cancelEdit(rename, label.name, $event)"
                 (blur)="commitRename(label.id, label.name, rename.value, $event)" />
             } @else {
-              <span [class]="'min-w-0 flex-1 truncate font-semibold ' + textClass(label.color)">
+              <span [class]="'min-w-0 flex-1 break-words pr-24 font-semibold line-clamp-2 md:line-clamp-none md:truncate md:pr-1 ' + textClass(label.color)">
                 {{ label.name }}
               </span>
+
+              <!-- Favoritenstern als reine Zustandsanzeige: verschwindet erst, wenn
+                   die Aktionsleiste beim Hover an dieselbe Stelle rückt -->
+              @if (label.isFavorite) {
+                <lucide-icon [img]="StarIcon" aria-hidden="true"
+                  class="hidden h-3.5 w-3.5 flex-none fill-amber-400 text-amber-400
+                         transition-opacity md:block md:group-hover:opacity-0"></lucide-icon>
+              }
             }
 
-            <!-- Stift: einziger Einstieg ins Bearbeiten -->
-            <button
-              type="button"
-              class="flex-none rounded-full p-1 transition hover:scale-110"
-              [class]="editingId() === label.id
-                ? 'text-indigo-300'
-                : 'text-zinc-400 hover:text-zinc-200 opacity-100 sm:opacity-0 sm:group-hover:opacity-100'"
-              (click)="toggleEdit(label.id, $event)"
-              [attr.aria-expanded]="editingId() === label.id"
-              [attr.aria-label]="'Edit folder ' + label.name">
-              <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
-            </button>
+            <!-- Stift, Stern und Löschen liegen ÜBER der Karte, nicht in der Zeile.
+                 Vorher waren sie am Desktop nur opacity-0 — unsichtbar, aber sie haben
+                 dem Namen weiter Breite weggenommen (daher die abgeschnittenen Namen)
+                 und blieben dabei anklickbar. -->
+            <div
+              class="absolute right-2.5 top-3 flex items-center gap-0.5 rounded-full
+                     bg-black/40 px-1 py-0.5 backdrop-blur-sm transition-opacity
+                     md:pointer-events-none md:opacity-0
+                     md:group-hover:pointer-events-auto md:group-hover:opacity-100
+                     md:group-focus-within:pointer-events-auto md:group-focus-within:opacity-100"
+              (click)="$event.stopPropagation()">
 
-            <!-- Favoriten-Stern -->
-            <button type="button"
-                    class="flex-none rounded-full p-1 transition hover:scale-110
-                           disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
-                    [class]="label.isFavorite
-                      ? 'text-amber-400'
-                      : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-zinc-400 hover:text-amber-300'"
-                    [disabled]="!label.isFavorite && favoritesFull()"
-                    [attr.title]="!label.isFavorite && favoritesFull()
-                      ? 'Maximum four favorites — remove a star first'
-                      : null"
-                    (click)="toggleFavorite(label.id, $event)"
-                    [attr.aria-pressed]="label.isFavorite"
-                    [attr.aria-label]="label.isFavorite
-                      ? 'Remove folder from favorites'
-                      : 'Mark folder as favorite'">
-              <lucide-icon [img]="StarIcon" class="h-4 w-4"
-                           [class.fill-amber-400]="label.isFavorite"></lucide-icon>
-            </button>
+              <button
+                type="button"
+                class="grid h-7 w-7 flex-none place-items-center rounded-full transition hover:bg-white/10"
+                [class]="editingId() === label.id ? 'text-indigo-300' : 'text-zinc-300 hover:text-white'"
+                (click)="toggleEdit(label.id, $event)"
+                [attr.aria-expanded]="editingId() === label.id"
+                [attr.aria-label]="'Edit folder ' + label.name">
+                <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
+              </button>
 
-            @if (confirmDeleteId() === label.id) {
-              <div class="flex items-center gap-2">
-                <span class="text-xs text-zinc-300">Delete?</span>
-                <button type="button" class="text-xs text-rose-400 hover:text-rose-300"
-                        (click)="confirmDelete(label.id, $event)">Yes</button>
-                <button type="button" class="text-xs text-zinc-400 hover:text-zinc-200"
-                        (click)="cancelDelete($event)">No</button>
-              </div>
-            } @else {
               <button type="button"
-                      class="p-1 text-zinc-400 transition hover:text-rose-400
-                             sm:opacity-0 sm:group-hover:opacity-100"
-                      (click)="askDelete(label.id, $event)"
-                      aria-label="Delete category">✕</button>
-            }
+                      class="grid h-7 w-7 flex-none place-items-center rounded-full transition hover:bg-white/10
+                             disabled:cursor-not-allowed disabled:opacity-30"
+                      [class]="label.isFavorite ? 'text-amber-400' : 'text-zinc-300 hover:text-amber-300'"
+                      [disabled]="!label.isFavorite && favoritesFull()"
+                      [attr.title]="!label.isFavorite && favoritesFull()
+                        ? 'Maximum four favorites — remove a star first'
+                        : null"
+                      (click)="toggleFavorite(label.id, $event)"
+                      [attr.aria-pressed]="label.isFavorite"
+                      [attr.aria-label]="label.isFavorite
+                        ? 'Remove folder from favorites'
+                        : 'Mark folder as favorite'">
+                <lucide-icon [img]="StarIcon" class="h-4 w-4"
+                             [class.fill-amber-400]="label.isFavorite"></lucide-icon>
+              </button>
+
+              @if (confirmDeleteId() === label.id) {
+                <span class="pl-1 text-xs text-zinc-300">Delete?</span>
+                <button type="button" class="rounded-full px-2 py-1 text-xs font-semibold text-rose-400 hover:bg-white/10 hover:text-rose-300"
+                        (click)="confirmDelete(label.id, $event)">Yes</button>
+                <button type="button" class="rounded-full px-2 py-1 text-xs text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
+                        (click)="cancelDelete($event)">No</button>
+              } @else {
+                <button type="button"
+                        class="grid h-7 w-7 flex-none place-items-center rounded-full text-zinc-300
+                               transition hover:bg-white/10 hover:text-rose-400"
+                        (click)="askDelete(label.id, $event)"
+                        [attr.aria-label]="'Delete folder ' + label.name">✕</button>
+              }
+            </div>
 
             <!-- Bearbeiten-Bereich: Farbe + Abschluss, volle Breite, letztes Kind -->
             @if (editingId() === label.id) {
@@ -216,7 +229,9 @@
                focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:h-10 sm:flex-1"
         (keydown.enter)="$event.preventDefault(); add(newCat.value); newCat.value=''"
       />
-      <div class="flex flex-wrap items-center justify-between gap-1 sm:justify-start sm:gap-1.5">
+      <div class="flex items-center justify-center gap-1 sm:justify-start sm:gap-1.5"
+           role="group"
+           aria-label="Colour for the new folder">
         @for (c of palette; track c) {
           <button
             type="button"
@@ -224,7 +239,7 @@
             [class]="textClass(c)"
             [class.ring-2]="draftColor() === c"
             class="grid h-9 w-9 place-items-center rounded-full text-lg leading-none
-                   ring-white/70 transition hover:bg-white/5 sm:h-7 sm:w-7"
+                   ring-white/70 transition hover:bg-white/5 sm:h-8 sm:w-8"
             [attr.aria-label]="'Color ' + c"
             [attr.aria-pressed]="draftColor() === c">
             ●
