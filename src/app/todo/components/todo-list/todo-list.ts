@@ -44,7 +44,7 @@ import {
     OverlayModule,
     CdkDropList,
     CdkDrag,
-    CdkDragHandle,
+    
     CdkDragPlaceholder,
   ],
   templateUrl: './todo-list.html',
