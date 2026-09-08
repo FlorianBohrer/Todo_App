@@ -15,11 +15,26 @@
   min-height: 44px;
 }
 
+// Platz fuer die nebeneinanderliegende Werkzeugleiste. Haengt an derselben
+// Medienabfrage wie die Trefferflaeche oben, sonst laufen Text und Leiste
+// ineinander, sobald sich eine der beiden Groessen aendert.
+// Die Mindesthoehe haelt die 44px-Leiste innerhalb des Blocks: ohne sie ragt
+// sie bei einem leeren Textblock (~42px) wieder in den naechsten hinein.
+.block-row {
+  padding-right: calc(3 * 44px + 12px);
+  min-height: 52px;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .block-tool,
   .section-tool {
     min-width: 28px;
     min-height: 28px;
+  }
+
+  .block-row {
+    padding-right: calc(3 * 28px + 12px);
+    min-height: 0;
   }
 }
 
