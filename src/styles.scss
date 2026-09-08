@@ -538,7 +538,45 @@ textarea::-webkit-resizer { display: none; }
   box-shadow:
     0 22px 45px rgb(0 0 0 / 38%);
 
-  transform: rotate(1deg) scale(1.025);
+  // rotate und scale als eigene Eigenschaften, nicht als transform: die CDK
+  // setzt transform inline, um die Vorschau am Zeiger zu halten, und ein
+  // Inline-Style schlaegt das Stylesheet — die Neigung war bisher wirkungslos.
+  rotate: 1deg;
+  scale: 1.025;
+}
+
+// Vorschau der Plan-Bloecke. Liegt global, weil die CDK sie an den <body>
+// haengt; ueber cdkDragPreviewClass sauber von den Todo-Karten getrennt.
+.plan-drag-preview {
+  border-radius: 0.75rem;
+
+  background: color-mix(in srgb, var(--color-panel1) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 8%) inset,
+    0 18px 44px rgb(0 0 0 / 50%),
+    0 2px 8px rgb(0 0 0 / 35%);
+
+  rotate: 0.6deg;
+  animation: plan-pick-up 430ms linear(0, 0.0947, 0.3195, 0.5762, 0.7877, 0.9297, 1.0091, 1.0416, 1.0435, 1.0294, 1.0104, 0.9944, 0.9848, 0.9819, 0.9835, 0.9873, 0.9915, 0.9948, 0.9971, 0.9985, 0.9994, 1) both;
+  will-change: transform, scale;
+}
+
+@keyframes plan-pick-up {
+  from { scale: 1; }
+  to { scale: 1.025; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-drag-preview { animation: none; scale: 1.02; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .plan-drag-preview {
+    background: var(--color-panel1);
+    backdrop-filter: none;
+  }
 }
 
 .cdk-drag-placeholder {
