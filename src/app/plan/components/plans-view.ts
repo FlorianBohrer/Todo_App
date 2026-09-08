@@ -99,53 +99,14 @@ export class PlansView {
 
   // ---- Reihenfolge der Plaene ----
   //
-  // Das Backend kennt kein Sortierfeld: PlanPatch erlaubt nur title,
-  // categoryId und content. Die selbst gewaehlte Reihenfolge liegt deshalb
-  // lokal im Browser und gilt pro Geraet. Sobald das Plan-Modell eine
-  // Position bekommt, ersetzt ein patchPlan-Aufruf hier den Speicher —
-  // orderedPlans und dropPlan bleiben unveraendert.
-  private static readonly ORDER_KEY = 'plan.order';
-
-  private readonly planOrder = signal<string[]>(PlansView.readOrder());
-
-  private static readOrder(): string[] {
-    try {
-      const raw = localStorage.getItem(PlansView.ORDER_KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
-      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
-    } catch {
-      return []; // privater Modus oder blockierter Speicher: ungeordnet ist besser als kaputt
-    }
-  }
-
-  private writeOrder(ids: string[]) {
-    this.planOrder.set(ids);
-    try {
-      localStorage.setItem(PlansView.ORDER_KEY, JSON.stringify(ids));
-    } catch {
-      /* Reihenfolge gilt dann nur fuer diese Sitzung */
-    }
-  }
-
-  /** Plaene in gespeicherter Reihenfolge; neu hinzugekommene haengen hinten an. */
-  protected readonly orderedPlans = computed<Plan[]>(() => {
-    const all = this.plans();
-    const order = this.planOrder();
-    if (!order.length) return all;
-    const rank = new Map(order.map((id, i) => [id, i]));
-    return [...all].sort(
-      (a, b) =>
-        (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
-        (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
-    );
-  });
-
+  // Sortiert wird serverseitig ueber plans.position; die Liste kommt bereits
+  // geordnet zurueck. Der Handler schickt nur die neue Reihenfolge der IDs.
   dropPlan(event: CdkDragDrop<unknown>) {
     if (event.previousIndex === event.currentIndex) return;
-    const ids = this.orderedPlans().map((p) => p.id);
+    const ids = this.plans().map((p) => p.id);
     const [moved] = ids.splice(event.previousIndex, 1);
     ids.splice(event.currentIndex, 0, moved);
-    this.writeOrder(ids);
+    this.planService.reorderPlans(ids);
   }
   protected readonly loading = this.planService.loading;
   protected readonly labels = this.labelService.labels;

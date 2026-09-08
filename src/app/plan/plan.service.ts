@@ -88,6 +88,30 @@ export class PlanService {
     this.saveTimers.set(id, setTimeout(() => this.savePlan(id), 700));
   }
 
+  /**
+   * Schreibt die neue Reihenfolge sofort lokal und schickt sie hinterher —
+   * genau wie patchPlan, damit sich das Ziehen nicht verzögert anfühlt.
+   * Schlägt der Request fehl, holt loadPlans den Serverstand zurück.
+   */
+  reorderPlans(ids: string[]) {
+    const rank = new Map(ids.map((id, i) => [id, i]));
+    this.plans.update((list) =>
+      [...list].sort(
+        (a, b) =>
+          (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+          (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+      ),
+    );
+
+    this.http.put<void>(`${this.apiUrl}/reorder`, { ids }).subscribe({
+      error: (err) => {
+        console.error('Reihenfolge speichern fehlgeschlagen', err);
+        this.toast.error('Could not save plan order');
+        this.loadPlans();
+      },
+    });
+  }
+
   private savePlan(id: string) {
     this.saveTimers.delete(id);
     const patch = this.pendingPatches.get(id);
