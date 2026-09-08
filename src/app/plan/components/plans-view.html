@@ -44,7 +44,7 @@
            [cdkDropListData]="rootList"
            (cdkDropListDropped)="dropBlock($event)">
         @for (block of plan.content; track block.id) {
-          <div cdkDrag>
+          <div cdkDrag cdkDragPreviewClass="plan-drag-preview">
             <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: block }"></ng-container>
             <div class="drop-preview" *cdkDragPlaceholder></div>
           </div>
@@ -104,7 +104,7 @@
                  [cdkDropListData]="block.id"
                  (cdkDropListDropped)="dropBlock($event)">
               @for (child of asGroup(block).blocks; track child.id) {
-                <div cdkDrag>
+                <div cdkDrag cdkDragPreviewClass="plan-drag-preview">
                   <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: child }"></ng-container>
                   <div class="drop-preview" *cdkDragPlaceholder></div>
                 </div>
@@ -350,7 +350,7 @@
            cdkDropListOrientation="mixed"
            (cdkDropListDropped)="dropPlan($event)">
         @for (plan of plans(); track plan.id) {
-          <div cdkDrag
+          <div cdkDrag cdkDragPreviewClass="plan-drag-preview"
             class="group flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-left transition hover:border-white/15 hover:bg-white/[0.04]"
             role="button" tabindex="0"
             (click)="open(plan.id)"
