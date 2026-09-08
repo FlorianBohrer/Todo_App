@@ -51,3 +51,4 @@ Thumbs.db
 # Von Sass/Editoren erzeugte Nebenprodukte (styleUrl zeigt auf .scss)
 src/**/*.css
 src/**/*.css.map
+.env*
