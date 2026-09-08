@@ -22,7 +22,13 @@
 // sie bei einem leeren Textblock (~42px) wieder in den naechsten hinein.
 .block-row {
   padding-right: calc(3 * 44px + 12px);
+  padding-left: 44px; // Randspalte fuer den Ziehgriff
   min-height: 52px;
+}
+
+.block-handle {
+  width: 44px;
+  height: 44px;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -34,7 +40,65 @@
 
    .block-row {
     padding-right: calc(3 * 28px + 12px);
+    padding-left: 28px;
     min-height: 0;
+  }
+
+  .block-handle {
+    width: 28px;
+    height: 28px;
+  }
+
+  // Am Zeigergeraet treten die Griffe zurueck, bis der Block ueberfahren wird —
+  // auf Touch bleiben sie stehen, dort gibt es kein Hover.
+  .drag-handle {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  // .cdk-drag deckt alle drei Faelle ab: Block, Section und Plan-Kachel.
+  // Ohne das waere der Griff auf der Plan-Kachel dauerhaft unsichtbar.
+  .cdk-drag:hover .drag-handle,
+  .cdk-drag:focus-within .drag-handle,
+  .drag-handle:focus-visible {
+    opacity: 1;
+  }
+}
+
+// ---- Drag & Drop ----
+
+// Platzhalter an der Stelle, an der der Block landen wuerde.
+.drop-preview {
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px dashed rgb(255 255 255 / 0.25);
+  background: rgb(255 255 255 / 0.04);
+}
+
+// Der mitgezogene Block bleibt lesbar, statt als Rohtext zu erscheinen.
+.cdk-drag-preview {
+  border-radius: 0.5rem;
+  background: var(--panel1, #171d2d);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+  opacity: 0.95;
+}
+
+.cdk-drag-animating,
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Zielliste hervorheben, damit sichtbar ist, wo der Block landet.
+.cdk-drop-list-receiving {
+  border-radius: 0.5rem;
+  outline: 1px dashed rgb(255 255 255 / 0.18);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cdk-drag-animating,
+  .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+    transition: none;
   }
 }
 
