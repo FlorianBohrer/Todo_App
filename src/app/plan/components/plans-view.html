@@ -64,17 +64,17 @@
 
             <div class="section-tools flex flex-none items-center gap-0.5">
               <button type="button"
-                class="section-tool grid place-items-center rounded-md text-subtle transition-colors hover:bg-white/10 hover:text-text"
+                class="section-tool grid place-items-center rounded-md text-muted transition-colors hover:bg-white/10 hover:text-text"
                 (click)="moveBlock(block.id, -1)" aria-label="Move section up">
                 <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon>
               </button>
               <button type="button"
-                class="section-tool grid place-items-center rounded-md text-subtle transition-colors hover:bg-white/10 hover:text-text"
+                class="section-tool grid place-items-center rounded-md text-muted transition-colors hover:bg-white/10 hover:text-text"
                 (click)="moveBlock(block.id, 1)" aria-label="Move section down">
                 <lucide-icon [img]="DownIcon" class="h-4 w-4"></lucide-icon>
               </button>
               <button type="button"
-                class="section-tool grid place-items-center rounded-md text-subtle transition-colors hover:bg-danger/15 hover:text-danger"
+                class="section-tool grid place-items-center rounded-md text-muted transition-colors hover:bg-danger/15 hover:text-danger"
                 (click)="deleteBlock(block.id)" aria-label="Delete section">
                 <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
               </button>
@@ -115,17 +115,17 @@
 
           <div class="block-tools absolute right-1 top-1 flex flex-col gap-0.5">
             <button type="button"
-              class="block-tool grid place-items-center rounded-md text-subtle transition-colors hover:bg-white/10 hover:text-text focus-visible:bg-white/10 focus-visible:text-text"
+              class="block-tool grid place-items-center rounded-md text-muted transition-colors hover:bg-white/10 hover:text-text focus-visible:bg-white/10 focus-visible:text-text"
               (click)="moveBlock(block.id, -1)" aria-label="Move block up">
               <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon>
             </button>
             <button type="button"
-              class="block-tool grid place-items-center rounded-md text-subtle transition-colors hover:bg-white/10 hover:text-text focus-visible:bg-white/10 focus-visible:text-text"
+              class="block-tool grid place-items-center rounded-md text-muted transition-colors hover:bg-white/10 hover:text-text focus-visible:bg-white/10 focus-visible:text-text"
               (click)="moveBlock(block.id, 1)" aria-label="Move block down">
               <lucide-icon [img]="DownIcon" class="h-4 w-4"></lucide-icon>
             </button>
             <button type="button"
-              class="block-tool grid place-items-center rounded-md text-subtle transition-colors hover:bg-danger/15 hover:text-danger focus-visible:bg-danger/15 focus-visible:text-danger"
+              class="block-tool grid place-items-center rounded-md text-muted transition-colors hover:bg-danger/15 hover:text-danger focus-visible:bg-danger/15 focus-visible:text-danger"
               (click)="deleteBlock(block.id)" aria-label="Delete block">
               <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
             </button>
