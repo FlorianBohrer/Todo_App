@@ -349,7 +349,7 @@
            cdkDropList
            cdkDropListOrientation="mixed"
            (cdkDropListDropped)="dropPlan($event)">
-        @for (plan of orderedPlans(); track plan.id) {
+        @for (plan of plans(); track plan.id) {
           <div cdkDrag
             class="group flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-left transition hover:border-white/15 hover:bg-white/[0.04]"
             role="button" tabindex="0"
