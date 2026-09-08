@@ -132,13 +132,51 @@
           </div>
 
           @if (block.type === 'text') {
+            <div class="relative">
+              <textarea
+                appAutosize
+                rows="1"
+                class="w-full resize-none bg-transparent text-[15px]/[1.7] text-text placeholder:text-subtle focus:outline-none"
+                placeholder="Write, or press / for blocks…"
+                [value]="block.text"
+                (input)="onTextInput(block.id, $any($event.target).value)"
+                (keydown)="onTextKeydown($event, block.id)"></textarea>
+
+              <!-- Slash-Menü (Notion-Stil): erscheint, sobald ein Textblock mit
+                   „/" beginnt; Pfeiltasten wählen, Enter oder Klick fügt ein. -->
+              @if (slash()?.blockId === block.id && slashResults().length) {
+                <div class="slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
+                  @for (item of slashResults(); track item.kind; let i = $index) {
+                    <button type="button"
+                      class="slash-item flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/5"
+                      [class.slash-item--active]="i === slashActiveIndex()"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="chooseSlash(block.id, item.kind)">
+                      <span class="grid h-8 w-8 flex-none place-items-center rounded-md bg-white/5 text-muted">
+                        <lucide-icon [img]="item.icon" class="h-4 w-4"></lucide-icon>
+                      </span>
+                      <span class="min-w-0">
+                        <span class="block truncate text-sm font-medium text-text">{{ item.label }}</span>
+                        <span class="block truncate text-xs text-muted">{{ item.hint }}</span>
+                      </span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          } @else if (block.type === 'heading') {
             <textarea
               appAutosize
               rows="1"
-              class="w-full resize-none bg-transparent text-[15px]/[1.7] text-text placeholder:text-subtle focus:outline-none"
-              placeholder="Write your notes…"
+              class="w-full resize-none bg-transparent tracking-tight text-text placeholder:text-subtle focus:outline-none"
+              [class.text-3xl]="asHeading(block).level === 1"
+              [class.font-bold]="asHeading(block).level === 1"
+              [class.text-2xl]="asHeading(block).level === 2"
+              [class.text-xl]="asHeading(block).level === 3"
+              [class.font-semibold]="asHeading(block).level !== 1"
+              [attr.placeholder]="'Heading ' + asHeading(block).level"
               [value]="block.text"
-              (input)="updateText(block.id, $any($event.target).value)"></textarea>
+              (input)="updateHeadingText(block.id, $any($event.target).value)"></textarea>
           } @else if (block.type === 'table') {
             <!-- Tabelle -->
             <div class="overflow-x-auto">

@@ -1,7 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   LucideAngularModule,
+  LucideIconData,
   ChevronLeft,
   Plus,
   Trash2,
@@ -9,6 +10,9 @@ import {
   Table as TableIcon,
   Workflow,
   Layers,
+  Heading1,
+  Heading2,
+  Heading3,
   ChevronUp,
   ChevronDown,
 } from 'lucide-angular';
@@ -16,10 +20,27 @@ import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
 import { folderColorClass } from '../../todo/shared/folder-color';
 import { PlanService } from '../plan.service';
-import { Plan, PlanBlock, PlanDiagramBlock, PlanTableBlock, PlanGroupBlock } from '../plan.model';
+import {
+  Plan,
+  PlanBlock,
+  PlanDiagramBlock,
+  PlanTableBlock,
+  PlanGroupBlock,
+  PlanHeadingBlock,
+} from '../plan.model';
 import { MermaidDiagram } from './mermaid-diagram';
 
 type BlockKind = 'text' | 'diagram' | 'table';
+
+/** Was das Slash-Menü einfügen kann. */
+type SlashKind =
+  | 'text'
+  | 'heading1'
+  | 'heading2'
+  | 'heading3'
+  | 'toggle'
+  | 'table'
+  | 'diagram';
 
 /** Startvorlage: ein neuer Diagrammblock zeigt sofort etwas Gezeichnetes,
  *  statt den Nutzer vor ein leeres Feld und eine fremde Syntax zu setzen. */
@@ -45,6 +66,9 @@ export class PlansView {
   protected readonly TableIcon = TableIcon;
   protected readonly DiagramIcon = Workflow;
   protected readonly SectionIcon = Layers;
+  protected readonly H1Icon = Heading1;
+  protected readonly H2Icon = Heading2;
+  protected readonly H3Icon = Heading3;
   protected readonly UpIcon = ChevronUp;
   protected readonly DownIcon = ChevronDown;
 
@@ -56,6 +80,114 @@ export class PlansView {
     const id = this.planService.selectedId();
     return id ? this.plans().find((p) => p.id === id) ?? null : null;
   });
+
+  // ---- Slash-Menü (Notion-Stil) ----
+  /** Einträge des „/"-Menüs. Reihenfolge = Anzeige-Reihenfolge. */
+  private readonly SLASH_MENU: {
+    kind: SlashKind;
+    label: string;
+    hint: string;
+    icon: LucideIconData;
+    keywords: string;
+  }[] = [
+    { kind: 'text', label: 'Text', hint: 'Plain paragraph', icon: this.TextIcon, keywords: 'text plain paragraph note body' },
+    { kind: 'heading1', label: 'Heading 1', hint: 'Large section title', icon: this.H1Icon, keywords: 'heading1 heading title h1 big large' },
+    { kind: 'heading2', label: 'Heading 2', hint: 'Medium heading', icon: this.H2Icon, keywords: 'heading2 heading h2 medium subtitle' },
+    { kind: 'heading3', label: 'Heading 3', hint: 'Small heading', icon: this.H3Icon, keywords: 'heading3 heading h3 small' },
+    { kind: 'toggle', label: 'Toggle', hint: 'Collapsible container', icon: this.SectionIcon, keywords: 'toggle dropdown section group collapsible container fold' },
+    { kind: 'table', label: 'Table', hint: 'Rows and columns', icon: this.TableIcon, keywords: 'table grid rows columns' },
+    { kind: 'diagram', label: 'Diagram', hint: 'Mermaid flowchart', icon: this.DiagramIcon, keywords: 'diagram flow flowchart mermaid chart' },
+  ];
+
+  /** Offenes Menü: an welchem Block + welcher Eintrag markiert ist. */
+  protected readonly slash = signal<{ blockId: string; index: number } | null>(null);
+
+  /** Rohtext des aktiven Slash-Blocks („/quer…"), abhängig vom Plan-Inhalt. */
+  private slashRaw(): string {
+    const s = this.slash();
+    if (!s) return '';
+    const plan = this.selected();
+    const b = plan ? this.findById(plan.content, s.blockId) : null;
+    return b && b.type === 'text' ? b.text : '';
+  }
+
+  /** Gefilterte Menü-Einträge zum aktuellen Query hinter dem „/". */
+  protected readonly slashResults = computed(() => {
+    if (!this.slash()) return [];
+    const raw = this.slashRaw();
+    if (!raw.startsWith('/')) return [];
+    const rest = raw.slice(1);
+    if (rest.includes(' ') || rest.includes('\n')) return []; // Leerzeichen bricht ab (wie Notion)
+    const q = rest.toLowerCase();
+    return this.SLASH_MENU.filter(
+      (it) => !q || it.label.toLowerCase().includes(q) || it.keywords.includes(q),
+    );
+  });
+
+  onTextInput(blockId: string, value: string) {
+    this.updateText(blockId, value);
+    const isSlash =
+      value.startsWith('/') && !value.slice(1).includes(' ') && !value.includes('\n');
+    if (isSlash) {
+      const cur = this.slash();
+      this.slash.set({ blockId, index: cur && cur.blockId === blockId ? cur.index : 0 });
+    } else if (this.slash()?.blockId === blockId) {
+      this.slash.set(null);
+    }
+  }
+
+  onTextKeydown(event: KeyboardEvent, blockId: string) {
+    const s = this.slash();
+    if (!s || s.blockId !== blockId) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.slash.set(null);
+      return;
+    }
+    const items = this.slashResults();
+    if (!items.length) return;
+    const idx = Math.min(s.index, items.length - 1);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.slash.set({ blockId, index: (idx + 1) % items.length });
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.slash.set({ blockId, index: (idx - 1 + items.length) % items.length });
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      this.chooseSlash(blockId, items[idx].kind);
+    }
+  }
+
+  slashActiveIndex(): number {
+    const s = this.slash();
+    if (!s) return -1;
+    return Math.min(s.index, this.slashResults().length - 1);
+  }
+
+  chooseSlash(blockId: string, kind: SlashKind) {
+    this.slash.set(null);
+    this.updateContent((b) => this.replaceById(b, blockId, (id) => this.makeConverted(id, kind)));
+  }
+
+  private makeConverted(id: string, kind: SlashKind): PlanBlock {
+    switch (kind) {
+      case 'text':
+        return { id, type: 'text', text: '' };
+      case 'heading1':
+        return { id, type: 'heading', level: 1, text: '' };
+      case 'heading2':
+        return { id, type: 'heading', level: 2, text: '' };
+      case 'heading3':
+        return { id, type: 'heading', level: 3, text: '' };
+      case 'toggle':
+        return { id, type: 'group', title: '', collapsed: false, blocks: [] };
+      case 'table':
+        return { id, type: 'table', columns: ['Column 1', 'Column 2'], rows: [['', '']] };
+      case 'diagram':
+        return { id, type: 'diagram', code: DIAGRAM_TEMPLATE };
+    }
+  }
 
   // ---- Liste ----
   newPlan() { this.planService.createPlan('Untitled plan'); }
@@ -122,6 +254,28 @@ export class PlansView {
       if (b.type === 'group') return { ...b, blocks: this.mapById(b.blocks, id, fn) };
       return b;
     });
+  }
+  /** Ersetzt den Block mit dieser id vollständig (Typwechsel), behält die Position. */
+  private replaceById(
+    blocks: PlanBlock[],
+    id: string,
+    make: (id: string) => PlanBlock,
+  ): PlanBlock[] {
+    return blocks.map((b) => {
+      if (b.id === id) return make(id);
+      if (b.type === 'group') return { ...b, blocks: this.replaceById(b.blocks, id, make) };
+      return b;
+    });
+  }
+  private findById(blocks: PlanBlock[], id: string): PlanBlock | null {
+    for (const b of blocks) {
+      if (b.id === id) return b;
+      if (b.type === 'group') {
+        const found = this.findById(b.blocks, id);
+        if (found) return found;
+      }
+    }
+    return null;
   }
   private removeById(blocks: PlanBlock[], id: string): PlanBlock[] {
     return blocks
@@ -204,6 +358,16 @@ export class PlansView {
     this.updateContent((b) =>
       this.mapById(b, blockId, (x) => (x.type === 'text' ? { ...x, text } : x)),
     );
+  }
+
+  // ---- Editor: Überschrift ----
+  updateHeadingText(blockId: string, text: string) {
+    this.updateContent((b) =>
+      this.mapById(b, blockId, (x) => (x.type === 'heading' ? { ...x, text } : x)),
+    );
+  }
+  asHeading(block: PlanBlock): PlanHeadingBlock {
+    return block as PlanHeadingBlock;
   }
 
   // ---- Editor: Diagramm ----

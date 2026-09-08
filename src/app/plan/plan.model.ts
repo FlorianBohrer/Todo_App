@@ -18,6 +18,14 @@ export interface PlanDiagramBlock {
   code: string;
 }
 
+/** Überschrift in drei Größen (wie Notion /heading1..3). */
+export interface PlanHeadingBlock {
+  id: string;
+  type: 'heading';
+  level: 1 | 2 | 3;
+  text: string;
+}
+
 /**
  * Aufklappbarer Container, der mehrere Blöcke bündelt (z. B. Überschrift als
  * Titel + Ablaufdiagramm + Beschreibungstext). Verschachtelung möglich.
@@ -32,6 +40,7 @@ export interface PlanGroupBlock {
 
 export type PlanBlock =
   | PlanTextBlock
+  | PlanHeadingBlock
   | PlanTableBlock
   | PlanDiagramBlock
   | PlanGroupBlock;
