@@ -1,6 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  CdkDrag,
+  CdkDragHandle,
+  CdkDragPlaceholder,
+  CdkDropList,
+  CdkDropListGroup,
+  CdkDragDrop,
+} from '@angular/cdk/drag-drop';
+import {
   LucideAngularModule,
   LucideIconData,
   ChevronLeft,
@@ -15,6 +23,7 @@ import {
   Heading3,
   ChevronUp,
   ChevronDown,
+  GripVertical,
 } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
@@ -51,7 +60,17 @@ const DIAGRAM_TEMPLATE = `flowchart TD
 
 @Component({
   selector: 'app-plans-view',
-  imports: [LucideAngularModule, Autosize, MermaidDiagram, NgTemplateOutlet],
+  imports: [
+    LucideAngularModule,
+    Autosize,
+    MermaidDiagram,
+    NgTemplateOutlet,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
+    CdkDragPlaceholder,
+  ],
   templateUrl: './plans-view.html',
   styleUrl: './plans-view.scss',
 })
@@ -62,6 +81,10 @@ export class PlansView {
   protected readonly BackIcon = ChevronLeft;
   protected readonly PlusIcon = Plus;
   protected readonly TrashIcon = Trash2;
+  protected readonly GripIcon = GripVertical;
+
+  /** Datenwert der obersten Blockliste; getippt, damit er zu den Section-Listen passt. */
+  protected readonly rootList: string | null = null;
   protected readonly TextIcon = Type;
   protected readonly TableIcon = TableIcon;
   protected readonly DiagramIcon = Workflow;
@@ -73,6 +96,57 @@ export class PlansView {
   protected readonly DownIcon = ChevronDown;
 
   protected readonly plans = this.planService.plans;
+
+  // ---- Reihenfolge der Plaene ----
+  //
+  // Das Backend kennt kein Sortierfeld: PlanPatch erlaubt nur title,
+  // categoryId und content. Die selbst gewaehlte Reihenfolge liegt deshalb
+  // lokal im Browser und gilt pro Geraet. Sobald das Plan-Modell eine
+  // Position bekommt, ersetzt ein patchPlan-Aufruf hier den Speicher —
+  // orderedPlans und dropPlan bleiben unveraendert.
+  private static readonly ORDER_KEY = 'plan.order';
+
+  private readonly planOrder = signal<string[]>(PlansView.readOrder());
+
+  private static readOrder(): string[] {
+    try {
+      const raw = localStorage.getItem(PlansView.ORDER_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
+    } catch {
+      return []; // privater Modus oder blockierter Speicher: ungeordnet ist besser als kaputt
+    }
+  }
+
+  private writeOrder(ids: string[]) {
+    this.planOrder.set(ids);
+    try {
+      localStorage.setItem(PlansView.ORDER_KEY, JSON.stringify(ids));
+    } catch {
+      /* Reihenfolge gilt dann nur fuer diese Sitzung */
+    }
+  }
+
+  /** Plaene in gespeicherter Reihenfolge; neu hinzugekommene haengen hinten an. */
+  protected readonly orderedPlans = computed<Plan[]>(() => {
+    const all = this.plans();
+    const order = this.planOrder();
+    if (!order.length) return all;
+    const rank = new Map(order.map((id, i) => [id, i]));
+    return [...all].sort(
+      (a, b) =>
+        (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+        (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+    );
+  });
+
+  dropPlan(event: CdkDragDrop<unknown>) {
+    if (event.previousIndex === event.currentIndex) return;
+    const ids = this.orderedPlans().map((p) => p.id);
+    const [moved] = ids.splice(event.previousIndex, 1);
+    ids.splice(event.currentIndex, 0, moved);
+    this.writeOrder(ids);
+  }
   protected readonly loading = this.planService.loading;
   protected readonly labels = this.labelService.labels;
 
@@ -352,6 +426,77 @@ export class PlansView {
   }
   moveBlock(blockId: string, dir: -1 | 1) {
     this.updateContent((b) => this.moveInTree(b, blockId, dir));
+  }
+
+  // ---- Editor: Bloecke per Drag & Drop umsortieren ----
+  //
+  // Die Bloecke bilden einen Baum: eine Section enthaelt wieder Bloecke. Jede
+  // Liste meldet daher ueber cdkDropListData, zu welcher Section sie gehoert
+  // (null = oberste Ebene), und der Ablage-Handler arbeitet auf genau diesen
+  // beiden Listen — statt stumpf auf plan.content, wo verschachtelte Bloecke
+  // gar nicht auftauchen.
+
+  /** Liest die Liste einer Section (null = oberste Ebene) ohne sie zu kopieren. */
+  private findList(blocks: PlanBlock[], groupId: string | null): PlanBlock[] | null {
+    if (groupId === null) return blocks;
+    for (const b of blocks) {
+      if (b.type !== 'group') continue;
+      if (b.id === groupId) return b.blocks;
+      const nested = this.findList(b.blocks, groupId);
+      if (nested) return nested;
+    }
+    return null;
+  }
+
+  /** Ersetzt genau eine Liste im Baum und laesst den Rest unberuehrt. */
+  private withList(
+    blocks: PlanBlock[],
+    groupId: string | null,
+    fn: (list: PlanBlock[]) => PlanBlock[],
+  ): PlanBlock[] {
+    if (groupId === null) return fn(blocks);
+    return blocks.map((b) =>
+      b.type !== 'group'
+        ? b
+        : b.id === groupId
+          ? { ...b, blocks: fn(b.blocks) }
+          : { ...b, blocks: this.withList(b.blocks, groupId, fn) },
+    );
+  }
+
+  /** Enthaelt die Section (oder ist sie selbst) die Ziel-Section? */
+  private groupContains(group: PlanGroupBlock, groupId: string): boolean {
+    if (group.id === groupId) return true;
+    return group.blocks.some(
+      (b) => b.type === 'group' && this.groupContains(b, groupId),
+    );
+  }
+
+  dropBlock(event: CdkDragDrop<string | null>) {
+    const from = event.previousContainer.data ?? null;
+    const to = event.container.data ?? null;
+    if (from === to && event.previousIndex === event.currentIndex) return;
+
+    this.updateContent((root) => {
+      const source = this.findList(root, from);
+      const moved = source?.[event.previousIndex];
+      if (!moved) return root;
+
+      // Eine Section in sich selbst zu ziehen wuerde den Baum abhaengen —
+      // der Teilbaum waere danach aus dem Plan nicht mehr erreichbar.
+      if (moved.type === 'group' && to !== null && this.groupContains(moved, to)) {
+        return root;
+      }
+
+      const without = this.withList(root, from, (list) =>
+        list.filter((_, i) => i !== event.previousIndex),
+      );
+      return this.withList(without, to, (list) => {
+        const next = [...list];
+        next.splice(Math.min(event.currentIndex, next.length), 0, moved);
+        return next;
+      });
+    });
   }
 
   updateText(blockId: string, text: string) {
