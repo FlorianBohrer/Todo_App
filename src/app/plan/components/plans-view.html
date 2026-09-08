@@ -35,10 +35,21 @@
          bündelt mehrere Blöcke wie ein Notion-Toggle. Über ein geteiltes
          Template gerendert, damit dieselben Blöcke auch verschachtelt in einer
          Section erscheinen (Rekursion via Outlet). -->
-    <div class="space-y-1">
-      @for (block of plan.content; track block.id) {
-        <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: block }"></ng-container>
-      }
+    <!-- cdkDropListGroup verbindet die oberste Liste mit allen Section-Listen,
+         damit ein Block auch in eine Section hinein- und wieder herausgezogen
+         werden kann. cdkDropListData sagt dem Handler, welche Liste gemeint ist. -->
+    <div cdkDropListGroup>
+      <div class="space-y-1"
+           cdkDropList
+           [cdkDropListData]="rootList"
+           (cdkDropListDropped)="dropBlock($event)">
+        @for (block of plan.content; track block.id) {
+          <div cdkDrag>
+            <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: block }"></ng-container>
+            <div class="drop-preview" *cdkDragPlaceholder></div>
+          </div>
+        }
+      </div>
     </div>
 
     <ng-template #blockTpl let-block>
@@ -48,6 +59,12 @@
              Führungslinie, damit die Zugehörigkeit sofort lesbar ist. -->
         <div class="section-block py-1">
           <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-white/[0.04]">
+            <button type="button" cdkDragHandle
+              class="drag-handle grid h-6 w-6 flex-none cursor-grab touch-none place-items-center rounded-md
+                     text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
+              aria-label="Drag section">
+              <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+            </button>
             <button type="button"
               class="grid h-6 w-6 flex-none place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-text"
               (click)="toggleGroup(block.id)"
@@ -82,9 +99,15 @@
           </div>
 
           @if (!asGroup(block).collapsed) {
-            <div class="ml-[13px] space-y-1 border-l border-white/10 pl-4 pt-1">
+            <div class="ml-[13px] space-y-1 border-l border-white/10 pl-4 pt-1"
+                 cdkDropList
+                 [cdkDropListData]="block.id"
+                 (cdkDropListDropped)="dropBlock($event)">
               @for (child of asGroup(block).blocks; track child.id) {
-                <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: child }"></ng-container>
+                <div cdkDrag>
+                  <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: child }"></ng-container>
+                  <div class="drop-preview" *cdkDragPlaceholder></div>
+                </div>
               }
 
               <div class="flex flex-wrap gap-1 pl-2 pt-0.5">
@@ -111,7 +134,16 @@
         <!-- Normaler Block: flach auf der Fläche, hebt sich erst beim Überfahren
              sanft ab (Notion-Gefühl). Werkzeuge sitzen dezent oben rechts und
              treten am Zeigergerät zurück; auf Touch bleiben sie stehen. -->
-        <div class="block block-row group/block relative rounded-lg py-2 pl-2 transition-colors hover:bg-white/[0.03]">
+        <div class="block block-row group/block relative rounded-lg py-2 transition-colors hover:bg-white/[0.03]">
+          <!-- Ziehgriff in der linken Randspalte (wie in Notion): am Text selbst
+               zu ziehen wuerde das Markieren und Bearbeiten unmoeglich machen. -->
+          <button type="button" cdkDragHandle
+            class="drag-handle block-handle absolute left-0 top-1 grid cursor-grab touch-none place-items-center
+                   rounded-md text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
+            aria-label="Drag block">
+            <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+          </button>
+
           <!-- Nebeneinander statt gestapelt: gestapelt war die Leiste hoeher als ein
                leerer Block und ragte in den naechsten hinein, sodass Papierkorb und
                Pfeil benachbarter Bloecke uebereinander lagen. Das Rechts-Padding
@@ -313,12 +345,26 @@
         No plans yet. Create one for your hackathon, a trip, or a software idea.
       </p>
     } @else {
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2"
+           cdkDropList
+           cdkDropListOrientation="mixed"
+           (cdkDropListDropped)="dropPlan($event)">
         @for (plan of plans(); track plan.id) {
-          <button type="button"
+          <div cdkDrag
             class="group flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-left transition hover:border-white/15 hover:bg-white/[0.04]"
-            (click)="open(plan.id)">
+            role="button" tabindex="0"
+            (click)="open(plan.id)"
+            (keydown.enter)="open(plan.id)"
+            (keydown.space)="$event.preventDefault(); open(plan.id)">
+            <div class="drop-preview" *cdkDragPlaceholder></div>
             <div class="flex items-start justify-between gap-2">
+              <button type="button" cdkDragHandle
+                class="drag-handle -ml-1 grid h-6 w-6 flex-none cursor-grab touch-none place-items-center
+                       rounded-md text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
+                (click)="$event.stopPropagation()"
+                aria-label="Drag plan">
+                <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+              </button>
               <span class="min-w-0 flex-1 truncate font-semibold text-text">{{ plan.title }}</span>
               <span
                 class="flex-none rounded p-1 text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100"
@@ -333,7 +379,7 @@
               <span class="text-subtle">·</span>
               {{ plan.content.length }} {{ plan.content.length === 1 ? 'block' : 'blocks' }}
             </div>
-          </button>
+          </div>
         }
       </div>
     }
