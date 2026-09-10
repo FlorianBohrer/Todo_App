@@ -3,6 +3,7 @@ import { Component, computed, inject, HostListener, signal } from '@angular/core
 import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
 import { folderColorClass } from '../../shared/folder-color';
+import { splitFolderName } from '../../shared/folder-name';
 import { viewChild, ElementRef } from '@angular/core';
 
 import {
@@ -146,6 +147,18 @@ pickColor(id: string, color: string, event: Event) {
 
   bgClass(color: string): string {
     return folderColorClass(color, 'bg');
+  }
+
+  /** Gedaempfter Hintergrund fuer den Typ-Chip, in der Folder-Farbe. */
+  chipClass(color: string): string {
+    return (
+      folderColorClass(color, 'iconBox') + ' ' + folderColorClass(color, 'text')
+    );
+  }
+
+  /** Prefix wie projekt: vom Namen trennen - siehe folder-name.ts. */
+  nameParts(raw: string) {
+    return splitFolderName(raw);
   }
 
   textClass(color: string): string {

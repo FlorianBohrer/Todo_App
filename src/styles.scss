@@ -639,3 +639,29 @@ textarea::-webkit-resizer { display: none; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Typ-Chip und Folder-Name. Global, weil beide Stellen sie brauchen: die
+   Favoriten-Kacheln und der Folders-Dialog, der keine eigene SCSS hat.
+   Ein abgeschnittener Projektname wirkt wie ein Darstellungsfehler, ein
+   Umbruch auf zwei Zeilen nicht. */
+.folder-chip {
+  display: inline-block;
+  margin-bottom: 0.125rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.folder-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
