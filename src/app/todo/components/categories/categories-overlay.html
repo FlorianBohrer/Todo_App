@@ -114,8 +114,16 @@
                 (keydown.escape)="cancelEdit(rename, label.name, $event)"
                 (blur)="commitRename(label.id, label.name, rename.value, $event)" />
             } @else {
-              <span [class]="'min-w-0 flex-1 break-words pr-24 font-semibold line-clamp-2 md:line-clamp-none md:truncate md:pr-1 ' + textClass(label.color)">
-                {{ label.name }}
+              <!-- Wie in den Favoriten-Kacheln: Prefix als Chip, Name ueber
+                   hoechstens zwei Zeilen. Das pr- haelt rechts Platz fuer die
+                   Aktionsleiste frei, die auf Mobil dauerhaft sichtbar ist. -->
+              <span class="min-w-0 flex-1 pr-24 md:pr-1">
+                @if (nameParts(label.name).prefix; as prefix) {
+                  <span [class]="'folder-chip ' + chipClass(label.color)">{{ prefix }}</span>
+                }
+                <span [class]="'folder-name font-semibold ' + textClass(label.color)">
+                  {{ nameParts(label.name).name }}
+                </span>
               </span>
 
               <!-- Favoritenstern als reine Zustandsanzeige: verschwindet erst, wenn

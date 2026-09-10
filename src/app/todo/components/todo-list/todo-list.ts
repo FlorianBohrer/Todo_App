@@ -260,6 +260,31 @@ closeOptionsMenu(): void {
     this.openTimerMenuId.set(null);
   }
 
+  /**
+   * Aufgeklappt trennt die Karte den Titel von den Unterpunkten: die erste
+   * Zeile bleibt in der Kopfzeile neben Checkbox und Bedienelementen, alles
+   * danach steht eingerueckt darunter. Zusammengeklappt bleibt der ganze Text
+   * stehen und wird per CSS auf zwei Zeilen begrenzt.
+   */
+  firstLine(title: string): string {
+    return stripPriorityPrefix(title).split('\n')[0].trim();
+  }
+
+  /** Alles nach der ersten Zeile; leer, wenn der Text einzeilig ist. */
+  detailLines(title: string): string {
+    const [, ...rest] = stripPriorityPrefix(title).split('\n');
+    return rest.join('\n').trim();
+  }
+
+  /** Nur im aufgeklappten Zustand und ausserhalb des Bearbeitens aufteilen. */
+  showsDetail(todo: { id: string; title: string }): boolean {
+    return (
+      this.isExpanded(todo.id) &&
+      this.editingId() !== todo.id &&
+      this.detailLines(todo.title).length > 0
+    );
+  }
+
   canExpand(title: string): boolean {
     return (
       title.length > this.EXPAND_THRESHOLD ||

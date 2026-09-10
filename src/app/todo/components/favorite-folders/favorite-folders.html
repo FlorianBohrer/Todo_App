@@ -64,8 +64,16 @@
                 [class]="textClass(label.color)">
               </lucide-icon>
             </span>
-            <span [class]="'min-w-0 flex-1 truncate font-semibold ' + textClass(label.color)">
-              {{ label.name }}
+            <!-- Prefix als Chip, Name darunter ueber zwei Zeilen: einzeilig
+                 abgeschnitten liest sich "projekt: Bozen Live Impact Twin"
+                 wie ein Fehler statt wie ein langer Name. -->
+            <span class="min-w-0 flex-1">
+              @if (nameParts(label.name).prefix; as prefix) {
+                <span [class]="'folder-chip ' + chipClass(label.color)">{{ prefix }}</span>
+              }
+              <span [class]="'folder-name font-semibold ' + textClass(label.color)">
+                {{ nameParts(label.name).name }}
+              </span>
             </span>
             <span
               class="flex-none rounded-full p-1 text-amber-400 transition hover:scale-110"
