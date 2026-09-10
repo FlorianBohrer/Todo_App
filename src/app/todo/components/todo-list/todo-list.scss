@@ -34,17 +34,46 @@ li.cdk-drag {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent 100%);
 }
 
+// Zusammengeklappt zwei Zeilen statt einer: die meisten mehrzeiligen Todos
+// sind kurze Beschreibungen, eine Zeile verbirgt zu viel. Der weiche Auslauf
+// zeigt, dass es weitergeht — ein textarea kann kein text-overflow: ellipsis.
 textarea.todo-collapsed {
-  max-height: 1.75rem;
+  max-height: 3.5rem;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 0.75rem), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 0.75rem), transparent);
 }
 
 li.todo-expanded-row {
   flex-wrap: wrap;
 }
 
-li.todo-expanded-row label {
+// Erste Zeile in der Kopfzeile: dieselbe Optik wie das Textfeld, damit beim
+// Aufklappen nichts springt.
+.todo-title-line {
+  margin: 0;
+  line-height: 1.75rem;
+  overflow-wrap: anywhere;
+}
+
+// Die Unterpunkte bekommen eine eigene Zeile und eine Fuehrungslinie, damit
+// die Zugehoerigkeit zum Titel lesbar bleibt.
+.todo-detail {
   order: 10;
   flex-basis: 100%;
+  margin: 0.125rem 0 0 2.75rem;
+  padding-left: 0.875rem;
+  border-left: 1px solid rgb(255 255 255 / 12%);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgb(255 255 255 / 62%);
+}
+
+@media (min-width: 640px) {
+  .todo-detail {
+    margin-left: 5.25rem;
+  }
 }
 
 

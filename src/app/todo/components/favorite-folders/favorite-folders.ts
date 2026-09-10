@@ -11,6 +11,7 @@ import {
 } from 'lucide-angular';
 import { LabelService } from '../../services/label.service';
 import { TodoService } from '../../services/todo';
+import { splitFolderName } from '../../shared/folder-name';
 import { folderColorClass } from '../../shared/folder-color';
 
 
@@ -134,5 +135,17 @@ toggleFavorite(id: string, event: Event) {
 
   barClass(color: string): string {
     return folderColorClass(color, 'bar');
+  }
+
+  /** Gedämpfter Hintergrund für den Typ-Chip, in der Folder-Farbe. */
+  chipClass(color: string): string {
+    return (
+      folderColorClass(color, 'iconBox') + ' ' + folderColorClass(color, 'text')
+    );
+  }
+
+  /** Prefix ("projekt:") vom Namen trennen — siehe folder-name.ts. */
+  nameParts(raw: string) {
+    return splitFolderName(raw);
   }
 }
