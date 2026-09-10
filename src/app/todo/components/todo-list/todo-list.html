@@ -110,8 +110,27 @@
                 completingTodoIds().has(todo.id)
               "
               [value]="editingId() === todo.id ? todo.title : displayTitle(todo.title)"
+              [class.hidden]="showsDetail(todo)"
             ></textarea>
+
+            <!-- Aufgeklappt: nur die erste Zeile steht hier, die Unterpunkte
+                 kommen als eigener Block unter die Kopfzeile. Das Textfeld
+                 bleibt im DOM, damit Bearbeiten und Autosize unveraendert
+                 funktionieren. -->
+            @if (showsDetail(todo)) {
+              <p class="todo-title todo-title-line min-w-0 flex-1 cursor-text"
+                 [class.todo-title--completed]="
+                   todo.completed || completingTodoIds().has(todo.id)
+                 "
+                 (click)="startEditing(todo, todoText)">
+                {{ firstLine(todo.title) }}
+              </p>
+            }
           </div>
+
+          @if (showsDetail(todo)) {
+            <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)">{{ detailLines(todo.title) }}</div>
+          }
 
           <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
           @if (canExpand(todo.title)) {
