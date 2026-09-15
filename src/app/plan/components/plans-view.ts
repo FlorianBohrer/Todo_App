@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { NgClass, NgTemplateOutlet } from '@angular/common';
 import {
   CdkDrag,
   CdkDragHandle,
@@ -28,6 +28,8 @@ import {
   Quote,
   Minus,
   Link2,
+  MoreHorizontal,
+  Copy,
   ChevronUp,
   ChevronDown,
   GripVertical,
@@ -83,6 +85,7 @@ const DIAGRAM_TEMPLATE = `flowchart TD
     Autosize,
     MermaidDiagram,
     NgTemplateOutlet,
+    NgClass,
     CdkDropListGroup,
     CdkDropList,
     CdkDrag,
@@ -117,8 +120,62 @@ export class PlansView {
   protected readonly QuoteIcon = Quote;
   protected readonly DividerIcon = Minus;
   protected readonly LinkIcon = Link2;
+  protected readonly MoreIcon = MoreHorizontal;
+  protected readonly CopyIcon = Copy;
   protected readonly UpIcon = ChevronUp;
   protected readonly DownIcon = ChevronDown;
+
+  // ---- Blockaktionen ----
+  //
+  // Ein Knopf statt drei. Drei dauerhafte Icons je Block waren mehr Unruhe als
+  // Nutzen und haben ~20% der Spaltenbreite als Randspalte gekostet.
+
+  /** Block, dessen Aktionsmenue offen ist. */
+  protected readonly openBlockMenu = signal<string | null>(null);
+
+  toggleBlockMenu(blockId: string) {
+    this.openBlockMenu.update((cur) => (cur === blockId ? null : blockId));
+  }
+  closeBlockMenu() {
+    this.openBlockMenu.set(null);
+  }
+  menuMove(blockId: string, dir: -1 | 1) {
+    this.moveBlock(blockId, dir);
+    this.closeBlockMenu();
+  }
+  menuDelete(blockId: string) {
+    this.deleteBlock(blockId);
+    this.closeBlockMenu();
+  }
+
+  /** Kopie mit frischen IDs — sonst kollidieren Original und Duplikat. */
+  private cloneBlock(block: PlanBlock): PlanBlock {
+    const id = this.newId();
+    switch (block.type) {
+      case 'group':
+        return { ...block, id, blocks: block.blocks.map((b) => this.cloneBlock(b)) };
+      case 'list':
+        return { ...block, id, items: block.items.map((i) => ({ ...i })) };
+      case 'table':
+        return {
+          ...block,
+          id,
+          columns: [...block.columns],
+          rows: block.rows.map((r) => [...r]),
+        };
+      default:
+        return { ...block, id };
+    }
+  }
+
+  duplicateBlock(blockId: string) {
+    const plan = this.selected();
+    const original = plan ? this.findById(plan.content, blockId) : null;
+    if (!original) return;
+    const copy = this.cloneBlock(original);
+    this.updateContent((b) => this.insertAfterById(b, blockId, copy));
+    this.closeBlockMenu();
+  }
 
   protected readonly plans = this.planService.plans;
 
@@ -749,6 +806,22 @@ export class PlansView {
   }
   asHeading(block: PlanBlock): PlanHeadingBlock {
     return block as PlanHeadingBlock;
+  }
+
+  /**
+   * Größenstufe einer Überschrift. Große Schrift bekommt engeres Tracking und
+   * knapperes Leading — sonst wirkt sie auseinandergezogen; kleine Stufen
+   * dürfen wieder offener stehen.
+   */
+  headingClass(level: 1 | 2 | 3): string {
+    switch (level) {
+      case 1:
+        return 'text-[28px] font-bold leading-[1.2] tracking-[-0.021em]';
+      case 2:
+        return 'text-[22px] font-semibold leading-[1.28] tracking-[-0.015em]';
+      default:
+        return 'text-[17px] font-semibold leading-[1.4] tracking-[-0.008em]';
+    }
   }
 
   // ---- Editor: Diagramm ----
