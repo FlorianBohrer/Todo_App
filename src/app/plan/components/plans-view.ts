@@ -581,6 +581,46 @@ export class PlansView {
     this.beginEdit(created.id);
   }
 
+  // ---- Outline (Obsidian) ----
+  //
+  // Sobald ein Plan Ueberschriften hat, ist er laenger als ein Bildschirm.
+  // Die Outline macht die Gliederung sichtbar und anspringbar.
+
+  /**
+   * Ueberschriften und Section-Titel in Dokumentreihenfolge. Section-Titel
+   * zaehlen mit, weil sie strukturell dasselbe leisten; verschachtelte
+   * Ueberschriften ruecken pro Ebene eine Stufe ein (maximal drei).
+   */
+  protected readonly outline = computed<{ id: string; level: number; text: string }[]>(() => {
+    const plan = this.selected();
+    if (!plan) return [];
+
+    const items: { id: string; level: number; text: string }[] = [];
+    const walk = (blocks: PlanBlock[], depth: number) => {
+      for (const b of blocks) {
+        if (b.type === 'heading') {
+          const text = b.text.trim();
+          if (text) items.push({ id: b.id, level: Math.min(3, b.level + depth), text });
+        } else if (b.type === 'group') {
+          const title = b.title.trim();
+          if (title) items.push({ id: b.id, level: Math.min(3, 1 + depth), text: title });
+          walk(b.blocks, depth + 1);
+        }
+      }
+    };
+    walk(plan.content, 0);
+    return items;
+  });
+
+  jumpTo(blockId: string) {
+    const el = document.getElementById('block-' + blockId);
+    if (!el) return;
+    // Weiches Scrollen ist eine Bewegung ueber den ganzen Bildschirm — wer
+    // reduzierte Bewegung eingestellt hat, springt lieber direkt.
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  }
+
   // ---- Liste ----
   newPlan() { this.planService.createPlan('Untitled plan'); }
   open(id: string) { this.planService.select(id); }
