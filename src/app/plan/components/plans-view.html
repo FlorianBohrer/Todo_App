@@ -6,7 +6,7 @@
          Fenster, statt beim Einblenden der Outline nach rechts zu rutschen.
          Die Outline belegt ihre Breite immer, damit nichts springt, sobald die
          erste Überschrift entsteht. -->
-    <div class="mx-auto flex w-full max-w-[72rem] gap-6">
+    <div class="mx-auto flex w-full max-w-[72rem] gap-8">
       <nav class="outline-nav" aria-label="Outline">
         @if (outline().length) {
           <p class="mb-2 px-2 text-[11px] font-medium uppercase tracking-wide text-subtle">
@@ -16,7 +16,7 @@
             @for (item of outline(); track item.id) {
               <li>
                 <button type="button"
-                  class="block w-full truncate rounded-md py-1 pr-2 text-left text-[13px] text-muted transition hover:bg-white/5 hover:text-text"
+                  class="outline-link block w-full truncate rounded-md py-1 pr-2 text-left text-[13px] transition"
                   [style.padding-left.rem]="0.5 + (item.level - 1) * 0.7"
                   [title]="item.text"
                   (click)="jumpTo(item.id)">{{ item.text }}</button>
@@ -39,7 +39,7 @@
 
       <input
         type="text"
-        class="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-2xl font-semibold tracking-[-0.02em] text-text placeholder:text-subtle focus:bg-white/[0.03] focus:outline-none sm:text-3xl"
+        class="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-xl font-semibold tracking-[-0.022em] text-text placeholder:text-subtle focus:bg-white/[0.03] focus:outline-none sm:text-2xl"
         [value]="plan.title"
         (input)="setTitle(plan.id, $any($event.target).value)"
         placeholder="Untitled"
@@ -343,7 +343,7 @@
                           <button type="button"
                             class="mt-[5px] grid h-4 w-4 flex-none place-items-center rounded border text-[10px] leading-none transition"
                             [class]="item.checked
-                              ? 'border-brand bg-brand text-white'
+                              ? 'border-brand-2 bg-brand-2 text-white'
                               : 'border-white/25 text-transparent hover:border-white/50'"
                             (click)="$event.stopPropagation(); toggleListItem(block.id, i)"
                             [attr.aria-pressed]="item.checked"
@@ -595,7 +595,7 @@
       </div>
 
       <button type="button"
-        class="ml-auto inline-flex items-center gap-2 rounded-full bg-button px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+        class="ml-auto inline-flex items-center gap-2 rounded-full bg-brand-2 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
         (click)="newPlan()">
         <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon> New plan
       </button>

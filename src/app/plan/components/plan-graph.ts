@@ -92,8 +92,8 @@ const HEIGHT = 520;
        gehoert zum Folder und soll ihre Bedeutung behalten. */
     .graph-node--active circle {
       opacity: 1;
-      stroke: rgb(255 255 255 / 0.85);
-      stroke-width: 2;
+      stroke: #a78bfa;
+      stroke-width: 2.5;
     }
 
     .graph-label {

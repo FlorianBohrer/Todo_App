@@ -69,6 +69,11 @@
 // CSS keine echten Federn kennt. Die cubic-bezier davor bleibt als Rueckfall
 // fuer Browser ohne linear() stehen.
 :host {
+  // Modul-Akzent. Violett gehoert der Planung, Blau bleibt den App-weiten
+  // Aktionen — dadurch ist jederzeit klar, worauf man gerade klickt.
+  --plan-accent: #a78bfa;
+  --plan-accent-soft: rgb(167 139 250 / 0.16);
+
   --spring-settle: cubic-bezier(0.22, 1, 0.36, 1);
   --spring-settle: linear(0.0000, 0.0153, 0.0558, 0.1142, 0.1845, 0.2617, 0.3421, 0.4223, 0.5002, 0.5741, 0.6426, 0.7051, 0.7613, 0.8109, 0.8542, 0.8913, 0.9227, 0.9488, 0.9701, 0.9872, 1.0005, 1.0107, 1.0180, 1.0231, 1.0263, 1.0279, 1.0284, 1.0279, 1.0267, 1.0250, 1.0230, 1.0208, 1.0185, 1.0162, 1.0140, 1.0119, 1.0100, 1.0082, 1.0067, 1.0053, 1.0040, 1.0030, 1.0021, 1.0014, 1.0000);
   --spring-shift: cubic-bezier(0.2, 0, 0, 1);
@@ -125,9 +130,12 @@
   .drag-handle:active { scale: 1; }
 }
 
-// Aktiver Eintrag im Slash-Menü (Tastatur-/Maus-Auswahl).
+// Aktiver Eintrag im Slash-Menü (Tastatur-/Maus-Auswahl). Der Balken links
+// macht die Auswahl auch dann eindeutig, wenn die Maus ueber einem anderen
+// Eintrag steht.
 .slash-item--active {
-  background-color: rgb(255 255 255 / 0.10);
+  background-color: var(--plan-accent-soft);
+  box-shadow: inset 2px 0 0 var(--plan-accent);
 }
 
 // ---- Gerenderter Text (Live Preview) ----
@@ -187,7 +195,7 @@
 }
 
 .block-menu-item:hover {
-  background-color: rgb(255 255 255 / 0.07);
+  background-color: var(--plan-accent-soft);
 }
 
 .block-menu-item--danger:hover {
@@ -242,15 +250,18 @@
 
   // Bleibt beim Scrollen stehen. align-self verhindert, dass das Flex-Item auf
   // volle Spaltenhoehe gestreckt wird — sticky haette sonst keinen Spielraum.
-  // Die Haarlinie rechts trennt Randspalte von Inhalt, wie eine Pane-Grenze.
+  // Eigene Flaeche statt nur einer Trennlinie: die Outline liest sich damit als
+  // Seitenbereich, das Dokument daneben bleibt auf der ruhigen Canvas.
   .outline-nav {
     position: sticky;
     top: 1.5rem;
     align-self: flex-start;
     max-height: calc(100vh - 3rem);
     overflow-y: auto;
-    border-right: 1px solid rgb(255 255 255 / 0.06);
-    padding-right: 0.75rem;
+    border: 1px solid rgb(255 255 255 / 0.07);
+    border-radius: 0.75rem;
+    background: rgb(255 255 255 / 0.022);
+    padding: 0.75rem 0.5rem;
   }
 }
 
@@ -268,6 +279,17 @@
 }
 
 .mode-tab--active {
-  background-color: rgb(255 255 255 / 0.08);
-  color: var(--color-text);
+  background-color: var(--plan-accent-soft);
+  color: var(--plan-accent);
+}
+
+// ---- Outline-Einträge ----
+.outline-link {
+  color: var(--color-muted);
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.outline-link:hover {
+  background-color: var(--plan-accent-soft);
+  color: var(--plan-accent);
 }
