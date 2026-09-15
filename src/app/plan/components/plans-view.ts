@@ -1,5 +1,6 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import {
   CdkDrag,
   CdkDragHandle,
@@ -98,6 +99,7 @@ const DIAGRAM_TEMPLATE = `flowchart TD
     CdkDrag,
     CdkDragHandle,
     CdkDragPlaceholder,
+    OverlayModule,
     PlanGraph,
   ],
   templateUrl: './plans-view.html',
@@ -140,6 +142,15 @@ export class PlansView {
 
   /** Block, dessen Aktionsmenue offen ist. */
   protected readonly openBlockMenu = signal<string | null>(null);
+
+  /**
+   * Das Menue klappt unter dem Griff nach rechts auf; ist unten kein Platz,
+   * nach oben. CDK waehlt die erste Position, die ins Fenster passt.
+   */
+  protected readonly menuPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+  ];
 
   /**
    * Der Ziehgriff oeffnet das Menue per Klick. Nach einem Drag feuert aber noch
@@ -247,7 +258,7 @@ export class PlansView {
     { kind: 'code', label: 'Code', hint: 'Monospace block', icon: this.CodeIcon, keywords: 'code snippet monospace pre terminal' },
     { kind: 'quote', label: 'Quote', hint: 'Callout with a side bar', icon: this.QuoteIcon, keywords: 'quote callout note blockquote aside' },
     { kind: 'divider', label: 'Divider', hint: 'Horizontal rule', icon: this.DividerIcon, keywords: 'divider rule separator line hr break' },
-    { kind: 'toggle', label: 'Toggle', hint: 'Collapsible container', icon: this.SectionIcon, keywords: 'toggle dropdown section group collapsible container fold' },
+    { kind: 'toggle', label: 'Toggle', hint: 'Accordion — collapsible container', icon: this.SectionIcon, keywords: 'toggle accordion dropdown section group collapsible container fold' },
     { kind: 'table', label: 'Table', hint: 'Rows and columns', icon: this.TableIcon, keywords: 'table grid rows columns' },
     { kind: 'diagram', label: 'Diagram', hint: 'Mermaid flowchart', icon: this.DiagramIcon, keywords: 'diagram flow flowchart mermaid chart' },
   ];

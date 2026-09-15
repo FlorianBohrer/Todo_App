@@ -1,30 +1,13 @@
 <section class="w-full px-1">
 
   @if (selected(); as plan) {
-    <!-- Drei Spalten: Outline, Inhalt, Blindspalte. Die Blindspalte rechts ist
-         gleich breit wie die Outline — nur so bleibt die Textspalte mittig im
-         Fenster, statt beim Einblenden der Outline nach rechts zu rutschen.
-         Die Outline belegt ihre Breite immer, damit nichts springt, sobald die
+    <!-- Drei Spalten: Blindspalte, Inhalt, Outline. Die Outline steht rechts
+         (wie in Obsidian); die Blindspalte links ist gleich breit, nur so
+         bleibt die Textspalte mittig im Fenster statt nach links zu rutschen.
+         Beide belegen ihre Breite immer, damit nichts springt, sobald die
          erste Überschrift entsteht. -->
     <div class="mx-auto flex w-full max-w-[72rem] gap-8">
-      <nav class="outline-nav" aria-label="Outline">
-        @if (outline().length) {
-          <p class="mb-2 px-2 text-[11px] font-medium uppercase tracking-wide text-subtle">
-            Outline
-          </p>
-          <ul class="space-y-0.5">
-            @for (item of outline(); track item.id) {
-              <li>
-                <button type="button"
-                  class="outline-link block w-full truncate rounded-md py-1 pr-2 text-left text-[13px] transition"
-                  [style.padding-left.rem]="0.5 + (item.level - 1) * 0.7"
-                  [title]="item.text"
-                  (click)="jumpTo(item.id)">{{ item.text }}</button>
-              </li>
-            }
-          </ul>
-        }
-      </nav>
+      <div class="outline-spacer"></div>
 
       <div class="min-w-0 flex-1">
         <div class="mx-auto w-full max-w-3xl">
@@ -91,14 +74,23 @@
     }
 
     <!-- Blockaktionen liegen hinter dem Ziehgriff (Notion: ziehen = verschieben,
-         klicken = Menü). Nur das Dropdown — den Auslöser stellt jede Stelle
-         selbst, weil der Griff im Block anders sitzt als in der Section. -->
-    <ng-template #blockMenuTpl let-id>
-      @if (openBlockMenu() === id) {
-        <!-- Klick daneben schliesst das Menue. -->
-        <div class="fixed inset-0 z-20" (click)="closeBlockMenu()"></div>
+         klicken = Menü). Das Menü hängt als CDK-Overlay am <body>: als
+         absolutes Kind des Blocks wurde es von späteren Blöcken überzeichnet,
+         weil ein z-index nur gegen Geschwister im selben Stapelkontext wirkt.
+         Den Anker reicht jede Stelle über den Template-Kontext herein. -->
+    <ng-template #blockMenuTpl let-id let-origin="origin">
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="origin"
+        [cdkConnectedOverlayOpen]="openBlockMenu() === id"
+        [cdkConnectedOverlayPositions]="menuPositions"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+        (backdropClick)="closeBlockMenu()"
+        (detach)="closeBlockMenu()"
+        (overlayKeydown)="$event.key === 'Escape' && closeBlockMenu()">
         <div role="menu"
-          class="absolute left-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
+          class="w-44 overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
           <button role="menuitem" type="button" class="block-menu-item" (click)="menuMove(id, -1)">
             <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon> Move up
           </button>
@@ -112,7 +104,7 @@
             <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon> Delete
           </button>
         </div>
-      }
+      </ng-template>
     </ng-template>
 
     <ng-template #blockTpl let-block>
@@ -124,6 +116,7 @@
           <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-white/[0.04]">
             <div class="relative flex-none">
               <button type="button" cdkDragHandle
+                cdkOverlayOrigin #sectionMenuAnchor="cdkOverlayOrigin"
                 class="drag-handle grid h-6 w-6 flex-none cursor-grab touch-none place-items-center rounded-md
                        text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
                 [class.is-open]="openBlockMenu() === block.id"
@@ -133,7 +126,7 @@
                 aria-label="Drag section, or click for actions">
                 <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
               </button>
-              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id }"></ng-container>
+              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id, origin: sectionMenuAnchor }"></ng-container>
             </div>
             <button type="button"
               class="grid h-6 w-6 flex-none place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-text"
@@ -207,6 +200,7 @@
           <div class="block-grip absolute top-1">
             <div class="relative">
               <button type="button" cdkDragHandle
+                cdkOverlayOrigin #blockMenuAnchor="cdkOverlayOrigin"
                 class="drag-handle block-handle grid cursor-grab touch-none place-items-center
                        rounded-md text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
                 [class.is-open]="openBlockMenu() === block.id"
@@ -216,7 +210,7 @@
                 aria-label="Drag block, or click for actions">
                 <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
               </button>
-              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id }"></ng-container>
+              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id, origin: blockMenuAnchor }"></ng-container>
             </div>
           </div>
 
@@ -571,7 +565,24 @@
 
         </div>
       </div>
-      <div class="outline-spacer"></div>
+      <nav class="outline-nav" aria-label="Outline">
+        @if (outline().length) {
+          <p class="mb-2 px-2 text-[11px] font-medium uppercase tracking-wide text-subtle">
+            Outline
+          </p>
+          <ul class="space-y-0.5">
+            @for (item of outline(); track item.id) {
+              <li>
+                <button type="button"
+                  class="outline-link block w-full truncate rounded-md py-1 pr-2 text-left text-[13px] transition"
+                  [style.padding-left.rem]="0.5 + (item.level - 1) * 0.7"
+                  [title]="item.text"
+                  (click)="jumpTo(item.id)">{{ item.text }}</button>
+              </li>
+            }
+          </ul>
+        }
+      </nav>
     </div>
 
   } @else {
