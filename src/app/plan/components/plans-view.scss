@@ -222,4 +222,10 @@
   .add-bar {
     display: none;
   }
+
+  // Ausnahme: solange der Plan leer ist, gibt es keinen Block und damit auch
+  // kein „+". Dann muss die Leiste da sein, sonst ist der Plan eine Sackgasse.
+  .add-bar--always {
+    display: flex;
+  }
 }
