@@ -39,7 +39,7 @@
 
       <input
         type="text"
-        class="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-3xl font-bold tracking-tight text-text placeholder:text-subtle focus:bg-white/[0.03] focus:outline-none sm:text-4xl"
+        class="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-2xl font-semibold tracking-[-0.02em] text-text placeholder:text-subtle focus:bg-white/[0.03] focus:outline-none sm:text-3xl"
         [value]="plan.title"
         (input)="setTitle(plan.id, $any($event.target).value)"
         placeholder="Untitled"
@@ -390,7 +390,7 @@
                 (input)="updateCodeText(block.id, $any($event.target).value)"></textarea>
             </div>
           } @else if (block.type === 'quote') {
-            <div class="border-l-2 border-brand/60 pl-3">
+            <div class="border-l-2 border-brand-2/50 pl-3">
               @if (isEditing(block.id)) {
                 <textarea
                   [id]="'block-edit-' + block.id"
@@ -576,16 +576,37 @@
   } @else {
     <!-- ===== Übersicht ===== -->
     <div class="mx-auto w-full max-w-3xl">
-    <div class="mb-5 flex items-center justify-between">
+    <div class="mb-5 flex flex-wrap items-center gap-3">
       <h2 class="text-lg font-medium text-text">Plans</h2>
+
+      <!-- Kacheln oder Graph. Der Graph lohnt erst, wenn verlinkt wurde —
+           deshalb bleibt die Liste die Voreinstellung. -->
+      <div class="flex items-center rounded-full border border-white/10 p-0.5" role="tablist">
+        <button type="button" role="tab"
+          class="mode-tab"
+          [class.mode-tab--active]="overviewMode() === 'list'"
+          [attr.aria-selected]="overviewMode() === 'list'"
+          (click)="setOverviewMode('list')">Notes</button>
+        <button type="button" role="tab"
+          class="mode-tab"
+          [class.mode-tab--active]="overviewMode() === 'graph'"
+          [attr.aria-selected]="overviewMode() === 'graph'"
+          (click)="setOverviewMode('graph')">Graph</button>
+      </div>
+
       <button type="button"
-        class="inline-flex items-center gap-2 rounded-full bg-button px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+        class="ml-auto inline-flex items-center gap-2 rounded-full bg-button px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
         (click)="newPlan()">
         <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon> New plan
       </button>
     </div>
 
-    @if (loading()) {
+    @if (overviewMode() === 'graph') {
+      <app-plan-graph
+        [plans]="plans()"
+        [activeId]="null"
+        (open)="open($event)"></app-plan-graph>
+    } @else if (loading()) {
       <p class="flex items-center gap-2 text-muted" role="status">
         <span class="h-4 w-4 flex-none animate-spin rounded-full border-2 border-zinc-500 border-t-transparent"></span>
         Loading plans…

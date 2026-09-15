@@ -48,14 +48,16 @@ import {
   PlanCodeBlock,
   PlanQuoteBlock,
 } from '../plan.model';
-import { formatBlock, formatInline, wikiLinkTargets } from '../inline-format';
+import { formatBlock, formatInline } from '../inline-format';
 import { detectSlashToken } from '../slash-command';
+import { planLinkTargets, planPlainText } from '../plan-links';
 import {
   detectMarkdownShortcut,
   detectWikiToken,
   MarkdownBlockKind,
 } from '../editor-input';
 import { MermaidDiagram } from './mermaid-diagram';
+import { PlanGraph } from './plan-graph';
 
 type BlockKind = 'text' | 'diagram' | 'table';
 
@@ -95,6 +97,7 @@ const DIAGRAM_TEMPLATE = `flowchart TD
     CdkDrag,
     CdkDragHandle,
     CdkDragPlaceholder,
+    PlanGraph,
   ],
   templateUrl: './plans-view.html',
   styleUrl: './plans-view.scss',
@@ -211,6 +214,13 @@ export class PlansView {
   }
   protected readonly loading = this.planService.loading;
   protected readonly labels = this.labelService.labels;
+
+  /** Übersicht: Kacheln oder Graph. */
+  protected readonly overviewMode = signal<'list' | 'graph'>('list');
+
+  setOverviewMode(mode: 'list' | 'graph') {
+    this.overviewMode.set(mode);
+  }
 
   protected readonly selected = computed<Plan | null>(() => {
     const id = this.planService.selectedId();
@@ -572,25 +582,6 @@ export class PlansView {
     this.planService.createPlan(title.trim(), this.selected()?.categoryId ?? null);
   }
 
-  /** Alle Wikilink-Ziele eines Plans, quer durch alle Blocktypen. */
-  private planLinkTargets(plan: Plan): string[] {
-    const out: string[] = [];
-    const walk = (blocks: PlanBlock[]) => {
-      for (const b of blocks) {
-        if (b.type === 'text' || b.type === 'quote' || b.type === 'heading') {
-          out.push(...wikiLinkTargets(b.text));
-        } else if (b.type === 'list') {
-          for (const item of b.items) out.push(...wikiLinkTargets(item.text));
-        } else if (b.type === 'group') {
-          out.push(...wikiLinkTargets(b.title));
-          walk(b.blocks);
-        }
-      }
-    };
-    walk(plan.content);
-    return out;
-  }
-
   /** Pläne, die auf den offenen Plan verweisen. */
   protected readonly backlinks = computed<Plan[]>(() => {
     const current = this.selected();
@@ -600,28 +591,9 @@ export class PlansView {
     return this.plans().filter(
       (p) =>
         p.id !== current.id &&
-        this.planLinkTargets(p).some((t) => t.toLowerCase() === title),
+        planLinkTargets(p).some((t) => t.toLowerCase() === title),
     );
   });
-
-  /** Sämtlicher lesbarer Text eines Plans — Grundlage für unverlinkte Treffer. */
-  private planPlainText(plan: Plan): string {
-    const parts: string[] = [];
-    const walk = (blocks: PlanBlock[]) => {
-      for (const b of blocks) {
-        if (b.type === 'text' || b.type === 'quote' || b.type === 'heading') parts.push(b.text);
-        else if (b.type === 'code') parts.push(b.code);
-        else if (b.type === 'list') parts.push(...b.items.map((i) => i.text));
-        else if (b.type === 'table') parts.push(...b.columns, ...b.rows.flat());
-        else if (b.type === 'group') {
-          parts.push(b.title);
-          walk(b.blocks);
-        }
-      }
-    };
-    walk(plan.content);
-    return parts.join('\n');
-  }
 
   /**
    * Pläne, die den Titel erwähnen, ohne ihn zu verlinken — die Kandidaten, aus
@@ -638,7 +610,7 @@ export class PlansView {
       (p) =>
         p.id !== current.id &&
         !alreadyLinked.has(p.id) &&
-        this.planPlainText(p).toLowerCase().includes(title),
+        planPlainText(p).toLowerCase().includes(title),
     );
   });
 
