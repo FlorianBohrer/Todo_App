@@ -7,25 +7,13 @@
   opacity: 1;
 }
 
-.block-tool,
-.section-tool {
-  // 44px Mindest-Trefferflaeche auf Touch (WCAG 2.5.5), am Zeigergeraet
-  // darf es kompakter sein.
-  min-width: 44px;
-  min-height: 44px;
-}
-
-// Platz fuer die nebeneinanderliegende Werkzeugleiste. Haengt an derselben
-// Medienabfrage wie die Trefferflaeche oben, sonst laufen Text und Leiste
-// ineinander, sobald sich eine der beiden Groessen aendert.
-// Die Mindesthoehe haelt die 44px-Leiste innerhalb des Blocks: ohne sie ragt
-// sie bei einem leeren Textblock (~42px) wieder in den naechsten hinein.
-// Rechts liegt nur noch EIN Knopf statt dreier — die Randspalte schrumpft
-// entsprechend und gibt die Breite an den Text zurueck.
+// Rechts liegt jetzt gar nichts mehr — die Blockaktionen sitzen hinter dem
+// Ziehgriff in der linken Randspalte. Die gesamte rechte Reserve faellt weg
+// und geht an den Text.
 .block-row {
-  padding-right: calc(44px + 8px);
+  padding-right: 0.5rem;
   padding-left: 44px; // Randspalte fuer den Ziehgriff
-  min-height: 52px;
+  min-height: 52px; // haelt den 44px-Griff auf Touch im Block
 }
 
 .block-handle {
@@ -44,14 +32,8 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .block-tool,
-  .section-tool {
-    min-width: 28px;
-    min-height: 28px;
-  }
-
    .block-row {
-    padding-right: calc(28px + 8px);
+    padding-right: 0.5rem;
     padding-left: 56px; // „+" und Griff nebeneinander, wie in Notion
     min-height: 0;
   }
@@ -78,9 +60,12 @@
 
   // .cdk-drag deckt alle drei Faelle ab: Block, Section und Plan-Kachel.
   // Ohne das waere der Griff auf der Plan-Kachel dauerhaft unsichtbar.
+  // .is-open haelt ihn stehen, solange sein Menue offen ist — sonst schwebte
+  // das Menue ohne sichtbaren Anker, sobald die Maus den Block verlaesst.
   .cdk-drag:hover .drag-handle,
   .cdk-drag:focus-within .drag-handle,
-  .drag-handle:focus-visible {
+  .drag-handle:focus-visible,
+  .drag-handle.is-open {
     opacity: 1;
   }
 }

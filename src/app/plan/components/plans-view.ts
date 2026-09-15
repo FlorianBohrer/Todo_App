@@ -28,7 +28,6 @@ import {
   Quote,
   Minus,
   Link2,
-  MoreHorizontal,
   Copy,
   ChevronUp,
   ChevronDown,
@@ -120,20 +119,35 @@ export class PlansView {
   protected readonly QuoteIcon = Quote;
   protected readonly DividerIcon = Minus;
   protected readonly LinkIcon = Link2;
-  protected readonly MoreIcon = MoreHorizontal;
   protected readonly CopyIcon = Copy;
   protected readonly UpIcon = ChevronUp;
   protected readonly DownIcon = ChevronDown;
 
   // ---- Blockaktionen ----
   //
-  // Ein Knopf statt drei. Drei dauerhafte Icons je Block waren mehr Unruhe als
-  // Nutzen und haben ~20% der Spaltenbreite als Randspalte gekostet.
+  // Kein eigener Knopf mehr: die Aktionen liegen hinter dem Ziehgriff in der
+  // linken Randspalte. Rechts bleibt dadurch nichts mehr stehen, was vom Text
+  // ablenkt — und die gesamte rechte Reserve faellt weg.
 
   /** Block, dessen Aktionsmenue offen ist. */
   protected readonly openBlockMenu = signal<string | null>(null);
 
+  /**
+   * Der Ziehgriff oeffnet das Menue per Klick. Nach einem Drag feuert aber noch
+   * ein Klick hinterher — ohne diese Sperre ginge das Menue nach jedem
+   * Verschieben auf.
+   */
+  private lastDragEnd = 0;
+
+  onDragStarted() {
+    this.closeBlockMenu();
+  }
+  onDragEnded() {
+    this.lastDragEnd = Date.now();
+  }
+
   toggleBlockMenu(blockId: string) {
+    if (Date.now() - this.lastDragEnd < 250) return;
     this.openBlockMenu.update((cur) => (cur === blockId ? null : blockId));
   }
   closeBlockMenu() {
