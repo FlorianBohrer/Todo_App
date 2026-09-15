@@ -191,7 +191,7 @@
                   placeholder="Press '/' for commands…"
                   [value]="block.text"
                   (blur)="endEdit(block.id)"
-                  (input)="onTextInput(block.id, $any($event.target).value)"
+                  (input)="onTextInput(block.id, $event)"
                   (keydown)="onTextKeydown($event, block.id)"></textarea>
               } @else {
                 <div class="plan-prose min-h-[1.7em] cursor-text text-[15px]/[1.7] text-text"

@@ -48,6 +48,7 @@ import {
   PlanQuoteBlock,
 } from '../plan.model';
 import { formatBlock, formatInline, wikiLinkTargets } from '../inline-format';
+import { detectSlashToken } from '../slash-command';
 import { MermaidDiagram } from './mermaid-diagram';
 
 type BlockKind = 'text' | 'diagram' | 'table';
@@ -164,38 +165,47 @@ export class PlansView {
     { kind: 'diagram', label: 'Diagram', hint: 'Mermaid flowchart', icon: this.DiagramIcon, keywords: 'diagram flow flowchart mermaid chart' },
   ];
 
-  /** Offenes Menü: an welchem Block + welcher Eintrag markiert ist. */
-  protected readonly slash = signal<{ blockId: string; index: number } | null>(null);
-
-  /** Rohtext des aktiven Slash-Blocks („/quer…"), abhängig vom Plan-Inhalt. */
-  private slashRaw(): string {
-    const s = this.slash();
-    if (!s) return '';
-    const plan = this.selected();
-    const b = plan ? this.findById(plan.content, s.blockId) : null;
-    return b && b.type === 'text' ? b.text : '';
-  }
+  /** Offenes Menü: Block, markierter Eintrag, Position des „/" + Query dahinter. */
+  protected readonly slash = signal<{
+    blockId: string;
+    index: number;
+    start: number;
+    query: string;
+  } | null>(null);
 
   /** Gefilterte Menü-Einträge zum aktuellen Query hinter dem „/". */
   protected readonly slashResults = computed(() => {
-    if (!this.slash()) return [];
-    const raw = this.slashRaw();
-    if (!raw.startsWith('/')) return [];
-    const rest = raw.slice(1);
-    if (rest.includes(' ') || rest.includes('\n')) return []; // Leerzeichen bricht ab (wie Notion)
-    const q = rest.toLowerCase();
+    const s = this.slash();
+    if (!s) return [];
+    const q = s.query.toLowerCase();
     return this.SLASH_MENU.filter(
       (it) => !q || it.label.toLowerCase().includes(q) || it.keywords.includes(q),
     );
   });
 
-  onTextInput(blockId: string, value: string) {
+  /**
+   * Sucht ein „/…"-Kommando direkt links vom Cursor — auch mitten im Text.
+   * Die Regeln stecken in detectSlashToken (dort auch die Tests).
+   */
+  private detectSlash(value: string, caret: number): { start: number; query: string } | null {
+    return detectSlashToken(value, caret);
+  }
+
+  onTextInput(blockId: string, event: Event) {
+    const field = event.target as HTMLTextAreaElement;
+    const value = field.value;
+    const caret = field.selectionStart ?? value.length;
     this.updateText(blockId, value);
-    const isSlash =
-      value.startsWith('/') && !value.slice(1).includes(' ') && !value.includes('\n');
-    if (isSlash) {
-      const cur = this.slash();
-      this.slash.set({ blockId, index: cur && cur.blockId === blockId ? cur.index : 0 });
+
+    const token = this.detectSlash(value, caret);
+    if (token) {
+      const current = this.slash();
+      this.slash.set({
+        blockId,
+        index: current && current.blockId === blockId ? current.index : 0,
+        start: token.start,
+        query: token.query,
+      });
     } else if (this.slash()?.blockId === blockId) {
       this.slash.set(null);
     }
@@ -214,10 +224,10 @@ export class PlansView {
     const idx = Math.min(s.index, items.length - 1);
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      this.slash.set({ blockId, index: (idx + 1) % items.length });
+      this.slash.set({ ...s, index: (idx + 1) % items.length });
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      this.slash.set({ blockId, index: (idx - 1 + items.length) % items.length });
+      this.slash.set({ ...s, index: (idx - 1 + items.length) % items.length });
     } else if (event.key === 'Enter') {
       event.preventDefault();
       this.chooseSlash(blockId, items[idx].kind);
@@ -231,8 +241,37 @@ export class PlansView {
   }
 
   chooseSlash(blockId: string, kind: SlashKind) {
+    const s = this.slash();
     this.slash.set(null);
-    this.updateContent((b) => this.replaceById(b, blockId, (id) => this.makeConverted(id, kind)));
+
+    const plan = this.selected();
+    const block = plan ? this.findById(plan.content, blockId) : null;
+    const text = block && block.type === 'text' ? block.text : '';
+    const start = s ? s.start : 0;
+    const query = s ? s.query : '';
+    // Das getippte „/…" herausschneiden — der Rest ist Text, den der Nutzer
+    // behalten will.
+    const rest = text.slice(0, start) + text.slice(start + 1 + query.length);
+
+    if (rest.trim() === '') {
+      // Leerer Block: an Ort und Stelle umwandeln, die Position bleibt.
+      this.updateContent((b) =>
+        this.replaceById(b, blockId, (id) => this.makeConverted(id, kind)),
+      );
+      return;
+    }
+
+    // Stand schon Text im Block, bleibt der stehen und der neue Block kommt
+    // direkt darunter — sonst wuerde das Kommando den Absatz ueberschreiben.
+    const created = this.makeConverted(this.newId(), kind);
+    this.updateContent((b) =>
+      this.insertAfterById(
+        this.mapById(b, blockId, (x) => (x.type === 'text' ? { ...x, text: rest } : x)),
+        blockId,
+        created,
+      ),
+    );
+    this.beginEdit(created.id);
   }
 
   private makeConverted(id: string, kind: SlashKind): PlanBlock {
