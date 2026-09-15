@@ -146,17 +146,19 @@
     color: #f8a3a3; // wie im Referenzbild: Code hebt sich farblich ab
   }
 
-  // Wikilink: als Verweis erkennbar, ohne die Zeile zu zerreissen.
+  // Wikilink: als Verweis erkennbar, ohne die Zeile zu zerreissen. Violett
+  // statt Indigo — das trennt Verweise klar von den blauen Aktionsflaechen der
+  // App und ist der Ton, den Obsidian fuer Links setzt.
   .plan-link {
-    border-bottom: 1px solid rgb(129 140 248 / 0.45);
-    color: #a5b4fc;
+    border-bottom: 1px solid rgb(167 139 250 / 0.45);
+    color: #c4b5fd;
     cursor: pointer;
     transition: color 120ms ease-out, border-color 120ms ease-out;
   }
 
   .plan-link:hover {
-    border-bottom-color: rgb(165 180 252 / 0.9);
-    color: #c7d2fe;
+    border-bottom-color: rgb(196 181 253 / 0.9);
+    color: #ddd6fe;
   }
 
   strong { font-weight: 650; }
@@ -240,11 +242,32 @@
 
   // Bleibt beim Scrollen stehen. align-self verhindert, dass das Flex-Item auf
   // volle Spaltenhoehe gestreckt wird — sticky haette sonst keinen Spielraum.
+  // Die Haarlinie rechts trennt Randspalte von Inhalt, wie eine Pane-Grenze.
   .outline-nav {
     position: sticky;
     top: 1.5rem;
     align-self: flex-start;
     max-height: calc(100vh - 3rem);
     overflow-y: auto;
+    border-right: 1px solid rgb(255 255 255 / 0.06);
+    padding-right: 0.75rem;
   }
+}
+
+// ---- Umschalter Notes / Graph ----
+.mode-tab {
+  border-radius: 9999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  transition: background-color 130ms ease-out, color 130ms ease-out;
+}
+
+.mode-tab:hover {
+  color: var(--color-text);
+}
+
+.mode-tab--active {
+  background-color: rgb(255 255 255 / 0.08);
+  color: var(--color-text);
 }
