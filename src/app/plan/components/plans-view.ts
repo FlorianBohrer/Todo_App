@@ -570,6 +570,17 @@ export class PlansView {
     this.beginEdit(created.id);
   }
 
+  /**
+   * Leerer Plan: es gibt keinen Block, an dem das „+" der Randspalte haengen
+   * koennte, und die Add-Leiste steht am Zeigergeraet nicht zur Verfuegung.
+   * Ohne diesen Einstieg laesst sich ein frischer Plan gar nicht befuellen.
+   */
+  startFirstBlock() {
+    const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
+    this.updateContent((bs) => [...bs, created]);
+    this.beginEdit(created.id);
+  }
+
   // ---- Liste ----
   newPlan() { this.planService.createPlan('Untitled plan'); }
   open(id: string) { this.planService.select(id); }

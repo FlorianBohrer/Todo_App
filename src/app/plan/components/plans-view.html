@@ -53,6 +53,16 @@
       </div>
     </div>
 
+    <!-- Leerer Plan braucht einen eigenen Einstieg: ohne Block gibt es kein
+         „+" in der Randspalte, und die Add-Leiste ist am Zeigergerät aus. -->
+    @if (!plan.content.length) {
+      <button type="button"
+        class="w-full cursor-text rounded-lg px-2 py-2 text-left text-[15px]/[1.7] text-subtle transition hover:bg-white/[0.03]"
+        (click)="startFirstBlock()">
+        Press '/' for commands…
+      </button>
+    }
+
     <!-- Blockaktionen liegen hinter dem Ziehgriff (Notion: ziehen = verschieben,
          klicken = Menü). Nur das Dropdown — den Auslöser stellt jede Stelle
          selbst, weil der Griff im Block anders sitzt als in der Section. -->
@@ -442,7 +452,8 @@
 
     <!-- Blöcke anlegen — am Zeigergerät übernehmen „/" und das „+" in der
          Randspalte diese Aufgabe, dort ist die Leiste ausgeblendet. -->
-    <div class="add-bar mt-4 flex flex-wrap items-center gap-1 border-t border-white/5 pt-3">
+    <div class="add-bar mt-4 flex flex-wrap items-center gap-1 border-t border-white/5 pt-3"
+      [class.add-bar--always]="!plan.content.length">
       <span class="px-1 text-xs font-medium uppercase tracking-wide text-subtle">Add</span>
       <button type="button"
         class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted transition hover:bg-white/5 hover:text-text"
