@@ -27,6 +27,40 @@ export interface PlanHeadingBlock {
 }
 
 /**
+ * Aufzählung, nummerierte Liste oder Checkliste. Ein Block hält die ganze
+ * Liste: beim Bearbeiten ist eine Zeile ein Eintrag, angezeigt wird echtes
+ * ul/ol. Das hält das Umsortieren einfach — Notion macht daraus je einen
+ * eigenen Block, was ohne contenteditable kaum zu bedienen wäre.
+ */
+export interface PlanListBlock {
+  id: string;
+  type: 'list';
+  variant: 'bullet' | 'number' | 'todo';
+  items: { text: string; checked: boolean }[];
+}
+
+/** Code-Block mit Sprachkennung — Monospace, nicht formatiert. */
+export interface PlanCodeBlock {
+  id: string;
+  type: 'code';
+  language: string;
+  code: string;
+}
+
+/** Zitat bzw. Merkkasten (Obsidian-Callout). */
+export interface PlanQuoteBlock {
+  id: string;
+  type: 'quote';
+  text: string;
+}
+
+/** Trennlinie — reine Gliederung, nichts zu bearbeiten. */
+export interface PlanDividerBlock {
+  id: string;
+  type: 'divider';
+}
+
+/**
  * Aufklappbarer Container, der mehrere Blöcke bündelt (z. B. Überschrift als
  * Titel + Ablaufdiagramm + Beschreibungstext). Verschachtelung möglich.
  */
@@ -41,6 +75,10 @@ export interface PlanGroupBlock {
 export type PlanBlock =
   | PlanTextBlock
   | PlanHeadingBlock
+  | PlanListBlock
+  | PlanCodeBlock
+  | PlanQuoteBlock
+  | PlanDividerBlock
   | PlanTableBlock
   | PlanDiagramBlock
   | PlanGroupBlock;

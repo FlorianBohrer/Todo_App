@@ -31,6 +31,16 @@
   height: 44px;
 }
 
+// Randspalte: auf Touch nur der Ziehgriff. Zwei 44px-Flaechen nebeneinander
+// wuerden dort die halbe Textbreite auffressen.
+.block-add {
+  display: none;
+}
+
+.block-grip {
+  left: 0;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .block-tool,
   .section-tool {
@@ -40,8 +50,16 @@
 
    .block-row {
     padding-right: calc(3 * 28px + 12px);
-    padding-left: 28px;
+    padding-left: 56px; // „+" und Griff nebeneinander, wie in Notion
     min-height: 0;
+  }
+
+  .block-add {
+    display: grid;
+  }
+
+  .block-grip {
+    left: 28px;
   }
 
   .block-handle {
@@ -132,4 +150,44 @@
 // Aktiver Eintrag im Slash-Menü (Tastatur-/Maus-Auswahl).
 .slash-item--active {
   background-color: rgb(255 255 255 / 0.10);
+}
+
+// ---- Gerenderter Text (Live Preview) ----
+//
+// Alles unter .plan-prose entsteht ueber [innerHTML]. Solche Elemente tragen
+// KEIN Angular-Encapsulation-Attribut, deshalb ::ng-deep — sonst greift hier
+// keine einzige Regel. Der :host-Prefix haelt es trotzdem auf diese Komponente
+// begrenzt.
+:host ::ng-deep {
+  .plan-code {
+    border-radius: 0.3rem;
+    background: rgb(255 255 255 / 0.07);
+    padding: 0.1em 0.35em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.875em;
+    color: #f8a3a3; // wie im Referenzbild: Code hebt sich farblich ab
+  }
+
+  // Wikilink: als Verweis erkennbar, ohne die Zeile zu zerreissen.
+  .plan-link {
+    border-bottom: 1px solid rgb(129 140 248 / 0.45);
+    color: #a5b4fc;
+    cursor: pointer;
+    transition: color 120ms ease-out, border-color 120ms ease-out;
+  }
+
+  .plan-link:hover {
+    border-bottom-color: rgb(165 180 252 / 0.9);
+    color: #c7d2fe;
+  }
+
+  strong { font-weight: 650; }
+  em { font-style: italic; }
+  s { opacity: 0.6; }
+}
+
+// Leerer Block bleibt anklickbar: ohne Mindesthoehe waere die Trefferflaeche
+// eines leeren Absatzes null.
+.plan-prose {
+  word-break: break-word;
 }

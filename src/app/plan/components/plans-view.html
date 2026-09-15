@@ -137,8 +137,19 @@
         <div class="block block-row group/block relative rounded-lg py-2 transition-colors hover:bg-white/[0.03]">
           <!-- Ziehgriff in der linken Randspalte (wie in Notion): am Text selbst
                zu ziehen wuerde das Markieren und Bearbeiten unmoeglich machen. -->
+          <!-- Randspalte wie in Notion: „+" legt einen Block darunter an, der
+               Griff zieht ihn. Auf Touch bleibt nur der Griff — zwei
+               44px-Flaechen wuerden dort die halbe Textbreite fressen. -->
+          <button type="button"
+            class="block-add block-handle drag-handle absolute left-0 top-1 place-items-center
+                   rounded-md text-subtle transition hover:bg-white/10 hover:text-text"
+            (click)="addBelow(block.id)"
+            aria-label="Add block below">
+            <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon>
+          </button>
+
           <button type="button" cdkDragHandle
-            class="drag-handle block-handle absolute left-0 top-1 grid cursor-grab touch-none place-items-center
+            class="drag-handle block-handle block-grip absolute top-1 grid cursor-grab touch-none place-items-center
                    rounded-md text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
             aria-label="Drag block">
             <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
@@ -169,14 +180,29 @@
 
           @if (block.type === 'text') {
             <div class="relative">
-              <textarea
-                appAutosize
-                rows="1"
-                class="w-full resize-none bg-transparent text-[15px]/[1.7] text-text placeholder:text-subtle focus:outline-none"
-                placeholder="Write, or press / for blocks…"
-                [value]="block.text"
-                (input)="onTextInput(block.id, $any($event.target).value)"
-                (keydown)="onTextKeydown($event, block.id)"></textarea>
+              <!-- Live Preview: gelesen wird formatierter Text, erst der Klick
+                   macht daraus wieder Rohtext (Obsidian-Prinzip). -->
+              @if (isEditing(block.id)) {
+                <textarea
+                  [id]="'block-edit-' + block.id"
+                  appAutosize
+                  rows="1"
+                  class="w-full resize-none bg-transparent text-[15px]/[1.7] text-text placeholder:text-subtle focus:outline-none"
+                  placeholder="Press '/' for commands…"
+                  [value]="block.text"
+                  (blur)="endEdit(block.id)"
+                  (input)="onTextInput(block.id, $any($event.target).value)"
+                  (keydown)="onTextKeydown($event, block.id)"></textarea>
+              } @else {
+                <div class="plan-prose min-h-[1.7em] cursor-text text-[15px]/[1.7] text-text"
+                  (click)="onRenderedClick($event, block.id)">
+                  @if (block.text) {
+                    <span [innerHTML]="renderText(block.text)"></span>
+                  } @else {
+                    <span class="text-subtle">Press '/' for commands…</span>
+                  }
+                </div>
+              }
 
               <!-- Slash-Menü (Notion-Stil): erscheint, sobald ein Textblock mit
                    „/" beginnt; Pfeiltasten wählen, Enter oder Klick fügt ein. -->
@@ -201,18 +227,137 @@
               }
             </div>
           } @else if (block.type === 'heading') {
-            <textarea
-              appAutosize
-              rows="1"
-              class="w-full resize-none bg-transparent tracking-tight text-text placeholder:text-subtle focus:outline-none"
-              [class.text-3xl]="asHeading(block).level === 1"
-              [class.font-bold]="asHeading(block).level === 1"
-              [class.text-2xl]="asHeading(block).level === 2"
-              [class.text-xl]="asHeading(block).level === 3"
-              [class.font-semibold]="asHeading(block).level !== 1"
-              [attr.placeholder]="'Heading ' + asHeading(block).level"
-              [value]="block.text"
-              (input)="updateHeadingText(block.id, $any($event.target).value)"></textarea>
+            @if (isEditing(block.id)) {
+              <textarea
+                [id]="'block-edit-' + block.id"
+                appAutosize
+                rows="1"
+                class="w-full resize-none bg-transparent tracking-tight text-text placeholder:text-subtle focus:outline-none"
+                [class.text-3xl]="asHeading(block).level === 1"
+                [class.font-bold]="asHeading(block).level === 1"
+                [class.text-2xl]="asHeading(block).level === 2"
+                [class.text-xl]="asHeading(block).level === 3"
+                [class.font-semibold]="asHeading(block).level !== 1"
+                [attr.placeholder]="'Heading ' + asHeading(block).level"
+                [value]="block.text"
+                (blur)="endEdit(block.id)"
+                (input)="updateHeadingText(block.id, $any($event.target).value)"></textarea>
+            } @else {
+              <div class="plan-prose cursor-text tracking-tight text-text"
+                [class.text-3xl]="asHeading(block).level === 1"
+                [class.font-bold]="asHeading(block).level === 1"
+                [class.text-2xl]="asHeading(block).level === 2"
+                [class.text-xl]="asHeading(block).level === 3"
+                [class.font-semibold]="asHeading(block).level !== 1"
+                (click)="onRenderedClick($event, block.id)">
+                @if (block.text) {
+                  <span [innerHTML]="renderInline(block.text)"></span>
+                } @else {
+                  <span class="text-subtle">Heading {{ asHeading(block).level }}</span>
+                }
+              </div>
+            }
+          } @else if (block.type === 'list') {
+            <!-- Beim Bearbeiten eine Zeile je Eintrag; angezeigt echtes ul/ol.
+                 Die Haken der Checkliste bleiben dabei an ihrer Position. -->
+            @if (isEditing(block.id)) {
+              <textarea
+                [id]="'block-edit-' + block.id"
+                appAutosize
+                rows="1"
+                class="w-full resize-none bg-transparent text-[15px]/[1.8] text-text placeholder:text-subtle focus:outline-none"
+                placeholder="One item per line"
+                [value]="listAsText(asList(block))"
+                (blur)="endEdit(block.id)"
+                (input)="setListText(block.id, $any($event.target).value)"></textarea>
+            } @else {
+              <div class="plan-prose cursor-text" (click)="onRenderedClick($event, block.id)">
+                @switch (asList(block).variant) {
+                  @case ('number') {
+                    <ol class="list-decimal space-y-1 pl-5 text-[15px]/[1.7] text-text marker:text-muted">
+                      @for (item of asList(block).items; track $index) {
+                        <li><span [innerHTML]="renderInline(item.text)"></span></li>
+                      }
+                    </ol>
+                  }
+                  @case ('todo') {
+                    <ul class="space-y-1 text-[15px]/[1.7] text-text">
+                      @for (item of asList(block).items; track $index; let i = $index) {
+                        <li class="flex items-start gap-2">
+                          <button type="button"
+                            class="mt-[5px] grid h-4 w-4 flex-none place-items-center rounded border text-[10px] leading-none transition"
+                            [class]="item.checked
+                              ? 'border-brand bg-brand text-white'
+                              : 'border-white/25 text-transparent hover:border-white/50'"
+                            (click)="$event.stopPropagation(); toggleListItem(block.id, i)"
+                            [attr.aria-pressed]="item.checked"
+                            aria-label="Toggle item">✓</button>
+                          <span
+                            [class.line-through]="item.checked"
+                            [class.text-subtle]="item.checked"
+                            [innerHTML]="renderInline(item.text)"></span>
+                        </li>
+                      }
+                    </ul>
+                  }
+                  @default {
+                    <ul class="list-disc space-y-1 pl-5 text-[15px]/[1.7] text-text marker:text-muted">
+                      @for (item of asList(block).items; track $index) {
+                        <li><span [innerHTML]="renderInline(item.text)"></span></li>
+                      }
+                    </ul>
+                  }
+                }
+              </div>
+            }
+          } @else if (block.type === 'code') {
+            <!-- Code bleibt immer Rohtext: hier gibt es nichts zu formatieren. -->
+            <div class="overflow-hidden rounded-lg border border-white/10 bg-black/30">
+              <div class="flex items-center gap-2 border-b border-white/10 px-3 py-1.5">
+                <lucide-icon [img]="CodeIcon" class="h-3.5 w-3.5 flex-none text-subtle"></lucide-icon>
+                <input type="text"
+                  class="w-32 bg-transparent font-mono text-xs text-muted placeholder:text-subtle focus:outline-none"
+                  placeholder="language"
+                  [value]="asCode(block).language"
+                  (input)="setCodeLanguage(block.id, $any($event.target).value)"
+                  aria-label="Code language" />
+              </div>
+              <textarea
+                appAutosize
+                rows="3"
+                spellcheck="false"
+                autocapitalize="off"
+                autocorrect="off"
+                class="w-full resize-none bg-transparent px-3 py-2 font-mono text-[13px]/[1.6] text-text placeholder:text-subtle focus:outline-none"
+                placeholder="Code…"
+                [value]="asCode(block).code"
+                (input)="updateCodeText(block.id, $any($event.target).value)"></textarea>
+            </div>
+          } @else if (block.type === 'quote') {
+            <div class="border-l-2 border-brand/60 pl-3">
+              @if (isEditing(block.id)) {
+                <textarea
+                  [id]="'block-edit-' + block.id"
+                  appAutosize
+                  rows="1"
+                  class="w-full resize-none bg-transparent text-[15px]/[1.7] italic text-text placeholder:text-subtle focus:outline-none"
+                  placeholder="Quote or callout…"
+                  [value]="block.text"
+                  (blur)="endEdit(block.id)"
+                  (input)="updateQuoteText(block.id, $any($event.target).value)"></textarea>
+              } @else {
+                <div class="plan-prose cursor-text text-[15px]/[1.7] italic text-muted"
+                  (click)="onRenderedClick($event, block.id)">
+                  @if (block.text) {
+                    <span [innerHTML]="renderText(block.text)"></span>
+                  } @else {
+                    <span class="text-subtle">Quote or callout…</span>
+                  }
+                </div>
+              }
+            </div>
+          } @else if (block.type === 'divider') {
+            <hr class="my-2 border-0 border-t border-white/10" />
           } @else if (block.type === 'table') {
             <!-- Tabelle -->
             <div class="overflow-x-auto">
@@ -322,7 +467,32 @@
         (click)="addGroupBlock()">
         <lucide-icon [img]="SectionIcon" class="h-4 w-4"></lucide-icon> Section
       </button>
+      <span class="ml-auto hidden px-1 text-xs text-subtle sm:block">
+        Tip: type <span class="font-mono text-muted">/</span> in a text block, or
+        <span class="font-mono text-muted">[[Plan]]</span> to link
+      </span>
     </div>
+
+    <!-- Linked mentions (Obsidian): welche Pläne zeigen hierher? Erst dadurch
+         wird aus einzelnen Notizen ein zusammenhängendes Netz. -->
+    @if (backlinks().length) {
+      <div class="mt-8 border-t border-white/5 pt-4">
+        <h3 class="mb-2 flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wide text-subtle">
+          <lucide-icon [img]="LinkIcon" class="h-3.5 w-3.5"></lucide-icon>
+          Linked mentions · {{ backlinks().length }}
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          @for (p of backlinks(); track p.id) {
+            <button type="button"
+              class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-1.5 text-sm text-muted transition hover:border-white/20 hover:text-text"
+              (click)="open(p.id)">
+              <span [class]="dotClass(p.categoryId)">●</span>
+              {{ p.title }}
+            </button>
+          }
+        </div>
+      </div>
+    }
 
   } @else {
     <!-- ===== Übersicht ===== -->
