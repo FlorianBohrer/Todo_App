@@ -44,7 +44,8 @@
            [cdkDropListData]="rootList"
            (cdkDropListDropped)="dropBlock($event)">
         @for (block of plan.content; track block.id) {
-          <div cdkDrag cdkDragPreviewClass="plan-drag-preview">
+          <div cdkDrag cdkDragPreviewClass="plan-drag-preview"
+            (cdkDragStarted)="onDragStarted()" (cdkDragEnded)="onDragEnded()">
             <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: block }"></ng-container>
             <div class="drop-preview" *cdkDragPlaceholder></div>
           </div>
@@ -52,39 +53,29 @@
       </div>
     </div>
 
-    <!-- Blockaktionen hinter EINEM Knopf. Wird von Bloecken und Sections
-         gleichermassen benutzt; der Kontext traegt nur die Block-ID. -->
+    <!-- Blockaktionen liegen hinter dem Ziehgriff (Notion: ziehen = verschieben,
+         klicken = Menü). Nur das Dropdown — den Auslöser stellt jede Stelle
+         selbst, weil der Griff im Block anders sitzt als in der Section. -->
     <ng-template #blockMenuTpl let-id>
-      <div class="relative">
-        <button type="button"
-          class="block-tool grid place-items-center rounded-md text-muted transition-colors hover:bg-white/10 hover:text-text focus-visible:bg-white/10 focus-visible:text-text"
-          (click)="toggleBlockMenu(id)"
-          [attr.aria-expanded]="openBlockMenu() === id"
-          aria-haspopup="menu"
-          aria-label="Block actions">
-          <lucide-icon [img]="MoreIcon" class="h-4 w-4"></lucide-icon>
-        </button>
-
-        @if (openBlockMenu() === id) {
-          <!-- Klick daneben schliesst das Menue. -->
-          <div class="fixed inset-0 z-20" (click)="closeBlockMenu()"></div>
-          <div role="menu"
-            class="absolute right-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
-            <button role="menuitem" type="button" class="block-menu-item" (click)="menuMove(id, -1)">
-              <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon> Move up
-            </button>
-            <button role="menuitem" type="button" class="block-menu-item" (click)="menuMove(id, 1)">
-              <lucide-icon [img]="DownIcon" class="h-4 w-4"></lucide-icon> Move down
-            </button>
-            <button role="menuitem" type="button" class="block-menu-item" (click)="duplicateBlock(id)">
-              <lucide-icon [img]="CopyIcon" class="h-4 w-4"></lucide-icon> Duplicate
-            </button>
-            <button role="menuitem" type="button" class="block-menu-item block-menu-item--danger" (click)="menuDelete(id)">
-              <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon> Delete
-            </button>
-          </div>
-        }
-      </div>
+      @if (openBlockMenu() === id) {
+        <!-- Klick daneben schliesst das Menue. -->
+        <div class="fixed inset-0 z-20" (click)="closeBlockMenu()"></div>
+        <div role="menu"
+          class="absolute left-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
+          <button role="menuitem" type="button" class="block-menu-item" (click)="menuMove(id, -1)">
+            <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon> Move up
+          </button>
+          <button role="menuitem" type="button" class="block-menu-item" (click)="menuMove(id, 1)">
+            <lucide-icon [img]="DownIcon" class="h-4 w-4"></lucide-icon> Move down
+          </button>
+          <button role="menuitem" type="button" class="block-menu-item" (click)="duplicateBlock(id)">
+            <lucide-icon [img]="CopyIcon" class="h-4 w-4"></lucide-icon> Duplicate
+          </button>
+          <button role="menuitem" type="button" class="block-menu-item block-menu-item--danger" (click)="menuDelete(id)">
+            <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon> Delete
+          </button>
+        </div>
+      }
     </ng-template>
 
     <ng-template #blockTpl let-block>
@@ -94,12 +85,19 @@
              Führungslinie, damit die Zugehörigkeit sofort lesbar ist. -->
         <div class="section-block py-1">
           <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-white/[0.04]">
-            <button type="button" cdkDragHandle
-              class="drag-handle grid h-6 w-6 flex-none cursor-grab touch-none place-items-center rounded-md
-                     text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
-              aria-label="Drag section">
-              <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
-            </button>
+            <div class="relative flex-none">
+              <button type="button" cdkDragHandle
+                class="drag-handle grid h-6 w-6 flex-none cursor-grab touch-none place-items-center rounded-md
+                       text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
+                [class.is-open]="openBlockMenu() === block.id"
+                (click)="toggleBlockMenu(block.id)"
+                [attr.aria-expanded]="openBlockMenu() === block.id"
+                aria-haspopup="menu"
+                aria-label="Drag section, or click for actions">
+                <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id }"></ng-container>
+            </div>
             <button type="button"
               class="grid h-6 w-6 flex-none place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-text"
               (click)="toggleGroup(block.id)"
@@ -113,10 +111,6 @@
               [value]="asGroup(block).title"
               (input)="setGroupTitle(block.id, $any($event.target).value)"
               placeholder="Section" aria-label="Section title" />
-
-            <div class="section-tools flex flex-none items-center">
-              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id }"></ng-container>
-            </div>
           </div>
 
           @if (!asGroup(block).collapsed) {
@@ -125,7 +119,8 @@
                  [cdkDropListData]="block.id"
                  (cdkDropListDropped)="dropBlock($event)">
               @for (child of asGroup(block).blocks; track child.id) {
-                <div cdkDrag cdkDragPreviewClass="plan-drag-preview">
+                <div cdkDrag cdkDragPreviewClass="plan-drag-preview"
+            (cdkDragStarted)="onDragStarted()" (cdkDragEnded)="onDragEnded()">
                   <ng-container *ngTemplateOutlet="blockTpl; context: { $implicit: child }"></ng-container>
                   <div class="drop-preview" *cdkDragPlaceholder></div>
                 </div>
@@ -160,8 +155,9 @@
           <!-- Ziehgriff in der linken Randspalte (wie in Notion): am Text selbst
                zu ziehen wuerde das Markieren und Bearbeiten unmoeglich machen. -->
           <!-- Randspalte wie in Notion: „+" legt einen Block darunter an, der
-               Griff zieht ihn. Auf Touch bleibt nur der Griff — zwei
-               44px-Flaechen wuerden dort die halbe Textbreite fressen. -->
+               Griff zieht ihn UND öffnet per Klick das Blockmenü. Auf Touch
+               bleibt nur der Griff — zwei 44px-Flaechen wuerden dort die halbe
+               Textbreite fressen. -->
           <button type="button"
             class="block-add block-handle drag-handle absolute left-0 top-1 place-items-center
                    rounded-md text-subtle transition hover:bg-white/10 hover:text-text"
@@ -170,20 +166,20 @@
             <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon>
           </button>
 
-          <button type="button" cdkDragHandle
-            class="drag-handle block-handle block-grip absolute top-1 grid cursor-grab touch-none place-items-center
-                   rounded-md text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
-            aria-label="Drag block">
-            <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
-          </button>
-
-          <!-- Nebeneinander statt gestapelt: gestapelt war die Leiste hoeher als ein
-               leerer Block und ragte in den naechsten hinein, sodass Papierkorb und
-               Pfeil benachbarter Bloecke uebereinander lagen. Das Rechts-Padding
-               dazu steht im SCSS, damit es an dieselbe Trefferflaechen-Regel
-               gekoppelt bleibt. -->
-          <div class="block-tools absolute right-1 top-1 flex flex-row items-center">
-            <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id }"></ng-container>
+          <div class="block-grip absolute top-1">
+            <div class="relative">
+              <button type="button" cdkDragHandle
+                class="drag-handle block-handle grid cursor-grab touch-none place-items-center
+                       rounded-md text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
+                [class.is-open]="openBlockMenu() === block.id"
+                (click)="toggleBlockMenu(block.id)"
+                [attr.aria-expanded]="openBlockMenu() === block.id"
+                aria-haspopup="menu"
+                aria-label="Drag block, or click for actions">
+                <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id }"></ng-container>
+            </div>
           </div>
 
           @if (block.type === 'text') {
