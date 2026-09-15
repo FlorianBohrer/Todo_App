@@ -51,6 +51,7 @@ import {
 import { formatBlock, formatInline } from '../inline-format';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
+import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
 import {
   detectMarkdownShortcut,
   detectWikiToken,
@@ -748,6 +749,73 @@ export class PlansView {
     return blocks.map((b) =>
       b.type === 'group'
         ? { ...b, blocks: this.insertAfterById(b.blocks, id, newBlock) }
+        : b,
+    );
+  }
+
+  // ---- Eingefuegtes Markdown in Bloecke zerlegen ----
+  //
+  // Ohne das landet ein ganzes Dokument in einem Block — und beginnt es mit
+  // „# ", macht die Kurzbefehl-Erkennung daraus den Text einer einzigen
+  // Ueberschrift, weil sie den kompletten Blockinhalt prueft.
+
+  onTextPaste(blockId: string, event: ClipboardEvent) {
+    const pasted = event.clipboardData?.getData('text/plain') ?? '';
+    if (!pasted.trim()) return;
+
+    const parsed = parseMarkdownBlocks(pasted);
+
+    // Ein einzelner Absatz ist ein ganz normaler Einfuegevorgang — da greifen
+    // wir nicht ein, sonst verliert man Cursorposition und Auswahl.
+    if (parsed.length <= 1 && (!parsed[0] || parsed[0].kind === 'text')) return;
+
+    event.preventDefault();
+
+    const plan = this.selected();
+    const block = plan ? this.findById(plan.content, blockId) : null;
+    const isEmpty = !block || block.type !== 'text' || !block.text.trim();
+    const incoming = parsed.map((p) => this.fromParsed(p));
+
+    this.slash.set(null);
+    this.wikiPick.set(null);
+    this.editingBlock.set(null);
+    this.updateContent((bs) => this.spliceById(bs, blockId, incoming, isEmpty));
+  }
+
+  private fromParsed(parsed: ParsedBlock): PlanBlock {
+    const id = this.newId();
+    switch (parsed.kind) {
+      case 'heading':
+        return { id, type: 'heading', level: parsed.level, text: parsed.text };
+      case 'list':
+        return { id, type: 'list', variant: parsed.variant, items: parsed.items };
+      case 'code':
+        return { id, type: 'code', language: parsed.language, code: parsed.code };
+      case 'quote':
+        return { id, type: 'quote', text: parsed.text };
+      case 'divider':
+        return { id, type: 'divider' };
+      default:
+        return { id, type: 'text', text: parsed.text };
+    }
+  }
+
+  /** Setzt mehrere Bloecke an die Stelle eines vorhandenen — ersetzend oder dahinter. */
+  private spliceById(
+    blocks: PlanBlock[],
+    id: string,
+    incoming: PlanBlock[],
+    replace: boolean,
+  ): PlanBlock[] {
+    const i = blocks.findIndex((b) => b.id === id);
+    if (i >= 0) {
+      const copy = [...blocks];
+      copy.splice(replace ? i : i + 1, replace ? 1 : 0, ...incoming);
+      return copy;
+    }
+    return blocks.map((b) =>
+      b.type === 'group'
+        ? { ...b, blocks: this.spliceById(b.blocks, id, incoming, replace) }
         : b,
     );
   }

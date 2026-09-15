@@ -293,3 +293,149 @@
   background-color: var(--plan-accent-soft);
   color: var(--plan-accent);
 }
+
+// ---- Micro-Animationen ----
+//
+// Ausschliesslich transform und opacity: beides laeuft auf dem Compositor,
+// ohne Layout neu zu rechnen. Alles hier ist kurz genug, um Rueckmeldung zu
+// sein statt Vorfuehrung — und faellt unter prefers-reduced-motion weg.
+
+@keyframes block-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+// Laeuft, wenn ein Block neu ins DOM kommt: nach dem Einfuegen, nach „/",
+// nach dem „+". Beim Oeffnen eines Plans liest es sich als kurzes Setzen.
+.block-row,
+.section-block {
+  animation: block-enter 220ms var(--spring-settle) both;
+}
+
+// Die Ziehvorschau ist eine Kopie und soll sofort unter dem Finger kleben,
+// nicht erst einfliegen.
+.cdk-drag-preview .block-row,
+.cdk-drag-preview .section-block {
+  animation: none;
+}
+
+// Der Trenner zieht sich von links auf — die einzige Stelle, an der eine
+// Linie tatsaechlich entsteht.
+@keyframes rule-draw {
+  from { opacity: 0; transform: scaleX(0.3); }
+  to   { opacity: 1; transform: none; }
+}
+
+.block-row hr {
+  transform-origin: left center;
+  animation: rule-draw 280ms var(--spring-settle) both;
+}
+
+// Menues kommen aus ihrem Ausloeser heraus, statt einfach da zu sein.
+@keyframes menu-pop {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.slash-menu,
+[role="menu"] {
+  transform-origin: top left;
+  animation: menu-pop 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+// Quick Switcher: die Zentrierung steht in der Grundregel, damit sie auch
+// haelt, wenn die Animation abgeschaltet ist.
+.switcher-panel {
+  transform: translateX(-50%);
+  animation: switcher-in 240ms var(--spring-settle) both;
+}
+
+@keyframes switcher-in {
+  from { opacity: 0; transform: translate(-50%, -10px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(-50%); }
+}
+
+.switcher-backdrop {
+  animation: backdrop-fade 200ms ease-out both;
+}
+
+@keyframes backdrop-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+// Rueckmeldung auf den Druck, nicht erst auf das Loslassen.
+.block-menu-item,
+.mode-tab,
+.slash-item,
+.block-add {
+  transition: transform 110ms cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 130ms ease-out,
+              color 130ms ease-out;
+}
+
+.block-menu-item:active,
+.mode-tab:active,
+.slash-item:active,
+.block-add:active {
+  transform: scale(0.97);
+}
+
+// Die Checkbox gibt sofort nach und ploppt beim Setzen kurz auf.
+.todo-box {
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 140ms ease-out,
+              border-color 140ms ease-out;
+}
+
+.todo-box:active {
+  transform: scale(0.85);
+}
+
+.todo-box[aria-pressed="true"] {
+  animation: check-pop 260ms var(--spring-settle);
+}
+
+@keyframes check-pop {
+  0%   { transform: scale(0.8); }
+  55%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+
+// Outline: ein kleiner Schubs zur Seite macht den Eintrag greifbar.
+.outline-link {
+  transition: background-color 120ms ease-out,
+              color 120ms ease-out,
+              transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.outline-link:hover {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-row,
+  .section-block,
+  .block-row hr,
+  .slash-menu,
+  [role="menu"],
+  .switcher-panel,
+  .switcher-backdrop,
+  .todo-box[aria-pressed="true"] {
+    animation: none;
+  }
+
+  .block-menu-item:active,
+  .mode-tab:active,
+  .slash-item:active,
+  .block-add:active,
+  .todo-box:active,
+  .outline-link:hover {
+    transform: none;
+  }
+
+  // Die Zentrierung ist Layout, keine Bewegung — sie bleibt.
+  .switcher-panel {
+    transform: translateX(-50%);
+  }
+}
