@@ -21,6 +21,13 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  List,
+  ListOrdered,
+  ListChecks,
+  Code,
+  Quote,
+  Minus,
+  Link2,
   ChevronUp,
   ChevronDown,
   GripVertical,
@@ -36,7 +43,11 @@ import {
   PlanTableBlock,
   PlanGroupBlock,
   PlanHeadingBlock,
+  PlanListBlock,
+  PlanCodeBlock,
+  PlanQuoteBlock,
 } from '../plan.model';
+import { formatBlock, formatInline, wikiLinkTargets } from '../inline-format';
 import { MermaidDiagram } from './mermaid-diagram';
 
 type BlockKind = 'text' | 'diagram' | 'table';
@@ -47,6 +58,12 @@ type SlashKind =
   | 'heading1'
   | 'heading2'
   | 'heading3'
+  | 'bullet'
+  | 'number'
+  | 'todo'
+  | 'code'
+  | 'quote'
+  | 'divider'
   | 'toggle'
   | 'table'
   | 'diagram';
@@ -92,6 +109,13 @@ export class PlansView {
   protected readonly H1Icon = Heading1;
   protected readonly H2Icon = Heading2;
   protected readonly H3Icon = Heading3;
+  protected readonly BulletIcon = List;
+  protected readonly NumberIcon = ListOrdered;
+  protected readonly TodoIcon = ListChecks;
+  protected readonly CodeIcon = Code;
+  protected readonly QuoteIcon = Quote;
+  protected readonly DividerIcon = Minus;
+  protected readonly LinkIcon = Link2;
   protected readonly UpIcon = ChevronUp;
   protected readonly DownIcon = ChevronDown;
 
@@ -129,6 +153,12 @@ export class PlansView {
     { kind: 'heading1', label: 'Heading 1', hint: 'Large section title', icon: this.H1Icon, keywords: 'heading1 heading title h1 big large' },
     { kind: 'heading2', label: 'Heading 2', hint: 'Medium heading', icon: this.H2Icon, keywords: 'heading2 heading h2 medium subtitle' },
     { kind: 'heading3', label: 'Heading 3', hint: 'Small heading', icon: this.H3Icon, keywords: 'heading3 heading h3 small' },
+    { kind: 'bullet', label: 'Bulleted list', hint: 'One line per item', icon: this.BulletIcon, keywords: 'bullet list ul unordered dash point' },
+    { kind: 'number', label: 'Numbered list', hint: 'Ordered steps', icon: this.NumberIcon, keywords: 'number numbered list ol ordered steps' },
+    { kind: 'todo', label: 'To-do list', hint: 'Checkboxes you can tick', icon: this.TodoIcon, keywords: 'todo task checkbox check list' },
+    { kind: 'code', label: 'Code', hint: 'Monospace block', icon: this.CodeIcon, keywords: 'code snippet monospace pre terminal' },
+    { kind: 'quote', label: 'Quote', hint: 'Callout with a side bar', icon: this.QuoteIcon, keywords: 'quote callout note blockquote aside' },
+    { kind: 'divider', label: 'Divider', hint: 'Horizontal rule', icon: this.DividerIcon, keywords: 'divider rule separator line hr break' },
     { kind: 'toggle', label: 'Toggle', hint: 'Collapsible container', icon: this.SectionIcon, keywords: 'toggle dropdown section group collapsible container fold' },
     { kind: 'table', label: 'Table', hint: 'Rows and columns', icon: this.TableIcon, keywords: 'table grid rows columns' },
     { kind: 'diagram', label: 'Diagram', hint: 'Mermaid flowchart', icon: this.DiagramIcon, keywords: 'diagram flow flowchart mermaid chart' },
@@ -215,6 +245,18 @@ export class PlansView {
         return { id, type: 'heading', level: 2, text: '' };
       case 'heading3':
         return { id, type: 'heading', level: 3, text: '' };
+      case 'bullet':
+        return { id, type: 'list', variant: 'bullet', items: [{ text: '', checked: false }] };
+      case 'number':
+        return { id, type: 'list', variant: 'number', items: [{ text: '', checked: false }] };
+      case 'todo':
+        return { id, type: 'list', variant: 'todo', items: [{ text: '', checked: false }] };
+      case 'code':
+        return { id, type: 'code', language: '', code: '' };
+      case 'quote':
+        return { id, type: 'quote', text: '' };
+      case 'divider':
+        return { id, type: 'divider' };
       case 'toggle':
         return { id, type: 'group', title: '', collapsed: false, blocks: [] };
       case 'table':
@@ -222,6 +264,200 @@ export class PlansView {
       case 'diagram':
         return { id, type: 'diagram', code: DIAGRAM_TEMPLATE };
     }
+  }
+
+  // ---- Live Preview (Obsidian) ----
+  //
+  // Geschriebenes Markup soll man LESEN, nicht entziffern. Ein Block zeigt
+  // deshalb formatierten Text und wird erst beim Anklicken zum Rohtext-Feld.
+
+  /** Block, der gerade im Rohtext-Modus steht. */
+  protected readonly editingBlock = signal<string | null>(null);
+
+  isEditing(blockId: string): boolean {
+    return this.editingBlock() === blockId;
+  }
+
+  beginEdit(blockId: string) {
+    if (this.editingBlock() === blockId) return;
+    this.editingBlock.set(blockId);
+    // Das Feld existiert erst nach dem naechsten Rendern.
+    requestAnimationFrame(() => {
+      const el = document.getElementById('block-edit-' + blockId);
+      if (!(el instanceof HTMLTextAreaElement)) return;
+      el.focus();
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+      const end = el.value.length;
+      el.setSelectionRange(end, end);
+    });
+  }
+
+  endEdit(blockId: string) {
+    // Eintraege im Slash-Menue verhindern den Fokusverlust selbst
+    // (mousedown/preventDefault). Ein echtes blur heisst also immer: der Cursor
+    // ist woanders — dann darf auch das Menue zu.
+    if (this.slash()?.blockId === blockId) this.slash.set(null);
+    if (this.editingBlock() === blockId) this.editingBlock.set(null);
+  }
+
+  /** Klick auf gerenderten Text: Wikilink folgt, sonst Bearbeiten. */
+  onRenderedClick(event: MouseEvent, blockId: string) {
+    const target = event.target as HTMLElement | null;
+    const link = target?.closest?.('[data-plan]') as HTMLElement | null;
+    if (link) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.openByTitle(link.dataset['plan'] ?? '');
+      return;
+    }
+    this.beginEdit(blockId);
+  }
+
+  /** Formatierter Text (mehrzeilig bzw. einzeilig). */
+  renderText(raw: string): string {
+    return formatBlock(raw);
+  }
+  renderInline(raw: string): string {
+    return formatInline(raw);
+  }
+
+  // ---- Wikilinks & Backlinks (Obsidian) ----
+
+  /** [[Titel]] öffnet den Plan; gibt es ihn nicht, wird er angelegt. */
+  openByTitle(title: string) {
+    const wanted = title.trim().toLowerCase();
+    if (!wanted) return;
+    const found = this.plans().find((p) => p.title.trim().toLowerCase() === wanted);
+    if (found) {
+      this.planService.select(found.id);
+      return;
+    }
+    this.planService.createPlan(title.trim(), this.selected()?.categoryId ?? null);
+  }
+
+  /** Alle Wikilink-Ziele eines Plans, quer durch alle Blocktypen. */
+  private planLinkTargets(plan: Plan): string[] {
+    const out: string[] = [];
+    const walk = (blocks: PlanBlock[]) => {
+      for (const b of blocks) {
+        if (b.type === 'text' || b.type === 'quote' || b.type === 'heading') {
+          out.push(...wikiLinkTargets(b.text));
+        } else if (b.type === 'list') {
+          for (const item of b.items) out.push(...wikiLinkTargets(item.text));
+        } else if (b.type === 'group') {
+          out.push(...wikiLinkTargets(b.title));
+          walk(b.blocks);
+        }
+      }
+    };
+    walk(plan.content);
+    return out;
+  }
+
+  /** Pläne, die auf den offenen Plan verweisen. */
+  protected readonly backlinks = computed<Plan[]>(() => {
+    const current = this.selected();
+    if (!current) return [];
+    const title = current.title.trim().toLowerCase();
+    if (!title) return [];
+    return this.plans().filter(
+      (p) =>
+        p.id !== current.id &&
+        this.planLinkTargets(p).some((t) => t.toLowerCase() === title),
+    );
+  });
+
+  // ---- Liste, Code, Zitat ----
+
+  asList(block: PlanBlock): PlanListBlock {
+    return block as PlanListBlock;
+  }
+  /** Bearbeitet wird die ganze Liste als Text: eine Zeile = ein Eintrag. */
+  listAsText(block: PlanListBlock): string {
+    return block.items.map((i) => i.text).join('\n');
+  }
+  setListText(blockId: string, value: string) {
+    const lines = value.split('\n');
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) => {
+        if (x.type !== 'list') return x;
+        // Haken bleiben an ihrer Position haengen, damit Tippen sie nicht loescht.
+        const items = lines.map((text, i) => ({
+          text,
+          checked: x.items[i]?.checked ?? false,
+        }));
+        return { ...x, items: items.length ? items : [{ text: '', checked: false }] };
+      }),
+    );
+  }
+  toggleListItem(blockId: string, index: number) {
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) =>
+        x.type !== 'list'
+          ? x
+          : {
+              ...x,
+              items: x.items.map((it, i) =>
+                i === index ? { ...it, checked: !it.checked } : it,
+              ),
+            },
+      ),
+    );
+  }
+  setListVariant(blockId: string, variant: 'bullet' | 'number' | 'todo') {
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) => (x.type !== 'list' ? x : { ...x, variant })),
+    );
+  }
+
+  asCode(block: PlanBlock): PlanCodeBlock {
+    return block as PlanCodeBlock;
+  }
+  updateCodeText(blockId: string, code: string) {
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) => (x.type === 'code' ? { ...x, code } : x)),
+    );
+  }
+  setCodeLanguage(blockId: string, language: string) {
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) => (x.type === 'code' ? { ...x, language } : x)),
+    );
+  }
+
+  asQuote(block: PlanBlock): PlanQuoteBlock {
+    return block as PlanQuoteBlock;
+  }
+  updateQuoteText(blockId: string, text: string) {
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) => (x.type === 'quote' ? { ...x, text } : x)),
+    );
+  }
+
+  // ---- Block darunter einfuegen (das „+" in der Randspalte) ----
+
+  private insertAfterById(
+    blocks: PlanBlock[],
+    id: string,
+    newBlock: PlanBlock,
+  ): PlanBlock[] {
+    const i = blocks.findIndex((b) => b.id === id);
+    if (i >= 0) {
+      const copy = [...blocks];
+      copy.splice(i + 1, 0, newBlock);
+      return copy;
+    }
+    return blocks.map((b) =>
+      b.type === 'group'
+        ? { ...b, blocks: this.insertAfterById(b.blocks, id, newBlock) }
+        : b,
+    );
+  }
+
+  addBelow(blockId: string) {
+    const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
+    this.updateContent((bs) => this.insertAfterById(bs, blockId, created));
+    this.beginEdit(created.id);
   }
 
   // ---- Liste ----
