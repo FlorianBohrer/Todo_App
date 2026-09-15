@@ -267,6 +267,28 @@
                   }
                 </div>
               }
+
+              <!-- Wikilink-Vorschläge: erscheinen bei einem offenen „[[".
+                   Ohne sie müsste man Titel blind und exakt tippen. -->
+              @if (wikiPick()?.blockId === block.id) {
+                <div class="slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
+                  @for (p of wikiResults(); track p.id; let i = $index) {
+                    <button type="button"
+                      class="slash-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/5"
+                      [class.slash-item--active]="i === wikiActiveIndex()"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="chooseWiki(block.id, p.title)">
+                      <lucide-icon [img]="LinkIcon" class="h-4 w-4 flex-none text-muted"></lucide-icon>
+                      <span class="min-w-0 flex-1 truncate text-sm text-text">{{ p.title }}</span>
+                      <span [class]="dotClass(p.categoryId)">●</span>
+                    </button>
+                  } @empty {
+                    <p class="px-2.5 py-2 text-xs text-subtle">
+                      No plan matches — close with <span class="font-mono">]]</span> to link a new one.
+                    </p>
+                  }
+                </div>
+              }
             </div>
           } @else if (block.type === 'heading') {
             @if (isEditing(block.id)) {
@@ -526,6 +548,26 @@
       </div>
     }
 
+    <!-- Unlinked mentions: Pläne, die den Titel erwähnen, ohne ihn zu
+         verlinken — die Kandidaten, aus denen echte Verknüpfungen werden. -->
+    @if (unlinkedMentions().length) {
+      <div class="mt-4">
+        <h3 class="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-subtle">
+          Unlinked mentions · {{ unlinkedMentions().length }}
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          @for (p of unlinkedMentions(); track p.id) {
+            <button type="button"
+              class="inline-flex items-center gap-2 rounded-lg border border-dashed border-white/10 px-3 py-1.5 text-sm text-subtle transition hover:border-white/25 hover:text-muted"
+              (click)="open(p.id)">
+              <span [class]="dotClass(p.categoryId)">●</span>
+              {{ p.title }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+
         </div>
       </div>
       <div class="outline-spacer"></div>
@@ -591,6 +633,45 @@
         }
       </div>
     }
+    </div>
+  }
+
+  <!-- Quick Switcher (⌘K / Strg+K): ab ein paar Dutzend Plänen ist die
+       Kachelliste kein Weg mehr — tippen und Enter schon. -->
+  @if (switcherOpen()) {
+    <div class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" (click)="closeSwitcher()"></div>
+    <div role="dialog" aria-modal="true" aria-label="Switch plan"
+      class="fixed left-1/2 top-24 z-50 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2
+             overflow-hidden rounded-2xl border border-border bg-panel1 shadow-2xl">
+      <input
+        id="plan-switcher-input"
+        type="text"
+        autocomplete="off"
+        class="w-full bg-transparent px-4 py-3 text-[15px] text-text placeholder:text-subtle focus:outline-none"
+        placeholder="Jump to a plan, or type a new name…"
+        [value]="switcherQuery()"
+        (input)="switcherQuery.set($any($event.target).value)"
+        (keydown.enter)="switcherSubmit()" />
+
+      <div class="max-h-80 overflow-y-auto border-t border-white/5 p-1">
+        @for (p of switcherResults(); track p.id) {
+          <button type="button"
+            class="slash-item flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/5"
+            (click)="openFromSwitcher(p.id)">
+            <span [class]="dotClass(p.categoryId)">●</span>
+            <span class="min-w-0 flex-1 truncate text-sm text-text">{{ p.title }}</span>
+            <span class="flex-none text-xs text-subtle">{{ folderName(p.categoryId) }}</span>
+          </button>
+        } @empty {
+          @if (switcherQuery().trim()) {
+            <p class="px-3 py-2 text-sm text-subtle">
+              Press Enter to create „{{ switcherQuery().trim() }}"
+            </p>
+          } @else {
+            <p class="px-3 py-2 text-sm text-subtle">No plans yet</p>
+          }
+        }
+      </div>
     </div>
   }
 </section>

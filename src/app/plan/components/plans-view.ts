@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import {
   CdkDrag,
@@ -50,6 +50,11 @@ import {
 } from '../plan.model';
 import { formatBlock, formatInline, wikiLinkTargets } from '../inline-format';
 import { detectSlashToken } from '../slash-command';
+import {
+  detectMarkdownShortcut,
+  detectWikiToken,
+  MarkdownBlockKind,
+} from '../editor-input';
 import { MermaidDiagram } from './mermaid-diagram';
 
 type BlockKind = 'text' | 'diagram' | 'table';
@@ -268,6 +273,28 @@ export class PlansView {
     const caret = field.selectionStart ?? value.length;
     this.updateText(blockId, value);
 
+    // Markdown hat Vorrang: der Block wandelt sich sofort um.
+    const shortcut = detectMarkdownShortcut(value);
+    if (shortcut) {
+      this.applyMarkdownShortcut(blockId, shortcut.kind, shortcut.rest);
+      return;
+    }
+
+    // Offener Wikilink „[[…" — Vorschlaege aus den vorhandenen Plaenen.
+    const wiki = detectWikiToken(value, caret);
+    if (wiki) {
+      this.slash.set(null);
+      const current = this.wikiPick();
+      this.wikiPick.set({
+        blockId,
+        index: current && current.blockId === blockId ? current.index : 0,
+        start: wiki.start,
+        query: wiki.query,
+      });
+      return;
+    }
+    if (this.wikiPick()?.blockId === blockId) this.wikiPick.set(null);
+
     const token = this.detectSlash(value, caret);
     if (token) {
       const current = this.slash();
@@ -282,7 +309,81 @@ export class PlansView {
     }
   }
 
+  // ---- Wikilink-Vervollstaendigung ----
+
+  /** Offener „[[…"-Vorschlag: Block, Markierung, Position und Query. */
+  protected readonly wikiPick = signal<{
+    blockId: string;
+    index: number;
+    start: number;
+    query: string;
+  } | null>(null);
+
+  protected readonly wikiResults = computed<Plan[]>(() => {
+    const pick = this.wikiPick();
+    if (!pick) return [];
+    const query = pick.query.trim().toLowerCase();
+    const current = this.selected();
+    return this.plans()
+      .filter((p) => p.id !== current?.id)
+      .filter((p) => !query || p.title.toLowerCase().includes(query))
+      .slice(0, 6);
+  });
+
+  wikiActiveIndex(): number {
+    const pick = this.wikiPick();
+    if (!pick) return -1;
+    return Math.min(pick.index, this.wikiResults().length - 1);
+  }
+
+  /** Setzt „[[Titel]]" ein und laesst den Cursor dahinter stehen. */
+  chooseWiki(blockId: string, title: string) {
+    const pick = this.wikiPick();
+    this.wikiPick.set(null);
+    if (!pick) return;
+
+    const plan = this.selected();
+    const block = plan ? this.findById(plan.content, blockId) : null;
+    if (!block || block.type !== 'text') return;
+
+    const before = block.text.slice(0, pick.start);
+    const after = block.text.slice(pick.start + 2 + pick.query.length);
+    this.updateText(blockId, `${before}[[${title}]]${after}`);
+
+    const caret = before.length + title.length + 4;
+    requestAnimationFrame(() => {
+      const el = document.getElementById('block-edit-' + blockId);
+      if (!(el instanceof HTMLTextAreaElement)) return;
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
   onTextKeydown(event: KeyboardEvent, blockId: string) {
+    // Der Wikilink-Vorschlag liegt vorn: er ist offen, waehrend getippt wird.
+    const pick = this.wikiPick();
+    if (pick && pick.blockId === blockId) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.wikiPick.set(null);
+        return;
+      }
+      const hits = this.wikiResults();
+      if (!hits.length) return;
+      const at = Math.min(pick.index, hits.length - 1);
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.wikiPick.set({ ...pick, index: (at + 1) % hits.length });
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.wikiPick.set({ ...pick, index: (at - 1 + hits.length) % hits.length });
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        this.chooseWiki(blockId, hits[at].title);
+      }
+      return;
+    }
+
     const s = this.slash();
     if (!s || s.blockId !== blockId) return;
     if (event.key === 'Escape') {
@@ -345,35 +446,60 @@ export class PlansView {
     this.beginEdit(created.id);
   }
 
-  private makeConverted(id: string, kind: SlashKind): PlanBlock {
+  /**
+   * Neuer Block des gewaehlten Typs. `initial` uebernimmt den bereits
+   * getippten Text — bei einem Markdown-Kurzbefehl steht hinter dem Praefix
+   * schon Inhalt, der sonst verloren ginge.
+   */
+  private makeConverted(id: string, kind: SlashKind, initial = ''): PlanBlock {
     switch (kind) {
       case 'text':
-        return { id, type: 'text', text: '' };
+        return { id, type: 'text', text: initial };
       case 'heading1':
-        return { id, type: 'heading', level: 1, text: '' };
+        return { id, type: 'heading', level: 1, text: initial };
       case 'heading2':
-        return { id, type: 'heading', level: 2, text: '' };
+        return { id, type: 'heading', level: 2, text: initial };
       case 'heading3':
-        return { id, type: 'heading', level: 3, text: '' };
+        return { id, type: 'heading', level: 3, text: initial };
       case 'bullet':
-        return { id, type: 'list', variant: 'bullet', items: [{ text: '', checked: false }] };
+        return { id, type: 'list', variant: 'bullet', items: [{ text: initial, checked: false }] };
       case 'number':
-        return { id, type: 'list', variant: 'number', items: [{ text: '', checked: false }] };
+        return { id, type: 'list', variant: 'number', items: [{ text: initial, checked: false }] };
       case 'todo':
-        return { id, type: 'list', variant: 'todo', items: [{ text: '', checked: false }] };
+        return { id, type: 'list', variant: 'todo', items: [{ text: initial, checked: false }] };
       case 'code':
-        return { id, type: 'code', language: '', code: '' };
+        return { id, type: 'code', language: '', code: initial };
       case 'quote':
-        return { id, type: 'quote', text: '' };
+        return { id, type: 'quote', text: initial };
       case 'divider':
         return { id, type: 'divider' };
       case 'toggle':
-        return { id, type: 'group', title: '', collapsed: false, blocks: [] };
+        return { id, type: 'group', title: initial, collapsed: false, blocks: [] };
       case 'table':
         return { id, type: 'table', columns: ['Column 1', 'Column 2'], rows: [['', '']] };
       case 'diagram':
         return { id, type: 'diagram', code: DIAGRAM_TEMPLATE };
     }
+  }
+
+  /**
+   * Markdown-Kurzbefehl am Blockanfang („# ", „- ", „> ", „```" …): der Block
+   * wird sofort umgewandelt, der Text hinter dem Praefix wandert mit.
+   */
+  private applyMarkdownShortcut(blockId: string, kind: MarkdownBlockKind, rest: string) {
+    this.slash.set(null);
+    this.wikiPick.set(null);
+    this.updateContent((bs) =>
+      this.replaceById(bs, blockId, (id) => this.makeConverted(id, kind, rest)),
+    );
+    if (kind === 'divider') {
+      this.editingBlock.set(null);
+      return;
+    }
+    // Der Block ist durch einen anderen Typ ersetzt worden — das Eingabefeld
+    // im Template ist ein neues Element und braucht Fokus und Cursor erneut.
+    this.editingBlock.set(null);
+    this.beginEdit(blockId);
   }
 
   // ---- Live Preview (Obsidian) ----
@@ -477,6 +603,96 @@ export class PlansView {
         this.planLinkTargets(p).some((t) => t.toLowerCase() === title),
     );
   });
+
+  /** Sämtlicher lesbarer Text eines Plans — Grundlage für unverlinkte Treffer. */
+  private planPlainText(plan: Plan): string {
+    const parts: string[] = [];
+    const walk = (blocks: PlanBlock[]) => {
+      for (const b of blocks) {
+        if (b.type === 'text' || b.type === 'quote' || b.type === 'heading') parts.push(b.text);
+        else if (b.type === 'code') parts.push(b.code);
+        else if (b.type === 'list') parts.push(...b.items.map((i) => i.text));
+        else if (b.type === 'table') parts.push(...b.columns, ...b.rows.flat());
+        else if (b.type === 'group') {
+          parts.push(b.title);
+          walk(b.blocks);
+        }
+      }
+    };
+    walk(plan.content);
+    return parts.join('\n');
+  }
+
+  /**
+   * Pläne, die den Titel erwähnen, ohne ihn zu verlinken — die Kandidaten, aus
+   * denen echte Verknüpfungen werden. Sehr kurze Titel bleiben außen vor, sie
+   * träfen fast jeden Text.
+   */
+  protected readonly unlinkedMentions = computed<Plan[]>(() => {
+    const current = this.selected();
+    if (!current) return [];
+    const title = current.title.trim().toLowerCase();
+    if (title.length < 3) return [];
+    const alreadyLinked = new Set(this.backlinks().map((p) => p.id));
+    return this.plans().filter(
+      (p) =>
+        p.id !== current.id &&
+        !alreadyLinked.has(p.id) &&
+        this.planPlainText(p).toLowerCase().includes(title),
+    );
+  });
+
+  // ---- Quick Switcher (⌘K) ----
+  //
+  // Ab ein paar Duzend Plaenen ist die Kachelliste kein Weg mehr. Tippen und
+  // Enter ist er.
+
+  protected readonly switcherOpen = signal(false);
+  protected readonly switcherQuery = signal('');
+
+  protected readonly switcherResults = computed<Plan[]>(() => {
+    const query = this.switcherQuery().trim().toLowerCase();
+    return this.plans()
+      .filter((p) => !query || p.title.toLowerCase().includes(query))
+      .slice(0, 8);
+  });
+
+  @HostListener('document:keydown', ['$event'])
+  onGlobalKeydown(event: KeyboardEvent) {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      const opening = !this.switcherOpen();
+      this.switcherOpen.set(opening);
+      this.switcherQuery.set('');
+      if (opening) {
+        requestAnimationFrame(() => document.getElementById('plan-switcher-input')?.focus());
+      }
+      return;
+    }
+    if (event.key === 'Escape' && this.switcherOpen()) this.switcherOpen.set(false);
+  }
+
+  closeSwitcher() {
+    this.switcherOpen.set(false);
+  }
+
+  openFromSwitcher(id: string) {
+    this.switcherOpen.set(false);
+    this.planService.select(id);
+  }
+
+  /** Enter ohne Treffer legt den Plan an — wie „create note" in Obsidian. */
+  switcherSubmit() {
+    const hit = this.switcherResults()[0];
+    if (hit) {
+      this.openFromSwitcher(hit.id);
+      return;
+    }
+    const title = this.switcherQuery().trim();
+    if (!title) return;
+    this.switcherOpen.set(false);
+    this.planService.createPlan(title, this.selected()?.categoryId ?? null);
+  }
 
   // ---- Liste, Code, Zitat ----
 
