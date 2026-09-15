@@ -1,12 +1,3 @@
-// Block- und Section-Werkzeuge sind IMMER voll sichtbar. Auf der flachen
-// Notion-Fläche (keine Kartenränder) waren hover-only Werkzeuge nicht
-// auffindbar — deshalb keine Opacity-Spielereien mehr. Sie treten allein über
-// die gedämpfte Icon-Farbe zurück und werden beim Überfahren farblich klarer.
-.block-tools,
-.section-tools {
-  opacity: 1;
-}
-
 // Rechts liegt jetzt gar nichts mehr — die Blockaktionen sitzen hinter dem
 // Ziehgriff in der linken Randspalte. Die gesamte rechte Reserve faellt weg
 // und geht an den Text.
@@ -227,5 +218,33 @@
   // kein „+". Dann muss die Leiste da sein, sonst ist der Plan eine Sackgasse.
   .add-bar--always {
     display: flex;
+  }
+}
+
+// ---- Outline ----
+//
+// Erst ab 1280px: darunter reicht der Rand neben der zentrierten Textspalte
+// nicht, und die Outline wuerde dem Text Breite wegnehmen.
+.outline-nav,
+.outline-spacer {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .outline-nav,
+  .outline-spacer {
+    display: block;
+    width: 11.5rem;
+    flex: none;
+  }
+
+  // Bleibt beim Scrollen stehen. align-self verhindert, dass das Flex-Item auf
+  // volle Spaltenhoehe gestreckt wird — sticky haette sonst keinen Spielraum.
+  .outline-nav {
+    position: sticky;
+    top: 1.5rem;
+    align-self: flex-start;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
   }
 }

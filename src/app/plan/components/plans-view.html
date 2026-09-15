@@ -1,6 +1,33 @@
-<section class="mx-auto w-full max-w-3xl px-1">
+<section class="w-full px-1">
 
   @if (selected(); as plan) {
+    <!-- Drei Spalten: Outline, Inhalt, Blindspalte. Die Blindspalte rechts ist
+         gleich breit wie die Outline — nur so bleibt die Textspalte mittig im
+         Fenster, statt beim Einblenden der Outline nach rechts zu rutschen.
+         Die Outline belegt ihre Breite immer, damit nichts springt, sobald die
+         erste Überschrift entsteht. -->
+    <div class="mx-auto flex w-full max-w-[72rem] gap-6">
+      <nav class="outline-nav" aria-label="Outline">
+        @if (outline().length) {
+          <p class="mb-2 px-2 text-[11px] font-medium uppercase tracking-wide text-subtle">
+            Outline
+          </p>
+          <ul class="space-y-0.5">
+            @for (item of outline(); track item.id) {
+              <li>
+                <button type="button"
+                  class="block w-full truncate rounded-md py-1 pr-2 text-left text-[13px] text-muted transition hover:bg-white/5 hover:text-text"
+                  [style.padding-left.rem]="0.5 + (item.level - 1) * 0.7"
+                  [title]="item.text"
+                  (click)="jumpTo(item.id)">{{ item.text }}</button>
+              </li>
+            }
+          </ul>
+        }
+      </nav>
+
+      <div class="min-w-0 flex-1">
+        <div class="mx-auto w-full max-w-3xl">
     <!-- ===== Editor ===== -->
     <div class="mb-5 flex items-center gap-2">
       <button
@@ -93,7 +120,7 @@
         <!-- Section: aufklappbarer Container (Notion-Toggle) mit Titel +
              beliebigen Blöcken. Der eingerückte Körper trägt links eine
              Führungslinie, damit die Zugehörigkeit sofort lesbar ist. -->
-        <div class="section-block py-1">
+        <div class="section-block py-1" [id]="'block-' + block.id">
           <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-white/[0.04]">
             <div class="relative flex-none">
               <button type="button" cdkDragHandle
@@ -161,6 +188,7 @@
              sanft ab (Notion-Gefühl). Werkzeuge sitzen dezent oben rechts und
              treten am Zeigergerät zurück; auf Touch bleiben sie stehen. -->
         <div class="block block-row group/block relative rounded-lg py-2"
+          [id]="'block-' + block.id"
           [class.block-heading]="block.type === 'heading'">
           <!-- Ziehgriff in der linken Randspalte (wie in Notion): am Text selbst
                zu ziehen wuerde das Markieren und Bearbeiten unmoeglich machen. -->
@@ -498,8 +526,14 @@
       </div>
     }
 
+        </div>
+      </div>
+      <div class="outline-spacer"></div>
+    </div>
+
   } @else {
     <!-- ===== Übersicht ===== -->
+    <div class="mx-auto w-full max-w-3xl">
     <div class="mb-5 flex items-center justify-between">
       <h2 class="text-lg font-medium text-text">Plans</h2>
       <button type="button"
@@ -557,5 +591,6 @@
         }
       </div>
     }
+    </div>
   }
 </section>
