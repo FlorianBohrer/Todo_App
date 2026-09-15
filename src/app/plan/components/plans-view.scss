@@ -20,8 +20,10 @@
 // ineinander, sobald sich eine der beiden Groessen aendert.
 // Die Mindesthoehe haelt die 44px-Leiste innerhalb des Blocks: ohne sie ragt
 // sie bei einem leeren Textblock (~42px) wieder in den naechsten hinein.
+// Rechts liegt nur noch EIN Knopf statt dreier — die Randspalte schrumpft
+// entsprechend und gibt die Breite an den Text zurueck.
 .block-row {
-  padding-right: calc(3 * 44px + 12px);
+  padding-right: calc(44px + 8px);
   padding-left: 44px; // Randspalte fuer den Ziehgriff
   min-height: 52px;
 }
@@ -49,7 +51,7 @@
   }
 
    .block-row {
-    padding-right: calc(3 * 28px + 12px);
+    padding-right: calc(28px + 8px);
     padding-left: 56px; // „+" und Griff nebeneinander, wie in Notion
     min-height: 0;
   }
@@ -190,4 +192,49 @@
 // eines leeren Absatzes null.
 .plan-prose {
   word-break: break-word;
+}
+
+// ---- Blockaktionen-Menue ----
+.block-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+.block-menu-item:hover {
+  background-color: rgb(255 255 255 / 0.07);
+}
+
+.block-menu-item--danger:hover {
+  background-color: rgb(244 73 93 / 0.15);
+  color: var(--color-danger);
+}
+
+// ---- Vertikaler Rhythmus ----
+//
+// Eine Ueberschrift braucht oben mehr Luft als unten, sonst klebt sie am
+// vorherigen Absatz und liest sich wie dessen Fortsetzung. Beim ersten Block
+// faellt der Abstand weg — dort gibt es nichts, wovon man sich absetzen muss.
+.block-heading {
+  margin-top: 1.5rem;
+}
+
+.cdk-drag:first-child .block-heading {
+  margin-top: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  // Am Zeigergeraet erledigen „/" und das „+" in der Randspalte dasselbe —
+  // die Leiste waere nur noch Wiederholung. Auf Touch bleibt sie, dort gibt es
+  // kein „+".
+  .add-bar {
+    display: none;
+  }
 }
