@@ -665,3 +665,99 @@ textarea::-webkit-resizer { display: none; }
   overflow-wrap: anywhere;
   line-height: 1.25;
 }
+
+/* ---------------------------------------------------------------------------
+   Micro-Interaktionen, app-weit
+   --------------------------------------------------------------------------- */
+
+/* Rueckmeldung auf den Druck, nicht erst auf das Loslassen — und zwar fuer
+   JEDEN Knopf, nicht nur .btn. Icon-Knoepfe fuehlten sich sonst tot an.
+   Die Selektor-Spezifitaet bleibt bewusst niedrig (0,1,1): eigene Regeln wie
+   .todo-checkbox:active oder .btn-primary:active sollen weiter gewinnen,
+   sonst waere ihr staerkerer Druck plaetzlich weg. */
+button {
+  transition:
+    transform 110ms var(--ease-out),
+    background-color 140ms ease-out,
+    color 140ms ease-out,
+    border-color 140ms ease-out,
+    opacity 140ms ease-out;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* Ein deaktivierter Knopf gibt nicht nach — er tut ja nichts. */
+button[disabled]:active {
+  transform: none;
+}
+
+/* Tastaturfokus sichtbar und ruhig, ueberall gleich. */
+:focus-visible {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 2px;
+}
+
+input,
+textarea,
+select {
+  transition:
+    background-color 140ms ease-out,
+    border-color 140ms ease-out,
+    box-shadow 160ms var(--ease-out);
+}
+
+/* Fortschritt laeuft weich auf den neuen Stand, statt zu springen. */
+.progress-fill {
+  transition: width 420ms var(--spring);
+}
+
+/* ---- Filter: eine Pille, die wandert ----
+   Statt vier Knoepfen, die unabhaengig aufleuchten, bewegt sich eine Auswahl.
+   Vier gleich breite Laschen (flex-1) und drei Luecken von 0.5rem, plus je
+   0.25rem Polster: damit laesst sich beides ohne Messen im DOM ausrechnen. */
+.filter-tabs {
+  position: relative;
+}
+
+.filter-pill {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0.25rem;
+  width: calc((100% - 2rem) / 4);
+  border-radius: 9999px;
+  background: var(--color-button1);
+  box-shadow:
+    0 0 0 1px rgb(99 102 241 / 0.30),
+    0 6px 18px -8px rgb(99 102 241 / 0.60);
+  transform: translateX(calc(var(--tab-index, 0) * (100% + 0.5rem)));
+  transition: transform 340ms var(--spring);
+}
+
+.filter-tab {
+  position: relative; /* Text ueber der Pille */
+  z-index: 1;
+  color: var(--color-muted);
+}
+
+.filter-tab.is-active {
+  color: #fff;
+}
+
+.filter-tab:hover:not(.is-active) {
+  color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Kein Nachgeben, kein Gleiten — die Pille springt direkt an ihren Platz. */
+  button:active {
+    transform: none;
+  }
+
+  .filter-pill,
+  .progress-fill {
+    transition: none;
+  }
+}
