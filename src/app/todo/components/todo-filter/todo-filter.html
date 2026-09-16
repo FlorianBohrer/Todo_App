@@ -16,14 +16,27 @@
   </div>
 </div>
   
-  <section class="flex gap-2 mt-6 mb-4 rounded-full bg-bg3 p-1 ">
-    
-    <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'active'" 
-    (click)="filter.set('active')">Active  </button>
-    <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'completed'"
-    (click)="filter.set('completed')">Done</button>
-    <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'favorites'"
-    (click)="filter.set('favorites')">Favorites</button>
-    <button class="flex-1 btn rounded-full" [class.btn-primary]="filter() === 'all'"
-    (click)="filter.set('all')">All </button>
+  <!-- Eine Pille, die wandert — statt vier Knöpfe, die unabhängig aufleuchten.
+       Der Index treibt sie; vier gleich breite Laschen (flex-1) machen die
+       Rechnung ohne Messen im DOM möglich. -->
+  <section class="filter-tabs relative flex gap-2 mt-6 mb-4 rounded-full bg-bg3 p-1"
+    role="tablist" [style.--tab-index]="tabIndex()">
+    <span class="filter-pill" aria-hidden="true"></span>
+
+    <button type="button" role="tab" class="filter-tab flex-1 btn rounded-full"
+      [class.is-active]="filter() === 'active'"
+      [attr.aria-selected]="filter() === 'active'"
+      (click)="filter.set('active')">Active</button>
+    <button type="button" role="tab" class="filter-tab flex-1 btn rounded-full"
+      [class.is-active]="filter() === 'completed'"
+      [attr.aria-selected]="filter() === 'completed'"
+      (click)="filter.set('completed')">Done</button>
+    <button type="button" role="tab" class="filter-tab flex-1 btn rounded-full"
+      [class.is-active]="filter() === 'favorites'"
+      [attr.aria-selected]="filter() === 'favorites'"
+      (click)="filter.set('favorites')">Favorites</button>
+    <button type="button" role="tab" class="filter-tab flex-1 btn rounded-full"
+      [class.is-active]="filter() === 'all'"
+      [attr.aria-selected]="filter() === 'all'"
+      (click)="filter.set('all')">All</button>
   </section>
