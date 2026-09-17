@@ -110,3 +110,30 @@ li.todo-expanded-row {
     animation: none;
   }
 }
+
+/* ---- Ladezustand ----
+   Drei Platzhalterzeilen statt „No todos yet". Sie atmen leicht, damit klar
+   ist, dass etwas unterwegs ist — und nicht, dass hier nichts mehr kommt. */
+.skeleton-row {
+  animation: skeleton-breathe 1.4s ease-in-out infinite;
+}
+
+.skeleton-row:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.skeleton-row:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+@keyframes skeleton-breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-row {
+    animation: none;
+    opacity: 0.6;
+  }
+}

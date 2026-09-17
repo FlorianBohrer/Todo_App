@@ -22,8 +22,10 @@ import { folderColorClass } from '../../shared/folder-color';
 import { stripPriorityPrefix, priorityBadge } from '../../shared/title-priority';
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
+import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
 
 import {
+  CalendarPlus,
   ChevronDown,
   ChevronsUpDown,
   EllipsisVertical,
@@ -69,8 +71,14 @@ export class TodoList {
   protected readonly OptionsIcon = EllipsisVertical;
   protected readonly TrashIcon = Trash2;
     protected readonly PencilIcon = Pencil;
+  protected readonly ScheduleIcon = CalendarPlus;
 
   protected readonly timerPresets = TIMER_PRESETS_MINUTES;
+
+  /** true, solange die erste Ladung Todos unterwegs ist. */
+  protected readonly loading = this.todoService.loading;
+  /** Platzhalterzeilen, damit @for etwas zu zaehlen hat. */
+  protected readonly skeletonRows = [0, 1, 2];
   protected readonly folderListOpen = signal(false);
 
 toggleFolderList(): void {
@@ -81,6 +89,9 @@ toggleFolderList(): void {
     signal<string | null>(null);
 
   protected readonly openTimerMenuId =
+    signal<string | null>(null);
+
+  protected readonly openScheduleId =
     signal<string | null>(null);
 
   protected readonly openOptionsId =
@@ -260,6 +271,38 @@ closeOptionsMenu(): void {
     this.openTimerMenuId.set(null);
   }
 
+  // ---- Termin ----
+  // Ein Todo trug schon immer ein Datum, nur gesetzt wurde es allein per Ziehen
+  // in der Wochenansicht. Die Liste zeigt es jetzt und vergibt es auch.
+
+  /** Heute, morgen, Wochenende, nächste Woche — jeweils frisch gerechnet. */
+  scheduleChoices() {
+    return scheduleOptions();
+  }
+
+  /** Kurze Beschriftung des Termins, z.B. „Tomorrow" oder „Sep 24". */
+  scheduleText(todo: Todo): string {
+    return todo.scheduledDate === null ? '' : scheduleLabel(todo.scheduledDate);
+  }
+
+  /** Termin verstrichen und noch offen — nur dann ist die Warnfarbe ehrlich. */
+  isLate(todo: Todo): boolean {
+    return !todo.completed && isOverdueDate(todo.scheduledDate);
+  }
+
+  toggleScheduleMenu(id: string): void {
+    this.openScheduleId.update(current => current === id ? null : id);
+  }
+
+  closeScheduleMenu(): void {
+    this.openScheduleId.set(null);
+  }
+
+  schedule(id: string, iso: string | null): void {
+    this.todoService.scheduleTodo(id, iso);
+    this.closeScheduleMenu();
+  }
+
   /**
    * Aufgeklappt trennt die Karte den Titel von den Unterpunkten: die erste
    * Zeile bleibt in der Kopfzeile neben Checkbox und Bedienelementen, alles
@@ -381,7 +424,7 @@ closeOptionsMenu(): void {
 
   /** Namen aller Labels als Tooltip-Text (Punkte in der Zeile zeigen keine Namen). */
   labelTitle(labelIds: string[]): string {
-    if (labelIds.length === 0) return 'Kein Label';
+    if (labelIds.length === 0) return 'No labels';
     return labelIds.map(id => this.labelName(id)).join(', ');
   }
 
