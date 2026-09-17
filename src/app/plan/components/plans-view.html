@@ -109,7 +109,7 @@
 
     <ng-template #blockTpl let-block>
       @if (block.type === 'group') {
-        <!-- Heisst nach aussen „Accordion" — intern bleibt es der Blocktyp
+        <!-- Heisst nach aussen „Toggle" — intern bleibt es der Blocktyp
              'group' samt PlanGroupBlock und .section-block. Aufklappbarer
              Container mit Titel und beliebigen Blöcken; der eingerückte Körper
              trägt links eine Führungslinie, damit die Zugehörigkeit sofort
@@ -142,7 +142,7 @@
               class="min-w-0 flex-1 bg-transparent text-lg font-semibold tracking-tight text-text placeholder:text-subtle focus:outline-none"
               [value]="asGroup(block).title"
               (input)="setGroupTitle(block.id, $any($event.target).value)"
-              placeholder="Accordion" aria-label="Accordion title" />
+              placeholder="Toggle" aria-label="Toggle title" />
           </div>
 
           @if (!asGroup(block).collapsed) {
@@ -520,7 +520,7 @@
       <button type="button"
         class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted transition hover:bg-white/5 hover:text-text"
         (click)="addGroupBlock()">
-        <lucide-icon [img]="SectionIcon" class="h-4 w-4"></lucide-icon> Accordion
+        <lucide-icon [img]="SectionIcon" class="h-4 w-4"></lucide-icon> Toggle
       </button>
     </div>
 
