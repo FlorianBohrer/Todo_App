@@ -258,7 +258,7 @@ export class PlansView {
     { kind: 'code', label: 'Code', hint: 'Monospace block', icon: this.CodeIcon, keywords: 'code snippet monospace pre terminal' },
     { kind: 'quote', label: 'Quote', hint: 'Callout with a side bar', icon: this.QuoteIcon, keywords: 'quote callout note blockquote aside' },
     { kind: 'divider', label: 'Divider', hint: 'Horizontal rule', icon: this.DividerIcon, keywords: 'divider rule separator line hr break' },
-    { kind: 'toggle', label: 'Toggle', hint: 'Accordion — collapsible container', icon: this.SectionIcon, keywords: 'toggle accordion dropdown section group collapsible container fold' },
+    { kind: 'toggle', label: 'Accordion', hint: 'Collapsible section', icon: this.SectionIcon, keywords: 'accordion akkordeon toggle dropdown section group collapsible container fold aufklappen einklappen' },
     { kind: 'table', label: 'Table', hint: 'Rows and columns', icon: this.TableIcon, keywords: 'table grid rows columns' },
     { kind: 'diagram', label: 'Diagram', hint: 'Mermaid flowchart', icon: this.DiagramIcon, keywords: 'diagram flow flowchart mermaid chart' },
   ];
@@ -1015,7 +1015,7 @@ export class PlansView {
       {
         id: this.newId(),
         type: 'group',
-        title: 'Section',
+        title: 'Accordion',
         collapsed: false,
         blocks: [this.makeBlock('diagram'), this.makeBlock('text')],
       },
@@ -1031,7 +1031,7 @@ export class PlansView {
   setGroupTitle(groupId: string, title: string) {
     this.updateContent((b) =>
       this.mapById(b, groupId, (x) =>
-        x.type === 'group' ? { ...x, title: title.trim() || 'Section' } : x,
+        x.type === 'group' ? { ...x, title: title.trim() || 'Accordion' } : x,
       ),
     );
   }
