@@ -315,6 +315,13 @@
     --radius-sm: 0.5rem;     /* Buttons, Chips, Inputs */
     --radius:    0.875rem;   /* Cards */
     --radius-lg: 1.25rem;    /* große Container */
+
+    /* Einschwingen — schnell los, sanft ankommen.
+       War nie definiert: `transition: width 420ms var(--spring)` ist damit als
+       ganze Deklaration ungültig, die Übergänge fielen also komplett aus statt
+       nur die Kurve zu verlieren. Betraf .progress-fill und die Filter-Pille.
+       (--ease-out kommt aus Tailwinds Theme und bleibt deshalb unangetastet.) */
+    --spring: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   html, body {
@@ -723,10 +730,27 @@ select {
   transition: width 420ms var(--spring);
 }
 
-/* ---- Filter: eine Pille, die wandert ----
-   Statt vier Knoepfen, die unabhaengig aufleuchten, bewegt sich eine Auswahl.
-   Vier gleich breite Laschen (flex-1) und drei Luecken von 0.5rem, plus je
-   0.25rem Polster: damit laesst sich beides ohne Messen im DOM ausrechnen. */
+/* Ein Blatt, das sich meldet statt zu erscheinen. */
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sheet-in {
+  animation: sheet-in 180ms var(--ease-out) both;
+}
+
+/* ---- Laschen: eine Pille, die wandert ----
+   Statt Knoepfen, die unabhaengig aufleuchten, bewegt sich eine Auswahl.
+   Gleich breite Laschen (flex-1) und Luecken von 0.5rem, plus je 0.25rem
+   Polster: damit laesst sich die Breite ohne Messen im DOM ausrechnen.
+   --tab-count sagt, wie viele Laschen es sind (Voreinstellung: vier). */
 .filter-tabs {
   position: relative;
 }
@@ -736,7 +760,9 @@ select {
   top: 0.25rem;
   bottom: 0.25rem;
   left: 0.25rem;
-  width: calc((100% - 2rem) / 4);
+  width: calc(
+    (100% - (var(--tab-count, 4) - 1) * 0.5rem - 0.5rem) / var(--tab-count, 4)
+  );
   border-radius: 9999px;
   background: var(--color-button1);
   box-shadow:

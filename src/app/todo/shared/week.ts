@@ -10,6 +10,8 @@ export interface WeekDay {
   dayNum: number;
   isToday: boolean;
   isWeekend: boolean;
+  /** Liegt vor heute — trägt die „überfällig"-Kennzeichnung. */
+  isPast: boolean;
 }
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -28,6 +30,45 @@ function addDays(d: Date, n: number): Date {
   return c;
 }
 
+/**
+ * 'YYYY-MM-DD' → lokales Date (Mitternacht).
+ *
+ * Bewusst nicht `new Date(iso)`: das liest reine Datums-Strings als UTC und
+ * verschiebt den Tag in jeder Zeitzone westlich von Greenwich um eins.
+ */
+export function fromISODate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Heute als 'YYYY-MM-DD' (lokal). */
+export function todayISO(): string {
+  return toISODate(new Date());
+}
+
+/** Ein ISO-Datum um n Tage verschieben. Rechnet über Date, also DST-fest. */
+export function shiftISODate(iso: string, days: number): string {
+  return toISODate(addDays(fromISODate(iso), days));
+}
+
+/**
+ * Kalenderwoche nach ISO-8601: Woche 1 ist die mit dem ersten Donnerstag des
+ * Jahres. Deshalb der Sprung auf den Donnerstag — er entscheidet, zu welchem
+ * Jahr eine Woche über den Jahreswechsel hinweg gehört.
+ */
+export function isoWeekNumber(d: Date): number {
+  const thursday = (x: Date) => {
+    const c = new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    c.setDate(c.getDate() + 3 - ((c.getDay() + 6) % 7));
+    return c;
+  };
+  const current = thursday(d);
+  const first = thursday(new Date(current.getFullYear(), 0, 4));
+  const DAY = 86_400_000;
+  // Runden statt Abschneiden: über eine Zeitumstellung hinweg fehlt sonst 1 h.
+  return 1 + Math.round((current.getTime() - first.getTime()) / (7 * DAY));
+}
+
 /** Montag der Woche, in der d liegt (Mo–So). */
 function startOfWeek(d: Date): Date {
   const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -44,13 +85,16 @@ export function buildWeek(offset: number): WeekDay[] {
 
   return Array.from({ length: 7 }, (_, i) => {
     const date = addDays(start, i);
+    const iso = toISODate(date);
     return {
-      iso: toISODate(date),
+      iso,
       date,
       weekdayShort: WEEKDAYS[i],
       dayNum: date.getDate(),
-      isToday: toISODate(date) === todayIso,
+      isToday: iso === todayIso,
       isWeekend: i >= 5,
+      // Zeichenketten-Vergleich reicht: 'YYYY-MM-DD' sortiert wie das Datum.
+      isPast: iso < todayIso,
     };
   });
 }

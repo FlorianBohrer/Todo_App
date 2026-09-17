@@ -29,24 +29,34 @@
         <lucide-icon [img]="ArrowDown" class="h-4 w-4"></lucide-icon>
       </button>
 
-      <!-- Ansicht umschalten: Liste ↔ Woche ↔ Pläne -->
-      <div class="inline-flex rounded-full border border-white/10 p-1 text-sm">
-        <button
-          class="rounded-full px-4 py-1.5 transition"
-          [class]="view() === 'list' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
-          [attr.aria-pressed]="view() === 'list'"
+      <!-- Ansicht umschalten: Liste ↔ Woche ↔ Pläne. Dieselbe gleitende Pille
+           wie bei den Filtern — drei gleich breite Laschen, --tab-count sagt es. -->
+      <div class="filter-tabs flex gap-2 rounded-full border border-white/10 p-1 text-sm"
+        role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="3">
+        <span class="filter-pill" aria-hidden="true"></span>
+
+        <button type="button" role="tab" class="filter-tab flex-1 rounded-full px-4 py-1.5"
+          [class.is-active]="view() === 'list'"
+          [attr.aria-selected]="view() === 'list'"
+          title="List view (1)"
           (click)="setView('list')">List</button>
-        <button
-          class="rounded-full px-4 py-1.5 transition"
-          [class]="view() === 'week' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
-          [attr.aria-pressed]="view() === 'week'"
+        <button type="button" role="tab" class="filter-tab flex-1 rounded-full px-4 py-1.5"
+          [class.is-active]="view() === 'week'"
+          [attr.aria-selected]="view() === 'week'"
+          title="Week view (2)"
           (click)="setView('week')">Week</button>
-        <button
-          class="rounded-full px-4 py-1.5 transition"
-          [class]="view() === 'plans' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
-          [attr.aria-pressed]="view() === 'plans'"
+        <button type="button" role="tab" class="filter-tab flex-1 rounded-full px-4 py-1.5"
+          [class.is-active]="view() === 'plans'"
+          [attr.aria-selected]="view() === 'plans'"
+          title="Plans view (3)"
           (click)="setView('plans')">Plans</button>
       </div>
+
+      <!-- Der Weg zu den Kürzeln, für alle, die „?" nicht raten. -->
+      <button type="button"
+        class="ml-auto hidden h-8 w-8 place-items-center rounded-full border border-white/10 text-sm text-muted transition hover:border-white/30 hover:text-text sm:grid"
+        (click)="shortcuts.toggle()"
+        title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
     </div>
     </div>
 
@@ -67,6 +77,7 @@
     }
 
     <app-categories-overlay></app-categories-overlay>
+    <app-shortcuts-overlay #shortcuts></app-shortcuts-overlay>
   </main>
 } @else {
   <div class="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg2">

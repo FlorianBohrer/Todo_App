@@ -328,15 +328,19 @@
                 @switch (asList(block).variant) {
                   @case ('number') {
                     <ol class="list-decimal space-y-1 pl-5 text-[15px]/[1.7] text-text marker:text-muted">
-                      @for (item of asList(block).items; track $index) {
-                        <li><span [innerHTML]="renderInline(item.text)"></span></li>
+                      @for (item of asList(block).items; track $index; let i = $index) {
+                        <li class="list-item-row">
+                          <span [innerHTML]="renderInline(item.text)"></span>
+                          <ng-container
+                            *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
+                        </li>
                       }
                     </ol>
                   }
                   @case ('todo') {
                     <ul class="space-y-1 text-[15px]/[1.7] text-text">
                       @for (item of asList(block).items; track $index; let i = $index) {
-                        <li class="flex items-start gap-2">
+                        <li class="list-item-row flex items-start gap-2">
                           <button type="button"
                             class="todo-box mt-[5px] grid h-4 w-4 flex-none place-items-center rounded border text-[10px] leading-none"
                             [class]="item.checked
@@ -349,14 +353,20 @@
                             [class.line-through]="item.checked"
                             [class.text-subtle]="item.checked"
                             [innerHTML]="renderInline(item.text)"></span>
+                          <ng-container
+                            *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
                         </li>
                       }
                     </ul>
                   }
                   @default {
                     <ul class="list-disc space-y-1 pl-5 text-[15px]/[1.7] text-text marker:text-muted">
-                      @for (item of asList(block).items; track $index) {
-                        <li><span [innerHTML]="renderInline(item.text)"></span></li>
+                      @for (item of asList(block).items; track $index; let i = $index) {
+                        <li class="list-item-row">
+                          <span [innerHTML]="renderInline(item.text)"></span>
+                          <ng-container
+                            *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
+                        </li>
                       }
                     </ul>
                   }
@@ -495,6 +505,20 @@
           }
         </div>
       }
+    </ng-template>
+
+    <!-- Ein einzelner Listenpunkt lässt sich für sich löschen. Ohne das bliebe
+         nur, die Liste als Text zu öffnen und eine ganze Zeile zu markieren.
+         Zeigt sich beim Überfahren der Zeile; stopPropagation, sonst öffnet der
+         Klick den Textmodus des Blocks. -->
+    <ng-template #itemDeleteTpl let-blockId="blockId" let-index="index">
+      <button type="button"
+        class="list-item-remove ml-1 inline-grid h-5 w-5 flex-none place-items-center rounded text-subtle transition hover:bg-white/10 hover:text-danger"
+        (click)="$event.stopPropagation(); removeListItem(blockId, index)"
+        title="Remove this item"
+        aria-label="Remove this item">
+        <lucide-icon [img]="TrashIcon" class="h-3 w-3"></lucide-icon>
+      </button>
     </ng-template>
 
     <!-- Blöcke anlegen — am Zeigergerät übernehmen „/" und das „+" in der

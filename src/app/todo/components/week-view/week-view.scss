@@ -7,6 +7,22 @@
   cursor: grabbing;
 }
 
+// Die Tages-Pfeile liegen über der Karte. Unsichtbar würden sie trotzdem
+// Klicks schlucken — und damit in der oberen Ecke jedes Ziehen verhindern.
+.week-shift {
+  pointer-events: none;
+}
+.week-card:hover .week-shift,
+.week-shift:focus-within {
+  pointer-events: auto;
+}
+
+// Beim Ziehen stören sie nur.
+.cdk-drag-preview .week-shift,
+.cdk-drop-list-dragging .week-shift {
+  display: none;
+}
+
 // --- CDK Drag & Drop ---
 .cdk-drag-preview {
   box-sizing: border-box;

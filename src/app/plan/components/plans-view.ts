@@ -701,6 +701,28 @@ export class PlansView {
       }),
     );
   }
+  /**
+   * Einen einzelnen Eintrag entfernen — wie in Notion, wo jeder Punkt für sich
+   * steht. Bisher ging das nur, indem man die Liste als Text bearbeitet und
+   * eine ganze Zeile markiert; das ist für „der eine Punkt ist erledigt" zu viel.
+   * War es der letzte Punkt, bleibt keine leere Liste zurück: der Block geht mit.
+   */
+  removeListItem(blockId: string, index: number) {
+    const block = this.findBlock(blockId);
+    if (!block || block.type !== 'list') return;
+
+    if (block.items.length <= 1) {
+      this.deleteBlock(blockId);
+      return;
+    }
+
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) =>
+        x.type !== 'list' ? x : { ...x, items: x.items.filter((_, i) => i !== index) },
+      ),
+    );
+  }
+
   toggleListItem(blockId: string, index: number) {
     this.updateContent((bs) =>
       this.mapById(bs, blockId, (x) =>
@@ -943,6 +965,18 @@ export class PlansView {
   }
 
   // --- Rekursive Helfer: wirken auf jeden Block, egal wie tief in Gruppen ---
+  /** Einen Block im Baum suchen (Sections enthalten wieder Bloecke). */
+  private findBlock(id: string, blocks = this.selected()?.content ?? []): PlanBlock | null {
+    for (const block of blocks) {
+      if (block.id === id) return block;
+      if (block.type === 'group') {
+        const hit = this.findBlock(id, block.blocks);
+        if (hit) return hit;
+      }
+    }
+    return null;
+  }
+
   private mapById(
     blocks: PlanBlock[],
     id: string,
