@@ -1,6 +1,13 @@
-import { Component, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TodoService } from '../../services/todo';
+import { isTypingTarget } from '../../shared/keyboard';
 import { Plus,LucideAngularModule } from "lucide-angular";
 
 @Component({
@@ -13,7 +20,20 @@ export class TodoAdd {
   readonly Plus = Plus;
 
   newTitle = '';
-  
+
+  private readonly field = viewChild<ElementRef<HTMLTextAreaElement>>('newTodoField');
+
+  /** „n" für eine neue Aufgabe, ohne zur Maus zu greifen. */
+  @HostListener('document:keydown', ['$event'])
+  onNewTodoShortcut(event: KeyboardEvent): void {
+    if (event.key !== 'n' && event.key !== 'N') return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isTypingTarget(event.target)) return;
+
+    event.preventDefault();
+    this.field()?.nativeElement.focus();
+  }
+
   addTodo() {
       const titles = this.parseTitles(this.newTitle);
       if (titles.length === 0) return;
