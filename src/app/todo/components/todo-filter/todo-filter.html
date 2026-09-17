@@ -12,6 +12,11 @@
       <button type="button"
         class="grid h-7 w-7 flex-none place-items-center rounded-md text-muted transition hover:bg-white/5 hover:text-text"
         (click)="clearSearch(); todoSearch.value = ''" aria-label="Clear search">✕</button>
+    } @else {
+      <!-- Ein Kürzel, das niemand kennt, nützt nichts — also zeigt das Feld es
+           selbst. Am Handy ausgeblendet, dort gibt es keine Taste dafür. -->
+      <kbd class="hidden flex-none rounded border border-white/15 px-1.5 py-0.5 font-mono text-[11px] text-subtle sm:block"
+        aria-hidden="true">/</kbd>
     }
   </div>
 </div>

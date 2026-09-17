@@ -264,21 +264,31 @@
   /* ================================================================
      EINZIGE Token-Quelle — Modern Dark (Indigo, entsättigt)
      Flächen steigen über Helligkeit auf, nicht über Rahmen.
+
+     Die Rampe ist in L* (perzeptueller Helligkeit) gesetzt, nicht nach
+     Kontrastverhältnis: zwischen zwei dunklen Flächen staucht die
+     WCAG-Formel alles auf ~1.1 zusammen und taugt dort nicht als Maß.
+     Vorher lagen die unteren, meistgenutzten Stufen nur +2.0 und +2.4 L*
+     auseinander — daher der matschige Eindruck. Jetzt +3.9 / +3.0 / +6.2.
+
+     Die Textfarben sind gegen die hellste Fläche gelöst, auf der sie
+     stehen: subtle kam auf Panels auf 2.78:1 und lag damit unter AA,
+     obwohl es Platzhalter und Hinweise trägt. Jetzt 4.99:1.
      ================================================================ */
   @theme {
-    /* Surfaces – Elevation-Rampe (dunkel → hell) */
-    --color-bg:      #0A0E1A;   /* Seite, tiefster Grund */
-    --color-bg2:     #121829;   /* Cards / Todo-Items */
-    --color-bg3:     #0E1322;
-    --color-panel:   #1B2236;   /* für bg-panel / hover:bg-panel */
-    --color-panel1:  #1B2236;   /* angehobene Fläche */
-    --color-panel2:  #232C44;   /* aktive / oberste Fläche */
-    --color-border:  #283150;   /* Hairline-Rahmen */
+    /* Surfaces – Elevation-Rampe (dunkel → hell), L*: 4.3 · 8.1 · 11.1 · 17.3 · 23.6 */
+    --color-bg:      #0B0F16;   /* Seite, tiefster Grund */
+    --color-bg3:     #121822;
+    --color-bg2:     #171E2A;   /* Cards / Todo-Items */
+    --color-panel:   #222B3A;   /* für bg-panel / hover:bg-panel */
+    --color-panel1:  #222B3A;   /* angehobene Fläche */
+    --color-panel2:  #2E3949;   /* aktive / oberste Fläche */
+    --color-border:  #313C4E;   /* Hairline-Rahmen */
 
-    /* Text */
-    --color-text:    #EAEEF9;   /* primär, fast weiß */
-    --color-muted:   #8C97B4;   /* sekundär, Labels */
-    --color-subtle:  #5E6680;   /* Placeholder, Disabled */
+    /* Text – AA auf jeder Fläche, auf der die Farbe vorkommt */
+    --color-text:    #ECF0F6;   /* primär, fast weiß */
+    --color-muted:   #A8B4C8;   /* sekundär, Labels — 6.80:1 auf panel */
+    --color-subtle:  #8C9AB0;   /* Placeholder, Hinweise — 4.99:1 auf panel */
 
     /* Akzente */
     --color-highlight1:  #6366F1;

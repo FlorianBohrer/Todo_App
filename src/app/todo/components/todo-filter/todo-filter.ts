@@ -1,6 +1,14 @@
-import { Component, computed, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { LucideAngularModule, Search } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
+import { isTypingTarget } from '../../shared/keyboard';
 
 @Component({
   selector: 'app-todo-filter',
@@ -12,6 +20,8 @@ export class TodoFilter {
   protected readonly filter = this.todoService.filter;
   protected readonly searchTerm = this.todoService.searchTerm;
   protected readonly SearchIcon = Search;
+
+  private readonly searchField = viewChild<ElementRef<HTMLInputElement>>('todoSearch');
 
   /**
    * Position der aktiven Lasche. Treibt die gleitende Pille im Template: vier
@@ -29,6 +39,17 @@ export class TodoFilter {
         return 3;
     }
   });
+
+  /** „/" springt in die Suche — die Taste, die im Web überall Suchfelder öffnet. */
+  @HostListener('document:keydown', ['$event'])
+  onSearchShortcut(event: KeyboardEvent): void {
+    if (event.key !== '/') return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isTypingTarget(event.target)) return;
+
+    event.preventDefault();
+    this.searchField()?.nativeElement.focus();
+  }
 
   clearSearch(): void { this.searchTerm.set(''); }
 }
