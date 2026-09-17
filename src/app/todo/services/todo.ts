@@ -140,8 +140,15 @@ export class TodoService {
   private readonly clerk = inject(ClerkService);
   private readonly toast = inject(ToastService);
 
-  /** true während des initialen Ladens nach dem Login. */
-  readonly loading = signal(false);
+  /**
+   * true während des initialen Ladens nach dem Login.
+   *
+   * Startet bewusst auf true: zwischen Appstart und der ersten Clerk-Antwort
+   * läge sonst ein Moment mit leerer Liste — also der Satz „No todos yet",
+   * bevor überhaupt jemand gefragt hat. Die Liste erscheint erst mit einem
+   * angemeldeten Nutzer, dieser Zustand kann also nicht hängen bleiben.
+   */
+  readonly loading = signal(true);
 
   constructor() {
     // Ticker starten/stoppen, sobald sich die Timer-Lage ändert.

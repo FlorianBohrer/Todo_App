@@ -1,6 +1,18 @@
 
 <section class="mt-4 rounded-2xl p-3">
-  @if (stats().total === 0) {
+  @if (loading()) {
+    <!-- „No todos yet" waehrend des Ladens ist schlicht falsch — und die
+         Aussage, die am meisten weh tut, wenn sie sich gleich widerruft. -->
+    <ul role="list" class="space-y-2" aria-busy="true" aria-label="Loading todos">
+      @for (row of skeletonRows; track row) {
+        <li class="skeleton-row flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <span class="h-8 w-8 flex-none rounded-lg bg-white/10"></span>
+          <span class="h-4 flex-1 rounded bg-white/10"></span>
+          <span class="h-4 w-10 flex-none rounded bg-white/10"></span>
+        </li>
+      }
+    </ul>
+  } @else if (stats().total === 0) {
     <p class="text-text">No todos yet, add one above</p>
   } @else if (todos().length === 0) {
     <p class="text-text">
@@ -14,9 +26,12 @@
   } @else {
     
 
+    <!-- Die Höhe hing an festen 20rem: auf jedem Bildschirm dieselben vier
+         Zeilen, der Rest im Kasten versteckt. Jetzt richtet sie sich nach dem
+         Fenster und bleibt trotzdem begrenzt, damit Kopf und Statistik stehen. -->
     <ul
       role="list"
-      class="space-y-2 max-h-80 overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
+      class="space-y-2 max-h-[min(70vh,44rem)] overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
       cdkDropList
       (cdkDropListDropped)="drop($event)">
       @for (todo of todos(); track todo.id) {
@@ -142,11 +157,70 @@
               (click)="toggleExpanded(todo.id, todoText)"
               [attr.aria-expanded]="isExpanded(todo.id)"
               [attr.aria-label]="isExpanded(todo.id)
-                ? 'Todo einklappen'
-                : 'Todo aufklappen, ganzen Text lesen'">
+                ? 'Collapse todo'
+                : 'Expand todo to read the full text'">
               <lucide-icon [img]="ExpandIcon" class="h-4 w-4"></lucide-icon>
             </button>
           }
+
+          <!-- Termin: geplant -> Chip mit dem Tag, sonst -> Kalender-Knopf.
+               Beide öffnen dasselbe Menü, damit Setzen und Ändern ein Weg sind. -->
+          <button
+            type="button"
+            cdkOverlayOrigin #scheduleTrigger="cdkOverlayOrigin"
+            class="hidden flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs
+                   transition focus:outline-none focus:ring-1 focus:ring-zinc-100 sm:flex"
+            [class]="todo.scheduledDate === null
+              ? 'border-transparent px-1.5 text-muted/60 hover:border-indigo-500/60 hover:text-indigo-300'
+              : (isLate(todo)
+                  ? 'border-amber-500/60 text-amber-300 hover:border-amber-400'
+                  : 'border-indigo-500/50 text-indigo-300 hover:border-indigo-400')"
+            (click)="toggleScheduleMenu(todo.id)"
+            aria-haspopup="listbox"
+            [attr.aria-expanded]="openScheduleId() === todo.id"
+            [attr.aria-label]="todo.scheduledDate === null
+              ? 'Schedule this todo'
+              : 'Scheduled for ' + scheduleText(todo) + ', change'">
+            <lucide-icon [img]="ScheduleIcon" class="h-3.5 w-3.5"></lucide-icon>
+            @if (todo.scheduledDate !== null) {
+              <span>{{ scheduleText(todo) }}</span>
+            }
+          </button>
+
+          <ng-template
+            cdkConnectedOverlay
+            [cdkConnectedOverlayOrigin]="scheduleTrigger"
+            [cdkConnectedOverlayOpen]="openScheduleId() === todo.id"
+            [cdkConnectedOverlayPositions]="overlayPositions"
+            [cdkConnectedOverlayHasBackdrop]="true"
+            cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+            (backdropClick)="closeScheduleMenu()"
+            (overlayKeydown)="$event.key === 'Escape' && closeScheduleMenu()">
+            <div
+              role="listbox"
+              class="w-44 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+              @for (choice of scheduleChoices(); track choice.key) {
+                <button
+                  type="button" role="option"
+                  [attr.aria-selected]="todo.scheduledDate === choice.iso"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  (click)="schedule(todo.id, choice.iso)">
+                  <span class="flex-1">{{ choice.label }}</span>
+                  @if (todo.scheduledDate === choice.iso) {
+                    <span class="text-emerald-400">✓</span>
+                  }
+                </button>
+              }
+              @if (todo.scheduledDate !== null) {
+                <button
+                  type="button" role="option" [attr.aria-selected]="false"
+                  class="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
+                  (click)="schedule(todo.id, null)">
+                  Clear date
+                </button>
+              }
+            </div>
+          </ng-template>
 
           <!-- Zeitblock: läuft -> Restzeit + Stopp, sonst -> Presets wählen -->
           @if (hasTimer(todo)) {
@@ -163,7 +237,7 @@
                 ? 'Time block finished, click to hide'
                 : 'Cancel time block'">
               <lucide-icon [img]="TimerIcon" class="h-3.5 w-3.5"></lucide-icon>
-              <span>{{ isTimerDone(todo) ? 'fertig' : remainingLabel(todo) }}</span>
+              <span>{{ isTimerDone(todo) ? 'Done' : remainingLabel(todo) }}</span>
             </button>
           } @else {
             <button
@@ -328,8 +402,34 @@
                 class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
                 (click)="startEditing(todo, todoText); closeOptionsMenu()">
                 <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
-                <span>Text bearbeiten</span>
+                <span>Edit text</span>
               </button>
+
+              <!-- Termin, mobil: dieselben Angebote als Reihe -->
+              <div class="border-t border-slate-700 px-3 pb-2.5 pt-2.5">
+                <div class="mb-1.5 flex items-center gap-2.5 text-xs text-zinc-400">
+                  <lucide-icon [img]="ScheduleIcon" class="h-3.5 w-3.5"></lucide-icon>
+                  <span>Plan for</span>
+                  @if (todo.scheduledDate !== null) {
+                    <button type="button"
+                      class="ml-auto text-xs text-zinc-400 underline transition hover:text-zinc-200"
+                      (click)="schedule(todo.id, null); closeOptionsMenu()">Clear</button>
+                  }
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (choice of scheduleChoices(); track choice.key) {
+                    <button
+                      type="button"
+                      class="rounded-full border px-2.5 py-1 text-xs transition"
+                      [class]="todo.scheduledDate === choice.iso
+                        ? 'border-indigo-400 text-indigo-300'
+                        : 'border-slate-600 text-zinc-200 hover:border-indigo-400 hover:text-indigo-300'"
+                      (click)="schedule(todo.id, choice.iso); closeOptionsMenu()">
+                      {{ choice.label }}
+                    </button>
+                  }
+                </div>
+              </div>
 
 <!-- Folders: collapsible and scrollable. Multi-select keeps the menu open. -->
 <div class="border-t border-slate-700">
