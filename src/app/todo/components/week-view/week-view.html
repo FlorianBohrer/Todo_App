@@ -1,62 +1,129 @@
 <section class="mx-auto w-full max-w-6xl px-1">
 
-  <!-- Wochen-Navigation -->
-  <div class="mb-4 flex items-center justify-between">
-    <div class="flex items-center gap-2">
+  <!-- Wochen-Kopf: wo bin ich, wie steht die Woche, wie komme ich zurück -->
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex min-w-0 items-center gap-2">
       <button
         type="button"
         class="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-muted transition hover:border-white/30 hover:text-text"
-        (click)="prevWeek()" aria-label="Previous week">
+        (click)="prevWeek()" title="Previous week (←)" aria-label="Previous week">
         <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
       </button>
       <button
         type="button"
         class="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-muted transition hover:border-white/30 hover:text-text"
-        (click)="nextWeek()" aria-label="Next week">
+        (click)="nextWeek()" title="Next week (→)" aria-label="Next week">
         <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
       </button>
-      <span class="ml-1 text-lg font-medium text-text">{{ rangeLabel() }}</span>
+
+      <div class="ml-1 min-w-0">
+        <span class="block truncate text-lg font-medium leading-tight text-text">{{ rangeLabel() }}</span>
+        <span class="block text-xs leading-tight text-subtle">Week {{ weekNumber() }}</span>
+      </div>
     </div>
 
-    @if (!isCurrentWeek()) {
+    <div class="flex items-center gap-3">
+      <!-- Wochenbilanz: dieselbe Sprache wie die Statistik in der Liste -->
+      @if (weekProgress().total > 0) {
+        <div class="hidden items-center gap-2 sm:flex" [attr.aria-label]="weekProgress().done + ' of ' + weekProgress().total + ' done this week'">
+          <div class="h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
+            <div class="progress-fill h-full rounded-full bg-emerald-400/80"
+              [style.width.%]="weekProgress().percent"></div>
+          </div>
+          <span class="tabular-nums text-xs text-muted">
+            {{ weekProgress().done }}/{{ weekProgress().total }}
+          </span>
+        </div>
+      }
+
+      @if (!isCurrentWeek()) {
+        <button
+          type="button"
+          class="rounded-full border border-indigo-500/60 px-3 py-1.5 text-sm text-indigo-300 transition hover:border-indigo-400 hover:text-indigo-200"
+          (click)="goToday()" title="Jump to the current week (T)">
+          Today
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Liegengebliebenes. Es still im Vergangenen versacken zu lassen ist die
+       häufigste Art, wie ein Wochenplan unbrauchbar wird. -->
+  @if (overdue().length > 0) {
+    <div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+      <lucide-icon [img]="OverdueIcon" class="h-4 w-4 flex-none text-amber-300" aria-hidden="true"></lucide-icon>
+      <span class="text-sm text-amber-100">
+        {{ overdue().length }} {{ overdue().length === 1 ? 'task is' : 'tasks are' }} past their day
+      </span>
       <button
         type="button"
-        class="rounded-full border border-indigo-500/60 px-3 py-1.5 text-sm text-indigo-300 transition hover:border-indigo-400"
-        (click)="goToday()">
-        Today
+        class="ml-auto rounded-full border border-amber-400/50 px-3 py-1 text-xs text-amber-100 transition hover:bg-amber-400/15"
+        (click)="catchUp()">
+        Move to today
       </button>
-    }
-  </div>
+    </div>
+  }
 
   <!-- Alle Drop-Listen (7 Tage + Backlog) in EINER Gruppe, sonst kein Ziehen dazwischen -->
   <div cdkDropListGroup>
 
     <!-- 7 Tage: mobil gestapelt; ab sm sieben Spalten, die bei zu wenig Platz
-         horizontal scrollen statt unleserlich schmal zu werden. -->
-    <div class="overflow-x-auto pb-1">
-    <div class="grid grid-cols-1 gap-2 sm:grid-cols-7 sm:min-w-[900px]">
-      @for (day of week(); track day.iso) {
+         horizontal scrollen statt unleserlich schmal zu werden. Der Streifen
+         rückt beim Öffnen von selbst auf den heutigen Tag. -->
+    <div #strip class="overflow-x-auto pb-1">
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-7 sm:min-w-[980px]">
+      @for (day of days(); track day.iso) {
         <div
-          class="flex flex-col rounded-xl border p-2 transition"
-          [class]="day.isToday ? 'border-indigo-500/70 bg-indigo-500/10' : 'border-white/5 bg-bg2'">
+          class="week-day group/day flex flex-col rounded-xl border p-2 transition"
+          [attr.data-today]="day.isToday ? 'true' : null"
+          [class]="day.isToday
+            ? 'border-indigo-500/70 bg-indigo-500/10'
+            : (day.isWeekend ? 'border-white/5 bg-bg3' : 'border-white/5 bg-bg2')"
+          [class.opacity-75]="day.isPast && !day.isToday">
 
           <!-- Tageskopf -->
-          <div class="mb-1 flex items-baseline justify-between px-1">
+          <div class="mb-1 flex items-baseline gap-1 px-1">
             <span class="text-xs font-medium uppercase tracking-wide"
-              [class]="day.isToday ? 'text-indigo-300' : (day.isWeekend ? 'text-muted/60' : 'text-muted')">
+              [class]="day.isToday ? 'text-indigo-300' : (day.isWeekend ? 'text-subtle' : 'text-muted')">
               {{ day.weekdayShort }}
             </span>
-            <span class="text-lg font-semibold"
-              [class]="day.isToday ? 'text-indigo-200' : 'text-text'">
+
+            @if (day.total > 0) {
+              <span class="tabular-nums text-[11px] leading-none"
+                [class]="day.overdue > 0 ? 'text-amber-300' : 'text-subtle'">
+                {{ day.done }}/{{ day.total }}
+              </span>
+            }
+
+            <!-- Was der Tag nicht geschafft hat, auf morgen schieben -->
+            @if (day.total > day.done) {
+              <button
+                type="button"
+                class="ml-auto grid h-5 w-5 flex-none place-items-center rounded text-subtle opacity-0 transition hover:bg-white/10 hover:text-text focus-visible:opacity-100 group-hover/day:opacity-100"
+                (click)="rollOver(day)"
+                [title]="'Move ' + (day.total - day.done) + ' unfinished to the next day'"
+                [attr.aria-label]="'Move unfinished tasks from ' + day.weekdayShort + ' to the next day'">
+                <lucide-icon [img]="RollOverIcon" class="h-3.5 w-3.5"></lucide-icon>
+              </button>
+            }
+
+            <span class="text-lg font-semibold leading-none"
+              [class]="day.isToday ? 'text-indigo-200' : 'text-text'"
+              [class.ml-auto]="day.total === day.done">
               {{ day.dayNum }}
             </span>
           </div>
 
-          <!-- Signatur: Mini-Fortschritt pro Tag (gleiche Sprache wie die Statistik) -->
-          <div class="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-white/10">
-            <div class="h-full rounded-full bg-emerald-400/80 transition-all duration-300"
-              [style.width.%]="dayProgress(day.iso).percent"></div>
-          </div>
+          <!-- Signatur: Mini-Fortschritt pro Tag. Leere Tage bekommen keinen
+               leeren Balken — sonst zeichnet die Woche sieben graue Striche. -->
+          @if (day.total > 0) {
+            <div class="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-white/10">
+              <div class="progress-fill h-full rounded-full bg-emerald-400/80"
+                [style.width.%]="day.percent"></div>
+            </div>
+          } @else {
+            <div class="mb-2 h-1"></div>
+          }
 
           <!-- Todos des Tages: Drop-Ziel -->
           <div
@@ -65,10 +132,10 @@
             [cdkDropListData]="day.iso"
             (cdkDropListDropped)="drop($event)">
 
-            @for (todo of todosForDay(day.iso); track todo.id) {
+            @for (todo of day.todos; track todo.id) {
               <div
                 cdkDrag [cdkDragData]="todo"
-                class="week-card group flex items-start gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
+                class="week-card group relative flex items-start gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
                 [class]="borderClass(todo)"
                 [class.opacity-60]="todo.completed">
                 <button
@@ -80,6 +147,22 @@
                 <span class="min-w-0 flex-1 break-words leading-snug" [class.line-through]="todo.completed">
                   {{ displayTitle(todo.title) }}
                 </span>
+
+                <!-- Einen Tag vor oder zurück, ohne zu ziehen. Auf schmalen
+                     Spalten wäre dauerhaft Platz dafür zu teuer, deshalb legen
+                     sie sich beim Zeigen (oder Antippen der Tastatur) darüber. -->
+                <span class="week-shift absolute right-1 top-1 flex gap-0.5 rounded-md bg-panel2/95 p-0.5 opacity-0 shadow-sm transition focus-within:opacity-100 group-hover:opacity-100">
+                  <button type="button"
+                    class="grid h-5 w-5 place-items-center rounded text-subtle transition hover:bg-white/10 hover:text-text"
+                    (click)="shiftTodo(todo, -1)" aria-label="Move one day earlier" title="One day earlier">
+                    <lucide-icon [img]="PrevIcon" class="h-3.5 w-3.5"></lucide-icon>
+                  </button>
+                  <button type="button"
+                    class="grid h-5 w-5 place-items-center rounded text-subtle transition hover:bg-white/10 hover:text-text"
+                    (click)="shiftTodo(todo, 1)" aria-label="Move one day later" title="One day later">
+                    <lucide-icon [img]="NextIcon" class="h-3.5 w-3.5"></lucide-icon>
+                  </button>
+                </span>
               </div>
             }
 
@@ -90,6 +173,7 @@
               placeholder="+ Add"
               class="mt-auto w-full rounded-md bg-transparent px-2 py-1 text-sm text-text placeholder:text-muted/50 focus:bg-white/5 focus:outline-none"
               (keydown.enter)="quickAdd(day.iso, q)"
+              (keydown.escape)="q.value = ''; q.blur()"
               [attr.aria-label]="'Add todo for ' + day.weekdayShort + ' ' + day.dayNum" />
           </div>
         </div>

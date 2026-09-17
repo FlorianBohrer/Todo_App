@@ -413,7 +413,32 @@
   transform: translateX(2px);
 }
 
+// ---- Listenpunkte einzeln entfernen ----
+// Der Knopf gehoert zur Zeile, nicht zur Ansicht: dauerhaft sichtbar wuerde er
+// jede Liste in eine Werkzeugleiste verwandeln.
+.list-item-remove {
+  opacity: 0;
+  vertical-align: middle;
+  transition: opacity 140ms ease-out;
+}
+
+.list-item-row:hover .list-item-remove,
+.list-item-remove:focus-visible {
+  opacity: 1;
+}
+
+// Ohne Zeigergeraet gibt es kein Ueberfahren — dort steht er leise da.
+@media (hover: none) {
+  .list-item-remove {
+    opacity: 0.5;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .list-item-remove {
+    transition: none;
+  }
+
   .block-row,
   .section-block,
   .block-row hr,

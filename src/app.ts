@@ -1,5 +1,5 @@
 // src/app.ts
-import { Component, inject, computed, signal } from '@angular/core';
+import { Component, HostListener, inject, computed, signal } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { firstValueFrom, take } from 'rxjs';
 import { ClerkService } from 'ngx-clerk';
@@ -18,6 +18,9 @@ import { DevicePairing } from './app/todo/components/device-pairing/device-pairi
 import { LabelService } from './app/todo/services/label.service';
 import { TodoService } from './app/todo/services/todo';
 import { ToastContainer } from './app/shared/toast-container';
+import { ShortcutsOverlay } from './app/shared/shortcuts-overlay';
+import { isTypingTarget } from './app/todo/shared/keyboard';
+import type { View } from './app/todo/services/todo';
 
 @Component({
   selector: 'app-root',
@@ -36,6 +39,7 @@ import { ToastContainer } from './app/shared/toast-container';
     DevicePairing,
     LucideAngularModule,
     ToastContainer,
+    ShortcutsOverlay,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -48,8 +52,31 @@ export class App {
 
   /** Aktive Ansicht: Liste, Woche oder Pläne. */
   protected readonly view = this.todoService.view;
-  setView(view: 'list' | 'week' | 'plans') {
+
+  private static readonly VIEWS: View[] = ['list', 'week', 'plans'];
+
+  /** Treibt die gleitende Pille im Umschalter — drei gleich breite Laschen. */
+  protected readonly viewIndex = computed(() => App.VIEWS.indexOf(this.view()));
+
+  setView(view: View) {
     this.todoService.view.set(view);
+  }
+
+  /**
+   * 1/2/3 wechseln die Ansicht. Wer zwischen Liste, Woche und Plänen hin- und
+   * herspringt, greift sonst jedes Mal zur Maus; die Ziffern stehen im
+   * „?"-Blatt und als Tooltip an den Laschen.
+   */
+  @HostListener('document:keydown', ['$event'])
+  onViewShortcut(event: KeyboardEvent): void {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isTypingTarget(event.target)) return;
+
+    const index = ['1', '2', '3'].indexOf(event.key);
+    if (index === -1) return;
+
+    event.preventDefault();
+    this.setView(App.VIEWS[index]);
   }
 
   /** true, wenn das Clerk-Script nicht geladen werden konnte (Netzwerk/Limit). */

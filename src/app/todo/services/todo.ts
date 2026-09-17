@@ -42,6 +42,21 @@ interface TodoListResponse {
 // Schlüssel der alten, rein lokalen Speicherung (vor der Server-Anbindung).
 const LEGACY_TODO_KEY = 'todos';
 
+/** Zuletzt gewählte Ansicht — überlebt den Reload. */
+const VIEW_KEY = 'todo.view';
+
+export type View = 'list' | 'week' | 'plans';
+
+function storedView(): View {
+  try {
+    const value = localStorage.getItem(VIEW_KEY);
+    return value === 'week' || value === 'plans' ? value : 'list';
+  } catch {
+    // Privater Modus / blockierte Site-Daten: dann eben die Standardansicht.
+    return 'list';
+  }
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -51,6 +66,13 @@ export class TodoService {
   private readonly apiUrl = `${environment.apiUrl}/todo`;
 
   private readonly todos = signal<Todo[]>([]);
+
+  /**
+   * Alle Todos, ungefiltert. Die Wochenansicht sortiert sie selbst in Tage —
+   * einmal durchlaufen ist billiger, als sieben Mal die ganze Liste zu filtern.
+   */
+  readonly allTodos = this.todos.asReadonly();
+
   readonly filter = signal<Filter>('all');
    readonly searchTerm = signal('');
 
@@ -126,6 +148,17 @@ export class TodoService {
     effect(() => {
       this.todos();
       this.ensureTicking();
+    });
+
+    // Die Ansicht merken. Wer in der Woche plant, will nach einem Reload nicht
+    // wieder in der Liste landen.
+    effect(() => {
+      const view = this.view();
+      try {
+        localStorage.setItem(VIEW_KEY, view);
+      } catch {
+        /* Speichern ist ein Komfort, kein Muss. */
+      }
     });
 
     // Todos erst laden, wenn ein Nutzer eingeloggt ist. Bei logout/userwechsel
@@ -325,8 +358,13 @@ export class TodoService {
 }
 
   // ---- Wochenansicht ----
-  /** Liste vs. Woche. */
-  readonly view = signal<'list' | 'week' | 'plans'>('list');
+  /** Liste vs. Woche vs. Pläne. Startet dort, wo man zuletzt war. */
+  readonly view = signal<View>(storedView());
+
+  /** Mehrere Todos auf denselben Tag umplanen. */
+  rescheduleAll(ids: string[], scheduledDate: string | null) {
+    for (const id of ids) this.scheduleTodo(id, scheduledDate);
+  }
 
   /** Todo einem Tag zuordnen ('YYYY-MM-DD') oder in den Backlog zurück (null). */
   scheduleTodo(id: string, scheduledDate: string | null) {

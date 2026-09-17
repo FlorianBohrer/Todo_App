@@ -1,0 +1,43 @@
+@if (open()) {
+  <div
+    class="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
+    (click)="close()">
+    <!-- Klicks im Blatt sollen es nicht schließen -->
+    <div
+      class="sheet-in w-full max-w-lg rounded-2xl border border-white/10 bg-panel1 p-5 shadow-2xl"
+      role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"
+      (click)="$event.stopPropagation()">
+
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-base font-medium text-text">Keyboard shortcuts</h2>
+        <button type="button"
+          class="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-white/5 hover:text-text"
+          (click)="close()" aria-label="Close">✕</button>
+      </div>
+
+      <div class="grid gap-5 sm:grid-cols-2">
+        @for (group of groups; track group.title) {
+          <section>
+            <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">{{ group.title }}</h3>
+            <ul class="space-y-1.5">
+              @for (item of group.items; track item.description) {
+                <li class="flex items-baseline justify-between gap-3">
+                  <span class="text-sm text-muted">{{ item.description }}</span>
+                  <span class="flex flex-none gap-1">
+                    @for (key of item.keys; track key) {
+                      <kbd class="rounded border border-white/15 bg-bg3 px-1.5 py-0.5 font-mono text-[11px] text-text">{{ key }}</kbd>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </div>
+
+      <p class="mt-5 text-xs text-subtle">
+        Shortcuts stay out of the way while you type — they only fire outside input fields.
+      </p>
+    </div>
+  </div>
+}
