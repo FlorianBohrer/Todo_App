@@ -285,6 +285,15 @@
     --color-panel2:  #2E3949;   /* aktive / oberste Fläche */
     --color-border:  #313C4E;   /* Hairline-Rahmen */
 
+    /* Overlay-Stufen. Vorher lagen 16 verschiedene Weiß-Alphawerte im Markup
+       (white/[0.01] bis white/70), jeder einzeln nach Augenmaß gewählt — und
+       das neben der Rampe darüber, die dieselbe Frage schon beantwortet.
+       Vier benannte Schritte: zwei für Linien, zwei für Flächen. */
+    --color-line:        rgb(255 255 255 / 0.10);  /* Hairline auf dunklem Grund */
+    --color-line-strong: rgb(255 255 255 / 0.22);  /* dieselbe Linie im Hover */
+    --color-fill:        rgb(255 255 255 / 0.05);  /* Hover-Fläche */
+    --color-fill-strong: rgb(255 255 255 / 0.10);  /* gedrückt / aktiv */
+
     /* Text – AA auf jeder Fläche, auf der die Farbe vorkommt */
     --color-text:    #ECF0F6;   /* primär, fast weiß */
     --color-muted:   #A8B4C8;   /* sekundär, Labels — 6.80:1 auf panel */
@@ -307,15 +316,18 @@
     --color-ok:       #36D399;
 
     --gradient-brand: linear-gradient(180deg, #6366F1, #4F46E5);
+
+    /* Zwei Schriftgrade, die als Einzelwerte im Markup standen (text-[11px],
+       text-[15px]). Als Stufe benannt sind sie eine Entscheidung statt zehn. */
+    --text-2xs:   0.6875rem;  /* 11px — Metadaten, Zähler */
+    --text-2xs--line-height: 1.45;
+    --text-prose: 0.9375rem;  /* 15px — Fließtext im Editor */
+    --text-prose--line-height: 1.7;
   }
 
   :root { color-scheme: dark; }
 
   :root {
-    --radius-sm: 0.5rem;     /* Buttons, Chips, Inputs */
-    --radius:    0.875rem;   /* Cards */
-    --radius-lg: 1.25rem;    /* große Container */
-
     /* Einschwingen — schnell los, sanft ankommen.
        War nie definiert: `transition: width 420ms var(--spring)` ist damit als
        ganze Deklaration ungültig, die Übergänge fielen also komplett aus statt
@@ -366,15 +378,9 @@
     height: 100%;
   }
 
-   .container-page { @apply mx-auto max-w-6xl px-4 sm:px-6 lg:px-8; }
- 
-   .card {
-    border-radius: calc(var(--radius) + 0.8rem);
-    @apply border border-white/5 shadow;
-  }
-  .card-body   { @apply p-4 md:p-6; }
-  .card-title  { @apply font-semibold; }
-  .card-subtle { @apply text-sm text-muted; }
+   /* .card/.card-body/.card-title/.card-subtle/.container-page standen hier
+      und wurden nirgends benutzt — samt der --radius-Variablen, die nur sie
+      gefuettert haben. Weg damit; Karten tragen ihre Radien im Markup. */
 
   /* ---- Buttons ---- */
   .btn {
@@ -409,16 +415,10 @@
 
   /* ---- Inputs ---- */
   .input {
-    @apply rounded-lg bg-bg2 px-3 py-2 text-text ring-1 ring-white/10
+    @apply rounded-lg bg-bg2 px-3 py-2 text-text ring-1 ring-line
            placeholder:text-muted
            focus:outline-none focus:ring-2 focus:ring-indigo-500 transition;
   }
-
-  lucide-icon svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
 
   .chip {
     @apply inline-flex items-center gap-1 rounded-full bg-panel1 px-3 py-1
@@ -692,6 +692,36 @@ select {
     background-color 140ms ease-out,
     border-color 140ms ease-out,
     box-shadow 160ms var(--ease-out);
+}
+
+/* ---- Popover: eine Flaeche fuer alle Menues ----
+   Vorher vier Varianten mit drei Breiten, drei davon auf roher slate-Palette
+   (bg-slate-800 = #1E293B) statt auf der Elevation-Rampe. Das liegt zwischen
+   bg2 und panel1, hat aber einen anderen Farbton — die Menues waren sichtbar
+   aus anderem Material als die App darunter. Jetzt eine Definition. */
+.popover {
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-panel1);
+  padding-block: 0.25rem;
+  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.65);
+}
+
+/* Nur Geometrie und Hover. Schriftgrad und Farbe bleiben bewusst im Markup:
+   diese Regeln stehen ausserhalb von @layer und wuerden Tailwind-Utilities
+   sonst schlagen — ein text-muted am Element haette keine Wirkung mehr. */
+.popover-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.popover-item:hover {
+  background: var(--color-fill);
 }
 
 /* Fortschritt laeuft weich auf den neuen Stand, statt zu springen. */

@@ -32,11 +32,11 @@
 
   <!-- Der Blur spannt über die volle Breite: vorher endete er bei max-w-3xl,
        sodass in Woche und Plänen Inhalt unblurred daneben vorbeizog. -->
-  <div class="sticky top-0 z-10 mt-6 mb-6 w-full border-b border-white/5 bg-bg2/80 backdrop-blur-md">
+  <div class="sticky top-0 z-10 mt-6 mb-6 w-full border-b border-line bg-bg2/80 backdrop-blur-md">
     <div class="mx-auto w-full max-w-3xl px-5 py-2.5">
       <div class="flex flex-wrap items-center gap-2">
         <button
-          class="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 px-5 text-sm text-muted transition hover:border-white/30 hover:text-text"
+          class="inline-flex h-10 items-center gap-2 rounded-full border border-line px-5 text-sm text-muted transition hover:border-line-strong hover:text-text"
           (click)="openCategories()"
           aria-label="Open categories">
           <lucide-icon [img]="FolderDownIcon" class="h-4 w-4"></lucide-icon>
@@ -48,7 +48,7 @@
              wie bei den Filtern — drei gleich breite Laschen, --tab-count sagt es.
              Gleiche Höhe wie der Folders-Knopf, damit die Leiste eine Linie hat;
              Symbole, weil man drei Ansichten am Bild schneller trifft als am Wort. -->
-        <div class="filter-tabs flex h-10 gap-2 rounded-full border border-white/10 bg-bg3/60 p-1 text-sm"
+        <div class="filter-tabs flex h-10 gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm"
           role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="3">
           <span class="filter-pill" aria-hidden="true"></span>
 
@@ -83,7 +83,7 @@
 
         <!-- Der Weg zu den Kürzeln, für alle, die „?" nicht raten. -->
         <button type="button"
-          class="ml-auto hidden h-10 w-10 place-items-center rounded-full border border-white/10 text-sm text-muted transition hover:border-white/30 hover:text-text sm:grid"
+          class="ml-auto hidden h-10 w-10 place-items-center rounded-full border border-line text-sm text-muted transition hover:border-line-strong hover:text-text sm:grid"
           (click)="shortcuts.toggle()"
           title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
       </div>
@@ -97,7 +97,7 @@
     } @else {
       <app-favorite-folders></app-favorite-folders>
 
-      <section class="mx-auto max-w-3xl rounded-2xl bg-panel2 backdrop-blur-md border border-white/10 shadow-2xl p-3 sm:p-6">
+      <section class="mx-auto max-w-3xl rounded-xl border border-line bg-panel1 p-3 sm:p-6">
         <app-todo-stats></app-todo-stats>
 
         <app-focus-panel></app-focus-panel>
@@ -114,7 +114,7 @@
 } @else {
   <div class="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg2">
     <button
-      class="rounded-full border px-6 py-3 text-slate-200 hover:bg-text hover:text-slate-700"
+      class="rounded-full border border-line px-6 py-3 text-text transition hover:border-line-strong"
       (click)="signIn()">
       Sign in
     </button>
@@ -124,7 +124,7 @@
         The login service could not be loaded.
       </p>
       <button
-        class="text-sm text-slate-400 underline transition hover:text-slate-200"
+        class="text-sm text-muted underline transition hover:text-text"
         (click)="reloadPage()">
         Reload page
       </button>

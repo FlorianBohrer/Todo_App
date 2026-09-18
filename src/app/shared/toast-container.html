@@ -3,12 +3,12 @@
   aria-live="polite">
   @for (toast of toasts(); track toast.id) {
     <div
-      class="pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-md"
+      class="pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-md"
       [class]="toast.type === 'error'
         ? 'border-rose-500/40 bg-rose-950/90 text-rose-100'
         : toast.type === 'success'
           ? 'border-emerald-500/40 bg-emerald-950/90 text-emerald-100'
-          : 'border-slate-600 bg-slate-800/95 text-zinc-100'">
+          : 'border-border bg-panel1 text-text'">
 
       <p class="min-w-0 flex-1 break-words text-sm">{{ toast.message }}</p>
 
@@ -16,7 +16,7 @@
         <button
           type="button"
           class="flex-none rounded-full border border-current px-3 py-1 text-xs font-semibold
-                 transition hover:bg-white/10"
+                 transition hover:bg-fill-strong"
           (click)="toastService.runAction(toast)">
           {{ toast.actionLabel }}
         </button>

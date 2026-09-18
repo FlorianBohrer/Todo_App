@@ -1,5 +1,5 @@
 @if (hasSomethingToSay()) {
-  <section class="mt-4 rounded-2xl border border-white/10 bg-bg3/60 p-3 sm:p-4"
+  <section class="mt-4 rounded-xl border border-line bg-bg3/60 p-3 sm:p-4"
     aria-label="What to work on next">
 
     <div class="flex items-center gap-2">
@@ -20,7 +20,7 @@
       </span>
 
       <button type="button"
-        class="grid h-6 w-6 flex-none place-items-center rounded text-subtle transition hover:bg-white/5 hover:text-text"
+        class="grid h-6 w-6 flex-none place-items-center rounded-lg text-subtle transition hover:bg-fill hover:text-text"
         (click)="toggleCollapsed()"
         [attr.aria-expanded]="!collapsed()"
         [attr.aria-label]="collapsed() ? 'Show suggestions' : 'Hide suggestions'">
@@ -32,9 +32,9 @@
     @if (!collapsed()) {
       <ul role="list" class="mt-3 space-y-1.5">
         @for (todo of suggestions(); track todo.id) {
-          <li class="flex items-start gap-2.5 rounded-lg px-1.5 py-1.5 transition hover:bg-white/[0.03]">
+          <li class="flex items-start gap-2.5 rounded-lg px-1.5 py-1.5 transition hover:bg-fill">
             <button type="button"
-              class="mt-0.5 h-4 w-4 flex-none rounded-full border-2 border-zinc-500 transition hover:border-emerald-400"
+              class="mt-0.5 h-4 w-4 flex-none rounded-full border-2 border-subtle transition hover:border-emerald-400"
               (click)="complete(todo.id)"
               [attr.aria-label]="'Mark “' + title(todo) + '” as done'"></button>
             <span class="min-w-0 flex-1">
@@ -48,7 +48,7 @@
       <!-- Ein Vorsatz ohne Wann bleibt ein Vorsatz. Deshalb steht hier nicht
            „plane das mal", sondern der Tag als Knopf. -->
       @if (unplanned().length > 0) {
-        <div class="mt-3 border-t border-white/5 pt-3">
+        <div class="mt-3 border-t border-line pt-3">
           <p class="mb-2 text-xs text-muted">
             {{ unplanned().length }} must-{{ unplanned().length === 1 ? 'have has' : 'haves have' }} no day yet
           </p>
@@ -58,7 +58,7 @@
                 <span class="min-w-0 flex-1 truncate text-sm text-text">{{ title(todo) }}</span>
                 @for (choice of dayChoices(); track choice.key) {
                   <button type="button"
-                    class="flex-none rounded-full border border-white/15 px-2.5 py-0.5 text-xs text-muted transition hover:border-indigo-400 hover:text-indigo-300"
+                    class="flex-none rounded-full border border-line-strong px-2.5 py-0.5 text-xs text-muted transition hover:border-indigo-400 hover:text-indigo-300"
                     (click)="plan(todo.id, choice.iso)">
                     {{ choice.label }}
                   </button>
@@ -77,7 +77,7 @@
       </button>
 
       @if (explaining()) {
-        <div class="mt-2 space-y-2 border-t border-white/5 pt-2 text-xs/[1.6] text-subtle">
+        <div class="mt-2 space-y-2 border-t border-line pt-2 text-xs/[1.6] text-subtle">
           <p>
             <strong class="text-muted">Importance outranks urgency.</strong>
             A must-have stays above a could-have no matter how soon the could-have
@@ -103,8 +103,8 @@
           </p>
           <p>
             <strong class="text-muted">Marking importance:</strong> start a
-            todo's title with <code class="rounded bg-white/10 px-1">/must</code>
-            or <code class="rounded bg-white/10 px-1">/could</code>. Anything
+            todo's title with <code class="rounded-lg bg-fill-strong px-1">/must</code>
+            or <code class="rounded-lg bg-fill-strong px-1">/could</code>. Anything
             else counts as normal.
           </p>
           <p class="text-subtle/80">

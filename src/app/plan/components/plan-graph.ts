@@ -21,11 +21,11 @@ const HEIGHT = 520;
   imports: [],
   template: `
     @if (!plans().length) {
-      <p class="rounded-xl border border-white/5 bg-bg2 p-6 text-center text-muted">
+      <p class="rounded-xl border border-line bg-bg2 p-6 text-center text-muted">
         No plans yet — the graph fills up as you create and link them.
       </p>
     } @else {
-      <div class="overflow-hidden rounded-xl border border-white/[0.07] bg-black/20">
+      <div class="overflow-hidden rounded-xl border border-line bg-black/20">
         <svg
           [attr.viewBox]="'0 0 ' + width + ' ' + height"
           class="h-auto w-full"

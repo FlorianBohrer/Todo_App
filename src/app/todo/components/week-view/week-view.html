@@ -5,13 +5,13 @@
     <div class="flex min-w-0 items-center gap-2">
       <button
         type="button"
-        class="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-muted transition hover:border-white/30 hover:text-text"
+        class="grid h-9 w-9 place-items-center rounded-full border border-line text-muted transition hover:border-line-strong hover:text-text"
         (click)="prevWeek()" title="Previous week (←)" aria-label="Previous week">
         <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
       </button>
       <button
         type="button"
-        class="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-muted transition hover:border-white/30 hover:text-text"
+        class="grid h-9 w-9 place-items-center rounded-full border border-line text-muted transition hover:border-line-strong hover:text-text"
         (click)="nextWeek()" title="Next week (→)" aria-label="Next week">
         <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
       </button>
@@ -33,7 +33,7 @@
       <!-- Wochenbilanz: dieselbe Sprache wie die Statistik in der Liste -->
       @if (weekProgress().total > 0) {
         <div class="hidden items-center gap-2 sm:flex" [attr.aria-label]="weekProgress().done + ' of ' + weekProgress().total + ' done this week'">
-          <div class="h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
+          <div class="h-1.5 w-24 overflow-hidden rounded-full bg-fill-strong">
             <div class="progress-fill h-full rounded-full bg-emerald-400/80"
               [style.width.%]="weekProgress().percent"></div>
           </div>
@@ -85,7 +85,7 @@
           [attr.data-today]="day.isToday ? 'true' : null"
           [class]="day.isToday
             ? 'border-indigo-500/70 bg-indigo-500/10'
-            : (day.isWeekend ? 'border-white/5 bg-bg3' : 'border-white/5 bg-bg2')"
+            : (day.isWeekend ? 'border-line bg-bg3' : 'border-line bg-bg2')"
           [class.opacity-75]="day.isPast && !day.isToday">
 
           <!-- Tageskopf -->
@@ -96,7 +96,7 @@
             </span>
 
             @if (day.total > 0) {
-              <span class="tabular-nums text-[11px] leading-none"
+              <span class="tabular-nums text-2xs leading-none"
                 [class]="day.overdue > 0 ? 'text-amber-300' : 'text-subtle'">
                 {{ day.done }}/{{ day.total }}
               </span>
@@ -106,7 +106,7 @@
             @if (day.total > day.done) {
               <button
                 type="button"
-                class="ml-auto grid h-5 w-5 flex-none place-items-center rounded text-subtle opacity-0 transition hover:bg-white/10 hover:text-text focus-visible:opacity-100 group-hover/day:opacity-100"
+                class="ml-auto grid h-5 w-5 flex-none place-items-center rounded-lg text-subtle opacity-0 transition hover:bg-fill-strong hover:text-text focus-visible:opacity-100 group-hover/day:opacity-100"
                 (click)="rollOver(day)"
                 [title]="'Move ' + (day.total - day.done) + ' unfinished to the next day'"
                 [attr.aria-label]="'Move unfinished tasks from ' + day.weekdayShort + ' to the next day'">
@@ -124,7 +124,7 @@
           <!-- Signatur: Mini-Fortschritt pro Tag. Leere Tage bekommen keinen
                leeren Balken — sonst zeichnet die Woche sieben graue Striche. -->
           @if (day.total > 0) {
-            <div class="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-white/10">
+            <div class="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-fill-strong">
               <div class="progress-fill h-full rounded-full bg-emerald-400/80"
                 [style.width.%]="day.percent"></div>
             </div>
@@ -148,7 +148,7 @@
                 <button
                   type="button"
                   class="mt-0.5 h-4 w-4 flex-none rounded-full border-2 transition"
-                  [class]="todo.completed ? 'border-emerald-400 bg-emerald-400' : 'border-zinc-500 hover:border-zinc-300'"
+                  [class]="todo.completed ? 'border-emerald-400 bg-emerald-400' : 'border-subtle hover:border-text'"
                   (click)="toggle(todo.id)"
                   [attr.aria-label]="todo.completed ? 'Mark as active' : 'Mark as done'"></button>
                 <span class="min-w-0 flex-1 break-words leading-snug" [class.line-through]="todo.completed">
@@ -158,14 +158,14 @@
                 <!-- Einen Tag vor oder zurück, ohne zu ziehen. Auf schmalen
                      Spalten wäre dauerhaft Platz dafür zu teuer, deshalb legen
                      sie sich beim Zeigen (oder Antippen der Tastatur) darüber. -->
-                <span class="week-shift absolute right-1 top-1 flex gap-0.5 rounded-md bg-panel2/95 p-0.5 opacity-0 shadow-sm transition focus-within:opacity-100 group-hover:opacity-100">
+                <span class="week-shift absolute right-1 top-1 flex gap-0.5 rounded-lg bg-panel2/95 p-0.5 opacity-0 shadow-sm transition focus-within:opacity-100 group-hover:opacity-100">
                   <button type="button"
-                    class="grid h-5 w-5 place-items-center rounded text-subtle transition hover:bg-white/10 hover:text-text"
+                    class="grid h-5 w-5 place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
                     (click)="shiftTodo(todo, -1)" aria-label="Move one day earlier" title="One day earlier">
                     <lucide-icon [img]="PrevIcon" class="h-3.5 w-3.5"></lucide-icon>
                   </button>
                   <button type="button"
-                    class="grid h-5 w-5 place-items-center rounded text-subtle transition hover:bg-white/10 hover:text-text"
+                    class="grid h-5 w-5 place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
                     (click)="shiftTodo(todo, 1)" aria-label="Move one day later" title="One day later">
                     <lucide-icon [img]="NextIcon" class="h-3.5 w-3.5"></lucide-icon>
                   </button>
@@ -178,7 +178,7 @@
               #q
               type="text"
               placeholder="+ Add"
-              class="mt-auto w-full rounded-md bg-transparent px-2 py-1 text-sm text-text placeholder:text-muted/50 focus:bg-white/5 focus:outline-none"
+              class="mt-auto w-full rounded-lg bg-transparent px-2 py-1 text-sm text-text placeholder:text-muted/50 focus:bg-fill focus:outline-none"
               (keydown.enter)="quickAdd(day.iso, q)"
               (keydown.escape)="q.value = ''; q.blur()"
               [attr.aria-label]="'Add todo for ' + day.weekdayShort + ' ' + day.dayNum" />
@@ -196,15 +196,15 @@
           <h3 class="text-sm font-medium text-muted">Unscheduled</h3>
 
           <!-- Status: All / Active -->
-          <div class="inline-flex rounded-full border border-white/10 p-0.5 text-xs">
+          <div class="inline-flex rounded-full border border-line p-0.5 text-xs">
             <button type="button"
               class="rounded-full px-2.5 py-1 transition"
-              [class]="backlogStatus() === 'all' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
+              [class]="backlogStatus() === 'all' ? 'bg-text text-bg' : 'text-muted hover:text-text'"
               [attr.aria-pressed]="backlogStatus() === 'all'"
               (click)="setBacklogStatus('all')">All</button>
             <button type="button"
               class="rounded-full px-2.5 py-1 transition"
-              [class]="backlogStatus() === 'active' ? 'bg-text text-slate-800' : 'text-slate-300 hover:text-white'"
+              [class]="backlogStatus() === 'active' ? 'bg-text text-bg' : 'text-muted hover:text-text'"
               [attr.aria-pressed]="backlogStatus() === 'active'"
               (click)="setBacklogStatus('active')">Active</button>
           </div>
@@ -215,13 +215,13 @@
           <div class="mb-2 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter by category">
             <button type="button"
               class="flex-none rounded-full border px-3 py-1 text-xs transition"
-              [class]="backlogCategory() === null ? 'border-white/40 text-text' : 'border-white/10 text-muted hover:text-text'"
+              [class]="backlogCategory() === null ? 'border-line-strong text-text' : 'border-line text-muted hover:text-text'"
               [attr.aria-pressed]="backlogCategory() === null"
               (click)="setBacklogCategory(null)">All categories</button>
             @for (label of labels(); track label.id) {
               <button type="button"
                 class="flex flex-none items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition"
-                [class]="backlogCategory() === label.id ? 'border-white/40 text-text' : 'border-white/10 text-muted hover:text-text'"
+                [class]="backlogCategory() === label.id ? 'border-line-strong text-text' : 'border-line text-muted hover:text-text'"
                 [attr.aria-pressed]="backlogCategory() === label.id"
                 (click)="setBacklogCategory(label.id)">
                 <span [class]="dotClass(label.color)">●</span>{{ label.name }}
@@ -231,7 +231,7 @@
         }
 
         <div
-          class="flex min-h-12 flex-wrap gap-1.5 rounded-xl border border-white/5 bg-bg2 p-2"
+          class="flex min-h-12 flex-wrap gap-1.5 rounded-xl border border-line bg-bg2 p-2"
           cdkDropList
           [cdkDropListData]="null"
           (cdkDropListDropped)="drop($event)">
