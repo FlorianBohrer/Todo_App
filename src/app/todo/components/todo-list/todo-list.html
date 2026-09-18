@@ -1,14 +1,14 @@
 
-<section class="mt-4 rounded-2xl p-3">
+<section class="mt-4 rounded-xl p-3">
   @if (loading()) {
     <!-- „No todos yet" waehrend des Ladens ist schlicht falsch — und die
          Aussage, die am meisten weh tut, wenn sie sich gleich widerruft. -->
     <ul role="list" class="space-y-2" aria-busy="true" aria-label="Loading todos">
       @for (row of skeletonRows; track row) {
-        <li class="skeleton-row flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-          <span class="h-8 w-8 flex-none rounded-lg bg-white/10"></span>
-          <span class="h-4 flex-1 rounded bg-white/10"></span>
-          <span class="h-4 w-10 flex-none rounded bg-white/10"></span>
+        <li class="skeleton-row flex items-center gap-3 rounded-xl border border-line bg-fill p-3">
+          <span class="h-8 w-8 flex-none rounded-lg bg-fill-strong"></span>
+          <span class="h-4 flex-1 rounded-lg bg-fill-strong"></span>
+          <span class="h-4 w-10 flex-none rounded-lg bg-fill-strong"></span>
         </li>
       }
     </ul>
@@ -39,7 +39,7 @@
         <li
       cdkDrag
       [cdkDragStartDelay]="dragStartDelay"
-      class="todo-card group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-3 backdrop-blur-sm transition hover:border-white/20"
+      class="todo-card group flex items-center justify-between gap-3 rounded-xl border border-line bg-panel2 p-3 transition hover:border-line-strong"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
         todo.completed || completingTodoIds().has(todo.id)
@@ -50,14 +50,14 @@
           <!-- Platzhalter beim Ziehen -->
           <div
             *cdkDragPlaceholder
-            class="h-12 rounded-xl border-2 border-dashed border-zinc-600 bg-zinc-700/20">
+            class="h-12 rounded-xl border-2 border-dashed border-border bg-fill">
           </div>
 
           <!-- Favoriten-Stern (mobil im 3-Punkte-Menü) -->
 
           <button
             type="button"
-            class="hidden sm:block flex-shrink-0 rounded-full p-1 text-zinc-500 transition hover:text-amber-400"
+            class="hidden sm:block flex-shrink-0 rounded-full p-1 text-subtle transition hover:text-amber-400"
             [class.text-amber-400]="todo.isFavorite"
             [attr.aria-pressed]="todo.isFavorite"
             [attr.aria-label]="todo.isFavorite
@@ -99,10 +99,10 @@
             <!-- Prioritäts-Badge (Präfix /must-have bzw. /could-have) -->
             @if (priorityBadge(todo.title); as badge) {
               <span
-                class="flex-none rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
+                class="flex-none rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
                 [class]="badge === 'must'
                   ? 'bg-rose-500/20 text-rose-300'
-                  : 'bg-amber-500/20 text-amber-300'">
+                  : 'bg-fill-strong text-muted'">
                 {{ badge === 'must' ? 'Must' : 'Could' }}
               </span>
             }
@@ -115,7 +115,7 @@
               [class.pointer-events-none]="editingId() !== todo.id"
               (blur)="finishEditing(todo, todoText)"
               (keydown.escape)="cancelEditing(todo, todoText)"
-              class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-md bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-zinc-100"
+              class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-lg bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-text"
               [class.todo-collapsed]="
                 canExpand(todo.title) &&
                 !isExpanded(todo.id)
@@ -151,8 +151,7 @@
           @if (canExpand(todo.title)) {
             <button
               type="button"
-              class="flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
-                     focus:outline-none focus:ring-1 focus:ring-zinc-100"
+              class="flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
               [class.text-text]="isExpanded(todo.id)"
               (click)="toggleExpanded(todo.id, todoText)"
               [attr.aria-expanded]="isExpanded(todo.id)"
@@ -169,7 +168,7 @@
             type="button"
             cdkOverlayOrigin #scheduleTrigger="cdkOverlayOrigin"
             class="hidden flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs
-                   transition focus:outline-none focus:ring-1 focus:ring-zinc-100 sm:flex"
+                   transition sm:flex"
             [class]="todo.scheduledDate === null
               ? 'border-transparent px-1.5 text-muted/60 hover:border-indigo-500/60 hover:text-indigo-300'
               : (isLate(todo)
@@ -198,23 +197,23 @@
             (overlayKeydown)="$event.key === 'Escape' && closeScheduleMenu()">
             <div
               role="listbox"
-              class="w-44 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+              class="popover w-52">
               @for (choice of scheduleChoices(); track choice.key) {
                 <button
                   type="button" role="option"
                   [attr.aria-selected]="todo.scheduledDate === choice.iso"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  class="popover-item text-sm text-text transition"
                   (click)="schedule(todo.id, choice.iso)">
                   <span class="flex-1">{{ choice.label }}</span>
                   @if (todo.scheduledDate === choice.iso) {
-                    <span class="text-emerald-400">✓</span>
+                    <span class="text-highlight2">✓</span>
                   }
                 </button>
               }
               @if (todo.scheduledDate !== null) {
                 <button
                   type="button" role="option" [attr.aria-selected]="false"
-                  class="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
+                  class="popover-item border-t border-border text-sm text-muted transition"
                   (click)="schedule(todo.id, null)">
                   Clear date
                 </button>
@@ -229,8 +228,7 @@
 
           
             class="hidden sm:flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-3 py-1.5
-                   text-sm text-text transition hover:bg-panel/10
-                   focus:outline-none focus:ring-1 focus:ring-zinc-100"
+                   text-sm text-text transition hover:bg-panel/10"
             [class]="labelService.borderClassFor(primaryLabelId(todo.labelIds))"
             (click)="toggleMenu(todo.id)"
             aria-haspopup="listbox"
@@ -239,7 +237,7 @@
             [attr.aria-label]="'Labels: ' + labelTitle(todo.labelIds)">
             <!-- Farbpunkte: einer je Label; kein Label = grauer Punkt -->
             @if (todo.labelIds.length === 0) {
-              <span class="text-zinc-500">●</span>
+              <span class="text-subtle">●</span>
             } @else {
               @for (lid of todo.labelIds; track lid) {
                 <span [class]="dotClass(lid)">●</span>
@@ -260,20 +258,20 @@
             (overlayKeydown)="$event.key === 'Escape' && closeMenu()">
             <div
               role="listbox" aria-multiselectable="true"
-              class="w-52 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+              class="popover w-52">
 
-              <div class="px-3 pb-1 pt-2 text-xs text-zinc-400">Labels (multiple allowed)</div>
+              <div class="px-3 pb-1 pt-2 text-xs text-muted">Labels (multiple allowed)</div>
 
               @for (label of labels(); track label.id) {
                 <button
                   type="button" role="option"
                   [attr.aria-selected]="isLabelActive(todo.labelIds, label.id)"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                  class="popover-item text-sm text-text transition"
                   (click)="toggleLabel(todo.id, label.id)">
                   <span [class]="dotClass(label.id)">●</span>
                   <span class="flex-1 truncate">{{ label.name }}</span>
                   @if (isLabelActive(todo.labelIds, label.id)) {
-                    <span class="text-emerald-400">✓</span>
+                    <span class="text-highlight2">✓</span>
                   }
                 </button>
               }
@@ -281,7 +279,7 @@
               @if (todo.labelIds.length > 0) {
                 <button
                   type="button"
-                  class="flex w-full items-center gap-2 border-t border-slate-700 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
+                  class="popover-item border-t border-border text-sm text-muted transition"
                   (click)="clearLabels(todo.id)">
                   Remove all
                 </button>
@@ -290,14 +288,13 @@
           </ng-template>
           <button
             type="button"
-            class="hidden sm:block flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
-                   focus:outline-none focus:ring-1 focus:ring-zinc-100"
+            class="hidden sm:block flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
             (click)="startEditing(todo, todoText)"
             aria-label="Edit text">
             <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
           </button>
           <button
-            class="hidden sm:block rounded-md px-2 py-1 flex-none text-text transition hover:text-red-400"
+            class="hidden sm:block rounded-lg px-2 py-1 flex-none text-text transition hover:text-red-400"
             (click)="removeTodos(todo.id)">
             ✕
           </button>
@@ -306,8 +303,7 @@
           <button
             type="button"
             cdkOverlayOrigin #optionsTrigger="cdkOverlayOrigin"
-            class="sm:hidden flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text
-                   focus:outline-none focus:ring-1 focus:ring-zinc-100"
+            class="sm:hidden flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
             (click)="toggleOptionsMenu(todo.id)"
             aria-haspopup="menu"
             [attr.aria-expanded]="openOptionsId() === todo.id"
@@ -326,11 +322,11 @@
             (overlayKeydown)="$event.key === 'Escape' && closeOptionsMenu()">
             <div
               role="menu"
-              class="w-56 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 py-1 shadow-2xl">
+              class="popover w-64">
 
               <button
                 type="button" role="menuitem"
-                class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                class="popover-item text-sm text-text transition"
                 (click)="toggleFavorite(todo.id); closeOptionsMenu()">
                 <lucide-icon
                   [img]="StarIcon"
@@ -343,20 +339,20 @@
 
                             <button
                 type="button" role="menuitem"
-                class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+                class="popover-item text-sm text-text transition"
                 (click)="startEditing(todo, todoText); closeOptionsMenu()">
                 <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
                 <span>Edit text</span>
               </button>
 
               <!-- Termin, mobil: dieselben Angebote als Reihe -->
-              <div class="border-t border-slate-700 px-3 pb-2.5 pt-2.5">
-                <div class="mb-1.5 flex items-center gap-2.5 text-xs text-zinc-400">
+              <div class="border-t border-border px-3 pb-2.5 pt-2.5">
+                <div class="mb-1.5 flex items-center gap-2.5 text-xs text-muted">
                   <lucide-icon [img]="ScheduleIcon" class="h-3.5 w-3.5"></lucide-icon>
                   <span>Plan for</span>
                   @if (todo.scheduledDate !== null) {
                     <button type="button"
-                      class="ml-auto text-xs text-zinc-400 underline transition hover:text-zinc-200"
+                      class="ml-auto text-xs text-muted underline transition hover:text-text"
                       (click)="schedule(todo.id, null); closeOptionsMenu()">Clear</button>
                   }
                 </div>
@@ -367,7 +363,7 @@
                       class="rounded-full border px-2.5 py-1 text-xs transition"
                       [class]="todo.scheduledDate === choice.iso
                         ? 'border-indigo-400 text-indigo-300'
-                        : 'border-slate-600 text-zinc-200 hover:border-indigo-400 hover:text-indigo-300'"
+                        : 'border-border text-text hover:border-indigo-400 hover:text-indigo-300'"
                       (click)="schedule(todo.id, choice.iso); closeOptionsMenu()">
                       {{ choice.label }}
                     </button>
@@ -376,10 +372,10 @@
               </div>
 
 <!-- Folders: collapsible and scrollable. Multi-select keeps the menu open. -->
-<div class="border-t border-slate-700">
+<div class="border-t border-border">
   <button
     type="button"
-    class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+    class="popover-item text-sm text-text transition"
     (click)="toggleFolderList()"
     [attr.aria-expanded]="folderListOpen()"
     [attr.aria-controls]="'folders-' + todo.id">
@@ -387,7 +383,7 @@
     <span class="flex-none">Folder</span>
 
     <!-- Current selection stays readable while collapsed -->
-    <span class="ml-auto min-w-0 truncate text-right text-xs text-zinc-400">
+    <span class="ml-auto min-w-0 truncate text-right text-xs text-muted">
       {{ todo.labelIds.length ? labelTitle(todo.labelIds) : 'None' }}
     </span>
 
@@ -412,10 +408,10 @@
             type="button"
             role="menuitemcheckbox"
             [attr.aria-checked]="isLabelActive(todo.labelIds, label.id)"
-            class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-zinc-200 transition hover:bg-slate-700"
+            class="popover-item text-sm text-text transition"
             (click)="toggleLabel(todo.id, label.id)">
             <span
-              class="flex h-6 w-6 flex-none items-center justify-center rounded-md ring-1 ring-inset"
+              class="flex h-6 w-6 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
               [class]="labelTitleClass(label)">
               <lucide-icon
                 [img]="labelIcon(label)"
@@ -424,17 +420,17 @@
             </span>
             <span class="flex-1 truncate">{{ label.name }}</span>
             @if (isLabelActive(todo.labelIds, label.id)) {
-              <span class="flex-none text-emerald-400">✓</span>
+              <span class="flex-none text-highlight2">✓</span>
             }
           </button>
         } @empty {
-          <p class="px-3 py-2 text-xs text-zinc-400">No folders yet</p>
+          <p class="px-3 py-2 text-xs text-muted">No folders yet</p>
         }
 
         @if (todo.labelIds.length > 0) {
           <button
             type="button" role="menuitem"
-            class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-zinc-400 transition hover:bg-slate-700"
+            class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-muted transition hover:bg-fill"
             (click)="clearLabels(todo.id)">
             Remove all
           </button>
@@ -445,7 +441,7 @@
 </div>
               <button
                 type="button" role="menuitem"
-                class="flex w-full items-center gap-2.5 border-t border-slate-700 px-3 py-2.5 text-left text-sm text-rose-400 transition hover:bg-slate-700"
+                class="popover-item border-t border-border text-sm text-danger transition"
                 (click)="removeTodos(todo.id); closeOptionsMenu()">
                 <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
                 <span>Delete</span>

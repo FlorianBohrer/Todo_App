@@ -15,14 +15,14 @@
     <div class="mb-5 flex items-center gap-2">
       <button
         type="button"
-        class="grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition hover:bg-white/10 hover:text-text"
+        class="grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition hover:bg-fill-strong hover:text-text"
         (click)="back()" aria-label="Back to plans">
         <lucide-icon [img]="BackIcon" class="h-5 w-5"></lucide-icon>
       </button>
 
       <input
         type="text"
-        class="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-xl font-semibold tracking-[-0.022em] text-text placeholder:text-subtle focus:bg-white/[0.03] focus:outline-none sm:text-2xl"
+        class="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-xl font-semibold tracking-[-0.022em] text-text placeholder:text-subtle focus:bg-fill focus:outline-none sm:text-2xl"
         [value]="plan.title"
         (input)="setTitle(plan.id, $any($event.target).value)"
         placeholder="Untitled"
@@ -30,7 +30,7 @@
 
       <!-- Folder-Bindung: eigenständig oder an einen Folder -->
       <select
-        class="flex-none rounded-lg bg-transparent px-2 py-1.5 text-sm text-muted transition hover:bg-white/5 focus:outline-none"
+        class="flex-none rounded-lg bg-transparent px-2 py-1.5 text-sm text-muted transition hover:bg-fill focus:outline-none"
         [value]="plan.categoryId ?? ''"
         (change)="setFolder(plan.id, $any($event.target).value)"
         aria-label="Attach to folder">
@@ -67,7 +67,7 @@
          „+" in der Randspalte, und die Add-Leiste ist am Zeigergerät aus. -->
     @if (!plan.content.length) {
       <button type="button"
-        class="w-full cursor-text rounded-lg px-2 py-2 text-left text-[15px]/[1.7] text-subtle transition hover:bg-white/[0.03]"
+        class="w-full cursor-text rounded-lg px-2 py-2 text-left text-prose text-subtle transition hover:bg-fill"
         (click)="startFirstBlock()">
         Press '/' for commands…
       </button>
@@ -90,7 +90,7 @@
         (detach)="closeBlockMenu()"
         (overlayKeydown)="$event.key === 'Escape' && closeBlockMenu()">
         <div role="menu"
-          class="w-44 overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
+          class="popover w-52 px-1">
           <button role="menuitem" type="button" class="block-menu-item" (click)="menuMove(id, -1)">
             <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon> Move up
           </button>
@@ -115,12 +115,12 @@
              trägt links eine Führungslinie, damit die Zugehörigkeit sofort
              lesbar ist. -->
         <div class="section-block py-1" [id]="'block-' + block.id">
-          <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-white/[0.04]">
+          <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-fill">
             <div class="relative flex-none">
               <button type="button" cdkDragHandle
                 cdkOverlayOrigin #sectionMenuAnchor="cdkOverlayOrigin"
-                class="drag-handle grid h-6 w-6 flex-none cursor-grab touch-none place-items-center rounded-md
-                       text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
+                class="drag-handle grid h-6 w-6 flex-none cursor-grab touch-none place-items-center rounded-lg
+                       text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
                 [class.is-open]="openBlockMenu() === block.id"
                 (click)="toggleBlockMenu(block.id)"
                 [attr.aria-expanded]="openBlockMenu() === block.id"
@@ -131,7 +131,7 @@
               <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id, origin: sectionMenuAnchor }"></ng-container>
             </div>
             <button type="button"
-              class="grid h-6 w-6 flex-none place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-text"
+              class="grid h-6 w-6 flex-none place-items-center rounded-lg text-muted transition hover:bg-fill-strong hover:text-text"
               (click)="toggleGroup(block.id)"
               [attr.aria-expanded]="!asGroup(block).collapsed"
               aria-label="Toggle section">
@@ -146,7 +146,7 @@
           </div>
 
           @if (!asGroup(block).collapsed) {
-            <div class="ml-[13px] space-y-1 border-l border-white/10 pl-4 pt-1"
+            <div class="ml-[13px] space-y-1 border-l border-line pl-4 pt-1"
                  cdkDropList
                  [cdkDropListData]="block.id"
                  (cdkDropListDropped)="dropBlock($event)">
@@ -160,17 +160,17 @@
 
               <div class="flex flex-wrap gap-1 pl-2 pt-0.5">
                 <button type="button"
-                  class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-subtle transition hover:bg-white/5 hover:text-muted"
+                  class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted"
                   (click)="addToGroup(block.id, 'text')">
                   <lucide-icon [img]="TextIcon" class="h-3.5 w-3.5"></lucide-icon> Text
                 </button>
                 <button type="button"
-                  class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-subtle transition hover:bg-white/5 hover:text-muted"
+                  class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted"
                   (click)="addToGroup(block.id, 'diagram')">
                   <lucide-icon [img]="DiagramIcon" class="h-3.5 w-3.5"></lucide-icon> Diagram
                 </button>
                 <button type="button"
-                  class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-subtle transition hover:bg-white/5 hover:text-muted"
+                  class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted"
                   (click)="addToGroup(block.id, 'table')">
                   <lucide-icon [img]="TableIcon" class="h-3.5 w-3.5"></lucide-icon> Table
                 </button>
@@ -193,7 +193,7 @@
                Textbreite fressen. -->
           <button type="button"
             class="block-add block-handle drag-handle absolute left-0 top-1 place-items-center
-                   rounded-md text-subtle transition hover:bg-white/10 hover:text-text"
+                   rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
             (click)="addBelow(block.id)"
             aria-label="Add block below">
             <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon>
@@ -204,7 +204,7 @@
               <button type="button" cdkDragHandle
                 cdkOverlayOrigin #blockMenuAnchor="cdkOverlayOrigin"
                 class="drag-handle block-handle grid cursor-grab touch-none place-items-center
-                       rounded-md text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
+                       rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
                 [class.is-open]="openBlockMenu() === block.id"
                 (click)="toggleBlockMenu(block.id)"
                 [attr.aria-expanded]="openBlockMenu() === block.id"
@@ -225,7 +225,7 @@
                   [id]="'block-edit-' + block.id"
                   appAutosize
                   rows="1"
-                  class="w-full resize-none bg-transparent text-[15px]/[1.7] text-text placeholder:text-subtle focus:outline-none"
+                  class="w-full resize-none bg-transparent text-prose text-text placeholder:text-subtle focus:outline-none"
                   placeholder="Press '/' for commands…"
                   [value]="block.text"
                   (blur)="endEdit(block.id)"
@@ -233,7 +233,7 @@
                   (paste)="onTextPaste(block.id, $event)"
                   (keydown)="onTextKeydown($event, block.id)"></textarea>
               } @else {
-                <div class="plan-prose min-h-[1.7em] cursor-text text-[15px]/[1.7] text-text"
+                <div class="plan-prose min-h-[1.7em] cursor-text text-prose text-text"
                   (click)="onRenderedClick($event, block.id)">
                   @if (block.text) {
                     <span [innerHTML]="renderText(block.text)"></span>
@@ -246,14 +246,14 @@
               <!-- Slash-Menü (Notion-Stil): erscheint, sobald ein Textblock mit
                    „/" beginnt; Pfeiltasten wählen, Enter oder Klick fügt ein. -->
               @if (slash()?.blockId === block.id && slashResults().length) {
-                <div class="slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
+                <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] px-1">
                   @for (item of slashResults(); track item.kind; let i = $index) {
                     <button type="button"
-                      class="slash-item flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/5"
+                      class="slash-item flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-fill"
                       [class.slash-item--active]="i === slashActiveIndex()"
                       (mousedown)="$event.preventDefault()"
                       (click)="chooseSlash(block.id, item.kind)">
-                      <span class="grid h-8 w-8 flex-none place-items-center rounded-md bg-white/5 text-muted">
+                      <span class="grid h-8 w-8 flex-none place-items-center rounded-lg bg-fill text-muted">
                         <lucide-icon [img]="item.icon" class="h-4 w-4"></lucide-icon>
                       </span>
                       <span class="min-w-0">
@@ -268,10 +268,10 @@
               <!-- Wikilink-Vorschläge: erscheinen bei einem offenen „[[".
                    Ohne sie müsste man Titel blind und exakt tippen. -->
               @if (wikiPick()?.blockId === block.id) {
-                <div class="slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] overflow-hidden rounded-xl border border-border bg-panel1 p-1 shadow-2xl">
+                <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] px-1">
                   @for (p of wikiResults(); track p.id; let i = $index) {
                     <button type="button"
-                      class="slash-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/5"
+                      class="slash-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-fill"
                       [class.slash-item--active]="i === wikiActiveIndex()"
                       (mousedown)="$event.preventDefault()"
                       (click)="chooseWiki(block.id, p.title)">
@@ -318,7 +318,7 @@
                 [id]="'block-edit-' + block.id"
                 appAutosize
                 rows="1"
-                class="w-full resize-none bg-transparent text-[15px]/[1.8] text-text placeholder:text-subtle focus:outline-none"
+                class="w-full resize-none bg-transparent text-prose/[1.8] text-text placeholder:text-subtle focus:outline-none"
                 placeholder="One item per line"
                 [value]="listAsText(asList(block))"
                 (blur)="endEdit(block.id)"
@@ -327,7 +327,7 @@
               <div class="plan-prose cursor-text" (click)="onRenderedClick($event, block.id)">
                 @switch (asList(block).variant) {
                   @case ('number') {
-                    <ol class="list-decimal space-y-1 pl-5 text-[15px]/[1.7] text-text marker:text-muted">
+                    <ol class="list-decimal space-y-1 pl-5 text-prose text-text marker:text-muted">
                       @for (item of asList(block).items; track $index; let i = $index) {
                         <li class="list-item-row">
                           <span [innerHTML]="renderInline(item.text)"></span>
@@ -338,14 +338,14 @@
                     </ol>
                   }
                   @case ('todo') {
-                    <ul class="space-y-1 text-[15px]/[1.7] text-text">
+                    <ul class="space-y-1 text-prose text-text">
                       @for (item of asList(block).items; track $index; let i = $index) {
                         <li class="list-item-row flex items-start gap-2">
                           <button type="button"
-                            class="todo-box mt-[5px] grid h-4 w-4 flex-none place-items-center rounded border text-[10px] leading-none"
+                            class="todo-box mt-[5px] grid h-4 w-4 flex-none place-items-center rounded-lg border text-2xs leading-none"
                             [class]="item.checked
                               ? 'border-brand-2 bg-brand-2 text-white'
-                              : 'border-white/25 text-transparent hover:border-white/50'"
+                              : 'border-line-strong text-transparent hover:border-line-strong'"
                             (click)="$event.stopPropagation(); toggleListItem(block.id, i)"
                             [attr.aria-pressed]="item.checked"
                             aria-label="Toggle item">✓</button>
@@ -360,7 +360,7 @@
                     </ul>
                   }
                   @default {
-                    <ul class="list-disc space-y-1 pl-5 text-[15px]/[1.7] text-text marker:text-muted">
+                    <ul class="list-disc space-y-1 pl-5 text-prose text-text marker:text-muted">
                       @for (item of asList(block).items; track $index; let i = $index) {
                         <li class="list-item-row">
                           <span [innerHTML]="renderInline(item.text)"></span>
@@ -375,8 +375,8 @@
             }
           } @else if (block.type === 'code') {
             <!-- Code bleibt immer Rohtext: hier gibt es nichts zu formatieren. -->
-            <div class="overflow-hidden rounded-lg border border-white/[0.07] bg-black/25">
-              <div class="flex items-center gap-2 border-b border-white/10 px-3 py-1.5">
+            <div class="overflow-hidden rounded-lg border border-line bg-black/25">
+              <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
                 <lucide-icon [img]="CodeIcon" class="h-3.5 w-3.5 flex-none text-subtle"></lucide-icon>
                 <input type="text"
                   class="w-32 bg-transparent font-mono text-xs text-muted placeholder:text-subtle focus:outline-none"
@@ -391,7 +391,7 @@
                 spellcheck="false"
                 autocapitalize="off"
                 autocorrect="off"
-                class="w-full resize-none bg-transparent px-3 py-2 font-mono text-[13px]/[1.6] text-text placeholder:text-subtle focus:outline-none"
+                class="w-full resize-none bg-transparent px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:outline-none"
                 placeholder="Code…"
                 [value]="asCode(block).code"
                 (input)="updateCodeText(block.id, $any($event.target).value)"></textarea>
@@ -403,13 +403,13 @@
                   [id]="'block-edit-' + block.id"
                   appAutosize
                   rows="1"
-                  class="w-full resize-none bg-transparent text-[15px]/[1.7] italic text-text placeholder:text-subtle focus:outline-none"
+                  class="w-full resize-none bg-transparent text-prose italic text-text placeholder:text-subtle focus:outline-none"
                   placeholder="Quote or callout…"
                   [value]="block.text"
                   (blur)="endEdit(block.id)"
                   (input)="updateQuoteText(block.id, $any($event.target).value)"></textarea>
               } @else {
-                <div class="plan-prose cursor-text text-[15px]/[1.7] italic text-muted"
+                <div class="plan-prose cursor-text text-prose italic text-muted"
                   (click)="onRenderedClick($event, block.id)">
                   @if (block.text) {
                     <span [innerHTML]="renderText(block.text)"></span>
@@ -420,7 +420,7 @@
               }
             </div>
           } @else if (block.type === 'divider') {
-            <hr class="my-2 border-0 border-t border-white/10" />
+            <hr class="my-2 border-0 border-t border-line" />
           } @else if (block.type === 'table') {
             <!-- Tabelle -->
             <div class="overflow-x-auto">
@@ -428,11 +428,11 @@
                 <thead>
                   <tr>
                     @for (col of asTable(block).columns; track $index; let ci = $index) {
-                      <th class="border border-white/[0.07] p-0">
+                      <th class="border border-line p-0">
                         <div class="flex items-center">
                           <input
                             type="text"
-                            class="min-w-24 flex-1 bg-white/[0.03] px-2 py-1.5 font-semibold text-text focus:bg-white/[0.06] focus:outline-none"
+                            class="min-w-24 flex-1 bg-fill px-2 py-1.5 font-semibold text-text focus:bg-fill focus:outline-none"
                             [value]="col"
                             (input)="setColumn(block.id, ci, $any($event.target).value)"
                             aria-label="Column name" />
@@ -442,23 +442,23 @@
                         </div>
                       </th>
                     }
-                    <th class="w-8 border border-white/[0.07]"></th>
+                    <th class="w-8 border border-line"></th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (row of asTable(block).rows; track $index; let ri = $index) {
                     <tr>
                       @for (cell of row; track $index; let ci = $index) {
-                        <td class="border border-white/[0.07] p-0">
+                        <td class="border border-line p-0">
                           <input
                             type="text"
-                            class="min-w-24 w-full bg-transparent px-2 py-1.5 text-text focus:bg-white/[0.04] focus:outline-none"
+                            class="min-w-24 w-full bg-transparent px-2 py-1.5 text-text focus:bg-fill focus:outline-none"
                             [value]="cell"
                             (input)="setCell(block.id, ri, ci, $any($event.target).value)"
                             aria-label="Cell" />
                         </td>
                       }
-                      <td class="border border-white/[0.07] text-center">
+                      <td class="border border-line text-center">
                         <button type="button"
                           class="px-1.5 text-subtle hover:text-danger"
                           (click)="deleteRow(block.id, ri)" aria-label="Delete row">✕</button>
@@ -469,8 +469,8 @@
               </table>
             </div>
             <div class="mt-2 flex gap-1">
-              <button type="button" class="rounded-md px-2 py-1 text-xs text-subtle transition hover:bg-white/5 hover:text-muted" (click)="addRow(block.id)">+ Row</button>
-              <button type="button" class="rounded-md px-2 py-1 text-xs text-subtle transition hover:bg-white/5 hover:text-muted" (click)="addColumn(block.id)">+ Column</button>
+              <button type="button" class="rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted" (click)="addRow(block.id)">+ Row</button>
+              <button type="button" class="rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted" (click)="addColumn(block.id)">+ Column</button>
             </div>
           } @else {
             <!-- Ablaufdiagramm: Quelltext und Zeichnung nebeneinander.
@@ -489,7 +489,7 @@
                   autocapitalize="off"
                   autocorrect="off"
                   [id]="'diagram-code-' + block.id"
-                  class="w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 font-mono text-[13px]/[1.6] text-text placeholder:text-subtle focus:border-white/25 focus:outline-none"
+                  class="w-full resize-none rounded-lg border border-line bg-black/20 px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
                   placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
                   [value]="asDiagram(block).code"
                   (input)="updateCode(block.id, $any($event.target).value)"></textarea>
@@ -498,7 +498,7 @@
                 </p>
               </div>
 
-              <div class="order-1 min-w-0 rounded-lg bg-white/[0.02] p-2 md:order-2">
+              <div class="order-1 min-w-0 rounded-lg bg-fill p-2 md:order-2">
                 <app-mermaid-diagram [code]="asDiagram(block).code"></app-mermaid-diagram>
               </div>
             </div>
@@ -513,7 +513,7 @@
          Klick den Textmodus des Blocks. -->
     <ng-template #itemDeleteTpl let-blockId="blockId" let-index="index">
       <button type="button"
-        class="list-item-remove ml-1 inline-grid h-5 w-5 flex-none place-items-center rounded text-subtle transition hover:bg-white/10 hover:text-danger"
+        class="list-item-remove ml-1 inline-grid h-5 w-5 flex-none place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-danger"
         (click)="$event.stopPropagation(); removeListItem(blockId, index)"
         title="Remove this item"
         aria-label="Remove this item">
@@ -523,26 +523,26 @@
 
     <!-- Blöcke anlegen — am Zeigergerät übernehmen „/" und das „+" in der
          Randspalte diese Aufgabe, dort ist die Leiste ausgeblendet. -->
-    <div class="add-bar mt-4 flex flex-wrap items-center gap-1 border-t border-white/5 pt-3"
+    <div class="add-bar mt-4 flex flex-wrap items-center gap-1 border-t border-line pt-3"
       [class.add-bar--always]="!plan.content.length">
       <span class="px-1 text-xs font-medium uppercase tracking-wide text-subtle">Add</span>
       <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted transition hover:bg-white/5 hover:text-text"
+        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-fill hover:text-text"
         (click)="addTextBlock()">
         <lucide-icon [img]="TextIcon" class="h-4 w-4"></lucide-icon> Text
       </button>
       <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted transition hover:bg-white/5 hover:text-text"
+        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-fill hover:text-text"
         (click)="addTableBlock()">
         <lucide-icon [img]="TableIcon" class="h-4 w-4"></lucide-icon> Table
       </button>
       <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted transition hover:bg-white/5 hover:text-text"
+        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-fill hover:text-text"
         (click)="addDiagramBlock()">
         <lucide-icon [img]="DiagramIcon" class="h-4 w-4"></lucide-icon> Diagram
       </button>
       <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted transition hover:bg-white/5 hover:text-text"
+        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-fill hover:text-text"
         (click)="addGroupBlock()">
         <lucide-icon [img]="SectionIcon" class="h-4 w-4"></lucide-icon> Toggle
       </button>
@@ -551,7 +551,7 @@
     <!-- Linked mentions (Obsidian): welche Pläne zeigen hierher? Erst dadurch
          wird aus einzelnen Notizen ein zusammenhängendes Netz. -->
     @if (backlinks().length) {
-      <div class="mt-8 border-t border-white/5 pt-4">
+      <div class="mt-8 border-t border-line pt-4">
         <h3 class="mb-2 flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wide text-subtle">
           <lucide-icon [img]="LinkIcon" class="h-3.5 w-3.5"></lucide-icon>
           Linked mentions · {{ backlinks().length }}
@@ -559,7 +559,7 @@
         <div class="flex flex-wrap gap-2">
           @for (p of backlinks(); track p.id) {
             <button type="button"
-              class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-1.5 text-sm text-muted transition hover:border-white/20 hover:text-text"
+              class="inline-flex items-center gap-2 rounded-lg border border-line bg-fill px-3 py-1.5 text-sm text-muted transition hover:border-line-strong hover:text-text"
               (click)="open(p.id)">
               <span [class]="dotClass(p.categoryId)">●</span>
               {{ p.title }}
@@ -579,7 +579,7 @@
         <div class="flex flex-wrap gap-2">
           @for (p of unlinkedMentions(); track p.id) {
             <button type="button"
-              class="inline-flex items-center gap-2 rounded-lg border border-dashed border-white/10 px-3 py-1.5 text-sm text-subtle transition hover:border-white/25 hover:text-muted"
+              class="inline-flex items-center gap-2 rounded-lg border border-dashed border-line px-3 py-1.5 text-sm text-subtle transition hover:border-line-strong hover:text-muted"
               (click)="open(p.id)">
               <span [class]="dotClass(p.categoryId)">●</span>
               {{ p.title }}
@@ -593,14 +593,14 @@
       </div>
       <nav class="outline-nav" aria-label="Outline">
         @if (outline().length) {
-          <p class="mb-2 px-2 text-[11px] font-medium uppercase tracking-wide text-subtle">
+          <p class="mb-2 px-2 text-2xs font-medium uppercase tracking-wide text-subtle">
             Outline
           </p>
           <ul class="space-y-0.5">
             @for (item of outline(); track item.id) {
               <li>
                 <button type="button"
-                  class="outline-link block w-full truncate rounded-md py-1 pr-2 text-left text-[13px] transition"
+                  class="outline-link block w-full truncate rounded-lg py-1 pr-2 text-left text-sm transition"
                   [style.padding-left.rem]="0.5 + (item.level - 1) * 0.7"
                   [title]="item.text"
                   (click)="jumpTo(item.id)">{{ item.text }}</button>
@@ -619,7 +619,7 @@
 
       <!-- Kacheln oder Graph. Der Graph lohnt erst, wenn verlinkt wurde —
            deshalb bleibt die Liste die Voreinstellung. -->
-      <div class="flex items-center rounded-full border border-white/10 p-0.5" role="tablist">
+      <div class="flex items-center rounded-full border border-line p-0.5" role="tablist">
         <button type="button" role="tab"
           class="mode-tab"
           [class.mode-tab--active]="overviewMode() === 'list'"
@@ -646,11 +646,11 @@
         (open)="open($event)"></app-plan-graph>
     } @else if (loading()) {
       <p class="flex items-center gap-2 text-muted" role="status">
-        <span class="h-4 w-4 flex-none animate-spin rounded-full border-2 border-zinc-500 border-t-transparent"></span>
+        <span class="h-4 w-4 flex-none animate-spin rounded-full border-2 border-subtle border-t-transparent"></span>
         Loading plans…
       </p>
     } @else if (plans().length === 0) {
-      <p class="rounded-xl border border-white/5 bg-bg2 p-6 text-center text-muted">
+      <p class="rounded-xl border border-line bg-bg2 p-6 text-center text-muted">
         No plans yet. Create one for your hackathon, a trip, or a software idea.
       </p>
     } @else {
@@ -660,7 +660,7 @@
            (cdkDropListDropped)="dropPlan($event)">
         @for (plan of plans(); track plan.id) {
           <div cdkDrag cdkDragPreviewClass="plan-drag-preview"
-            class="group flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-left transition hover:border-white/15 hover:bg-white/[0.04]"
+            class="group flex flex-col gap-2 rounded-xl border border-line bg-fill p-4 text-left transition hover:border-line-strong hover:bg-fill"
             role="button" tabindex="0"
             (click)="open(plan.id)"
             (keydown.enter)="open(plan.id)"
@@ -669,14 +669,14 @@
             <div class="flex items-start justify-between gap-2">
               <button type="button" cdkDragHandle
                 class="drag-handle -ml-1 grid h-6 w-6 flex-none cursor-grab touch-none place-items-center
-                       rounded-md text-subtle transition hover:bg-white/10 hover:text-text active:cursor-grabbing"
+                       rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
                 (click)="$event.stopPropagation()"
                 aria-label="Drag plan">
                 <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
               </button>
               <span class="min-w-0 flex-1 truncate font-semibold text-text">{{ plan.title }}</span>
               <span
-                class="flex-none rounded p-1 text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100"
+                class="flex-none rounded-lg p-1 text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100"
                 (click)="deletePlan(plan.id, $event)"
                 role="button" aria-label="Delete plan">
                 <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
@@ -701,21 +701,21 @@
     <div class="switcher-backdrop fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" (click)="closeSwitcher()"></div>
     <div role="dialog" aria-modal="true" aria-label="Switch plan"
       class="switcher-panel fixed left-1/2 top-24 z-50 w-[min(32rem,calc(100vw-2rem))]
-             overflow-hidden rounded-2xl border border-border bg-panel1 shadow-2xl">
+             overflow-hidden rounded-xl border border-border bg-panel1 shadow-lg">
       <input
         id="plan-switcher-input"
         type="text"
         autocomplete="off"
-        class="w-full bg-transparent px-4 py-3 text-[15px] text-text placeholder:text-subtle focus:outline-none"
+        class="w-full bg-transparent px-4 py-3 text-prose text-text placeholder:text-subtle focus:outline-none"
         placeholder="Jump to a plan, or type a new name…"
         [value]="switcherQuery()"
         (input)="switcherQuery.set($any($event.target).value)"
         (keydown.enter)="switcherSubmit()" />
 
-      <div class="max-h-80 overflow-y-auto border-t border-white/5 p-1">
+      <div class="max-h-80 overflow-y-auto border-t border-line p-1">
         @for (p of switcherResults(); track p.id) {
           <button type="button"
-            class="slash-item flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/5"
+            class="slash-item flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-fill"
             (click)="openFromSwitcher(p.id)">
             <span [class]="dotClass(p.categoryId)">●</span>
             <span class="min-w-0 flex-1 truncate text-sm text-text">{{ p.title }}</span>
