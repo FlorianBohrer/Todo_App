@@ -41,6 +41,10 @@ export class ShortcutsOverlay {
       items: [
         { keys: ['n'], description: 'New todo' },
         { keys: ['/'], description: 'Search' },
+        // Kein Tastenkürzel, aber dieselbe Sorte Wissen: getippte Konvention,
+        // die man kennen muss, um sie zu nutzen. Hier sucht man danach.
+        { keys: ['/must'], description: 'Start a title this way to mark a must-have' },
+        { keys: ['/could'], description: 'Start a title this way to mark a could-have' },
       ],
     },
     {

@@ -18,7 +18,14 @@
 
       <div class="ml-1 min-w-0">
         <span class="block truncate text-lg font-medium leading-tight text-text">{{ rangeLabel() }}</span>
-        <span class="block text-xs leading-tight text-subtle">Week {{ weekNumber() }}</span>
+        <span class="block text-xs leading-tight text-subtle">
+          Week {{ weekNumber() }}
+          <!-- Beim Verplanen der Woche der einzige belastbare Maßstab: was an
+               einem verplanten Tag tatsächlich fertig wurde. -->
+          @if (typicalPerDay() !== null) {
+            · you finish about {{ typicalPerDay() }} a day
+          }
+        </span>
       </div>
     </div>
 

@@ -11,10 +11,7 @@ import {
   CdkDropList,
 } from '@angular/cdk/drag-drop';
 
-import {
-  TodoService,
-  TIMER_PRESETS_MINUTES,
-} from '../../services/todo';
+import { TodoService } from '../../services/todo';
 import { NgClass } from '@angular/common';
 import { Todo } from '../../model/todo.model';
 import { Autosize } from '../../../directives/autosize.directive';
@@ -33,7 +30,6 @@ import {
   LucideAngularModule,
   Star,
   Pencil,
-  Timer,
   Trash2,
   Folder,
 } from 'lucide-angular';
@@ -66,14 +62,12 @@ export class TodoList {
   protected readonly ChevronDownIcon = ChevronDown;
   protected readonly GripIcon = GripVertical;
   protected readonly StarIcon = Star;
-  protected readonly TimerIcon = Timer;
   protected readonly ExpandIcon = ChevronsUpDown;
   protected readonly OptionsIcon = EllipsisVertical;
   protected readonly TrashIcon = Trash2;
     protected readonly PencilIcon = Pencil;
   protected readonly ScheduleIcon = CalendarPlus;
 
-  protected readonly timerPresets = TIMER_PRESETS_MINUTES;
 
   /** true, solange die erste Ladung Todos unterwegs ist. */
   protected readonly loading = this.todoService.loading;
@@ -86,9 +80,6 @@ toggleFolderList(): void {
 }
 
   protected readonly openMenuId =
-    signal<string | null>(null);
-
-  protected readonly openTimerMenuId =
     signal<string | null>(null);
 
   protected readonly openScheduleId =
@@ -259,16 +250,6 @@ closeOptionsMenu(): void {
 
   closeMenu(): void {
     this.openMenuId.set(null);
-  }
-
-  toggleTimerMenu(id: string): void {
-    this.openTimerMenuId.update(
-      current => current === id ? null : id,
-    );
-  }
-
-  closeTimerMenu(): void {
-    this.openTimerMenuId.set(null);
   }
 
   // ---- Termin ----
@@ -466,43 +447,4 @@ closeOptionsMenu(): void {
     );
   }
 
-  startTimer(
-    id: string,
-    minutes: number,
-  ): void {
-    this.todoService.startTimer(
-      id,
-      minutes * 60,
-    );
-
-    this.closeTimerMenu();
-  }
-
-  stopTimer(id: string): void {
-    this.todoService.stopTimer(id);
-  }
-
-  hasTimer(todo: Todo): boolean {
-    return todo.timerStartedAt !== null;
-  }
-
-  isTimerDone(todo: Todo): boolean {
-    return (
-      this.hasTimer(todo) &&
-      this.todoService.remainingSeconds(todo) === 0
-    );
-  }
-
-  remainingLabel(todo: Todo): string {
-    const total =
-      this.todoService.remainingSeconds(todo);
-
-    const minutes =
-      Math.floor(total / 60);
-
-    const seconds =
-      total % 60;
-
-    return `${minutes}:${String(seconds).padStart(2, '0')}`;
-  }
 }

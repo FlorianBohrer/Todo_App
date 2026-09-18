@@ -9,6 +9,7 @@ import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
 import { TodoList } from './app/todo/components/todo-list/todo-list';
 import { TodoStats } from './app/todo/components/todo-stats/todo-stats';
+import { FocusPanel } from './app/todo/components/focus-panel/focus-panel';
 import { CategoriesOverlay } from './app/todo/components/categories/categories-overlay';
 import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite-folders';
 import { WeekView } from './app/todo/components/week-view/week-view';
@@ -31,6 +32,7 @@ import type { View } from './app/todo/services/todo';
     TodoFilter,
     TodoList,
     TodoStats,
+    FocusPanel,
     CategoriesOverlay,
     FavoriteFolders,
     WeekView,

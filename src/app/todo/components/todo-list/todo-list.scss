@@ -89,28 +89,6 @@ li.todo-expanded-row {
   }
 }
 
-// --- Zeitblock ---
-
-.timer-chip.timer-done {
-  animation: timer-done-pulse 2s ease-in-out infinite;
-}
-
-@keyframes timer-done-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-  }
-  50% {
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .timer-chip.timer-done {
-    animation: none;
-  }
-}
-
 /* ---- Ladezustand ----
    Drei Platzhalterzeilen statt „No todos yet". Sie atmen leicht, damit klar
    ist, dass etwas unterwegs ist — und nicht, dass hier nichts mehr kommt. */

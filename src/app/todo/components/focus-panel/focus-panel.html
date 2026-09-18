@@ -1,0 +1,118 @@
+@if (hasSomethingToSay()) {
+  <section class="mt-4 rounded-2xl border border-white/10 bg-bg3/60 p-3 sm:p-4"
+    aria-label="What to work on next">
+
+    <div class="flex items-center gap-2">
+      <lucide-icon [img]="FocusIcon" class="h-4 w-4 flex-none text-indigo-300" aria-hidden="true"></lucide-icon>
+      <h2 class="text-sm font-medium text-text">Next up</h2>
+
+      <!-- Tagesbilanz gegen die eigene Vergangenheit statt gegen eine erfundene
+           Obergrenze — die Außensicht gegen den Planungsfehlschluss. -->
+      <span class="ml-auto text-xs" [class]="load().overCommitted ? 'text-amber-300' : 'text-subtle'">
+        @if (load().open + load().done > 0) {
+          {{ load().done }}/{{ load().done + load().open }} today
+          @if (load().overCommitted) {
+            · you usually finish {{ load().typical }}
+          }
+        } @else {
+          nothing planned for today
+        }
+      </span>
+
+      <button type="button"
+        class="grid h-6 w-6 flex-none place-items-center rounded text-subtle transition hover:bg-white/5 hover:text-text"
+        (click)="toggleCollapsed()"
+        [attr.aria-expanded]="!collapsed()"
+        [attr.aria-label]="collapsed() ? 'Show suggestions' : 'Hide suggestions'">
+        <lucide-icon [img]="ChevronIcon" class="h-4 w-4 transition-transform duration-200"
+          [class.rotate-180]="collapsed()"></lucide-icon>
+      </button>
+    </div>
+
+    @if (!collapsed()) {
+      <ul role="list" class="mt-3 space-y-1.5">
+        @for (todo of suggestions(); track todo.id) {
+          <li class="flex items-start gap-2.5 rounded-lg px-1.5 py-1.5 transition hover:bg-white/[0.03]">
+            <button type="button"
+              class="mt-0.5 h-4 w-4 flex-none rounded-full border-2 border-zinc-500 transition hover:border-emerald-400"
+              (click)="complete(todo.id)"
+              [attr.aria-label]="'Mark “' + title(todo) + '” as done'"></button>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-sm text-text">{{ title(todo) }}</span>
+              <span class="block text-xs text-subtle">{{ reason(todo) }}</span>
+            </span>
+          </li>
+        }
+      </ul>
+
+      <!-- Ein Vorsatz ohne Wann bleibt ein Vorsatz. Deshalb steht hier nicht
+           „plane das mal", sondern der Tag als Knopf. -->
+      @if (unplanned().length > 0) {
+        <div class="mt-3 border-t border-white/5 pt-3">
+          <p class="mb-2 text-xs text-muted">
+            {{ unplanned().length }} must-{{ unplanned().length === 1 ? 'have has' : 'haves have' }} no day yet
+          </p>
+          <ul role="list" class="space-y-1.5">
+            @for (todo of unplanned(); track todo.id) {
+              <li class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span class="min-w-0 flex-1 truncate text-sm text-text">{{ title(todo) }}</span>
+                @for (choice of dayChoices(); track choice.key) {
+                  <button type="button"
+                    class="flex-none rounded-full border border-white/15 px-2.5 py-0.5 text-xs text-muted transition hover:border-indigo-400 hover:text-indigo-300"
+                    (click)="plan(todo.id, choice.iso)">
+                    {{ choice.label }}
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      <button type="button"
+        class="mt-3 text-xs text-subtle underline underline-offset-2 transition hover:text-muted"
+        (click)="toggleExplaining()"
+        [attr.aria-expanded]="explaining()">
+        {{ explaining() ? 'Hide the reasoning' : 'Why these?' }}
+      </button>
+
+      @if (explaining()) {
+        <div class="mt-2 space-y-2 border-t border-white/5 pt-2 text-xs/[1.6] text-subtle">
+          <p>
+            <strong class="text-muted">Importance outranks urgency.</strong>
+            A must-have stays above a could-have no matter how soon the could-have
+            is due. People reliably pick the urgent task over the more valuable
+            one, even when both fit the same slot — Zhu, Yang &amp; Hsee,
+            <em>The Mere Urgency Effect</em> (Journal of Consumer Research, 2018).
+            Urgency only orders todos of equal importance.
+          </p>
+          <p>
+            <strong class="text-muted">A day matters more than a decision.</strong>
+            Naming when something happens raises follow-through far more than
+            resolving to do it — Gollwitzer &amp; Sheeran's meta-analysis of 94
+            studies on implementation intentions (2006). That is why must-haves
+            without a day get their own line.
+          </p>
+          <p>
+            <strong class="text-muted">Your own past beats your estimate.</strong>
+            We underestimate what a day holds; the working remedy is the outside
+            view — Buehler, Griffin &amp; Ross on the planning fallacy (1994).
+            The count above compares today's plan with the median you actually
+            finished on earlier planned days, and stays quiet until there are
+            enough of them to say anything.
+          </p>
+          <p>
+            <strong class="text-muted">Marking importance:</strong> start a
+            todo's title with <code class="rounded bg-white/10 px-1">/must</code>
+            or <code class="rounded bg-white/10 px-1">/could</code>. Anything
+            else counts as normal.
+          </p>
+          <p class="text-subtle/80">
+            Not used: the Eisenhower matrix. It is management folklore without
+            primary research — its useful half is the first point above.
+          </p>
+        </div>
+      }
+    }
+  </section>
+}
