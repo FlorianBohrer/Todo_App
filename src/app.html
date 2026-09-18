@@ -16,11 +16,12 @@
         hätte dann dauerhaft ~170px Bildschirm gekostet — auf dem Telefon ein
         Viertel. So bekommt die Überschrift ihren Abstand, und oben bleibt das
         hängen, was man tatsächlich im Zugriff braucht.
-        Die Breite folgt der Ansicht: Woche und Pläne sind max-w-6xl, der Titel
-        stand dort schmaler als der Inhalt unter ihm. -->
-   <div
-     class="mx-auto w-full px-5 pt-8 sm:pt-12"
-     [class]="view() === 'list' ? 'max-w-3xl' : 'max-w-6xl'">
+        Die Breite ist fest und folgt NICHT der Ansicht. Ein Versuch damit ist
+        gescheitert: der zentrierte Block wandert beim Umschalten seitlich, und
+        springende Bedienelemente wiegen schwerer als der Umstand, dass Woche
+        und Pläne (max-w-6xl) breiter sind als ihre Kopfzeile. Auf der Liste
+        steht der Titel dafür exakt über der Karte. -->
+   <div class="mx-auto w-full max-w-3xl px-5 pt-8 sm:pt-12">
      <app-header [title]="title()" [accentClass]="accentClass()"></app-header>
 
     <div
@@ -32,8 +33,7 @@
   <!-- Der Blur spannt über die volle Breite: vorher endete er bei max-w-3xl,
        sodass in Woche und Plänen Inhalt unblurred daneben vorbeizog. -->
   <div class="sticky top-0 z-10 mt-6 mb-6 w-full border-b border-white/5 bg-bg2/80 backdrop-blur-md">
-    <div class="mx-auto w-full px-5 py-2.5"
-      [class]="view() === 'list' ? 'max-w-3xl' : 'max-w-6xl'">
+    <div class="mx-auto w-full max-w-3xl px-5 py-2.5">
       <div class="flex flex-wrap items-center gap-2">
         <button
           class="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 px-5 text-sm text-muted transition hover:border-white/30 hover:text-text"

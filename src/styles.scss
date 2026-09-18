@@ -329,6 +329,14 @@
     width: 100%;
   }
 
+  html {
+    /* Die zweite Ursache dafür, dass zentrierte Elemente beim Ansichtswechsel
+       seitlich springen: die Liste scrollt in sich, Woche und Pläne scrollen
+       die Seite. Taucht die Scrollleiste auf, schrumpft der Viewport und alles
+       Zentrierte rückt. Der Platz wird jetzt immer freigehalten. */
+    scrollbar-gutter: stable;
+  }
+
   body {
     @apply antialiased;
     background: var(--color-bg);
