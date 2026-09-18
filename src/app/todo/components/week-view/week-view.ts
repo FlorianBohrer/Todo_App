@@ -30,6 +30,7 @@ import {
   weekRangeLabel,
 } from '../../shared/week';
 import { isTypingTarget } from '../../shared/keyboard';
+import { pastThroughput } from '../../shared/focus';
 import { stripPriorityPrefix } from '../../shared/title-priority';
 import { folderColorClass } from '../../shared/folder-color';
 
@@ -116,6 +117,15 @@ export class WeekView {
     }
     return { done, total, percent: total === 0 ? 0 : Math.round((done / total) * 100) };
   });
+
+  /**
+   * Was an einem verplanten Tag sonst fertig wird. Beim Planen ist das die
+   * einzige ehrliche Bezugsgröße — die Schätzung im Kopf ist es nachweislich
+   * nicht (Planungsfehlschluss). null, solange es zu wenig Vergangenheit gibt.
+   */
+  protected readonly typicalPerDay = computed(() =>
+    pastThroughput(this.todoService.allTodos()),
+  );
 
   /** Offene Aufgaben, deren Tag vorbei ist — über die ganze Zeit, nicht nur diese Woche. */
   protected readonly overdue = computed(() => {

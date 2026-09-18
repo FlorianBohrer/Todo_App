@@ -10,10 +10,6 @@ export interface Todo{
     labelIds: string[];
     createdAt: Date;
 
-    // Zeitblock: beide null = kein Timer aktiv.
-    timerStartedAt: Date | null;
-    timerDurationSeconds: number | null;
-
     // Wochenansicht: 'YYYY-MM-DD' oder null (ungeplant/Backlog).
     scheduledDate: string | null;
 }
