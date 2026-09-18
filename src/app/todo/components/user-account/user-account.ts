@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { ClerkService } from 'ngx-clerk';
 import { map } from 'rxjs';
@@ -6,6 +6,7 @@ import { map } from 'rxjs';
 @Component({
   selector: 'app-user-account',
   imports: [AsyncPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './user-account.html',
 })
 export class UserAccount {

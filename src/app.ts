@@ -1,5 +1,5 @@
 // src/app.ts
-import { Component, HostListener, inject, computed, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, HostListener, inject, computed, signal } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { firstValueFrom, take } from 'rxjs';
 import { ClerkService } from 'ngx-clerk';
@@ -51,6 +51,7 @@ import type { View } from './app/todo/services/todo';
     ToastContainer,
     ShortcutsOverlay,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',
   styleUrl: './app.scss',
   providers: [],
@@ -129,14 +130,14 @@ export class App {
   protected readonly title = computed(() => {
     const id = this.labelService.activeLabelId();
     if (id === null) return 'All Tasks';
-    const label = this.labelService.labels().find((l) => l.id === id);
+    const label = this.labelService.labelById(id);
     return label?.name ?? 'Tasks';
   });
 
   protected readonly accentClass = computed(() => {
     const id = this.labelService.activeLabelId();
     if (id === null) return 'text-white';
-    const label = this.labelService.labels().find((l) => l.id === id);
+    const label = this.labelService.labelById(id);
     const map: Record<string, string> = {
       violet: 'text-violet-400',
       emerald: 'text-emerald-400',
@@ -149,7 +150,7 @@ export class App {
   protected readonly bgClass = computed(() => {
     const id = this.labelService.activeLabelId();
     if (id === null) return 'bg-panel1';
-    const label = this.labelService.labels().find((l) => l.id === id);
+    const label = this.labelService.labelById(id);
     const map: Record<string, string> = {
       violet: 'bg-violet-950',
       emerald: 'bg-emerald-950',

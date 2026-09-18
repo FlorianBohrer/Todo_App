@@ -53,6 +53,24 @@ export class LabelService {
   readonly activeLabelId = signal<string | null>(null); // null = alle
 
   /**
+   * Nachschlagewerk statt linearer Suche.
+   *
+   * Jede Todo-Zeile fragt mehrfach nach ihrem Label — für Farbe, Rand, Punkt
+   * und Symbol. Als `labels().find(…)` war das pro Zeile und Durchlauf ein
+   * Durchmarsch durch alle Folder; bei 50 Zeilen und einem Tastendruck in der
+   * Suche summiert sich das. Die Map wird nur neu gebaut, wenn sich die Folder
+   * ändern — also praktisch nie.
+   */
+  private readonly labelsById = computed(
+    () => new Map(this.labels().map((label) => [label.id, label])),
+  );
+
+  /** Ein Label in konstanter Zeit. null, wenn es keins (mehr) gibt. */
+  labelById(id: string | null | undefined): Label | null {
+    return id ? this.labelsById().get(id) ?? null : null;
+  }
+
+  /**
    * Favorisierte Folder in der Reihenfolge ihrer Plätze (0–3) — werden als
    * Kacheln über der Todo-Liste angezeigt.
    */
@@ -136,9 +154,7 @@ export class LabelService {
 
   /** Favorit umschalten — sofort lokal anzeigen, bei Fehler Serverstand laden. */
   toggleFavorite(id: string) {
-    const label = this.labels().find(
-      (item) => item.id === id,
-    );
+    const label = this.labelById(id);
 
     if (!label) {
       return;
@@ -260,8 +276,7 @@ updateLabel(id: string, changes: { name?: string; color?: string; icon?: string 
   // ---- UI-State / Helfer ----
   borderClassFor(labelId: string | null): string {
     if (labelId === null) return 'border-zinc-600';
-    const label = this.labels().find((l) => l.id === labelId);
-    return folderColorClass(label?.color, 'border');
+    return folderColorClass(this.labelById(labelId)?.color, 'border');
   }
 
   openOverlay()  { this.isOverlayOpen.set(true); }

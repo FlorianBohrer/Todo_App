@@ -172,7 +172,7 @@ export class PlanGraph {
   });
 
   private toneFor(categoryId: string | null): string {
-    const color = this.labelService.labels().find((l) => l.id === categoryId)?.color;
+    const color = this.labelService.labelById(categoryId)?.color;
     return folderColorClass(color, 'dot');
   }
 

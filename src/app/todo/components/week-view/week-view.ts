@@ -1,4 +1,4 @@
-import {
+import {ChangeDetectionStrategy,
   Component,
   ElementRef,
   HostListener,
@@ -50,6 +50,7 @@ const UNSCHEDULED = '';
 @Component({
   selector: 'app-week-view',
   imports: [LucideAngularModule, CdkDropListGroup, CdkDropList, CdkDrag],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './week-view.html',
   styleUrl: './week-view.scss',
 })

@@ -1,10 +1,11 @@
-import { Component, inject } from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TodoService } from '../../services/todo';
 import { DecimalPipe } from '@angular/common';
 
 @Component({
   selector: 'app-todo-stats',
   imports: [DecimalPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-stats.html',
 })
 export class TodoStats {
