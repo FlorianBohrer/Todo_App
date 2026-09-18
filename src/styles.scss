@@ -709,9 +709,12 @@ select {
 
 /* ---- Laschen: eine Pille, die wandert ----
    Statt Knoepfen, die unabhaengig aufleuchten, bewegt sich eine Auswahl.
-   Gleich breite Laschen (flex-1) und Luecken von 0.5rem, plus je 0.25rem
-   Polster: damit laesst sich die Breite ohne Messen im DOM ausrechnen.
-   --tab-count sagt, wie viele Laschen es sind (Voreinstellung: vier). */
+   Die Rechnung kommt ohne Messen im DOM aus, setzt dafuer aber voraus, dass
+   alle Laschen GLEICH breit sind: entweder flex-1 (basis 0) in einem Container
+   mit fester Breite, oder eine ausgeschriebene Breite pro Lasche. Ungleiche
+   Laschen und die Pille steht daneben.
+   Dazu Luecken von 0.5rem und je 0.25rem Polster; --tab-count sagt, wie viele
+   Laschen es sind (Voreinstellung: vier). */
 .filter-tabs {
   position: relative;
 }

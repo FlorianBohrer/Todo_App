@@ -3,7 +3,15 @@ import { Component, HostListener, inject, computed, signal } from '@angular/core
 import { AsyncPipe } from '@angular/common';
 import { firstValueFrom, take } from 'rxjs';
 import { ClerkService } from 'ngx-clerk';
-import { LucideAngularModule, FolderDown, ArrowDown, Plus } from 'lucide-angular';
+import {
+  LucideAngularModule,
+  FolderDown,
+  ArrowDown,
+  Plus,
+  LayoutList,
+  CalendarDays,
+  NotebookPen,
+} from 'lucide-angular';
 import { Header } from './app/todo/components/header/header';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
@@ -146,6 +154,9 @@ export class App {
   protected readonly FolderDownIcon = FolderDown;
   protected readonly ArrowDown = ArrowDown;
   protected readonly PlusIcon = Plus;
+  protected readonly ListIcon = LayoutList;
+  protected readonly WeekIcon = CalendarDays;
+  protected readonly PlansIcon = NotebookPen;
 
   openCategories() {
     this.labelService.openOverlay();
