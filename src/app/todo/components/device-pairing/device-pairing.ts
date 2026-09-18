@@ -9,8 +9,10 @@ import {
 import { DeviceService, PairedDevice } from '../../services/device.service';
 
 /**
- * Kopplung des macOS-Timers. Steckt hinter einem Button, weil man das genau
- * einmal pro Gerät braucht — der Normalfall ist, dass hier nichts zu sehen ist.
+ * Kopplung der Flow-App auf dem Mac. Steckt hinter einem Button, weil man das
+ * genau einmal pro Gerät braucht — der Normalfall ist, dass hier nichts zu
+ * sehen ist. Mit dem (entfernten) Zeitblock pro Todo hatte das nie zu tun:
+ * Flow redet direkt mit dem Backend, die Web-App reicht nur den Code weiter.
  */
 @Component({
   selector: 'app-device-pairing',
@@ -68,11 +70,11 @@ export class DevicePairing {
 
   /** "vor 3 Minuten" ist hier Overkill — Datum reicht. */
   protected formatDate(value: string | null): string {
-    if (!value) return 'noch nie benutzt';
+    if (!value) return 'never';
 
-    return new Date(value).toLocaleDateString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
+    return new Date(value).toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
       year: 'numeric',
     });
   }

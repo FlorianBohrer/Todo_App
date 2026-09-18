@@ -18,7 +18,7 @@ interface PairingCodeResponse {
 }
 
 /**
- * Kopplung nativer Clients (macOS-Menüleisten-Timer). Die App im Browser hat
+ * Kopplung nativer Clients (Flow-App auf dem Mac). Die App im Browser hat
  * eine Clerk-Sitzung, das Gerät nicht — deshalb erzeugt der Browser hier einen
  * kurzlebigen Code, den das Gerät einmalig gegen ein eigenes Token tauscht.
  */
@@ -42,9 +42,7 @@ export class DeviceService {
       );
       this.devices.set(devices);
     } catch {
-      this.toast.show('Geräte konnten nicht geladen werden.', {
-        type: 'error',
-      });
+      this.toast.error('Could not load devices');
     }
   }
 
@@ -61,9 +59,7 @@ export class DeviceService {
         expiresAt: new Date(response.expiresAt),
       });
     } catch {
-      this.toast.show('Kopplungscode konnte nicht erzeugt werden.', {
-        type: 'error',
-      });
+      this.toast.error('Could not generate a pairing code');
     } finally {
       this.busy.set(false);
     }
@@ -82,11 +78,9 @@ export class DeviceService {
       await firstValueFrom(this.http.delete<void>(`${this.baseUrl}/${device.id}`));
 
       this.devices.update((list) => list.filter((d) => d.id !== device.id));
-      this.toast.show(`"${device.name}" wurde entkoppelt.`, { type: 'success' });
+      this.toast.success(`“${device.name}” disconnected`);
     } catch {
-      this.toast.show('Gerät konnte nicht entkoppelt werden.', {
-        type: 'error',
-      });
+      this.toast.error('Could not disconnect the device');
     }
   }
 }

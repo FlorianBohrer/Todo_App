@@ -4,17 +4,18 @@
     class="rounded-lg border border-border px-3 py-2 text-xs text-muted transition hover:bg-panel1 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight1"
     [attr.aria-expanded]="open()"
     (click)="toggle()">
-    Mac koppeln
+    Connect Mac
   </button>
 
   @if (open()) {
     <div
       class="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-border bg-panel1 p-4 shadow-2xl"
       role="dialog"
-      aria-label="Geräte koppeln">
-      <p class="text-sm font-semibold text-text">Menüleisten-Timer</p>
+      aria-label="Connect a device">
+      <p class="text-sm font-semibold text-text">Flow for Mac</p>
       <p class="mt-1 text-xs text-muted">
-        Erzeuge einen Code und tippe ihn im Timer auf deinem Mac ein.
+        Generate a code and enter it in Flow on your Mac. Timers live there — this
+        page only hands over the connection.
       </p>
 
       @if (pairingCode(); as code) {
@@ -27,11 +28,11 @@
 
           @if (expired()) {
             <p class="mt-2 text-xs text-danger">
-              Abgelaufen — erzeuge einen neuen Code.
+              Expired — generate a new one.
             </p>
           } @else {
             <p class="mt-2 text-xs text-muted" aria-live="polite">
-              Gültig noch {{ formatCountdown(secondsLeft()) }}
+              Valid for {{ formatCountdown(secondsLeft()) }}
             </p>
           }
         </div>
@@ -41,7 +42,7 @@
           class="mt-3 w-full rounded-lg border border-border px-3 py-2 text-xs text-muted transition hover:bg-panel2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight1"
           [disabled]="busy()"
           (click)="createCode()">
-          Neuen Code erzeugen
+          Generate a new code
         </button>
       } @else {
         <button
@@ -49,15 +50,15 @@
           class="btn btn-primary mt-4 w-full text-sm"
           [disabled]="busy()"
           (click)="createCode()">
-          {{ busy() ? 'Code wird erzeugt …' : 'Kopplungscode erzeugen' }}
+          {{ busy() ? 'Generating code…' : 'Generate pairing code' }}
         </button>
       }
 
       <div class="mt-5 border-t border-border pt-4">
-        <p class="text-xs font-semibold text-muted">Gekoppelte Geräte</p>
+        <p class="text-xs font-semibold text-muted">Connected devices</p>
 
         @if (deviceList().length === 0) {
-          <p class="mt-2 text-xs text-muted">Noch keins.</p>
+          <p class="mt-2 text-xs text-muted">None yet.</p>
         } @else {
           <ul class="mt-2 space-y-2">
             @for (device of deviceList(); track device.id) {
@@ -65,15 +66,15 @@
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-xs text-text">{{ device.name }}</p>
                   <p class="truncate text-[10px] text-muted">
-                    Zuletzt: {{ formatDate(device.lastUsedAt) }}
+                    Last seen: {{ formatDate(device.lastUsedAt) }}
                   </p>
                 </div>
                 <button
                   type="button"
                   class="shrink-0 rounded-md px-2 py-1 text-[10px] text-danger transition hover:bg-panel2 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-                  [attr.aria-label]="'Gerät ' + device.name + ' entkoppeln'"
+                  [attr.aria-label]="'Disconnect ' + device.name"
                   (click)="revoke(device)">
-                  Entkoppeln
+                  Disconnect
                 </button>
               </li>
             }
