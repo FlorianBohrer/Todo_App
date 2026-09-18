@@ -69,7 +69,16 @@ export class App {
   protected readonly viewIndex = computed(() => App.VIEWS.indexOf(this.view()));
 
   setView(view: View) {
+    if (this.view() === view) return;
     this.todoService.view.set(view);
+
+    // Nach oben springen. Die Ansichten sind unterschiedlich hoch: wer in der
+    // Woche nach unten gescrollt hat, steht dort mit der klebenden Leiste oben
+    // am Rand — in der kürzeren Liste klemmt der Browser die Scrollposition auf
+    // 0, und die Leiste fällt zurück an ihren Platz im Fluss, rund 150px
+    // tiefer. Das sieht aus, als wandere das Menü beim Umschalten.
+    // Ohne Weichzeichner: eine Animation macht denselben Sprung nur langsamer.
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
   /**
