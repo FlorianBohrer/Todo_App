@@ -1,5 +1,5 @@
 import { LabelService } from '../../services/label.service';
-import { Component, computed, inject, HostListener, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, HostListener, signal } from '@angular/core';
 import { CdkDropList, CdkDrag, CdkDragHandle, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
 import { folderColorClass } from '../../shared/folder-color';
@@ -20,6 +20,7 @@ import {
 @Component({
   selector: 'app-categories-overlay',
   imports: [LucideAngularModule, CdkDropList, CdkDrag, CdkDragHandle],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './categories-overlay.html',
 })
 export class CategoriesOverlay {

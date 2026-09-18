@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import {
@@ -102,6 +102,7 @@ const DIAGRAM_TEMPLATE = `flowchart TD
     OverlayModule,
     PlanGraph,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plans-view.html',
   styleUrl: './plans-view.scss',
 })
@@ -921,10 +922,10 @@ export class PlansView {
 
   folderName(categoryId: string | null): string {
     if (!categoryId) return 'Standalone';
-    return this.labels().find((l) => l.id === categoryId)?.name ?? 'Standalone';
+    return this.labelService.labelById(categoryId)?.name ?? 'Standalone';
   }
   dotClass(categoryId: string | null): string {
-    const color = this.labels().find((l) => l.id === categoryId)?.color;
+    const color = this.labelService.labelById(categoryId)?.color;
     return folderColorClass(color, 'dot');
   }
 

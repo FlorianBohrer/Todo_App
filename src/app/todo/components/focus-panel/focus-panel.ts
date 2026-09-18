@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { LucideAngularModule, ChevronDown, Target } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { Todo } from '../../model/todo.model';
@@ -19,6 +19,7 @@ const COLLAPSED_KEY = 'todo.focus.collapsed';
 @Component({
   selector: 'app-focus-panel',
   imports: [LucideAngularModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './focus-panel.html',
 })
 export class FocusPanel {

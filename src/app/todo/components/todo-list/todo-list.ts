@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import {
   ConnectedPosition,
   OverlayModule,
@@ -45,6 +45,7 @@ import {
     
     CdkDragPlaceholder,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-list.html',
   styleUrl: './todo-list.scss',
 })
@@ -365,7 +366,7 @@ closeOptionsMenu(): void {
 
   private primaryLabel(labelIds: string[]) {
     const id = labelIds[0];
-    return id ? this.labels().find((l) => l.id === id) ?? null : null;
+    return this.labelService.labelById(id);
   }
 
   labelIcon(label: Label){
@@ -396,11 +397,7 @@ closeOptionsMenu(): void {
       return 'No category';
     }
 
-    return (
-      this.labels().find(
-        label => label.id === labelId,
-      )?.name ?? 'No category'
-    );
+    return this.labelService.labelById(labelId)?.name ?? 'No category';
   }
 
   /** Namen aller Labels als Tooltip-Text (Punkte in der Zeile zeigen keine Namen). */
@@ -414,11 +411,7 @@ closeOptionsMenu(): void {
       return 'text-zinc-400';
     }
 
-    const label = this.labels().find(
-      item => item.id === labelId,
-    );
-
-    return folderColorClass(label?.color, 'dot');
+    return folderColorClass(this.labelService.labelById(labelId)?.color, 'dot');
   }
 
   renameTodo(

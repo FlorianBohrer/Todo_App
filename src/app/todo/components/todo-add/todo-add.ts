@@ -1,4 +1,4 @@
-import {
+import {ChangeDetectionStrategy,
   Component,
   ElementRef,
   HostListener,
@@ -13,6 +13,7 @@ import { Plus,LucideAngularModule } from "lucide-angular";
 @Component({
   selector: 'app-todo-add',
   imports: [FormsModule, LucideAngularModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-add.html',
 })
 export class TodoAdd {

@@ -1,7 +1,9 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   DestroyRef,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -16,6 +18,7 @@ import { DeviceService, PairedDevice } from '../../services/device.service';
  */
 @Component({
   selector: 'app-device-pairing',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './device-pairing.html',
 })
 export class DevicePairing {
@@ -44,9 +47,28 @@ export class DevicePairing {
     () => this.pairingCode() !== null && this.secondsLeft() === 0,
   );
 
+  private ticker: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
-    const interval = setInterval(() => this.now.set(Date.now()), 1000);
-    this.destroyRef.onDestroy(() => clearInterval(interval));
+    // Der Sekundentakt lief bisher immer — die Komponente sitzt dauerhaft in
+    // der Kopfleiste, also tickte die App rund um die Uhr durch, für einen
+    // Countdown, den fast nie jemand sieht. Jetzt läuft er nur, solange ein
+    // Code offen ist.
+    effect(() => {
+      const needed = this.pairingCode() !== null && this.open();
+
+      if (needed && this.ticker === null) {
+        this.now.set(Date.now()); // sonst zeigt die erste Sekunde einen alten Stand
+        this.ticker = setInterval(() => this.now.set(Date.now()), 1000);
+      } else if (!needed && this.ticker !== null) {
+        clearInterval(this.ticker);
+        this.ticker = null;
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      if (this.ticker !== null) clearInterval(this.ticker);
+    });
   }
 
   protected async toggle(): Promise<void> {

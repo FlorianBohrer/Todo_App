@@ -1,4 +1,4 @@
-import {
+import {ChangeDetectionStrategy,
   Component,
   ElementRef,
   HostListener,
@@ -13,6 +13,7 @@ import { isTypingTarget } from '../../shared/keyboard';
 @Component({
   selector: 'app-todo-filter',
   imports: [LucideAngularModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-filter.html',
 })
 export class TodoFilter {

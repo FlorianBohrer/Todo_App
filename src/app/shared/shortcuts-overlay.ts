@@ -1,4 +1,4 @@
-import { Component, HostListener, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, HostListener, signal } from '@angular/core';
 import { isTypingTarget } from '../todo/shared/keyboard';
 
 interface Shortcut {
@@ -20,6 +20,7 @@ interface ShortcutGroup {
  */
 @Component({
   selector: 'app-shortcuts-overlay',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shortcuts-overlay.html',
 })
 export class ShortcutsOverlay {

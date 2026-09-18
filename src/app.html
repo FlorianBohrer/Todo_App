@@ -90,10 +90,22 @@
     </div>
   </div>
 
+    <!-- Woche und Pläne lagen im Start-Bundle, obwohl die Liste die Ansicht
+         ist, mit der jeder anfängt. @defer schneidet sie heraus und lädt sie,
+         sobald sie gebraucht werden: `on immediate` heißt „jetzt sofort", nicht
+         „irgendwann im Leerlauf" — sie sind ja bereits ausgewählt. -->
     @if (view() === 'plans') {
-      <app-plans-view></app-plans-view>
+      @defer (on immediate) {
+        <app-plans-view></app-plans-view>
+      } @placeholder {
+        <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening plans…</p>
+      }
     } @else if (view() === 'week') {
-      <app-week-view></app-week-view>
+      @defer (on immediate) {
+        <app-week-view></app-week-view>
+      } @placeholder {
+        <p class="mx-auto max-w-6xl px-5 text-sm text-subtle">Opening the week…</p>
+      }
     } @else {
       <app-favorite-folders></app-favorite-folders>
 

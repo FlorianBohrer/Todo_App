@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -18,6 +18,7 @@ import { folderColorClass } from '../../shared/folder-color';
 @Component({
   selector: 'app-favorite-folders',
   imports: [LucideAngularModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './favorite-folders.html',
   styleUrl: './favorite-folders.scss',
 })
