@@ -18,6 +18,14 @@ export interface Label {
   favoritePosition: number | null;
   /** Abgeleitet aus favoritePosition — für einfache Abfragen im Template. */
   isFavorite: boolean;
+  /**
+   * Name der selbst angelegten Sammlung, in der dieser Folder in der Übersicht
+   * steht. null = keiner zugeordnet.
+   *
+   * Die Sammlung ist bewusst nur ein Name am Folder: sie besteht aus den
+   * Foldern, die ihn tragen, und verschwindet, sobald der letzte ihn ablegt.
+   */
+  collection: string | null;
 }
 
 // So liefert das Backend eine Kategorie (zusätzliche Felder ignorieren wir).
@@ -27,6 +35,7 @@ interface CategoryDto {
   color: string;
   icon: string;
   favoritePosition: number | null;
+  collection?: string | null;
 }
 
 interface CategoryListResponse {
@@ -134,6 +143,10 @@ export class LabelService {
       icon: c.icon,
       favoritePosition,
       isFavorite: favoritePosition !== null,
+      // Ein Server, der die Spalte noch nicht kennt, liefert das Feld gar
+      // nicht. Dann ist der Folder eben keiner Sammlung zugeordnet — die
+      // Übersicht bleibt bedienbar, statt auf undefined zu laufen.
+      collection: c.collection ?? null,
     };
   }
 
@@ -240,10 +253,19 @@ export class LabelService {
   }
 
   /** Rename or recolor a folder. Applied optimistically, reverted on error. */
-updateLabel(id: string, changes: { name?: string; color?: string; icon?: string }) {
+updateLabel(
+  id: string,
+  changes: {
+    name?: string;
+    color?: string;
+    icon?: string;
+    /** null löst die Zuordnung zu einer Sammlung wieder auf. */
+    collection?: string | null;
+  },
+) {
   const snapshot = this.labels();
 
-  const patch: Record<string, string> = {};
+  const patch: Record<string, string | null> = {};
   if (changes.name !== undefined) {
     const name = changes.name.trim();
     if (!name) return;                 // empty name discards the edit
@@ -251,6 +273,12 @@ updateLabel(id: string, changes: { name?: string; color?: string; icon?: string 
   }
   if (changes.color !== undefined) patch['color'] = changes.color;
   if (changes.icon !== undefined) patch['icon'] = changes.icon;
+  if (changes.collection !== undefined) {
+    // Ein leer getippter Name ist dasselbe wie „keine Sammlung" — sonst
+    // entstünde ein Abschnitt mit dem Titel "" , den man nicht mehr trifft.
+    const collection = changes.collection?.trim();
+    patch['collection'] = collection ? collection : null;
+  }
   if (Object.keys(patch).length === 0) return;
 
   // Show it right away — the folder colour is used all over the app.
@@ -262,7 +290,15 @@ updateLabel(id: string, changes: { name?: string; color?: string; icon?: string 
     next: (c) =>
       this.labels.update((list) =>
         list.map((l) =>
-          l.id === id ? { ...l, name: c.name, color: c.color, icon: c.icon } : l,
+          l.id === id
+            ? {
+                ...l,
+                name: c.name,
+                color: c.color,
+                icon: c.icon,
+                collection: c.collection ?? null,
+              }
+            : l,
         ),
       ),
     error: (err) => {
@@ -272,6 +308,22 @@ updateLabel(id: string, changes: { name?: string; color?: string; icon?: string 
     },
   });
 }
+
+  /**
+   * Folder einer Sammlung zuordnen. null löst die Zuordnung auf.
+   *
+   * Eigene Methode, weil das der einzige Weg ist, eine Sammlung anzulegen
+   * oder aufzulösen: es gibt keinen Sammlungs-Datensatz, nur diesen Namen.
+   */
+  setCollection(id: string, collection: string | null) {
+    const label = this.labelById(id);
+    if (!label) return;
+
+    const next = collection?.trim() || null;
+    if (next === label.collection) return; // nichts geändert, kein Request
+
+    this.updateLabel(id, { collection: next });
+  }
 
   // ---- UI-State / Helfer ----
   borderClassFor(labelId: string | null): string {
