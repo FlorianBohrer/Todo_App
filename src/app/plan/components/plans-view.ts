@@ -964,6 +964,9 @@ export class PlansView {
   protected readonly suggestAvailable = this.titles.available;
   protected readonly suggestExhausted = this.titles.exhausted;
 
+  /** Der Grund, warum der letzte Aufruf nichts geliefert hat. */
+  protected readonly suggestLastError = this.titles.lastError;
+
   /** Ein Satz, der sagt, warum keine Überschriften gesetzt werden. */
   protected readonly suggestOffReason = computed(() => {
     switch (this.titles.reason()) {

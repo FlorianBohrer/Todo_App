@@ -629,6 +629,12 @@
                 Daily limit reached — more tomorrow.
               </p>
             } @else {
+              <!-- Ein gescheiterter Aufruf sieht sonst aus wie „das Modell
+                   wollte nicht" — und man sucht im Text statt in der Konfiguration. -->
+              @if (suggestLastError(); as failure) {
+                <p class="mb-2 px-2 text-2xs leading-relaxed text-amber-300">{{ failure }}</p>
+              }
+
               <button type="button"
                 class="w-full rounded-lg border border-line px-2 py-1.5 text-2xs text-muted transition hover:border-line-strong hover:text-text disabled:opacity-60"
                 [disabled]="suggestBusy()"

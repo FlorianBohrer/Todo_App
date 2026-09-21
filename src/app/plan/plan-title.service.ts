@@ -6,6 +6,8 @@ import { UntitledSection, contentKey } from './untitled-sections';
 
 interface SuggestTitleResponse {
   title: string | null;
+  /** Gesetzt, wenn der Aufruf scheiterte — nicht, wenn nur nichts zu sagen war. */
+  error?: string;
 }
 
 /** Warum die Funktion aus ist — siehe AiStatusReason im Backend. */
@@ -68,6 +70,15 @@ export class PlanTitleService {
    * unterscheiden lassen.
    */
   readonly reason = signal<AiStatusReason | null>(null);
+
+  /**
+   * Der Grund, warum der LETZTE Aufruf nichts geliefert hat.
+   *
+   * „Das Modell wollte diesen Absatz nicht benennen" und „der Schlüssel wurde
+   * abgelehnt" enden beide ohne Überschrift. Ohne diese Unterscheidung sucht
+   * man den Fehler im Text, obwohl er in der Konfiguration liegt.
+   */
+  readonly lastError = signal<string | null>(null);
 
   private asked = false;
 
@@ -190,6 +201,7 @@ export class PlanTitleService {
       );
       this.serverReady.set(true);
       this.remaining.update((left) => (left === null ? null : Math.max(0, left - 1)));
+      this.lastError.set(response.error ?? null);
       return response.title;
     } catch (error) {
       const status = (error as { status?: number }).status;
