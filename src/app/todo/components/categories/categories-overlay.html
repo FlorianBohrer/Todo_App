@@ -57,6 +57,28 @@
       </div>
     </div>
 
+    <!-- Unterteilung: abgeleitet aus den Namen oder selbst vergeben. Beides
+         nebeneinander hiesse, jeden Folder zweimal zu zeigen — daher ein
+         Umschalter. -->
+    <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 sm:px-6">
+      <div class="flex items-center rounded-full border border-line p-0.5"
+           role="tablist" aria-label="Group folders">
+        @for (g of groupings; track g.value) {
+          <button type="button" role="tab"
+            class="rounded-full px-3 py-1 text-xs transition"
+            [class]="grouping() === g.value
+              ? 'bg-fill-strong text-text'
+              : 'text-muted hover:text-text'"
+            [attr.aria-selected]="grouping() === g.value"
+            (click)="setGrouping(g.value)">{{ g.label }}</button>
+        }
+      </div>
+
+      @if (groupingHint(); as hint) {
+        <p class="min-w-0 flex-1 text-2xs leading-relaxed text-subtle">{{ hint }}</p>
+      }
+    </div>
+
     <!-- Scrollbereich: nur die Folder-Liste scrollt -->
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6">
 
@@ -70,12 +92,45 @@
         <span class="font-semibold text-text">All</span>
       </button>
 
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-2"
-           cdkDropList
-           cdkDropListOrientation="mixed"
-           (cdkDropListDropped)="drop($event)">
+      <!-- Vorschlagsliste für das Sammlungsfeld: einmal für alle Karten. -->
+      <datalist id="folder-collections">
+        @for (name of collections(); track name) {
+          <option [value]="name"></option>
+        }
+      </datalist>
 
-        @for (label of visibleLabels(); track label.id) {
+      <!-- cdkDropListGroup verbindet die Abschnitte miteinander. Ob eine Karte
+           in einen fremden Abschnitt DARF, entscheidet canEnter: in der
+           automatischen Gruppierung nicht, dort ergibt der Abschnitt sich aus
+           dem Namen. -->
+      <div cdkDropListGroup>
+      @for (section of sections(); track section.key; let first = $first) {
+
+        @if (section.title) {
+          <button type="button"
+            class="mb-2 flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left transition hover:bg-fill"
+            [class.mt-5]="!first"
+            [attr.aria-expanded]="!isCollapsed(section.key)"
+            (click)="toggleCollapsed(section.key)">
+            <lucide-icon [img]="ChevronIcon"
+              class="h-3.5 w-3.5 flex-none text-subtle transition-transform"
+              [class.rotate-90]="!isCollapsed(section.key)"
+              aria-hidden="true"></lucide-icon>
+            <span class="text-xs font-semibold uppercase tracking-wide"
+                  [class]="section.rest ? 'text-subtle' : 'text-muted'">{{ section.title }}</span>
+            <span class="text-2xs text-subtle">{{ section.labels.length }}</span>
+          </button>
+        }
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2"
+             [class.hidden]="isCollapsed(section.key)"
+             cdkDropList
+             cdkDropListOrientation="mixed"
+             [cdkDropListData]="section"
+             [cdkDropListEnterPredicate]="canEnter"
+             (cdkDropListDropped)="drop($event)">
+
+        @for (label of section.labels; track label.id) {
           <div
             cdkDrag
             [cdkDragDisabled]="isSearching() || editingId() === label.id"
@@ -214,10 +269,34 @@
                   (click)="stopEditing($event)">
                   Done
                 </button>
+
+                <!-- Sammlung zuordnen. Der Weg über die Tastatur — Ziehen
+                     erledigt dasselbe, ist aber nichts, worauf man sich beim
+                     Anlegen einer neuen Sammlung verlassen kann. -->
+                <div class="mt-3 flex basis-full items-center gap-2 border-t border-line pt-3">
+                  <label class="flex-none text-2xs uppercase tracking-wide text-subtle"
+                         [attr.for]="'collection-' + label.id">Collection</label>
+                  <input
+                    #collectionInput
+                    type="text"
+                    list="folder-collections"
+                    [id]="'collection-' + label.id"
+                    class="min-w-0 flex-1 rounded-lg bg-black/25 px-2 py-1 text-sm text-text
+                           outline-none ring-1 ring-line-strong placeholder:text-subtle
+                           focus:ring-2 focus:ring-indigo-500"
+                    placeholder="None — type a name to create one"
+                    [value]="label.collection ?? ''"
+                    (click)="$event.stopPropagation()"
+                    (keydown.enter)="$event.stopPropagation(); assignCollection(label.id, collectionInput.value); collectionInput.blur()"
+                    (keydown.escape)="$event.stopPropagation(); collectionInput.value = label.collection ?? ''; collectionInput.blur()"
+                    (blur)="assignCollection(label.id, collectionInput.value)" />
+                </div>
               </div>
             }
           </div>
         }
+        </div>
+      }
       </div>
 
       @if (isSearching() && visibleLabels().length === 0) {
