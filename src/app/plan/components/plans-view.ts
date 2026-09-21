@@ -923,6 +923,7 @@ export class PlansView {
 
   protected readonly suggestBusy = this.titles.busy;
   protected readonly suggestAvailable = this.titles.available;
+  protected readonly suggestExhausted = this.titles.exhausted;
 
   /** Absaetze im aktuellen Plan, die in der Outline fehlen. */
   protected readonly untitled = computed<UntitledSection[]>(() => {
