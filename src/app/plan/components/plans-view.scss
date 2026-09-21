@@ -464,3 +464,21 @@
     transform: translateX(-50%);
   }
 }
+
+// Ein Vorschlag ist noch kein Titel — er gehoert sichtbar in eine andere
+// Kategorie als die echten Outline-Eintraege, sonst haelt man ihn fuer Inhalt.
+.outline-link--suggested {
+  color: var(--color-subtle);
+  font-style: italic;
+}
+
+.outline-link--suggested::before {
+  content: '✦';
+  margin-right: 0.35rem;
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.suggestion-row:hover .outline-link--suggested {
+  color: var(--plan-accent);
+}

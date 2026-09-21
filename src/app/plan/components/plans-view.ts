@@ -53,6 +53,8 @@ import { formatBlock, formatInline } from '../inline-format';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
+import { PlanTitleService } from '../plan-title.service';
+import { UntitledSection, findUntitledSections } from '../untitled-sections';
 import {
   detectMarkdownShortcut,
   detectWikiToken,
@@ -901,6 +903,77 @@ export class PlansView {
     walk(plan.content, 0);
     return items;
   });
+
+  // ---- Vorschlaege fuer Abschnitte ohne Ueberschrift ----
+  //
+  // Die Outline listet Ueberschriften. Was davor oder ganz ohne steht, fehlt
+  // dort — man kann es nicht anspringen und uebersieht beim Ueberfliegen, dass
+  // es existiert. Ein Modell liest den Absatz und schlaegt eine Ueberschrift
+  // vor; uebernommen wird sie erst auf Klick.
+
+  private readonly titles = inject(PlanTitleService);
+
+  protected readonly suggestBusy = this.titles.busy;
+  protected readonly suggestAvailable = this.titles.available;
+
+  /** Absaetze im aktuellen Plan, die in der Outline fehlen. */
+  protected readonly untitled = computed<UntitledSection[]>(() => {
+    const plan = this.selected();
+    return plan ? findUntitledSections(plan.content) : [];
+  });
+
+  /** Die Vorschlaege, die es dafuer schon gibt — in Dokumentreihenfolge. */
+  protected readonly suggestions = computed(() =>
+    this.untitled()
+      .map((section) => ({ section, title: this.titles.titleFor(section) }))
+      .filter(
+        (entry): entry is { section: UntitledSection; title: string } =>
+          entry.title !== null,
+      ),
+  );
+
+  /** Wie viele Absaetze noch auf einen Vorschlag warten. */
+  protected readonly pendingSuggestions = computed(
+    () => this.untitled().filter((s) => this.titles.titleFor(s) === null).length,
+  );
+
+  suggestTitles() {
+    void this.titles.suggestFor(this.untitled());
+  }
+
+  /** Vorschlag annehmen: eine echte Ueberschrift ueber den Absatz setzen. */
+  acceptSuggestion(blockId: string, title: string) {
+    const heading: PlanBlock = {
+      id: this.newId(),
+      type: 'heading',
+      level: 2,
+      text: title,
+    };
+    this.updateContent((blocks) => this.insertBeforeById(blocks, blockId, heading));
+    this.titles.forget(blockId);
+  }
+
+  dismissSuggestion(blockId: string) {
+    this.titles.forget(blockId);
+  }
+
+  private insertBeforeById(
+    blocks: PlanBlock[],
+    id: string,
+    newBlock: PlanBlock,
+  ): PlanBlock[] {
+    const i = blocks.findIndex((b) => b.id === id);
+    if (i >= 0) {
+      const copy = [...blocks];
+      copy.splice(i, 0, newBlock);
+      return copy;
+    }
+    return blocks.map((b) =>
+      b.type === 'group'
+        ? { ...b, blocks: this.insertBeforeById(b.blocks, id, newBlock) }
+        : b,
+    );
+  }
 
   jumpTo(blockId: string) {
     const el = document.getElementById('block-' + blockId);
