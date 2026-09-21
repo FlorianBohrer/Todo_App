@@ -1,4 +1,12 @@
-import {ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import {
@@ -936,6 +944,14 @@ export class PlansView {
   protected readonly pendingSuggestions = computed(
     () => this.untitled().filter((s) => this.titles.titleFor(s) === null).length,
   );
+
+  constructor() {
+    // Erst fragen, wenn es etwas zu betiteln gibt. Ein Plan ohne unbetitelte
+    // Absätze braucht die Funktion nicht, und die Anfrage bliebe umsonst.
+    effect(() => {
+      if (this.untitled().length > 0) this.titles.checkAvailability();
+    });
+  }
 
   suggestTitles() {
     void this.titles.suggestFor(this.untitled());

@@ -39,6 +39,29 @@ export class PlanTitleService {
   private readonly serverReady = signal<boolean | null>(null);
   readonly available = computed(() => this.serverReady() !== false);
 
+  private asked = false;
+
+  /**
+   * Einmal nachfragen, ob der Server Vorschläge liefern kann.
+   *
+   * Ohne das stünde der Abschnitt in der Outline, bis jemand klickt und ins
+   * Leere greift — auf einem Server ohne hinterlegten Schlüssel also dauerhaft.
+   * Die Anfrage läuft erst, wenn ein Plan überhaupt unbetitelte Absätze hat;
+   * wer nie plant, löst sie nie aus.
+   */
+  checkAvailability(): void {
+    if (this.asked) return;
+    this.asked = true;
+
+    this.http
+      .get<{ available: boolean }>(`${this.baseUrl}/ai/status`)
+      .subscribe({
+        next: (status) => this.serverReady.set(status.available),
+        // Kennt der Server die Route nicht, ist die Antwort dieselbe: kann er nicht.
+        error: () => this.serverReady.set(false),
+      });
+  }
+
   /** Der Vorschlag zu einem Block — nur, wenn er zum aktuellen Text passt. */
   titleFor(section: UntitledSection): string | null {
     const found = this.suggestions().get(section.id);
