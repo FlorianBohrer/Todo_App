@@ -4,17 +4,22 @@ import {
   autoGroupToken,
   collectionNames,
   groupFolders,
+  reorderSections,
   toGlobalMove,
 } from './folder-groups';
 import type { Label } from '../services/label.service';
 
 let nextId = 0;
 
-function folder(name: string, collection: string | null = null): Label {
+function folder(
+  name: string,
+  collection: string | null = null,
+  color = 'rose',
+): Label {
   return {
     id: `f${++nextId}`,
     name,
-    color: 'rose',
+    color,
     icon: 'tag',
     favoritePosition: null,
     isFavorite: false,
@@ -155,6 +160,58 @@ describe('groupFolders — custom', () => {
   });
 });
 
+describe('groupFolders — section colour', () => {
+  it('takes the colour its folders share', () => {
+    const groups = groupFolders(
+      [folder('projekt: A', null, 'teal'), folder('projekt: B', null, 'teal')],
+      'auto',
+    );
+
+    expect(groups[0].color).toBe('teal');
+  });
+
+  it('takes the colour that wins the count, not the one standing first', () => {
+    const groups = groupFolders(
+      [
+        folder('projekt: A', null, 'rose'),
+        folder('projekt: B', null, 'sky'),
+        folder('projekt: C', null, 'sky'),
+      ],
+      'auto',
+    );
+
+    expect(groups[0].color).toBe('sky');
+  });
+
+  it('breaks a tie with the folder the user put first', () => {
+    const groups = groupFolders(
+      [folder('projekt: A', null, 'amber'), folder('projekt: B', null, 'violet')],
+      'auto',
+    );
+
+    expect(groups[0].color).toBe('amber');
+  });
+
+  it('leaves the leftovers neutral — they are not a group', () => {
+    const groups = groupFolders(
+      [folder('Solo Eins', null, 'teal'), folder('Einzel Zwei', null, 'teal')],
+      'auto',
+    );
+
+    expect(groups[0].rest).toBe(true);
+    expect(groups[0].color).toBeNull();
+  });
+
+  it('colours a custom collection the same way', () => {
+    const groups = groupFolders(
+      [folder('Acme', 'Clients', 'sky'), folder('Globex', 'Clients', 'sky')],
+      'custom',
+    );
+
+    expect(groups[0].color).toBe('sky');
+  });
+});
+
 describe('collectionNames', () => {
   it('lists each name once, alphabetically', () => {
     const names = collectionNames([
@@ -193,5 +250,54 @@ describe('toGlobalMove', () => {
 
   it('reports nothing to do for an index outside the section', () => {
     expect(toGlobalMove(all, group, 0, 9)).toBeNull();
+  });
+});
+
+describe('reorderSections', () => {
+  it('moves a whole section and returns the new full order', () => {
+    const sections = groupFolders(
+      [
+        folder('Uni Mathe'),
+        folder('Uni Physik'),
+        folder('projekt: A'),
+        folder('projekt: B'),
+      ],
+      'auto',
+    );
+
+    const ids = reorderSections(sections, 1, 0);
+
+    // Die projekt-Folder stehen jetzt vorn, jeder genau einmal.
+    expect(ids).toEqual([
+      sections[1].labels[0].id,
+      sections[1].labels[1].id,
+      sections[0].labels[0].id,
+      sections[0].labels[1].id,
+    ]);
+  });
+
+  it('keeps every folder exactly once — the order must stay complete', () => {
+    const labels = [
+      folder('Uni Mathe'),
+      folder('projekt: A'),
+      folder('Uni Physik'),
+      folder('projekt: B'),
+    ];
+    const sections = groupFolders(labels, 'auto');
+    const ids = reorderSections(sections, 0, 1);
+
+    expect(ids).toHaveLength(labels.length);
+    expect(new Set(ids).size).toBe(labels.length);
+    expect([...(ids ?? [])].sort()).toEqual(labels.map((l) => l.id).sort());
+  });
+
+  it('reports nothing to do when the section stays put', () => {
+    const sections = groupFolders([folder('projekt: A'), folder('projekt: B')], 'auto');
+    expect(reorderSections(sections, 0, 0)).toBeNull();
+  });
+
+  it('reports nothing to do for an index outside the list', () => {
+    const sections = groupFolders([folder('projekt: A'), folder('projekt: B')], 'auto');
+    expect(reorderSections(sections, 0, 5)).toBeNull();
   });
 });

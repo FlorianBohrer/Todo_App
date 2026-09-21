@@ -67,7 +67,7 @@
           <button type="button" role="tab"
             class="rounded-full px-3 py-1 text-xs transition"
             [class]="grouping() === g.value
-              ? 'bg-fill-strong text-text'
+              ? 'bg-indigo-500/20 text-indigo-300'
               : 'text-muted hover:text-text'"
             [attr.aria-selected]="grouping() === g.value"
             (click)="setGrouping(g.value)">{{ g.label }}</button>
@@ -99,33 +99,62 @@
         }
       </datalist>
 
-      <!-- cdkDropListGroup verbindet die Abschnitte miteinander. Ob eine Karte
-           in einen fremden Abschnitt DARF, entscheidet canEnter: in der
-           automatischen Gruppierung nicht, dort ergibt der Abschnitt sich aus
-           dem Namen. -->
-      <div cdkDropListGroup>
-      @for (section of sections(); track section.key; let first = $first) {
+      <!-- Zwei Ebenen Ziehen: die äußere Liste ordnet die Abschnitte, die
+           inneren die Karten. Bewusst OHNE cdkDropListGroup — die würde jede
+           Liste darin verbinden, auch die äußere, und dann ließe sich eine
+           Folder-Karte auf die Abschnittsebene fallen. Die Karten-Listen
+           verbinden sich stattdessen ausdrücklich über ihre IDs. -->
+      <div cdkDropList
+           cdkDropListOrientation="vertical"
+           (cdkDropListDropped)="dropSection($event)">
+      @for (section of sections(); track section.key; let first = $first; let i = $index) {
+
+        <div cdkDrag [cdkDragDisabled]="sectionDragOff(section) !== null">
+          <!-- Platzhalter mit eigenen Klassen statt einer SCSS-Regel: dieser
+               Dialog hat keine eigene Stildatei. -->
+          <div *cdkDragPlaceholder
+               class="mb-2 h-12 rounded-xl border border-dashed border-line-strong bg-fill/40"
+               [class.mt-5]="!first"></div>
 
         @if (section.title) {
-          <button type="button"
-            class="mb-2 flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left transition hover:bg-fill"
-            [class.mt-5]="!first"
-            [attr.aria-expanded]="!isCollapsed(section.key)"
-            (click)="toggleCollapsed(section.key)">
-            <lucide-icon [img]="ChevronIcon"
-              class="h-3.5 w-3.5 flex-none text-subtle transition-transform"
-              [class.rotate-90]="!isCollapsed(section.key)"
-              aria-hidden="true"></lucide-icon>
-            <span class="text-xs font-semibold uppercase tracking-wide"
-                  [class]="section.rest ? 'text-subtle' : 'text-muted'">{{ section.title }}</span>
-            <span class="text-2xs text-subtle">{{ section.labels.length }}</span>
-          </button>
+          <div class="mb-2 flex items-center gap-1.5" [class.mt-5]="!first">
+            <!-- Der Griff ist der EINZIGE Weg, einen Abschnitt zu ziehen.
+                 Sonst würde jeder Zug an einer Karte auch den Abschnitt
+                 anfassen, in dem sie liegt. -->
+            @if (sectionDragOff(section); as why) {
+              <span class="h-4 w-4 flex-none" [attr.title]="why" aria-hidden="true"></span>
+            } @else {
+              <button type="button" cdkDragHandle
+                class="grid h-5 w-5 flex-none cursor-grab touch-none place-items-center rounded
+                       text-subtle opacity-50 transition hover:opacity-100 active:cursor-grabbing"
+                [attr.aria-label]="'Move section ' + section.title">
+                <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+            }
+
+            <button type="button"
+              class="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 py-1 text-left transition hover:bg-fill"
+              [attr.aria-expanded]="!isCollapsed(section.key)"
+              (click)="toggleCollapsed(section.key)">
+              <lucide-icon [img]="ChevronIcon"
+                class="h-3.5 w-3.5 flex-none transition-transform"
+                [class]="sectionTextClass(section)"
+                [class.rotate-90]="!isCollapsed(section.key)"
+                aria-hidden="true"></lucide-icon>
+              <span class="truncate text-xs font-semibold uppercase tracking-wide"
+                    [class]="sectionTextClass(section)">{{ section.title }}</span>
+              <span class="flex-none rounded-full px-1.5 py-0.5 text-2xs font-medium"
+                    [class]="sectionBadgeClass(section)">{{ section.labels.length }}</span>
+            </button>
+          </div>
         }
 
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2"
              [class.hidden]="isCollapsed(section.key)"
              cdkDropList
              cdkDropListOrientation="mixed"
+             [id]="'folder-cards-' + i"
+             [cdkDropListConnectedTo]="cardListIds()"
              [cdkDropListData]="section"
              [cdkDropListEnterPredicate]="canEnter"
              (cdkDropListDropped)="drop($event)">
@@ -295,6 +324,7 @@
             }
           </div>
         }
+        </div>
         </div>
       }
       </div>

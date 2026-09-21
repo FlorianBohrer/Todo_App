@@ -2,9 +2,9 @@ import { LabelService, Label } from '../../services/label.service';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, HostListener, signal } from '@angular/core';
 import {
   CdkDropList,
-  CdkDropListGroup,
   CdkDrag,
   CdkDragHandle,
+  CdkDragPlaceholder,
   CdkDragDrop,
 } from '@angular/cdk/drag-drop';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
@@ -15,6 +15,7 @@ import {
   FolderGrouping,
   collectionNames,
   groupFolders,
+  reorderSections,
   toGlobalMove,
 } from '../../shared/folder-groups';
 import { viewChild, ElementRef } from '@angular/core';
@@ -46,9 +47,9 @@ function storedGrouping(): FolderGrouping {
   imports: [
     LucideAngularModule,
     CdkDropList,
-    CdkDropListGroup,
     CdkDrag,
     CdkDragHandle,
+    CdkDragPlaceholder,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './categories-overlay.html',
@@ -116,6 +117,18 @@ export class CategoriesOverlay {
 
   /** Bereits vergebene Sammlungsnamen — als Vorschläge beim Zuordnen. */
   protected readonly collections = computed(() => collectionNames(this.labels()));
+
+  /**
+   * Die Karten-Listen verbinden sich ausdrücklich untereinander, statt über
+   * cdkDropListGroup.
+   *
+   * Die Gruppe würde JEDE Liste darin verbinden — auch die äußere, in der die
+   * Abschnitte liegen. Dann ließe sich eine Folder-Karte auf die Abschnitts-
+   * ebene fallen, wo sie nichts zu suchen hat.
+   */
+  protected readonly cardListIds = computed(() =>
+    this.sections().map((_, index) => `folder-cards-${index}`),
+  );
 
   /**
    * true, sobald etwas die Liste verkürzt oder umsortiert darstellt.
@@ -260,6 +273,55 @@ pickColor(id: string, color: string, event: Event) {
     drag: { dropContainer: unknown },
     drop: unknown,
   ): boolean => this.grouping() === 'custom' || drag.dropContainer === drop;
+
+  /**
+   * Einen ganzen Abschnitt verschieben.
+   *
+   * Beim Suchen und für den Sammelabschnitt gesperrt — siehe sectionDragOff.
+   */
+  dropSection(event: CdkDragDrop<unknown>) {
+    const ids = reorderSections(
+      this.sections(),
+      event.previousIndex,
+      event.currentIndex,
+    );
+    if (ids) this.labelService.setLabelOrder(ids);
+  }
+
+  /**
+   * Warum ein Abschnitt sich nicht ziehen lässt — oder null, wenn er es tut.
+   *
+   * Beim Suchen enthalten die Abschnitte nur die Treffer. Aus ihnen die neue
+   * Gesamtreihenfolge zu bauen hieße, alle nicht gefundenen Folder aus der
+   * Liste zu verlieren; sie behielten serverseitig ihre alten Positionen und
+   * stünden danach wahllos zwischen den neu nummerierten.
+   *
+   * Der Sammelabschnitt steht immer am Ende — dahin sortiert groupFolders,
+   * was zu keiner Gruppe gehört. Ihn ziehen zu lassen hieße, einen Griff
+   * anzubieten, der nach dem Loslassen sichtbar nichts tut.
+   */
+  sectionDragOff(section: FolderGroup): string | null {
+    if (this.isSearching()) return 'Sections cannot be moved while searching';
+    if (section.rest) return 'The leftovers always come last';
+    return null;
+  }
+
+  // ---- Farbe der Abschnitte ----
+  //
+  // Die Überschrift trägt die Farbe ihrer Folder, damit sie sichtbar zu den
+  // Karten darunter gehört. Der Sammelabschnitt bleibt gedämpft: er ist kein
+  // Thema, sondern der Rest, und eine Farbe würde eine Zusammengehörigkeit
+  // behaupten, die es dort nicht gibt.
+
+  sectionTextClass(section: FolderGroup): string {
+    return section.rest ? 'text-subtle' : folderColorClass(section.color, 'text');
+  }
+
+  sectionBadgeClass(section: FolderGroup): string {
+    return section.rest
+      ? 'bg-fill text-subtle'
+      : `${folderColorClass(section.color, 'iconBox')} ${folderColorClass(section.color, 'text')}`;
+  }
 
   drop(event: CdkDragDrop<FolderGroup>) {
     // Flaches Raster: ein einziger Abschnitt, die Indizes passen direkt.

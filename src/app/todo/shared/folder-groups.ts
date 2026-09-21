@@ -27,6 +27,14 @@ export interface FolderGroup {
   /** Die Folder darin, in ihrer gewohnten Reihenfolge. */
   labels: Label[];
   /**
+   * Die Farbe des Abschnitts — die seiner Folder, nicht eine zugeloste.
+   *
+   * Damit trägt sie eine Aussage: die Überschrift gehört sichtbar zu den
+   * Karten darunter. Eine Palette nach Abschnittsnummer wäre bunt, aber
+   * beliebig, und würde beim Umsortieren wandern. null = neutral.
+   */
+  color: string | null;
+  /**
    * true für den Sammelabschnitt am Ende ("Other" / "Unsorted"). Der ist keine
    * Sammlung, sondern der Rest — und darf deshalb kein Ziel beim Ziehen sein,
    * das eine Zuordnung SETZT: dorthin gezogen wird sie gelöscht.
@@ -88,6 +96,32 @@ function tokenKey(token: string): string {
 }
 
 /**
+ * Die Farbe, die im Abschnitt überwiegt.
+ *
+ * Nicht einfach die des ersten Folders: bei fünf grünen und einem roten wäre
+ * die Überschrift rot, wenn der rote zufällig oben steht. Bei Gleichstand
+ * gewinnt der erste — irgendeine Regel muss entscheiden, und diese ist die,
+ * die der Nutzer selbst durch die Reihenfolge gesetzt hat.
+ */
+function dominantColor(labels: Label[]): string | null {
+  const counts = new Map<string, number>();
+  for (const label of labels) {
+    counts.set(label.color, (counts.get(label.color) ?? 0) + 1);
+  }
+
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const label of labels) {
+    const count = counts.get(label.color) ?? 0;
+    if (count > bestCount) {
+      best = label.color;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+/**
  * Baut die Abschnitte.
  *
  * Die Reihenfolge der Abschnitte folgt dem ersten Folder darin — also der
@@ -99,7 +133,7 @@ export function groupFolders(
   grouping: FolderGrouping,
 ): FolderGroup[] {
   if (grouping === 'flat') {
-    return [{ key: '\u0000all', title: '', labels, rest: false }];
+    return [{ key: '\u0000all', title: '', labels, rest: false, color: null }];
   }
 
   const groups = new Map<string, FolderGroup>();
@@ -121,7 +155,8 @@ export function groupFolders(
     if (existing) {
       existing.labels.push(label);
     } else {
-      groups.set(key, { key, title: raw, labels: [label], rest: false });
+      // Die Farbe steht erst fest, wenn alle Folder eingeordnet sind.
+      groups.set(key, { key, title: raw, labels: [label], rest: false, color: null });
     }
   }
 
@@ -135,6 +170,7 @@ export function groupFolders(
       rest.push(...group.labels);
       continue;
     }
+    group.color = dominantColor(group.labels);
     sections.push(group);
   }
 
@@ -149,6 +185,9 @@ export function groupFolders(
       title: grouping === 'auto' ? 'Other' : 'Unsorted',
       labels: rest,
       rest: true,
+      // Die Übrigen sind kein Thema, sondern der Rest — eine gemeinsame Farbe
+      // würde eine Zusammengehörigkeit behaupten, die es nicht gibt.
+      color: null,
     });
   }
 
@@ -197,4 +236,32 @@ export function toGlobalMove(
   if (from === -1 || to === -1 || from === to) return null;
 
   return { previousIndex: from, currentIndex: to };
+}
+
+/**
+ * Verschiebt einen ganzen Abschnitt und gibt die neue Gesamtreihenfolge zurück.
+ *
+ * Die Abschnitte haben keine eigene gespeicherte Reihenfolge — sie ergibt sich
+ * daraus, welcher Folder zuerst kommt. Einen Abschnitt zu verschieben heißt
+ * also, seine Folder als Block umzusetzen; die Reihenfolge der Abschnitte
+ * folgt dann von selbst. Das kommt ohne zweite Sortierspalte aus, die sonst
+ * mit der ersten auseinanderlaufen könnte.
+ *
+ * null, wenn sich nichts ändert.
+ */
+export function reorderSections(
+  sections: FolderGroup[],
+  previousIndex: number,
+  currentIndex: number,
+): string[] | null {
+  if (previousIndex === currentIndex) return null;
+
+  const order = [...sections];
+  const moved = order[previousIndex];
+  if (!moved || currentIndex < 0 || currentIndex >= order.length) return null;
+
+  order.splice(previousIndex, 1);
+  order.splice(currentIndex, 0, moved);
+
+  return order.flatMap((section) => section.labels.map((label) => label.id));
 }
