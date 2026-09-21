@@ -41,6 +41,7 @@ import {
   ChevronUp,
   ChevronDown,
   GripVertical,
+  Search,
 } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
@@ -129,6 +130,7 @@ export class PlansView {
   protected readonly PlusIcon = Plus;
   protected readonly TrashIcon = Trash2;
   protected readonly GripIcon = GripVertical;
+  protected readonly SearchIcon = Search;
 
   /** Datenwert der obersten Blockliste; getippt, damit er zu den Section-Listen passt. */
   protected readonly rootList: string | null = null;
@@ -235,9 +237,22 @@ export class PlansView {
   // geordnet zurueck. Der Handler schickt nur die neue Reihenfolge der IDs.
   dropPlan(event: CdkDragDrop<unknown>) {
     if (event.previousIndex === event.currentIndex) return;
+
+    // Die Kacheln zeigen gefiltert nur einen Ausschnitt. Die Indizes von dort
+    // auf die gespeicherte Liste anzuwenden hiesse, beim Sortieren im Filter
+    // fremde Plaene zu vertauschen — also erst ueber die IDs umrechnen.
+    const visible = this.visiblePlans();
+    const moved = visible[event.previousIndex];
+    const target = visible[event.currentIndex];
+    if (!moved || !target) return;
+
     const ids = this.plans().map((p) => p.id);
-    const [moved] = ids.splice(event.previousIndex, 1);
-    ids.splice(event.currentIndex, 0, moved);
+    const from = ids.indexOf(moved.id);
+    const to = ids.indexOf(target.id);
+    if (from === -1 || to === -1 || from === to) return;
+
+    ids.splice(from, 1);
+    ids.splice(to, 0, moved.id);
     this.planService.reorderPlans(ids);
   }
   protected readonly loading = this.planService.loading;
@@ -248,6 +263,105 @@ export class PlansView {
 
   setOverviewMode(mode: 'list' | 'graph') {
     this.overviewMode.set(mode);
+  }
+
+  // ---- Übersicht filtern ----
+  //
+  // Die Kachelliste war der einzige Weg zu einem Plan, dessen Namen man nicht
+  // mehr genau im Kopf hat: ⌘K braucht den Titel, der Graph zeigt nur
+  // Verlinktes. Ab ein paar Dutzend Plänen bleibt sonst nur Scrollen.
+
+  /** Sentinel-Werte des Folder-Filters. Echte Folder tragen eine UUID, also
+   *  kann keiner heißen wie diese beiden. */
+  protected readonly ALL_FOLDERS = 'all';
+  protected readonly NO_FOLDER = 'standalone';
+
+  protected readonly overviewQuery = signal('');
+  protected readonly overviewFolder = signal<string>('all');
+
+  protected readonly overviewFiltered = computed(
+    () =>
+      this.overviewQuery().trim().length > 0 ||
+      this.overviewFolder() !== this.ALL_FOLDERS,
+  );
+
+  /**
+   * Der durchsuchbare Text eines Plans: Titel und Inhalt.
+   *
+   * Nur nach Titeln zu suchen hilft genau dann nicht, wenn man sucht — man
+   * erinnert den Inhalt, nicht die Überschrift. Das Ergebnis wird je Fassung
+   * eines Plans einmal gebaut und gemerkt: ohne den Merker liefe bei jedem
+   * Tastendruck der komplette Inhalt aller Pläne erneut durch.
+   */
+  private readonly haystacks = new Map<string, string>();
+
+  private haystack(plan: Plan): string {
+    const key = `${plan.id}:${plan.updatedAt}`;
+    const cached = this.haystacks.get(key);
+    if (cached !== undefined) return cached;
+
+    // Derselbe Durchlauf, den der Graph für die Verlinkung braucht.
+    const text = `${plan.title}\n${planPlainText(plan)}`.toLowerCase();
+    // Nur die aktuelle Fassung je Plan behalten, sonst wächst die Map mit
+    // jedem Tastendruck im Editor.
+    for (const existing of this.haystacks.keys()) {
+      if (existing.startsWith(`${plan.id}:`)) this.haystacks.delete(existing);
+    }
+    this.haystacks.set(key, text);
+    return text;
+  }
+
+  /** Die Pläne, die Suche und Folder-Filter übrig lassen. */
+  protected readonly visiblePlans = computed<Plan[]>(() => {
+    const query = this.overviewQuery().trim().toLowerCase();
+    const folder = this.overviewFolder();
+
+    return this.plans().filter((plan) => {
+      if (folder === this.NO_FOLDER) {
+        if (plan.categoryId !== null) return false;
+      } else if (folder !== this.ALL_FOLDERS && plan.categoryId !== folder) {
+        return false;
+      }
+
+      return !query || this.haystack(plan).includes(query);
+    });
+  });
+
+  /**
+   * Die Folder, auf die sich filtern lässt — nur solche mit Plänen.
+   *
+   * Ein Folder ohne Plan wäre ein Knopf, der garantiert eine leere Liste
+   * zeigt. Die Zählung steht daneben, damit man vor dem Klick weiß, was kommt.
+   */
+  protected readonly folderFilters = computed(() => {
+    const counts = new Map<string | null, number>();
+    for (const plan of this.plans()) {
+      counts.set(plan.categoryId, (counts.get(plan.categoryId) ?? 0) + 1);
+    }
+
+    const chips = this.labels()
+      .filter((label) => counts.has(label.id))
+      .map((label) => ({
+        id: label.id,
+        name: label.name,
+        count: counts.get(label.id) ?? 0,
+      }));
+
+    const standalone = counts.get(null) ?? 0;
+    if (standalone > 0) {
+      chips.push({ id: this.NO_FOLDER, name: 'Standalone', count: standalone });
+    }
+
+    return chips;
+  });
+
+  setOverviewFolder(id: string) {
+    this.overviewFolder.set(id);
+  }
+
+  clearOverviewFilters() {
+    this.overviewQuery.set('');
+    this.overviewFolder.set(this.ALL_FOLDERS);
   }
 
   protected readonly selected = computed<Plan | null>(() => {

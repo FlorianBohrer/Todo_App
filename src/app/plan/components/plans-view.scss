@@ -283,6 +283,37 @@
   color: var(--plan-accent);
 }
 
+// ---- Folder-Filter der Übersicht ----
+//
+// Bewusst flacher als die Umschalter darüber: das hier ist eine Einschränkung
+// der Liste, kein Moduswechsel. Ein aktiver Filter muss trotzdem auf den
+// ersten Blick zu sehen sein — sonst sucht man den fehlenden Plan im Backend.
+.folder-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--color-line);
+  border-radius: 9999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  transition:
+    background-color 130ms ease-out,
+    border-color 130ms ease-out,
+    color 130ms ease-out;
+}
+
+.folder-filter:hover {
+  border-color: var(--color-line-strong);
+  color: var(--color-text);
+}
+
+.folder-filter--active {
+  border-color: transparent;
+  background-color: var(--plan-accent-soft);
+  color: var(--plan-accent);
+}
+
 // ---- Outline-Einträge ----
 .outline-link {
   color: var(--color-muted);
