@@ -8,6 +8,12 @@ interface SuggestTitleResponse {
   title: string | null;
 }
 
+interface AiStatusResponse {
+  available: boolean;
+  remaining: number;
+  limit: number;
+}
+
 /** Ein Vorschlag samt dem Textstand, für den er gilt. */
 interface Suggestion {
   key: string;
@@ -35,6 +41,16 @@ export class PlanTitleService {
   /** Läuft gerade eine Anfrage? Treibt den Ladezustand im Panel. */
   readonly busy = signal(false);
 
+  /**
+   * Wie viele Vorschläge heute noch übrig sind; null = unbekannt.
+   *
+   * Vorschläge kosten Geld, deshalb hat jeder Nutzer ein Tageskontingent.
+   * Ist es aufgebraucht, muss man das sehen — sonst sieht ein erreichtes
+   * Limit aus wie ein kaputter Knopf.
+   */
+  readonly remaining = signal<number | null>(null);
+  readonly exhausted = computed(() => this.remaining() === 0);
+
   /** null = noch nicht nachgefragt. Danach: kann der Server das überhaupt? */
   private readonly serverReady = signal<boolean | null>(null);
   readonly available = computed(() => this.serverReady() !== false);
@@ -54,9 +70,12 @@ export class PlanTitleService {
     this.asked = true;
 
     this.http
-      .get<{ available: boolean }>(`${this.baseUrl}/ai/status`)
+      .get<AiStatusResponse>(`${this.baseUrl}/ai/status`)
       .subscribe({
-        next: (status) => this.serverReady.set(status.available),
+        next: (status) => {
+          this.serverReady.set(status.available);
+          this.remaining.set(status.remaining);
+        },
         // Kennt der Server die Route nicht, ist die Antwort dieselbe: kann er nicht.
         error: () => this.serverReady.set(false),
       });
@@ -86,6 +105,10 @@ export class PlanTitleService {
     this.busy.set(true);
     try {
       for (const section of open) {
+        // Am Limit hat jeder weitere Durchlauf nur noch abgelehnte Anfragen
+        // zur Folge — also gar nicht erst schicken.
+        if (this.exhausted()) break;
+
         const title = await this.ask(section.text);
         if (title === null) continue;
 
@@ -117,12 +140,16 @@ export class PlanTitleService {
         this.http.post<SuggestTitleResponse>(`${this.baseUrl}/suggest-title`, { text }),
       );
       this.serverReady.set(true);
+      this.remaining.update((left) => (left === null ? null : Math.max(0, left - 1)));
       return response.title;
     } catch (error) {
+      const status = (error as { status?: number }).status;
+
       // 503 heisst: auf diesem Server ist kein Schlüssel hinterlegt. Dann die
       // Funktion ausblenden, statt bei jedem Klick still zu scheitern.
-      const status = (error as { status?: number }).status;
       if (status === 503 || status === 404) this.serverReady.set(false);
+      // 429: Tageskontingent aufgebraucht. Kein Fehler, sondern eine Auskunft.
+      else if (status === 429) this.remaining.set(0);
       else console.error('Titelvorschlag fehlgeschlagen', error);
       return null;
     }

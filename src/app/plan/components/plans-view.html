@@ -644,14 +644,22 @@
             }
 
             @if (pendingSuggestions() > 0) {
-              <button type="button"
-                class="w-full rounded-lg border border-line px-2 py-1.5 text-2xs text-muted transition hover:border-line-strong hover:text-text disabled:opacity-60"
-                [disabled]="suggestBusy()"
-                (click)="suggestTitles()">
-                {{ suggestBusy()
-                    ? 'Reading…'
-                    : 'Suggest ' + pendingSuggestions() + ' title' + (pendingSuggestions() === 1 ? '' : 's') }}
-              </button>
+              @if (suggestExhausted()) {
+                <!-- Ein erreichtes Kontingent sieht sonst aus wie ein kaputter
+                     Knopf. Also sagen, was los ist, statt still nichts zu tun. -->
+                <p class="px-2 text-2xs leading-relaxed text-subtle">
+                  Daily limit reached — more tomorrow.
+                </p>
+              } @else {
+                <button type="button"
+                  class="w-full rounded-lg border border-line px-2 py-1.5 text-2xs text-muted transition hover:border-line-strong hover:text-text disabled:opacity-60"
+                  [disabled]="suggestBusy()"
+                  (click)="suggestTitles()">
+                  {{ suggestBusy()
+                      ? 'Reading…'
+                      : 'Suggest ' + pendingSuggestions() + ' title' + (pendingSuggestions() === 1 ? '' : 's') }}
+                </button>
+              }
             }
           </div>
         }
