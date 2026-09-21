@@ -964,6 +964,20 @@ export class PlansView {
   protected readonly suggestAvailable = this.titles.available;
   protected readonly suggestExhausted = this.titles.exhausted;
 
+  /** Ein Satz, der sagt, warum keine Überschriften gesetzt werden. */
+  protected readonly suggestOffReason = computed(() => {
+    switch (this.titles.reason()) {
+      case 'no-key':
+        return 'Auto headings need an API key on the server.';
+      case 'storage':
+        return 'Auto headings are off: the server cannot read its usage table.';
+      case 'unreachable':
+        return 'Auto headings are off: the server did not answer.';
+      default:
+        return null;
+    }
+  });
+
   /** Absaetze im aktuellen Plan, die in der Outline fehlen. */
   protected readonly untitled = computed<UntitledSection[]>(() => {
     const plan = this.selected();
