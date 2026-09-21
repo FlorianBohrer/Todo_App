@@ -8,10 +8,14 @@ interface SuggestTitleResponse {
   title: string | null;
 }
 
+/** Warum die Funktion aus ist — siehe AiStatusReason im Backend. */
+export type AiStatusReason = 'ok' | 'no-key' | 'storage' | 'unreachable';
+
 interface AiStatusResponse {
   available: boolean;
   remaining: number;
   limit: number;
+  reason: AiStatusReason;
 }
 
 /** Ein Vorschlag samt dem Textstand, für den er gilt. */
@@ -55,6 +59,16 @@ export class PlanTitleService {
   private readonly serverReady = signal<boolean | null>(null);
   readonly available = computed(() => this.serverReady() !== false);
 
+  /**
+   * Der Grund, falls die Funktion aus ist. null = noch nicht gefragt.
+   *
+   * Ohne ihn sieht jeder Ausfall gleich aus — die Funktion erscheint einfach
+   * nicht. Beim Einrichten kostet das Stunden, weil sich „kein Schlüssel",
+   * „Tabelle fehlt" und „laeuft, aber der Absatz ist zu kurz" nicht
+   * unterscheiden lassen.
+   */
+  readonly reason = signal<AiStatusReason | null>(null);
+
   private asked = false;
 
   /**
@@ -75,9 +89,14 @@ export class PlanTitleService {
         next: (status) => {
           this.serverReady.set(status.available);
           this.remaining.set(status.remaining);
+          // Ältere Backends kennen das Feld nicht — dann bleibt es bei „ok".
+          this.reason.set(status.reason ?? 'ok');
         },
         // Kennt der Server die Route nicht, ist die Antwort dieselbe: kann er nicht.
-        error: () => this.serverReady.set(false),
+        error: () => {
+          this.serverReady.set(false);
+          this.reason.set('unreachable');
+        },
       });
   }
 

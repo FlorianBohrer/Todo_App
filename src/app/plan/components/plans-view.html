@@ -613,6 +613,15 @@
              einen Absatz verlässt, über dem keine steht. Dieser Knopf ist für
              Dokumente, die es vorher schon gab — er tut dasselbe für alles auf
              einmal. -->
+        <!-- Aus heisst nicht stumm. Wer einen Absatz ohne Ueberschrift
+             schreibt und nichts passiert, soll den Grund lesen koennen,
+             statt ihn im Entwicklerwerkzeug zu suchen. -->
+        @if (!suggestAvailable() && pendingSuggestions() > 0 && suggestOffReason(); as why) {
+          <p class="mt-4 border-t border-line pt-3 px-2 text-2xs leading-relaxed text-subtle">
+            {{ why }}
+          </p>
+        }
+
         @if (suggestAvailable() && pendingSuggestions() > 0) {
           <div class="mt-4 border-t border-line pt-3">
             @if (suggestExhausted()) {
