@@ -62,7 +62,12 @@ import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
 import { PlanTitleService } from '../plan-title.service';
-import { UntitledSection, findUntitledSections } from '../untitled-sections';
+import {
+  UntitledSection,
+  blockText,
+  findUntitledSections,
+  needsHeading,
+} from '../untitled-sections';
 import {
   detectMarkdownShortcut,
   detectWikiToken,
@@ -568,6 +573,40 @@ export class PlansView {
     // ist woanders — dann darf auch das Menue zu.
     if (this.slash()?.blockId === blockId) this.slash.set(null);
     if (this.editingBlock() === blockId) this.editingBlock.set(null);
+
+    // Absatz fertig geschrieben: steht darueber keine Ueberschrift, eine setzen.
+    void this.titleUnheadedBlock(blockId);
+  }
+
+  /**
+   * Setzt eine Ueberschrift ueber den Block, wenn direkt darueber keine steht.
+   *
+   * Laeuft beim Verlassen des Absatzes, nicht beim Tippen: waehrend des
+   * Schreibens ist der Text noch keine Aussage, und jeder Tastendruck waere
+   * ein Aufruf. Verlassen heisst „fertig gedacht" — das ist der richtige
+   * Moment, und es ist genau einer pro Absatz.
+   */
+  private async titleUnheadedBlock(blockId: string): Promise<void> {
+    const plan = this.selected();
+    if (!plan || !this.suggestAvailable()) return;
+    if (!needsHeading(plan.content, blockId)) return;
+
+    const block = this.findBlock(blockId);
+    if (!block) return;
+
+    const text = blockText(block);
+    const title = await this.titles.fetchTitle(text);
+    if (!title) return;
+
+    // Zwischen Anfrage und Antwort liegen Sekunden. In der Zeit kann der Nutzer
+    // selbst eine Ueberschrift gesetzt, den Block verschoben oder weiter
+    // getippt haben — dann waere die Antwort veraltet und das Einfuegen falsch.
+    const current = this.selected();
+    if (!current || !needsHeading(current.content, blockId)) return;
+    const stillSame = this.findBlock(blockId);
+    if (!stillSame || blockText(stillSame) !== text) return;
+
+    this.acceptSuggestion(blockId, title);
   }
 
   /** Klick auf gerenderten Text: Wikilink folgt, sonst Bearbeiten. */
@@ -931,20 +970,8 @@ export class PlansView {
     return plan ? findUntitledSections(plan.content) : [];
   });
 
-  /** Die Vorschlaege, die es dafuer schon gibt — in Dokumentreihenfolge. */
-  protected readonly suggestions = computed(() =>
-    this.untitled()
-      .map((section) => ({ section, title: this.titles.titleFor(section) }))
-      .filter(
-        (entry): entry is { section: UntitledSection; title: string } =>
-          entry.title !== null,
-      ),
-  );
-
-  /** Wie viele Absaetze noch auf einen Vorschlag warten. */
-  protected readonly pendingSuggestions = computed(
-    () => this.untitled().filter((s) => this.titles.titleFor(s) === null).length,
-  );
+  /** Wie viele Absaetze noch ohne Ueberschrift darueber stehen. */
+  protected readonly pendingSuggestions = computed(() => this.untitled().length);
 
   constructor() {
     // Erst fragen, wenn es etwas zu betiteln gibt. Ein Plan ohne unbetitelte
@@ -954,11 +981,25 @@ export class PlansView {
     });
   }
 
-  suggestTitles() {
-    void this.titles.suggestFor(this.untitled());
+  /**
+   * Nachtraeglich fuer alles, was schon dasteht.
+   *
+   * Beim Schreiben passiert das von selbst (siehe endEdit). Dieser Weg ist fuer
+   * Dokumente, die es vorher schon gab — und er SETZT genauso, statt
+   * vorzuschlagen: zwei Verhalten fuer dieselbe Sache waeren nur verwirrend.
+   * Der Reihe nach, weil jede eingefuegte Ueberschrift die Liste veraendert.
+   */
+  async addMissingHeadings(): Promise<void> {
+    for (const section of this.untitled()) {
+      const plan = this.selected();
+      if (!plan || !needsHeading(plan.content, section.id)) continue;
+
+      const title = await this.titles.fetchTitle(section.text);
+      if (title) this.acceptSuggestion(section.id, title);
+    }
   }
 
-  /** Vorschlag annehmen: eine echte Ueberschrift ueber den Absatz setzen. */
+  /** Eine Ueberschrift ueber den Absatz setzen. */
   acceptSuggestion(blockId: string, title: string) {
     const heading: PlanBlock = {
       id: this.newId(),

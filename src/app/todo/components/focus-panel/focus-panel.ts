@@ -2,7 +2,14 @@ import {ChangeDetectionStrategy, Component, computed, inject, signal } from '@an
 import { LucideAngularModule, ChevronDown, Target } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { Todo } from '../../model/todo.model';
-import { dailyLoad, focusReason, rankForFocus, unplannedImportant } from '../../shared/focus';
+import {
+  dailyLoad,
+  focusReason,
+  moscowBalance,
+  rankForFocus,
+  unplannedImportant,
+  MUST_SHARE_LIMIT,
+} from '../../shared/focus';
 import { scheduleOptions } from '../../shared/schedule';
 import { stripPriorityPrefix } from '../../shared/title-priority';
 
@@ -42,6 +49,11 @@ export class FocusPanel {
 
   /** Wichtiges ohne Tag: die Lücke zwischen Vorsatz und Umsetzungsabsicht. */
   protected readonly unplanned = computed(() => unplannedImportant(this.scoped()));
+
+  /** MoSCoW-Balance — ist alles ein Must, ist nichts eins. */
+  protected readonly balance = computed(() => moscowBalance(this.scoped()));
+  protected readonly mustPercent = computed(() => Math.round(this.balance().mustShare * 100));
+  protected readonly mustLimitPercent = Math.round(MUST_SHARE_LIMIT * 100);
 
   /** Ohne offene Aufgaben hat das Panel nichts zu sagen. */
   protected readonly hasSomethingToSay = computed(() => this.suggestions().length > 0);

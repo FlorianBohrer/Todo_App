@@ -1,6 +1,8 @@
 import { Todo } from '../model/todo.model';
 import {
   dailyLoad,
+  moscowBalance,
+  MUST_SHARE_LIMIT,
   focusReason,
   focusScore,
   importanceOf,
@@ -27,9 +29,11 @@ function todo(partial: Partial<Todo> = {}): Todo {
 }
 
 describe('importanceOf', () => {
-  it('reads the title prefix the app already uses', () => {
+  it('reads all four MoSCoW levels from the title prefix', () => {
     expect(importanceOf('/must call the landlord')).toBe('must');
+    expect(importanceOf('/should sort the inbox')).toBe('should');
     expect(importanceOf('/could tidy the desk')).toBe('could');
+    expect(importanceOf("/won't rewrite the parser")).toBe('wont');
     expect(importanceOf('call the landlord')).toBe('normal');
   });
 });
@@ -47,6 +51,31 @@ describe('urgencyOf', () => {
 });
 
 describe('focusScore — urgency never outranks importance', () => {
+  it('keeps every adjacent level further apart than urgency can reach', () => {
+    // Das ist die Invariante, auf der die ganze Rangfolge steht. Bricht sie,
+    // schiebt sich eine dringende Kleinigkeit vor etwas Wichtiges — genau der
+    // Fehler, den der Mere-Urgency-Effekt beschreibt.
+    const mostUrgent = todo({ scheduledDate: '2020-01-01' }); // laengst faellig
+    const leastUrgent = todo({});                             // ohne Tag
+    const urgencySpan =
+      focusScore(mostUrgent, TODAY) - focusScore(leastUrgent, TODAY);
+
+    const levels = ['/must ', '/should ', '', '/could ', "/won't "];
+    for (let i = 0; i < levels.length - 1; i++) {
+      const higher = focusScore(todo({ title: `${levels[i]}x` }), TODAY);
+      const lower = focusScore(todo({ title: `${levels[i + 1]}x` }), TODAY);
+      expect(higher - lower).toBeGreaterThan(urgencySpan);
+    }
+  });
+
+  it('puts a should-have above an unrated todo, and that above a could-have', () => {
+    const should = focusScore(todo({ title: '/should a' }), TODAY);
+    const plain = focusScore(todo({ title: 'a' }), TODAY);
+    const could = focusScore(todo({ title: '/could a' }), TODAY);
+    expect(should).toBeGreaterThan(plain);
+    expect(plain).toBeGreaterThan(could);
+  });
+
   // Das ist der Punkt der ganzen Uebung (Mere-Urgency-Effekt): eine dringende
   // Kleinigkeit darf eine wichtige Sache nicht verdraengen.
   it('puts a far-off must-have above the most urgent could-have', () => {
@@ -69,6 +98,12 @@ describe('focusScore — urgency never outranks importance', () => {
 });
 
 describe('rankForFocus', () => {
+  it('leaves out won\'t-haves — they are deliberately out of scope', () => {
+    const wont = todo({ title: "/won't rewrite the parser", scheduledDate: TODAY });
+    const plain = todo({ title: 'something', scheduledDate: TODAY });
+    expect(rankForFocus([wont, plain], TODAY).map((t) => t.title)).toEqual(['something']);
+  });
+
   it('drops finished todos and orders by score', () => {
     const done = todo({ title: '/must done', completed: true });
     const could = todo({ title: '/could later' });
@@ -187,5 +222,67 @@ describe('dailyLoad', () => {
     );
     expect(load.done).toBe(1);
     expect(load.open).toBe(1);
+  });
+});
+
+describe('moscowBalance', () => {
+  const rated = (level: string, n: number) =>
+    Array.from({ length: n }, () => todo({ title: `${level}x` }));
+
+  it('counts each level separately', () => {
+    const balance = moscowBalance([
+      ...rated('/must ', 2),
+      ...rated('/should ', 3),
+      ...rated('/could ', 1),
+      ...rated("/won't ", 4),
+      ...rated('', 5),
+    ]);
+    expect(balance.counts.must).toBe(2);
+    expect(balance.counts.should).toBe(3);
+    expect(balance.counts.could).toBe(1);
+    expect(balance.counts.wont).toBe(4);
+    expect(balance.counts.normal).toBe(5);
+  });
+
+  it('leaves the unrated and the ruled-out out of the share', () => {
+    // Unbewertet ist keine Einstufung; won\'t steht gar nicht zur Umsetzung an.
+    const balance = moscowBalance([
+      ...rated('/must ', 3),
+      ...rated('/could ', 3),
+      ...rated('', 20),
+      ...rated("/won't ", 20),
+    ]);
+    expect(balance.rated).toBe(6);
+    expect(balance.mustShare).toBeCloseTo(0.5);
+  });
+
+  it('flags a plan that is almost entirely must-have', () => {
+    const balance = moscowBalance([...rated('/must ', 9), ...rated('/could ', 1)]);
+    expect(balance.mustShare).toBeGreaterThan(MUST_SHARE_LIMIT);
+    expect(balance.mustHeavy).toBe(true);
+  });
+
+  it('stays quiet at a healthy mix', () => {
+    const balance = moscowBalance([
+      ...rated('/must ', 3),
+      ...rated('/should ', 4),
+      ...rated('/could ', 3),
+    ]);
+    expect(balance.mustHeavy).toBe(false);
+  });
+
+  it('says nothing when there is barely anything rated', () => {
+    // Bei drei Todos ist ein Anteil keine Aussage, sondern Rauschen.
+    const balance = moscowBalance(rated('/must ', 3));
+    expect(balance.mustShare).toBe(1);
+    expect(balance.mustHeavy).toBe(false);
+  });
+
+  it('ignores finished todos', () => {
+    const balance = moscowBalance([
+      todo({ title: '/must done', completed: true }),
+      ...rated('/could ', 2),
+    ]);
+    expect(balance.counts.must).toBe(0);
   });
 });

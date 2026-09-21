@@ -16,7 +16,12 @@ import { NgClass } from '@angular/common';
 import { Todo } from '../../model/todo.model';
 import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
-import { stripPriorityPrefix, priorityBadge } from '../../shared/title-priority';
+import {
+  MoscowLevel,
+  MOSCOW_LABEL,
+  stripPriorityPrefix,
+  priorityBadge,
+} from '../../shared/title-priority';
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
@@ -177,9 +182,28 @@ toggleFolderList(): void {
     return stripPriorityPrefix(title);
   }
 
-  /** 'must' | 'could' | null — für das Prioritäts-Badge. */
-  priorityBadge(title: string): 'must' | 'could' | null {
+  /** Die MoSCoW-Stufe eines Titels — für das Badge in der Zeile. */
+  priorityBadge(title: string): MoscowLevel | null {
     return priorityBadge(title);
+  }
+
+  /** Beschriftung des Badges. */
+  badgeLabel(level: MoscowLevel): string {
+    return MOSCOW_LABEL[level];
+  }
+
+  /**
+   * Farbe des Badges. Rosé für das Unverhandelbare, Indigo für das Wichtige,
+   * neutral für das Verzichtbare — und Won't tritt zurück: es ist bewusst
+   * draußen, nicht dringend.
+   */
+  badgeClass(level: MoscowLevel): string {
+    switch (level) {
+      case 'must':   return 'bg-rose-500/20 text-rose-300';
+      case 'should': return 'bg-indigo-500/20 text-indigo-300';
+      case 'could':  return 'bg-fill-strong text-muted';
+      case 'wont':   return 'bg-fill text-subtle line-through';
+    }
   }
 
   startEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
