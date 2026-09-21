@@ -19,10 +19,14 @@ export interface UntitledSection {
 }
 
 /**
- * Kürzere Absätze bekommen keine Überschrift. Ein Zweizeiler braucht keine,
- * und der Titel wäre länger als der Inhalt.
+ * Kürzere Absätze bekommen keine Überschrift — der Titel wäre sonst länger
+ * als der Inhalt.
+ *
+ * Muss über der Untergrenze des Servers bleiben: der lehnt unter 40 Zeichen
+ * ohnehin ab. Läge der Wert darunter, schickte der Client Anfragen los, die
+ * nur abgelehnt zurückkommen können.
  */
-export const MIN_SECTION_CHARS = 80;
+export const MIN_SECTION_CHARS = 50;
 
 /** Der lesbare Text eines Blocks; '' für alles, was sich nicht betiteln lässt. */
 export function blockText(block: PlanBlock): string {
