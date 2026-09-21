@@ -677,6 +677,58 @@
       </button>
     </div>
 
+    <!-- Suche und Folder-Filter. Nur für die Kacheln: der Graph lebt von den
+         Verbindungen, und ein halber Graph zeigt Inseln, die keine sind. -->
+    @if (overviewMode() === 'list' && !loading() && plans().length > 0) {
+      <div class="mb-4 flex flex-col gap-3">
+        <div class="flex h-10 w-full items-center gap-2.5 rounded-lg border border-line bg-bg2 px-3
+                    transition focus-within:border-line-strong">
+          <lucide-icon [img]="SearchIcon" class="h-4 w-4 flex-none text-subtle" aria-hidden="true"></lucide-icon>
+          <input
+            #planSearch
+            type="text"
+            autocomplete="off"
+            class="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-subtle"
+            placeholder="Search plans — title and content…"
+            [value]="overviewQuery()"
+            (input)="overviewQuery.set(planSearch.value)"
+            (keydown.escape)="$event.stopPropagation(); overviewQuery.set(''); planSearch.value = ''"
+            aria-label="Search plans" />
+          @if (overviewQuery()) {
+            <button type="button"
+              class="grid h-6 w-6 flex-none place-items-center rounded-lg text-subtle transition hover:bg-fill hover:text-text"
+              (click)="overviewQuery.set(''); planSearch.value = ''"
+              aria-label="Clear search">✕</button>
+          }
+        </div>
+
+        @if (folderFilters().length > 0) {
+          <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by folder">
+            <button type="button"
+              class="folder-filter"
+              [class.folder-filter--active]="overviewFolder() === ALL_FOLDERS"
+              [attr.aria-pressed]="overviewFolder() === ALL_FOLDERS"
+              (click)="setOverviewFolder(ALL_FOLDERS)">
+              All <span class="opacity-60">{{ plans().length }}</span>
+            </button>
+
+            @for (chip of folderFilters(); track chip.id) {
+              <button type="button"
+                class="folder-filter"
+                [class.folder-filter--active]="overviewFolder() === chip.id"
+                [attr.aria-pressed]="overviewFolder() === chip.id"
+                (click)="setOverviewFolder(chip.id)">
+                @if (chip.id !== NO_FOLDER) {
+                  <span [class]="dotClass(chip.id)">●</span>
+                }
+                {{ chip.name }} <span class="opacity-60">{{ chip.count }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+
     @if (overviewMode() === 'graph') {
       <app-plan-graph
         [plans]="plans()"
@@ -691,12 +743,22 @@
       <p class="rounded-xl border border-line bg-bg2 p-6 text-center text-muted">
         No plans yet. Create one for your hackathon, a trip, or a software idea.
       </p>
+    } @else if (visiblePlans().length === 0) {
+      <!-- „Nichts gefunden" und „noch nichts da" sind zwei verschiedene
+           Nachrichten — und nur eine davon hat einen Ausweg. -->
+      <div class="rounded-xl border border-line bg-bg2 p-6 text-center">
+        <p class="text-muted">No plan matches this filter.</p>
+        <button type="button"
+          class="mt-3 rounded-full border border-line px-3 py-1.5 text-xs text-muted
+                 transition hover:border-line-strong hover:text-text"
+          (click)="clearOverviewFilters()">Clear filters</button>
+      </div>
     } @else {
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2"
            cdkDropList
            cdkDropListOrientation="mixed"
            (cdkDropListDropped)="dropPlan($event)">
-        @for (plan of plans(); track plan.id) {
+        @for (plan of visiblePlans(); track plan.id) {
           <div cdkDrag cdkDragPreviewClass="plan-drag-preview"
             class="group flex flex-col gap-2 rounded-xl border border-line bg-fill p-4 text-left transition hover:border-line-strong hover:bg-fill"
             role="button" tabindex="0"
