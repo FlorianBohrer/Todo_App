@@ -134,6 +134,36 @@ export class PlanTitleService {
     });
   }
 
+  /**
+   * Eine Ueberschrift fuer einen Absatz holen — der Weg fuers automatische
+   * Setzen beim Verlassen des Blocks.
+   *
+   * Merkt sich das Ergebnis am Textinhalt: wer denselben Absatz erneut
+   * anfasst, ohne etwas zu aendern, loest keine zweite Anfrage aus. Am
+   * erschoepften Tageskontingent wird gar nicht erst gefragt.
+   */
+  async fetchTitle(text: string): Promise<string | null> {
+    if (this.exhausted() || !this.available()) return null;
+
+    const key = contentKey(text);
+    const cached = this.byContent.get(key);
+    if (cached !== undefined) return cached;
+
+    this.busy.set(true);
+    try {
+      const title = await this.ask(text);
+      // Auch ein „nichts gefunden" wird gemerkt, sonst fragt jeder weitere
+      // Fokuswechsel auf demselben Text erneut.
+      this.byContent.set(key, title);
+      return title;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Textinhalt -> Ergebnis. Lebt so lange wie die Sitzung. */
+  private readonly byContent = new Map<string, string | null>();
+
   private async ask(text: string): Promise<string | null> {
     try {
       const response = await firstValueFrom(

@@ -44,8 +44,10 @@ export class ShortcutsOverlay {
         { keys: ['/'], description: 'Search' },
         // Kein Tastenkürzel, aber dieselbe Sorte Wissen: getippte Konvention,
         // die man kennen muss, um sie zu nutzen. Hier sucht man danach.
-        { keys: ['/must'], description: 'Start a title this way to mark a must-have' },
-        { keys: ['/could'], description: 'Start a title this way to mark a could-have' },
+        { keys: ['/must'], description: 'MoSCoW: without it the delivery is worthless' },
+        { keys: ['/should'], description: 'MoSCoW: painful to drop, but there is a workaround' },
+        { keys: ['/could'], description: 'MoSCoW: the contingency you drop when time runs short' },
+        { keys: ["/won't"], description: 'MoSCoW: out of scope for now, on purpose' },
       ],
     },
     {

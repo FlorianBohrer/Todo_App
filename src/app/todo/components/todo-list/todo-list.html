@@ -100,10 +100,8 @@
             @if (priorityBadge(todo.title); as badge) {
               <span
                 class="flex-none rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
-                [class]="badge === 'must'
-                  ? 'bg-rose-500/20 text-rose-300'
-                  : 'bg-fill-strong text-muted'">
-                {{ badge === 'must' ? 'Must' : 'Could' }}
+                [class]="badgeClass(badge)">
+                {{ badgeLabel(badge) }}
               </span>
             }
 

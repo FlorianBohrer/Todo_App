@@ -609,57 +609,25 @@
           </ul>
         }
 
-        <!-- Absätze ohne Überschrift stehen in keiner Outline. Ein Modell liest
-             sie und schlägt einen Titel vor — als Vorschlag erkennbar, bis man
-             ihn übernimmt. Nichts davon passiert von selbst: Vorschläge kosten
-             Geld, und ein Editor, der ungefragt an den Text geht, ist lästig. -->
-        @if (suggestAvailable() && (untitled().length || suggestions().length)) {
+        <!-- Beim Schreiben setzt die App die Überschrift selbst, sobald man
+             einen Absatz verlässt, über dem keine steht. Dieser Knopf ist für
+             Dokumente, die es vorher schon gab — er tut dasselbe für alles auf
+             einmal. -->
+        @if (suggestAvailable() && pendingSuggestions() > 0) {
           <div class="mt-4 border-t border-line pt-3">
-            <p class="mb-2 px-2 text-2xs font-medium uppercase tracking-wide text-subtle">
-              Untitled
-            </p>
-
-            @if (suggestions().length) {
-              <ul class="mb-2 space-y-0.5">
-                @for (entry of suggestions(); track entry.section.id) {
-                  <li class="suggestion-row group/sug relative">
-                    <button type="button"
-                      class="outline-link outline-link--suggested block w-full truncate rounded-lg py-1 pl-2 pr-12 text-left text-sm transition"
-                      [title]="entry.title"
-                      (click)="jumpTo(entry.section.id)">{{ entry.title }}</button>
-
-                    <span class="absolute right-1 top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 transition group-hover/sug:opacity-100 focus-within:opacity-100">
-                      <button type="button"
-                        class="grid h-5 w-5 place-items-center rounded text-subtle transition hover:bg-fill-strong hover:text-ok"
-                        (click)="acceptSuggestion(entry.section.id, entry.title)"
-                        title="Use as a heading" aria-label="Use as a heading">✓</button>
-                      <button type="button"
-                        class="grid h-5 w-5 place-items-center rounded text-subtle transition hover:bg-fill-strong hover:text-danger"
-                        (click)="dismissSuggestion(entry.section.id)"
-                        title="Discard" aria-label="Discard suggestion">✕</button>
-                    </span>
-                  </li>
-                }
-              </ul>
-            }
-
-            @if (pendingSuggestions() > 0) {
-              @if (suggestExhausted()) {
-                <!-- Ein erreichtes Kontingent sieht sonst aus wie ein kaputter
-                     Knopf. Also sagen, was los ist, statt still nichts zu tun. -->
-                <p class="px-2 text-2xs leading-relaxed text-subtle">
-                  Daily limit reached — more tomorrow.
-                </p>
-              } @else {
-                <button type="button"
-                  class="w-full rounded-lg border border-line px-2 py-1.5 text-2xs text-muted transition hover:border-line-strong hover:text-text disabled:opacity-60"
-                  [disabled]="suggestBusy()"
-                  (click)="suggestTitles()">
-                  {{ suggestBusy()
-                      ? 'Reading…'
-                      : 'Suggest ' + pendingSuggestions() + ' title' + (pendingSuggestions() === 1 ? '' : 's') }}
-                </button>
-              }
+            @if (suggestExhausted()) {
+              <p class="px-2 text-2xs leading-relaxed text-subtle">
+                Daily limit reached — more tomorrow.
+              </p>
+            } @else {
+              <button type="button"
+                class="w-full rounded-lg border border-line px-2 py-1.5 text-2xs text-muted transition hover:border-line-strong hover:text-text disabled:opacity-60"
+                [disabled]="suggestBusy()"
+                (click)="addMissingHeadings()">
+                {{ suggestBusy()
+                    ? 'Reading…'
+                    : 'Add ' + pendingSuggestions() + ' heading' + (pendingSuggestions() === 1 ? '' : 's') }}
+              </button>
             }
           </div>
         }

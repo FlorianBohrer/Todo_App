@@ -69,6 +69,17 @@
         </div>
       }
 
+      <!-- MoSCoW verlangt, dass Must-haves die Minderheit bleiben. Wer alles
+           zum Must erklärt, hat nicht priorisiert, sondern nur beschriftet —
+           und nichts mehr, was er opfern kann, wenn die Zeit knapp wird. -->
+      @if (balance().mustHeavy) {
+        <p class="mt-3 border-t border-line pt-3 text-xs/[1.6] text-amber-300">
+          {{ mustPercent() }}% of your rated todos are must-haves.
+          MoSCoW puts the guideline near {{ mustLimitPercent }}% — what is left
+          over is the part you can drop when time runs short.
+        </p>
+      }
+
       <button type="button"
         class="mt-3 text-xs text-subtle underline underline-offset-2 transition hover:text-muted"
         (click)="toggleExplaining()"
@@ -102,10 +113,17 @@
             enough of them to say anything.
           </p>
           <p>
-            <strong class="text-muted">Marking importance:</strong> start a
-            todo's title with <code class="rounded-lg bg-fill-strong px-1">/must</code>
-            or <code class="rounded-lg bg-fill-strong px-1">/could</code>. Anything
-            else counts as normal.
+            <strong class="text-muted">MoSCoW.</strong> Start a todo's title
+            with <code class="rounded-lg bg-fill-strong px-1">/must</code>,
+            <code class="rounded-lg bg-fill-strong px-1">/should</code>,
+            <code class="rounded-lg bg-fill-strong px-1">/could</code> or
+            <code class="rounded-lg bg-fill-strong px-1">/won't</code>. The
+            names carry definitions, not just a ranking: a must-have makes the
+            delivery worthless if it is missing; a should-have hurts to leave
+            out but has a workaround; a could-have is the contingency you drop
+            when time runs short; a won't-have is deliberately out of scope for
+            now — recorded as a decision rather than forgotten. Won't-haves are
+            left out of the ranking above for exactly that reason.
           </p>
           <p class="text-subtle/80">
             Not used: the Eisenhower matrix. It is management folklore without

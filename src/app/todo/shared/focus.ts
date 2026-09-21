@@ -31,18 +31,27 @@
  * steckt als Punkt 1 ohnehin drin.
  */
 import { Todo } from '../model/todo.model';
-import { priorityBadge } from './title-priority';
+import { MoscowLevel, priorityBadge } from './title-priority';
 import { shiftISODate, todayISO } from './week';
 
-export type Importance = 'must' | 'normal' | 'could';
+export type Importance = MoscowLevel | 'normal';
 export type Urgency = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later' | 'none';
 
 /**
- * Der Abstand zwischen zwei Wichtigkeitsstufen (3) ist größer als die gesamte
+ * Die vier MoSCoW-Stufen plus „unbewertet", das zwischen Could und Won't liegt.
+ *
+ * Der Abstand zwischen zwei benachbarten Stufen (3) ist größer als die gesamte
  * Spanne der Dringlichkeit (0 … 2.5). Damit kann kein noch so dringendes
- * Could-have ein Must-have überholen — siehe Punkt 1 oben.
+ * Could-have ein Should-have überholen — siehe Punkt 1 oben. Das ist als Test
+ * festgehalten, nicht nur als Absicht.
  */
-const IMPORTANCE_WEIGHT: Record<Importance, number> = { must: 6, normal: 3, could: 0 };
+const IMPORTANCE_WEIGHT: Record<Importance, number> = {
+  must: 12,
+  should: 9,
+  normal: 6,
+  could: 3,
+  wont: 0,
+};
 
 const URGENCY_WEIGHT: Record<Urgency, number> = {
   overdue: 2.5,
@@ -81,7 +90,10 @@ export function focusScore(todo: Todo, today = todayISO()): number {
  */
 export function rankForFocus(todos: readonly Todo[], today = todayISO()): Todo[] {
   return todos
-    .filter((t) => !t.completed)
+    // Won't-haves sind für diesen Zeitraum bewusst draußen. Sie als „das
+    // Nächste" vorzuschlagen würde die Entscheidung rückgängig machen, die
+    // ihre Einstufung war.
+    .filter((t) => !t.completed && importanceOf(t.title) !== 'wont')
     .map((todo, index) => ({ todo, index, score: focusScore(todo, today) }))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map((entry) => entry.todo);
@@ -93,7 +105,9 @@ export function focusReason(todo: Todo, today = todayISO()): string {
 
   const importance = importanceOf(todo.title);
   if (importance === 'must') parts.push('Must-have');
+  if (importance === 'should') parts.push('Should-have');
   if (importance === 'could') parts.push('Could-have');
+  if (importance === 'wont') parts.push("Won't-have");
 
   switch (urgencyOf(todo.scheduledDate, today)) {
     case 'overdue':  parts.push('past its day'); break;
@@ -165,5 +179,58 @@ export function dailyLoad(todos: readonly Todo[], today = todayISO()): DailyLoad
     done,
     typical,
     overCommitted: typical !== null && forToday.length > typical,
+  };
+}
+
+/**
+ * MoSCoW-Balance — die Regel, die in der Praxis am häufigsten gebrochen wird.
+ *
+ * DSDM gibt als Richtwert: höchstens rund 60 % des Aufwands in Must-haves, und
+ * etwa 20 % in Could-haves, weil genau die den Puffer bilden, den man opfert,
+ * wenn die Zeit knapp wird. Ist alles ein Must, gibt es nichts mehr zu opfern —
+ * dann ist der Plan nicht priorisiert, sondern nur beschriftet.
+ *
+ * Einschränkung, die ehrlich benannt gehört: DSDM misst AUFWAND, diese App
+ * kennt nur Anzahl. Anzahl ist ein grober Ersatz — zehn kleine Must-haves
+ * wiegen weniger als ein großes. Als Warnlampe taugt es trotzdem, als Messung
+ * nicht.
+ */
+export const MUST_SHARE_LIMIT = 0.6;
+
+export interface MoscowBalance {
+  counts: Record<Importance, number>;
+  /** Offene Todos mit einer Stufe (ohne „unbewertet" und ohne Won't). */
+  rated: number;
+  /** Anteil der Must-haves an den bewerteten, 0 … 1. */
+  mustShare: number;
+  /** Über dem Richtwert — ein Hinweis, keine Fehlermeldung. */
+  mustHeavy: boolean;
+}
+
+export function moscowBalance(todos: readonly Todo[]): MoscowBalance {
+  const counts: Record<Importance, number> = {
+    must: 0,
+    should: 0,
+    normal: 0,
+    could: 0,
+    wont: 0,
+  };
+
+  for (const todo of todos) {
+    if (todo.completed) continue;
+    counts[importanceOf(todo.title)]++;
+  }
+
+  // Unbewertetes und bewusst Ausgeschlossenes zählen nicht mit: das eine ist
+  // keine Einstufung, das andere steht gar nicht zur Umsetzung an.
+  const rated = counts.must + counts.should + counts.could;
+  const mustShare = rated === 0 ? 0 : counts.must / rated;
+
+  return {
+    counts,
+    rated,
+    mustShare,
+    // Unter einer Handvoll bewerteter Todos sagt ein Anteil nichts.
+    mustHeavy: rated >= 5 && mustShare > MUST_SHARE_LIMIT,
   };
 }
