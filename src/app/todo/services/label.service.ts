@@ -224,6 +224,36 @@ export class LabelService {
 
     const [moved] = list.splice(previousIndex, 1);
     list.splice(currentIndex, 0, moved);
+    this.applyOrder(list);
+  }
+
+  /**
+   * Die komplette Reihenfolge setzen — für Züge, die mehr als einen Folder
+   * bewegen, etwa einen ganzen Abschnitt.
+   *
+   * Die Liste MUSS jeden Folder genau einmal enthalten. Fehlt einer, behielte
+   * er serverseitig seine alte Position und stünde danach irgendwo zwischen
+   * den neu nummerierten — die Reihenfolge wäre still verwürfelt. Deshalb
+   * wird hier geprüft statt vertraut.
+   */
+  setLabelOrder(ids: string[]) {
+    const current = this.labels();
+    if (ids.length !== current.length) return;
+
+    const byId = new Map(current.map((label) => [label.id, label]));
+    const list: Label[] = [];
+    for (const id of ids) {
+      const label = byId.get(id);
+      if (!label) return; // unbekannte ID: lieber nichts tun als falsch sortieren
+      byId.delete(id);
+      list.push(label);
+    }
+
+    this.applyOrder(list);
+  }
+
+  /** Neue Reihenfolge sofort anzeigen und sichern; bei Fehler zurückholen. */
+  private applyOrder(list: Label[]) {
     this.labels.set(list);
 
     this.http
