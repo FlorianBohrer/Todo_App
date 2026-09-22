@@ -16,6 +16,7 @@ import {
   ChevronRight,
   ChevronsRight,
   CalendarClock,
+  Repeat,
 } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { LabelService } from '../../services/label.service';
@@ -60,6 +61,7 @@ export class WeekView {
   protected readonly labelService = inject(LabelService);
 
   protected readonly PrevIcon = ChevronLeft;
+  protected readonly RepeatIcon = Repeat;
   protected readonly NextIcon = ChevronRight;
   protected readonly RollOverIcon = ChevronsRight;
   protected readonly OverdueIcon = CalendarClock;
