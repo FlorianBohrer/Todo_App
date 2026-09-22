@@ -162,6 +162,17 @@
                   {{ displayTitle(todo.title) }}
                 </span>
 
+                <!-- Wiederkehrend. Hier wiegt das Zeichen schwerer als in der
+                     Liste: die naechste Ausgabe liegt fast immer in einer
+                     ANDEREN Woche als der, die man gerade ansieht. Ohne den
+                     Hinweis sieht man eine abgehakte Aufgabe und nichts
+                     weiter, und das sieht aus, als sei sie einfach weg. -->
+                @if (todo.repeat) {
+                  <lucide-icon [img]="RepeatIcon"
+                    class="mt-0.5 h-3 w-3 flex-none text-subtle"
+                    [attr.title]="'Repeats, next one follows in a later week'"></lucide-icon>
+                }
+
                 <!-- Einen Tag vor oder zurück, ohne zu ziehen. Auf schmalen
                      Spalten wäre dauerhaft Platz dafür zu teuer, deshalb legen
                      sie sich beim Zeigen (oder Antippen der Tastatur) darüber. -->
