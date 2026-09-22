@@ -88,9 +88,23 @@ export class App {
    * „?"-Blatt und als Tooltip an den Laschen.
    */
   @HostListener('document:keydown', ['$event'])
-  onViewShortcut(event: KeyboardEvent): void {
+  onShortcut(event: KeyboardEvent): void {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (isTypingTarget(event.target)) return;
+
+    // f oeffnet die Folder-Uebersicht und schliesst sie wieder. Toggle und
+    // nicht nur oeffnen: wer sie mit einer Taste aufmacht, greift zum
+    // Zumachen nicht zur Maus. Escape schliesst sie ebenfalls, aber das
+    // funktioniert nur, solange der Fokus im Dialog liegt.
+    //
+    // Gross und klein gelten beide: Shift oder Feststelltaste sollen das
+    // Kuerzel nicht verschlucken. Die Suche im Dialog faengt das nicht ab,
+    // die haelt isTypingTarget vorher schon auf.
+    if (event.key.toLowerCase() === 'f') {
+      event.preventDefault();
+      this.toggleCategories();
+      return;
+    }
 
     const index = ['1', '2', '3'].indexOf(event.key);
     if (index === -1) return;
@@ -170,5 +184,14 @@ export class App {
 
   openCategories() {
     this.labelService.openOverlay();
+  }
+
+  /** Auf- und zumachen, fuer das Kuerzel „f". */
+  toggleCategories() {
+    if (this.labelService.isOverlayOpen()) {
+      this.labelService.closeOverlay();
+    } else {
+      this.labelService.openOverlay();
+    }
   }
 }
