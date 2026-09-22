@@ -615,42 +615,7 @@ textarea::-webkit-resizer { display: none; }
   .plan-drag-preview { animation: none; scale: 1.02; }
 }
 
-@media (prefers-reduced-transparency: reduce) {
-  .plan-drag-preview {
-    background: var(--color-panel1);
-    backdrop-filter: none;
-  }
 
-  /* Bisher stand hier nur die Ziehvorschau — ausgerechnet die Flaeche, die
-     Sekundenbruchteile zu sehen ist. Die Leiste, die dauerhaft oben klebt,
-     und saemtliche Overlays blieben durchsichtig. Wer die Einstellung setzt,
-     tut das wegen genau dieser Flaechen.
-
-     Die Leiste braucht dabei beides: ohne Weichzeichner liesse eine
-     80%-Flaeche den Inhalt darunter durchscheinen, und das Durchscheinen ist
-     ja das, was abgestellt werden soll. Also wird sie deckend. */
-  .app-chrome {
-    background: var(--color-bg2);
-    backdrop-filter: none;
-  }
-
-  /* Abdunkelnde Hintergruende trennen auch ohne Weichzeichner. Der
-     Attributselektor greift die Tailwind-Utilities in den Vorlagen ab, ohne
-     dass jede Overlay-Flaeche eine eigene Klasse bekommen muss. */
-  [class*="backdrop-blur"] {
-    backdrop-filter: none;
-  }
-}
-
-/* Mehr Kontrast angefordert: die Haarlinien tragen in dieser App die
-   Gliederung — Karten, Eingabefelder, die Leiste oben. Bei 10% Weiss sind sie
-   auf einem dunklen Grund die Ersten, die verschwinden. */
-@media (prefers-contrast: more) {
-  :root {
-    --color-line: rgb(255 255 255 / 0.30);
-    --color-line-strong: rgb(255 255 255 / 0.55);
-  }
-}
 
 .cdk-drag-placeholder {
   opacity: 0.18;
@@ -712,10 +677,10 @@ textarea::-webkit-resizer { display: none; }
 button {
   transition:
     transform 110ms var(--ease-out),
-    background-color 140ms ease-out,
-    color 140ms ease-out,
-    border-color 140ms ease-out,
-    opacity 140ms ease-out;
+    background-color 140ms var(--ease-out),
+    color 140ms var(--ease-out),
+    border-color 140ms var(--ease-out),
+    opacity 140ms var(--ease-out);
 }
 
 button:active {
@@ -737,8 +702,8 @@ input,
 textarea,
 select {
   transition:
-    background-color 140ms ease-out,
-    border-color 140ms ease-out,
+    background-color 140ms var(--ease-out),
+    border-color 140ms var(--ease-out),
     box-shadow 160ms var(--ease-out);
 }
 
@@ -837,6 +802,46 @@ select {
 }
 
 /* ---------------------------------------------------------------------------
+   Schwebende Leiste
+   --------------------------------------------------------------------------- */
+
+/* Die Leiste war Glas, das nichts tat: bg-bg2/80 auf einer bg-bg2-Seite ist
+   dieselbe Farbe zu 80% ueber sich selbst. Sichtbar wurde davon nur der
+   Weichzeichner auf durchscrollendem Inhalt; als Material war sie nicht da.
+
+   Jetzt liegt eine hellere Flaeche darueber (panel1 statt bg2), damit die
+   Leiste als angehobene Schicht liest statt als Loch in der Seite. Dazu
+   saturate, weil ein Weichzeichner Farben ausblasst, und eine helle Oberkante:
+   Licht, das sich im Material faengt. */
+.app-chrome {
+  background: color-mix(in srgb, var(--color-panel1) 70%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
+}
+
+/* Statt der harten 1px-Linie eine kurze Verlaufskante.
+
+   Eine Linie behauptet eine Grenze. Dieser Verlauf zeigt stattdessen, dass der
+   Inhalt unter der Leiste weiterlaeuft, und er tut das nur dort, wo wirklich
+   etwas darunterliegt: der Verlauf traegt die Seitenfarbe, ist ueber der
+   leeren Seite also unsichtbar und wird erst sichtbar, wenn eine hellere
+   Karte darunter durchzieht. */
+.app-chrome::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 1.5rem;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-bg2) 60%, transparent),
+    transparent
+  );
+}
+
+/* ---------------------------------------------------------------------------
    Ansichtswechsel Liste / Woche / Plaene
    --------------------------------------------------------------------------- */
 
@@ -863,7 +868,7 @@ select {
 }
 
 .view-swap {
-  animation: view-in 200ms ease-out;
+  animation: view-in 200ms var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -882,5 +887,65 @@ select {
   .todo-card,
   .todo-card--new {
     animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Barrierefreiheits-Ueberschreibungen
+   ---------------------------------------------------------------------------
+
+   Stehen bewusst am DATEIENDE. Eine Media Query erhoeht die Spezifitaet nicht:
+   liegt eine normale Regel weiter unten, gewinnt sie gegen die Fassung in der
+   Abfrage. Genau das war hier schon passiert, als .app-chrome spaeter in der
+   Datei definiert wurde und die beiden Abfragen darueber wirkungslos machte.
+   Zuletzt zu stehen ist die einzige Anordnung, die das dauerhaft ausschliesst.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-reduced-transparency: reduce) {
+  .plan-drag-preview {
+    background: var(--color-panel1);
+    backdrop-filter: none;
+  }
+
+  /* Bisher stand hier nur die Ziehvorschau — ausgerechnet die Flaeche, die
+     Sekundenbruchteile zu sehen ist. Die Leiste, die dauerhaft oben klebt,
+     und saemtliche Overlays blieben durchsichtig. Wer die Einstellung setzt,
+     tut das wegen genau dieser Flaechen.
+
+     Die Leiste braucht dabei beides: ohne Weichzeichner liesse eine
+     80%-Flaeche den Inhalt darunter durchscheinen, und das Durchscheinen ist
+     ja das, was abgestellt werden soll. Also wird sie deckend. */
+  .app-chrome {
+    background: var(--color-panel1);
+    backdrop-filter: none;
+  }
+
+  /* Abdunkelnde Hintergruende trennen auch ohne Weichzeichner. Der
+     Attributselektor greift die Tailwind-Utilities in den Vorlagen ab, ohne
+     dass jede Overlay-Flaeche eine eigene Klasse bekommen muss. */
+  [class*="backdrop-blur"] {
+    backdrop-filter: none;
+  }
+}
+/* Mehr Kontrast angefordert: die Haarlinien tragen in dieser App die
+   Gliederung — Karten, Eingabefelder, die Leiste oben. Bei 10% Weiss sind sie
+   auf einem dunklen Grund die Ersten, die verschwinden. */
+@media (prefers-contrast: more) {
+  :root {
+    --color-line: rgb(255 255 255 / 0.30);
+    --color-line-strong: rgb(255 255 255 / 0.55);
+  }
+
+  /* Bei angefordertem Kontrast ist eine weiche Verlaufskante zu wenig: die
+     Leiste braucht eine benannte Grenze und eine Flaeche, durch die nichts
+     durchscheint. */
+  .app-chrome {
+    background: var(--color-panel1);
+    backdrop-filter: none;
+    border-bottom: 1px solid var(--color-line-strong);
+  }
+
+  .app-chrome::after {
+    content: none;
   }
 }
