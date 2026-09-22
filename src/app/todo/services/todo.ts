@@ -209,7 +209,7 @@ export class TodoService {
           error: (err) => {
             console.error('Todos laden fehlgeschlagen', err);
             this.loading.set(false);
-            this.toast.error('Could not load todos — please reload the page');
+            this.toast.error('Could not load todos. Please reload the page');
           },
         });
       });

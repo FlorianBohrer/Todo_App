@@ -106,7 +106,7 @@ type DiagramStatus = 'empty' | 'loading' | 'ready' | 'error';
 
       @if (status() === 'empty') {
         <p class="py-6 text-sm text-muted">
-          Describe the flow on the left — the diagram appears here.
+          Describe the flow on the left. The diagram appears here.
         </p>
       }
 
@@ -230,7 +230,7 @@ function readableError(cause: unknown): string {
 
   if (!firstLine) return 'This diagram could not be drawn.';
   if (/^parse error/i.test(firstLine)) {
-    return 'Syntax error — the last working diagram is still shown.';
+    return 'Syntax error. The last working diagram is still shown.';
   }
 
   return firstLine.length > 140 ? `${firstLine.slice(0, 137)}…` : firstLine;

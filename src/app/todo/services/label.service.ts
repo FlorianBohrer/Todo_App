@@ -179,7 +179,7 @@ export class LabelService {
       shouldBeFavorite &&
       this.favoriteLabels().length >= MAX_FAVORITE_LABELS
     ) {
-      this.toast.show('Maximum four favorites — remove a star first');
+      this.toast.show('Maximum four favorites. Remove a star first');
 
       return;
     }
