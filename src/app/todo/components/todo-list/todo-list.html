@@ -107,6 +107,16 @@
             </button>
 
             <!-- Prioritäts-Badge (Präfix /must-have bzw. /could-have) -->
+            <!-- Aus einem Plan entstanden. Nur das Zeichen, nicht der
+                 Plantitel: dafuer muesste die Liste den Planungsdienst kennen,
+                 und der liegt bewusst in einem nachgeladenen Teil. Ein Symbol
+                 kostet nichts und beantwortet die Frage „wo kam das her". -->
+            @if (todo.planId) {
+              <lucide-icon [img]="FromPlanIcon"
+                class="h-3.5 w-3.5 flex-none text-subtle"
+                title="Came from a plan"></lucide-icon>
+            }
+
             @if (row.badge) {
               <span
                 class="flex-none rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
@@ -192,6 +202,12 @@
             @if (todo.scheduledDate !== null) {
               <span>{{ row.scheduleText }}</span>
             }
+            <!-- Wiederkehrend: ein Symbol genuegt. Der Rhythmus steht im
+                 Menue, hier zaehlt nur, dass es wiederkommt. -->
+            @if (todo.repeat) {
+              <lucide-icon [img]="RepeatIcon" class="h-3 w-3 opacity-70"
+                [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
+            }
           </button>
 
           <ng-template
@@ -226,6 +242,44 @@
                   Clear date
                 </button>
               }
+              <!-- Wiederholung. Sitzt hier und nicht in einem eigenen Menue,
+                   weil Termin und Rhythmus dieselbe Frage sind: wann. Und
+                   dieses Menue gibt es auf Desktop wie Mobil, das
+                   3-Punkte-Menue nur mobil. -->
+              <div class="border-t border-border px-3 pb-2.5 pt-2.5">
+                <div class="mb-1.5 flex items-center gap-2 text-xs text-muted">
+                  <lucide-icon [img]="RepeatIcon" class="h-3.5 w-3.5"></lucide-icon>
+                  <span>Repeats</span>
+                </div>
+
+                <div class="flex flex-wrap gap-1.5">
+                  @for (option of repeatChoices; track option.key) {
+                    <button type="button"
+                      class="rounded-full border px-2.5 py-1 text-xs transition"
+                      [class]="repeatMatches(todo, option.rule)
+                        ? 'border-indigo-400 text-indigo-300'
+                        : 'border-border text-text hover:border-indigo-400 hover:text-indigo-300'"
+                      (click)="setRepeat(todo, option.rule)">
+                      {{ option.label }}
+                    </button>
+                  }
+                </div>
+
+                <!-- Der Unterschied, den die meisten Apps auslassen: den Muell
+                     bringt man nicht nach Kalender runter, sondern wenn er
+                     voll ist. -->
+                @if (todo.repeat) {
+                  <button type="button"
+                    class="mt-2 flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-2xs leading-snug text-subtle transition hover:text-muted"
+                    (click)="toggleRepeatFrom(todo)">
+                    <span class="flex-none rounded border border-line-strong px-1 py-0.5 font-mono">
+                      {{ todo.repeat.from === 'completion' ? 'ON' : 'OFF' }}
+                    </span>
+                    <span>Count from when I finish it, not from the plan</span>
+                  </button>
+                }
+              </div>
+
             </div>
           </ng-template>
 
@@ -301,11 +355,23 @@
             aria-label="Edit text">
             <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
           </button>
-          <button
-            class="hidden sm:block rounded-lg px-2 py-1 flex-none text-text transition hover:text-red-400"
-            (click)="removeTodos(todo.id)">
-            ✕
-          </button>
+          @if (todo.archivedAt) {
+            <!-- Im Archiv ist Zurueckholen die naheliegende Handlung, nicht
+                 Loeschen. Das Kreuz waere dort die gefaehrlichere von beiden
+                 an der bequemeren Stelle. -->
+            <button type="button"
+              class="hidden sm:inline-flex flex-none items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs text-muted transition hover:border-line-strong hover:text-text"
+              (click)="unarchive(todo.id)">
+              <lucide-icon [img]="RestoreIcon" class="h-3.5 w-3.5"></lucide-icon>
+              Restore
+            </button>
+          } @else {
+            <button
+              class="hidden sm:block rounded-lg px-2 py-1 flex-none text-text transition hover:text-red-400"
+              (click)="removeTodos(todo.id)">
+              ✕
+            </button>
+          }
 
           <!-- Mobil: 3-Punkte-Menü bündelt Favorit, Zeitblock und Löschen -->
           <button
@@ -459,5 +525,28 @@
         </li>
       }
     </ul>
+  }
+
+  <!-- Archiv.
+       175 von 204 erledigt heisst: die Liste erzaehlt mehr ueber die
+       Vergangenheit als ueber die Woche, und die Prozentzahl oben auch.
+       Weglegen loescht nichts, es raeumt nur den Blick frei. -->
+  @if (!loading() && (archivableCount() > 0 || showArchived())) {
+    <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-3">
+      @if (archivableCount() > 0) {
+        <button type="button"
+          class="inline-flex items-center gap-2 text-xs text-muted transition hover:text-text"
+          (click)="archiveCompleted()">
+          <lucide-icon [img]="ArchiveIcon" class="h-3.5 w-3.5"></lucide-icon>
+          Archive {{ archivableCount() }} completed
+        </button>
+      }
+
+      <button type="button"
+        class="ml-auto text-xs text-subtle underline underline-offset-2 transition hover:text-muted"
+        (click)="toggleArchiveView()">
+        {{ showArchived() ? 'Hide archive' : 'Show archive' }}
+      </button>
+    </div>
   }
 </section>

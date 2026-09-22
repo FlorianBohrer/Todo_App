@@ -24,6 +24,12 @@ function todo(partial: Partial<Todo> = {}): Todo {
     labelIds: [],
     createdAt: new Date(2026, 8, 1),
     scheduledDate: null,
+    // Die Priorisierung kennt weder Archiv noch Wiederholung noch Herkunft.
+    // Die Felder stehen hier nur, damit die Attrappe ein vollstaendiges Todo
+    // ist — waeren sie optional, verdeckte der Test kuenftige Luecken.
+    archivedAt: null,
+    repeat: null,
+    planId: null,
     ...partial,
   };
 }

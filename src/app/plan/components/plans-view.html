@@ -341,18 +341,38 @@
                     <ul class="space-y-1 text-prose text-text">
                       @for (item of asList(block).items; track $index; let i = $index) {
                         <li class="list-item-row flex items-start gap-2">
+                          <!-- Ist der Eintrag mit einem Todo verknuepft, zeigt
+                               und setzt die Box dessen Zustand. Es gibt dann
+                               genau einen Haken, nicht zwei. -->
                           <button type="button"
                             class="todo-box mt-[5px] grid h-4 w-4 flex-none place-items-center rounded-lg border text-2xs leading-none"
-                            [class]="item.checked
+                            [class]="itemChecked(item)
                               ? 'border-brand-2 bg-brand-2 text-white'
                               : 'border-line-strong text-transparent hover:border-line-strong'"
                             (click)="$event.stopPropagation(); toggleListItem(block.id, i)"
-                            [attr.aria-pressed]="item.checked"
+                            [attr.aria-pressed]="itemChecked(item)"
                             aria-label="Toggle item">✓</button>
                           <span
-                            [class.line-through]="item.checked"
-                            [class.text-subtle]="item.checked"
+                            [class.line-through]="itemChecked(item)"
+                            [class.text-subtle]="itemChecked(item)"
                             [innerHTML]="renderInline(item.text)"></span>
+
+                          @if (itemTodo(item); as linked) {
+                            <!-- Schon eine echte Aufgabe. Das Zeichen sagt,
+                                 dass dieser Haken anderswo mitzaehlt. -->
+                            <span class="mt-[3px] flex-none text-2xs text-brand-2"
+                                  [attr.title]="'This is a todo in your list' + (linked.scheduledDate ? ', planned for ' + linked.scheduledDate : '')">
+                              ↗ todo
+                            </span>
+                          } @else {
+                            <button type="button"
+                              class="item-promote mt-[3px] flex-none rounded px-1 text-2xs text-subtle transition hover:text-brand-2"
+                              (click)="$event.stopPropagation(); promoteToTodo(block.id, i)"
+                              title="Make this a todo in your list">
+                              → todo
+                            </button>
+                          }
+
                           <ng-container
                             *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
                         </li>

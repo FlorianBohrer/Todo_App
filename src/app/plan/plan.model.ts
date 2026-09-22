@@ -32,11 +32,24 @@ export interface PlanHeadingBlock {
  * ul/ol. Das hält das Umsortieren einfach — Notion macht daraus je einen
  * eigenen Block, was ohne contenteditable kaum zu bedienen wäre.
  */
+export interface PlanListItem {
+  text: string;
+  checked: boolean;
+  /**
+   * Das echte Todo, zu dem dieser Eintrag geworden ist.
+   *
+   * Ist er gesetzt, ist der Eintrag nur noch ein Verweis: angezeigt und
+   * abgehakt wird der Zustand des Todos, nicht `checked`. Damit gibt es genau
+   * einen Haken und nicht zwei, die auseinanderlaufen können.
+   */
+  todoId?: string;
+}
+
 export interface PlanListBlock {
   id: string;
   type: 'list';
   variant: 'bullet' | 'number' | 'todo';
-  items: { text: string; checked: boolean }[];
+  items: PlanListItem[];
 }
 
 /** Code-Block mit Sprachkennung — Monospace, nicht formatiert. */

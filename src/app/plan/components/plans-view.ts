@@ -45,6 +45,8 @@ import {
 } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
+import { TodoService } from '../../todo/services/todo';
+import type { Todo } from '../../todo/model/todo.model';
 import { folderColorClass } from '../../todo/shared/folder-color';
 import { PlanService } from '../plan.service';
 import {
@@ -55,6 +57,7 @@ import {
   PlanGroupBlock,
   PlanHeadingBlock,
   PlanListBlock,
+  PlanListItem,
   PlanCodeBlock,
   PlanQuoteBlock,
 } from '../plan.model';
@@ -125,6 +128,9 @@ const DIAGRAM_TEMPLATE = `flowchart TD
 export class PlansView {
   private readonly planService = inject(PlanService);
   protected readonly labelService = inject(LabelService);
+  // Beide Dienste stehen ohnehin app-weit bereit; die Planansicht liest hier
+  // nur den Zustand, den die Liste schon geladen hat. Kein zweiter Abruf.
+  private readonly todoService = inject(TodoService);
 
   protected readonly BackIcon = ChevronLeft;
   protected readonly PlusIcon = Plus;
@@ -887,7 +893,72 @@ export class PlansView {
     );
   }
 
+  // ---- Brücke zu den Todos ----
+  //
+  // Ein Checklisten-Eintrag im Plan ist erst einmal Text. Wird er zu einem
+  // echten Todo, hört er auf, einen eigenen Zustand zu haben: ab dann zeigt er
+  // den des Todos und hakt es ab. Zwei Haken, die dasselbe behaupten und
+  // auseinanderlaufen können, wären schlimmer als gar keine Verbindung.
+
+  /** Das verknüpfte Todo, oder null wenn es keins (mehr) gibt. */
+  itemTodo(item: PlanListItem): Todo | null {
+    return this.todoService.todoById(item.todoId);
+  }
+
+  /**
+   * Ist der Eintrag abgehakt? Beim verknüpften der Zustand des Todos.
+   *
+   * Fällt das Todo weg (gelöscht, archiviert und gerade nicht geladen), zählt
+   * wieder das, was im Plan steht. Der Eintrag verschwindet dadurch nicht.
+   */
+  itemChecked(item: PlanListItem): boolean {
+    return this.itemTodo(item)?.completed ?? item.checked;
+  }
+
+  /**
+   * Aus einem Eintrag eine echte Aufgabe machen.
+   *
+   * Die ID wandert in den Block, damit die Verbindung den Reload überlebt.
+   * Schlägt das Anlegen fehl, bleibt der Eintrag unverändert Text.
+   */
+  async promoteToTodo(blockId: string, index: number) {
+    const plan = this.selected();
+    if (!plan) return;
+
+    const block = this.findBlock(blockId);
+    if (!block || block.type !== 'list') return;
+
+    const item = block.items[index];
+    if (!item || item.todoId) return;
+
+    const todoId = await this.todoService.addTodoFromPlan(item.text, plan.id);
+    if (!todoId) return;
+
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) =>
+        x.type !== 'list'
+          ? x
+          : {
+              ...x,
+              items: x.items.map((it, i) =>
+                i === index ? { ...it, todoId } : it,
+              ),
+            },
+      ),
+    );
+  }
+
   toggleListItem(blockId: string, index: number) {
+    // Verknüpft? Dann gehört der Haken dem Todo, und nur dort wird er gesetzt.
+    const block = this.findBlock(blockId);
+    if (block?.type === 'list') {
+      const linked = block.items[index]?.todoId;
+      if (linked && this.todoService.todoById(linked)) {
+        this.todoService.toggleTodo(linked);
+        return;
+      }
+    }
+
     this.updateContent((bs) =>
       this.mapById(bs, blockId, (x) =>
         x.type !== 'list'
