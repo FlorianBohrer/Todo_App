@@ -1,10 +1,13 @@
 @if (clerk.user$ | async; as user) {
   <main class="min-h-screen w-full transition-colors duration-500 bg-bg2">
-   <!-- Kopfbereich und Leiste teilen sich EINE Flaeche, die bis an den oberen
-        Rand reicht. Vorher lagen hier drei Baender uebereinander: die
-        Kontozeile auf dem Seitengrund, die Ueberschrift auf bg2 und die Leiste
-        auf ihrem eigenen Material. Drei waagerechte Kanten, bevor der Inhalt
-        anfaengt.
+   <!-- Kopfbereich OHNE eigene Flaeche: Kontozeile, Titel und die Leiste
+        darunter liegen alle auf dem Seitengrund, damit oben keine waagerechte
+        Kante steht, bevor der Inhalt anfaengt. Die Leiste faerbt sich erst
+        beim Scrollen ein (siehe .app-chrome in styles.scss).
+
+        Dass die Kontozeile hier drin steht und nicht mehr ausserhalb von main,
+        ist der Grund, warum das aufgeht: dort lag sie auf einem anderen Grund
+        und bildete das oberste der frueheren drei Baender.
 
         Gescrollt wird weiter nur die Leiste festgehalten. Der Kopf laeuft
         mit hinaus: klebte der ganze Block, kostete er dauerhaft ~170px, auf
