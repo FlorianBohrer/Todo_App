@@ -31,6 +31,7 @@ export class ShortcutsOverlay {
       title: 'Anywhere',
       items: [
         { keys: ['?'], description: 'Show this list' },
+        { keys: ['f'], description: 'Folders, open and close' },
         { keys: ['1'], description: 'List view' },
         { keys: ['2'], description: 'Week view' },
         { keys: ['3'], description: 'Plans view' },
