@@ -7,6 +7,7 @@ import { RepeatRule, Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
 import { titlePriority } from '../shared/title-priority';
+import { scheduleLabel } from '../shared/schedule';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
 
@@ -56,6 +57,15 @@ interface TodoDto {
   repeatUnit?: string | null;
   repeatFrom?: string | null;
   planId?: string | null;
+  /**
+   * Was beim Abhaken nebenbei entstanden ist. Nur bei PUT gesetzt.
+   *
+   * Der Server sagt es ausdruecklich, statt dass der Client es sich aus der
+   * Wiederholungsregel zusammenreimt. Genau dieses Zusammenreimen hat vorher
+   * nicht funktioniert, und weil es stillschweigend nicht funktionierte, sah
+   * es aus, als tue die Wiederholung gar nichts.
+   */
+  nextOccurrence?: { id: string; scheduledDate: string | null } | null;
 }
 
 interface TodoListResponse {
@@ -653,7 +663,19 @@ toggleFavorite(id: string) {
     // Reload unsichtbar, und von aussen sah es aus, als tue die Wiederholung
     // gar nichts.
     this.updateOnServer(id, { completed }, (dto) => {
-      if (dto.completed && toRepeat(dto) !== null) this.loadTodos();
+      const next = dto.nextOccurrence;
+      if (!next) return;
+
+      // Die neue Zeile holen, und sagen, wann es wieder soweit ist. Der Hinweis
+      // ist nicht nur Bestaetigung: in der Wochenansicht steht die naechste
+      // Ausgabe in einer anderen Woche, dort saehe man sonst ueberhaupt nichts
+      // passieren.
+      this.loadTodos();
+      this.toast.show(
+        next.scheduledDate
+          ? `Repeats. Next one on ${scheduleLabel(next.scheduledDate)}`
+          : 'Repeats. Next one added',
+      );
     });
   }
 
