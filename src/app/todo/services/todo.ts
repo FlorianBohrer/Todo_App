@@ -84,14 +84,35 @@ export class TodoService {
     return labelId === null ? items : items.filter(i => i.labelIds.includes(labelId));
   });
 
+  /**
+   * Im aktuellen Ausschnitt gibt es Favoriten, aber alle sind erledigt.
+   *
+   * Nur für die leere Liste unter "Favorites": ohne diese Unterscheidung
+   * stünde dort "No favorites yet, tap the star" — ausgerechnet dann, wenn man
+   * gerade den letzten abgehakt hat. Man suchte einen Stern, den man längst
+   * gesetzt hat, statt zu lesen, dass man fertig ist.
+   */
+  readonly favoritesAllDone = computed(() => {
+    const favorites = this.todosInCategory().filter((i) => i.isFavorite);
+    return favorites.length > 0 && favorites.every((i) => i.completed);
+  });
+
   readonly filteredTodos = computed(() => {
     const f = this.filter();
     let items = this.todosInCategory();
 
     // Status-Filter
+    //
+    // "Favorites" zeigt nur die OFFENEN Favoriten. Ein Favorit ist etwas, das
+    // man im Blick behalten will — erledigt ist er das nicht mehr, und
+    // abgehakte Zeilen verdrängten sonst genau die, derentwegen man den Filter
+    // überhaupt anklickt. Wer die erledigten sehen will, hat dafür "Done".
+    //
+    // Die Kachel oben zählt weiter alle (19 von 22): sie zeigt den
+    // Fortschritt, die Liste das, was noch aussteht.
     if (f === 'active')    items = items.filter(i => !i.completed);
     if (f === 'completed') items = items.filter(i => i.completed);
-    if (f === 'favorites') items = items.filter(i => i.isFavorite);
+    if (f === 'favorites') items = items.filter(i => i.isFavorite && !i.completed);
 
         // Titel-Suche (case-insensitive)
     const term = this.searchTerm().trim().toLowerCase();

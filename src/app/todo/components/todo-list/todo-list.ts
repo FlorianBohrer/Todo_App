@@ -62,6 +62,7 @@ export class TodoList {
   protected readonly todos = this.todoService.filteredTodos;
   protected readonly stats = this.todoService.stats;
   protected readonly filter = this.todoService.filter;
+  protected readonly favoritesAllDone = this.todoService.favoritesAllDone;
   protected readonly labels = this.labelService.labels;
   protected readonly FolderIcon = Folder;
 
