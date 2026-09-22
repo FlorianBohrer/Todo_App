@@ -94,30 +94,39 @@
          ist, mit der jeder anfängt. @defer schneidet sie heraus und lädt sie,
          sobald sie gebraucht werden: `on immediate` heißt „jetzt sofort", nicht
          „irgendwann im Leerlauf" — sie sind ja bereits ausgewählt. -->
+    <!-- Der Wrapper steht AUSSERHALB von @defer, damit der Einlauf einmal beim
+         Umschalten laeuft und nicht noch einmal, wenn der nachgeladene Teil
+         den Platzhalter ersetzt. -->
     @if (view() === 'plans') {
-      @defer (on immediate) {
-        <app-plans-view></app-plans-view>
-      } @placeholder {
-        <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening plans…</p>
-      }
+      <div class="view-swap" [style.--slide]="slide()">
+        @defer (on immediate) {
+          <app-plans-view></app-plans-view>
+        } @placeholder {
+          <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening plans…</p>
+        }
+      </div>
     } @else if (view() === 'week') {
-      @defer (on immediate) {
-        <app-week-view></app-week-view>
-      } @placeholder {
-        <p class="mx-auto max-w-6xl px-5 text-sm text-subtle">Opening the week…</p>
-      }
+      <div class="view-swap" [style.--slide]="slide()">
+        @defer (on immediate) {
+          <app-week-view></app-week-view>
+        } @placeholder {
+          <p class="mx-auto max-w-6xl px-5 text-sm text-subtle">Opening the week…</p>
+        }
+      </div>
     } @else {
-      <app-favorite-folders></app-favorite-folders>
+      <div class="view-swap" [style.--slide]="slide()">
+        <app-favorite-folders></app-favorite-folders>
 
-      <section class="mx-auto max-w-3xl rounded-xl border border-line bg-panel1 p-3 sm:p-6">
-        <app-todo-stats></app-todo-stats>
+        <section class="mx-auto max-w-3xl rounded-xl border border-line bg-panel1 p-3 sm:p-6">
+          <app-todo-stats></app-todo-stats>
 
-        <app-focus-panel></app-focus-panel>
+          <app-focus-panel></app-focus-panel>
 
-        <app-todo-filter></app-todo-filter>
-        <app-todo-add></app-todo-add>
-        <app-todo-list></app-todo-list>
-      </section>
+          <app-todo-filter></app-todo-filter>
+          <app-todo-add></app-todo-add>
+          <app-todo-list></app-todo-list>
+        </section>
+      </div>
     }
 
     <app-categories-overlay></app-categories-overlay>
