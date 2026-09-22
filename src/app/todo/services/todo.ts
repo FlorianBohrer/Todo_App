@@ -644,10 +644,17 @@ toggleFavorite(id: string) {
     );
 
     // Beim Abhaken einer wiederkehrenden Aufgabe legt der SERVER die naechste
-    // Ausgabe an. Der Client kann sie nicht erraten, also holt er die Liste
-    // danach neu; sonst fehlt die neue Zeile bis zum naechsten Reload.
-    const spawnsNext = completed && current.repeat !== null;
-    this.updateOnServer(id, { completed }, spawnsNext);
+    // Ausgabe an, und nur seine Antwort weiss sicher, ob das passiert ist.
+    //
+    // Vorher entschied das der Client anhand seiner eigenen Kopie der Regel.
+    // Das war eine Vermutung ueber fremden Zustand: lag die Regel dort aus
+    // irgendeinem Grund nicht vor, wurde nicht nachgeladen, waehrend der
+    // Server sehr wohl angelegt hatte. Die neue Zeile blieb bis zum naechsten
+    // Reload unsichtbar, und von aussen sah es aus, als tue die Wiederholung
+    // gar nichts.
+    this.updateOnServer(id, { completed }, (dto) => {
+      if (dto.completed && toRepeat(dto) !== null) this.loadTodos();
+    });
   }
 
   // ---- Archiv ----
@@ -731,13 +738,14 @@ toggleFavorite(id: string) {
       repeatFrom: string | null;
       planId: string | null;
     }>,
-    /** true, wenn der Server dabei etwas anlegt, das der Client nicht kennt. */
-    reloadAfter = false,
+    /**
+     * Bekommt die Antwort des Servers. Dort steht, was wirklich passiert ist —
+     * der Aufrufer muss es nicht aus dem eigenen Zustand ableiten.
+     */
+    onSaved?: (dto: TodoDto) => void,
   ) {
     this.http.put<TodoDto>(`${this.apiUrl}/${id}`, changes).subscribe({
-      next: () => {
-        if (reloadAfter) this.loadTodos();
-      },
+      next: (dto) => onSaved?.(dto),
       error: (err) => {
         console.error('Todo aktualisieren fehlgeschlagen', err);
         this.toast.error('Could not save change');
