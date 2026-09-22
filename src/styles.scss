@@ -449,6 +449,18 @@ textarea::-webkit-resizer { display: none; }
     box-shadow 200ms ease;
 }
 
+/* Jede Zeile, die neu ins Bild kommt, kommt auch sichtbar herein.
+   Das ist zugleich die Animation beim Filterwechsel: schaltet man von Active
+   auf All, entstehen genau die erledigten Zeilen neu und ziehen damit den
+   Blick auf das, was sich geaendert hat. Was in beiden Filtern vorkommt,
+   bleibt ruhig stehen, statt grundlos mitzuwackeln.
+
+   Der Versatz ist bei acht Zeilen gedeckelt (siehe stagger() in der
+   Komponente): ohne Deckel liefe der Einlauf bei 200 Todos minutenlang. */
+.todo-card {
+  animation: todo-enter 380ms calc(var(--i, 0) * 22ms) var(--spring) backwards;
+}
+
 .todo-card--completed {
   opacity: 0.68;
 }
@@ -788,6 +800,33 @@ select {
   color: var(--color-text);
 }
 
+/* ---------------------------------------------------------------------------
+   Ansichtswechsel Liste / Woche / Plaene
+   --------------------------------------------------------------------------- */
+
+/* Die neue Ansicht kommt aus der Richtung herein, in die auch die Pille
+   wandert: nach rechts geschaltet heisst von rechts herein. Dadurch fuehlt
+   sich der Umschalter wie eine Reihe an und nicht wie drei Schalter.
+
+   Nur die ANKOMMENDE Ansicht bewegt sich. Die alte erst hinauslaufen zu
+   lassen hiesse, den Wechsel um ihre Dauer zu verzoegern, und die App fuehlte
+   sich dabei langsamer an, nicht schoener.
+
+   Bewusst nur ein from-Keyframe: der Endzustand ist der normale Zustand des
+   Elements. Ein ausgeschriebenes to { transform: translate3d(0,0,0) } wuerde
+   mit fill-mode eine Transformationsmatrix stehen lassen, und die macht aus
+   dem Wrapper den Bezugsrahmen fuer alles position: fixed darin. */
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translate3d(calc(var(--slide, 1) * 28px), 0, 0) scale(0.985);
+  }
+}
+
+.view-swap {
+  animation: view-in 380ms var(--spring);
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Kein Nachgeben, kein Gleiten — die Pille springt direkt an ihren Platz. */
   button:active {
@@ -797,5 +836,12 @@ select {
   .filter-pill,
   .progress-fill {
     transition: none;
+  }
+
+  /* Ansichten und Zeilen erscheinen, ohne zu gleiten. */
+  .view-swap,
+  .todo-card,
+  .todo-card--new {
+    animation: none;
   }
 }

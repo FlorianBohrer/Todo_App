@@ -21,7 +21,7 @@
         @case ('completed') { No completed todos yet }
         @case ('favorites') {
           @if (favoritesAllDone()) {
-            All favorites done — nothing left to keep an eye on
+            All favorites done, nothing left to keep an eye on
           } @else {
             No favorites yet, tap the star on a todo
           }
@@ -52,6 +52,7 @@
       "
       [class.todo-card--leaving]="leavingTodoIds().has(todo.id)"
       [class.todo-card--new]="newTodoId() === todo.id"
+      [style.--i]="stagger($index)"
     >
           <!-- Platzhalter beim Ziehen -->
           <div

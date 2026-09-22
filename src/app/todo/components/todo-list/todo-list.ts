@@ -178,6 +178,16 @@ toggleFolderList(): void {
     );
   }
 
+  /**
+   * Versatz einer Zeile beim Einlaufen, gedeckelt.
+   *
+   * Ungedeckelt wuerde die letzte von 200 Zeilen erst nach viereinhalb
+   * Sekunden erscheinen. Nach acht Zeilen ist der Effekt ohnehin gelesen.
+   */
+  stagger(index: number): number {
+    return Math.min(index, 8);
+  }
+
   /** Titel für die Ansicht — ohne das Prioritäts-Präfix. */
   displayTitle(title: string): string {
     return stripPriorityPrefix(title);
