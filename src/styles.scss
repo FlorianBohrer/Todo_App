@@ -828,10 +828,18 @@ select {
    Leiste als angehobene Schicht liest statt als Loch in der Seite. Dazu
    saturate, weil ein Weichzeichner Farben ausblasst, und eine helle Oberkante:
    Licht, das sich im Material faengt. */
+/* Kopfbereich und Leiste tragen dieselbe Flaeche, damit sie als eine lesen.
+   Die Farbe steht deshalb in EINER Regel: zwei getrennte Werte waeren
+   irgendwann auseinandergelaufen, und die Naht saehe man sofort. */
+.app-masthead,
 .app-chrome {
   background: color-mix(in srgb, var(--color-panel1) 70%, transparent);
+}
+
+/* Den Weichzeichner braucht nur die Leiste: unter dem Kopfbereich scrollt
+   nichts durch, dort waere er Rechenzeit ohne Bild. */
+.app-chrome {
   backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07);
 }
 
 /* Statt der harten 1px-Linie eine kurze Verlaufskante.
@@ -930,6 +938,7 @@ select {
      Die Leiste braucht dabei beides: ohne Weichzeichner liesse eine
      80%-Flaeche den Inhalt darunter durchscheinen, und das Durchscheinen ist
      ja das, was abgestellt werden soll. Also wird sie deckend. */
+  .app-masthead,
   .app-chrome {
     background: var(--color-panel1);
     backdrop-filter: none;
@@ -954,9 +963,13 @@ select {
   /* Bei angefordertem Kontrast ist eine weiche Verlaufskante zu wenig: die
      Leiste braucht eine benannte Grenze und eine Flaeche, durch die nichts
      durchscheint. */
+  .app-masthead,
   .app-chrome {
     background: var(--color-panel1);
     backdrop-filter: none;
+  }
+
+  .app-chrome {
     border-bottom: 1px solid var(--color-line-strong);
   }
 
