@@ -11,6 +11,7 @@ import {
   LayoutList,
   CalendarDays,
   NotebookPen,
+  LogOut,
 } from 'lucide-angular';
 import { Header } from './app/todo/components/header/header';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
@@ -181,6 +182,7 @@ export class App {
   protected readonly ListIcon = LayoutList;
   protected readonly WeekIcon = CalendarDays;
   protected readonly PlansIcon = NotebookPen;
+  protected readonly LogoutIcon = LogOut;
 
   openCategories() {
     this.labelService.openOverlay();
