@@ -386,9 +386,15 @@
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-5 py-2 font-medium
            rounded-lg disabled:pointer-events-none disabled:opacity-50;
+    /* Der Druck fuehlt sich hier genauso an wie bei jedem anderen Knopf.
+       Vorher stand hier eine ueberschwingende Kurve (1.56 als Kontrollpunkt)
+       ueber 150ms, waehrend die globale button-Regel 110ms ohne Ueberschwingen
+       faehrt. Zwei Dinge daran waren falsch: gleich aussehende Knoepfe
+       verhielten sich unterschiedlich, und ein Nachfedern gehoert an eine
+       Bewegung, die Schwung hatte — ein Tastendruck hat keinen. */
     transition:
       background-color 150ms ease,
-      transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      transform 110ms var(--ease-out),
       box-shadow 150ms ease;
   }
 
@@ -444,7 +450,7 @@ textarea::-webkit-resizer { display: none; }
 
   transition:
     opacity 260ms ease,
-    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 300ms var(--spring),
     background-color 200ms ease,
     box-shadow 200ms ease;
 }
@@ -458,7 +464,7 @@ textarea::-webkit-resizer { display: none; }
    Der Versatz ist bei acht Zeilen gedeckelt (siehe stagger() in der
    Komponente): ohne Deckel liefe der Einlauf bei 200 Todos minutenlang. */
 .todo-card {
-  animation: todo-enter 380ms calc(var(--i, 0) * 22ms) var(--spring) backwards;
+  animation: todo-enter 320ms calc(var(--i, 0) * 20ms) var(--spring) backwards;
 }
 
 .todo-card--completed {
@@ -473,7 +479,7 @@ textarea::-webkit-resizer { display: none; }
 
 .todo-card--new {
   animation: todo-enter 420ms
-    cubic-bezier(0.22, 1, 0.36, 1);
+    var(--spring);
 }
 
 .todo-checkbox {
@@ -614,6 +620,36 @@ textarea::-webkit-resizer { display: none; }
     background: var(--color-panel1);
     backdrop-filter: none;
   }
+
+  /* Bisher stand hier nur die Ziehvorschau — ausgerechnet die Flaeche, die
+     Sekundenbruchteile zu sehen ist. Die Leiste, die dauerhaft oben klebt,
+     und saemtliche Overlays blieben durchsichtig. Wer die Einstellung setzt,
+     tut das wegen genau dieser Flaechen.
+
+     Die Leiste braucht dabei beides: ohne Weichzeichner liesse eine
+     80%-Flaeche den Inhalt darunter durchscheinen, und das Durchscheinen ist
+     ja das, was abgestellt werden soll. Also wird sie deckend. */
+  .app-chrome {
+    background: var(--color-bg2);
+    backdrop-filter: none;
+  }
+
+  /* Abdunkelnde Hintergruende trennen auch ohne Weichzeichner. Der
+     Attributselektor greift die Tailwind-Utilities in den Vorlagen ab, ohne
+     dass jede Overlay-Flaeche eine eigene Klasse bekommen muss. */
+  [class*="backdrop-blur"] {
+    backdrop-filter: none;
+  }
+}
+
+/* Mehr Kontrast angefordert: die Haarlinien tragen in dieser App die
+   Gliederung — Karten, Eingabefelder, die Leiste oben. Bei 10% Weiss sind sie
+   auf einem dunklen Grund die Ersten, die verschwinden. */
+@media (prefers-contrast: more) {
+  :root {
+    --color-line: rgb(255 255 255 / 0.30);
+    --color-line-strong: rgb(255 255 255 / 0.55);
+  }
 }
 
 .cdk-drag-placeholder {
@@ -623,14 +659,14 @@ textarea::-webkit-resizer { display: none; }
 .cdk-drag-animating {
   transition:
     transform 250ms
-    cubic-bezier(0.22, 1, 0.36, 1);
+    var(--spring);
 }
 
 .cdk-drop-list-dragging
 .todo-card:not(.cdk-drag-placeholder) {
   transition:
     transform 250ms
-    cubic-bezier(0.22, 1, 0.36, 1);
+    var(--spring);
 }
 
 .todo-card.cdk-drag-disabled {

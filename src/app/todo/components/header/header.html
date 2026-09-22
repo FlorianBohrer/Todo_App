@@ -1,4 +1,8 @@
 <header>
-  <h1 class="text-4xl sm:text-5xl mt-0 font-semibold transition-colors duration-300" [class]="accentClass">
+  <!-- tracking-tight, weil Buchstaben mit wachsendem Grad optisch
+       auseinanderdriften: bei 48px liest sich der Normalabstand locker und
+       der Titel zerfaellt. Kleiner Text braucht umgekehrt eher mehr Abstand,
+       deshalb steht der Wert hier und nicht global. -->
+  <h1 class="text-4xl sm:text-5xl mt-0 font-semibold tracking-tight transition-colors duration-300" [class]="accentClass">
     {{ title }}</h1>
 </header>
