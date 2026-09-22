@@ -14,7 +14,7 @@ import {
 
 import { TodoService } from '../../services/todo';
 import { NgClass } from '@angular/common';
-import { Todo } from '../../model/todo.model';
+import { RepeatRule, Todo } from '../../model/todo.model';
 import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
 import {
@@ -38,6 +38,10 @@ import {
   Pencil,
   Trash2,
   Folder,
+  Repeat,
+  Archive,
+  Undo2,
+  FileText,
 } from 'lucide-angular';
 
 /** Ab dieser Laenge (oder bei einem Umbruch) laesst sich eine Zeile aufklappen. */
@@ -161,6 +165,10 @@ export class TodoList {
   protected readonly TrashIcon = Trash2;
     protected readonly PencilIcon = Pencil;
   protected readonly ScheduleIcon = CalendarPlus;
+  protected readonly RepeatIcon = Repeat;
+  protected readonly ArchiveIcon = Archive;
+  protected readonly RestoreIcon = Undo2;
+  protected readonly FromPlanIcon = FileText;
 
 
   /** true, solange die erste Ladung Todos unterwegs ist. */
@@ -465,6 +473,79 @@ closeOptionsMenu(): void {
   /** Label an-/abwählen — Menü bleibt offen (Mehrfachauswahl). */
   toggleLabel(id: string, labelId: string): void {
     this.todoService.toggleLabel(id, labelId);
+  }
+
+  // ---- Wiederholung ----
+  //
+  // Vier Angebote statt eines freien Zahlenfelds: taeglich, woechentlich,
+  // monatlich decken praktisch alles ab, was man von Hand pflegt. Wer "alle
+  // drei Tage" braucht, soll es bekommen, aber nicht auf Kosten dessen, dass
+  // die haeufigen Faelle einen Klick brauchen.
+  protected readonly repeatChoices: {
+    key: string;
+    label: string;
+    rule: RepeatRule | null;
+  }[] = [
+    { key: 'none', label: 'Never', rule: null },
+    { key: 'day', label: 'Daily', rule: { every: 1, unit: 'day', from: 'due' } },
+    { key: 'week', label: 'Weekly', rule: { every: 1, unit: 'week', from: 'due' } },
+    { key: 'month', label: 'Monthly', rule: { every: 1, unit: 'month', from: 'due' } },
+  ];
+
+  /**
+   * Ist dieses Angebot das eingestellte?
+   *
+   * Vergleicht Anzahl und Einheit, NICHT den Bezugspunkt: „woechentlich" und
+   * „woechentlich ab Erledigung" sind derselbe Rhythmus, und der Umschalter
+   * darunter regelt den Rest. Sonst fiele die Auswahl heraus, sobald man ihn
+   * umlegt.
+   */
+  repeatMatches(todo: Todo, rule: RepeatRule | null): boolean {
+    if (rule === null) return todo.repeat === null;
+    return (
+      todo.repeat !== null &&
+      todo.repeat.every === rule.every &&
+      todo.repeat.unit === rule.unit
+    );
+  }
+
+  setRepeat(todo: Todo, rule: RepeatRule | null): void {
+    // Den Bezugspunkt behalten, wenn schon einer gewaehlt war: wer ihn einmal
+    // auf „ab Erledigung" gestellt hat, meint das auch beim Wechsel von
+    // woechentlich auf monatlich.
+    const from = todo.repeat?.from ?? 'due';
+    this.todoService.setRepeat(todo.id, rule ? { ...rule, from } : null);
+  }
+
+  toggleRepeatFrom(todo: Todo): void {
+    if (!todo.repeat) return;
+    this.todoService.setRepeat(todo.id, {
+      ...todo.repeat,
+      from: todo.repeat.from === 'completion' ? 'due' : 'completion',
+    });
+  }
+
+  /** Kurzform fuer die Zeile, etwa „weekly". */
+  repeatLabel(rule: RepeatRule): string {
+    const unit = rule.every === 1 ? rule.unit : `${rule.every} ${rule.unit}s`;
+    return rule.every === 1 ? `${unit}ly`.replace('dayly', 'daily') : `every ${unit}`;
+  }
+
+  // ---- Archiv ----
+
+  protected readonly archivableCount = this.todoService.archivableCount;
+  protected readonly showArchived = this.todoService.showArchived;
+
+  archiveCompleted(): void {
+    this.todoService.archiveCompleted();
+  }
+
+  toggleArchiveView(): void {
+    this.todoService.toggleArchiveView();
+  }
+
+  unarchive(id: string): void {
+    this.todoService.unarchiveTodo(id);
   }
 
   /** Alle Labels eines Todos entfernen. */

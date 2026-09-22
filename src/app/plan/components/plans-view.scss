@@ -513,3 +513,21 @@
 .suggestion-row:hover .outline-link--suggested {
   color: var(--plan-accent);
 }
+
+// Der Weg vom Plan in die Liste. Tritt zurueck, bis die Zeile ueberfahren
+// wird: er gehoert zum Eintrag, soll ihn beim Lesen aber nicht zerreissen.
+// Auf Touch bleibt er stehen, dort gibt es kein Hover.
+.item-promote {
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+
+@media (hover: none) {
+  .item-promote { opacity: 0.7; }
+}
+
+.list-item-row:hover .item-promote,
+.list-item-row:focus-within .item-promote,
+.item-promote:focus-visible {
+  opacity: 1;
+}

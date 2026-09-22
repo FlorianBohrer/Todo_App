@@ -3,12 +3,34 @@ import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
 import { distinctUntilChanged, map } from 'rxjs';
 import { environment } from '../../../environments/enviroment';
-import { Todo } from '../model/todo.model';
+import { RepeatRule, Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
 import { titlePriority } from '../shared/title-priority';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
+
+/**
+ * Die drei Wiederholungsspalten zu einer Regel zusammenziehen.
+ *
+ * Alle drei zusammen oder keine: eine halbe Regel (etwa "alle 2" ohne Einheit)
+ * ist keine, und sie soll auch nicht als eine angezeigt werden.
+ */
+function toRepeat(dto: {
+  repeatEvery?: number | null;
+  repeatUnit?: string | null;
+  repeatFrom?: string | null;
+}): RepeatRule | null {
+  const every = dto.repeatEvery ?? null;
+  const unit = dto.repeatUnit ?? null;
+  const from = dto.repeatFrom ?? null;
+
+  if (every === null || every < 1) return null;
+  if (unit !== 'day' && unit !== 'week' && unit !== 'month') return null;
+  if (from !== 'due' && from !== 'completion') return null;
+
+  return { every, unit, from };
+}
 
 
 export interface Stats {
@@ -27,6 +49,13 @@ interface TodoDto {
   categoryIds: string[];       // alle Labels (n:m)
   createdAt: string;
   scheduledDate: string | null;
+  // Ein Server ohne die Migration liefert diese Felder gar nicht. Alle
+  // optional, damit die App dann weiterlaeuft statt auf undefined zu rechnen.
+  archivedAt?: string | null;
+  repeatEvery?: number | null;
+  repeatUnit?: string | null;
+  repeatFrom?: string | null;
+  planId?: string | null;
 }
 
 interface TodoListResponse {
@@ -217,10 +246,41 @@ export class TodoService {
 
   // ---- Laden ----
   private loadTodos() {
-    this.http.get<TodoListResponse>(this.apiUrl).subscribe({
+    // Das Archiv kommt nur mit, wenn man es sehen will. Der Server laesst es
+    // sonst gar nicht erst durch, und damit rechnen alle abgeleiteten Werte
+    // von selbst ohne die weggelegten Zeilen.
+    const url = this.showArchived()
+      ? `${this.apiUrl}?archived=true`
+      : this.apiUrl;
+
+    this.http.get<TodoListResponse>(url).subscribe({
       next: (res) => this.todos.set(res.todo.map((t) => this.toTodo(t))),
       error: (err) => console.error('Todos laden fehlgeschlagen', err),
     });
+  }
+
+  /** Zeigt die Liste gerade auch das Archiv? */
+  readonly showArchived = signal(false);
+
+  toggleArchiveView() {
+    this.showArchived.update((on) => !on);
+    this.loadTodos();
+  }
+
+  /** Ein weggelegtes Todo zurueck in die Liste holen. */
+  unarchiveTodo(id: string) {
+    this.http
+      .patch<TodoDto>(`${this.apiUrl}/${id}/archive`, { archived: false })
+      .subscribe({
+        next: (dto) =>
+          this.todos.update((items) =>
+            items.map((item) => (item.id === id ? this.toTodo(dto) : item)),
+          ),
+        error: (err) => {
+          console.error('Zurueckholen fehlgeschlagen', err);
+          this.toast.error('Could not restore');
+        },
+      });
   }
 
   /**
@@ -301,6 +361,9 @@ export class TodoService {
     labelIds: dto.categoryIds ?? (dto.categoryId ? [dto.categoryId] : []),
     createdAt: new Date(dto.createdAt),
     scheduledDate: dto.scheduledDate ?? null,
+    archivedAt: dto.archivedAt ? new Date(dto.archivedAt) : null,
+    repeat: toRepeat(dto),
+    planId: dto.planId ?? null,
   };
 }
 
@@ -362,6 +425,48 @@ toggleFavorite(id: string) {
       });
 
   }
+  /**
+   * Ein Todo aus einem Plan heraus anlegen.
+   *
+   * Gibt die neue ID an den Aufrufer zurück, damit der Checklisten-Eintrag im
+   * Plan sie sich merken kann. Ab dann ist der Eintrag ein Verweis auf das
+   * Todo, und das Todo ist die einzige Wahrheit über seinen Zustand — es gibt
+   * keinen zweiten Haken, der auseinanderlaufen könnte.
+   */
+  addTodoFromPlan(title: string, planId: string): Promise<string | null> {
+    const clean = title.trim();
+    if (clean === '') return Promise.resolve(null);
+
+    return new Promise((resolve) => {
+      this.http
+        .post<TodoDto>(this.apiUrl, {
+          title: clean,
+          categoryId: this.labelService.activeLabelId(),
+          planId,
+        })
+        .subscribe({
+          next: (dto) => {
+            this.todos.update((items) => [...items, this.toTodo(dto)]);
+            resolve(dto.id);
+          },
+          error: (err) => {
+            console.error('Todo aus Plan anlegen fehlgeschlagen', err);
+            this.toast.error('Could not create todo');
+            resolve(null);
+          },
+        });
+    });
+  }
+
+  /** Ein Todo in konstanter Zeit. null, wenn es keins (mehr) gibt. */
+  private readonly todosById = computed(
+    () => new Map(this.todos().map((todo) => [todo.id, todo])),
+  );
+
+  todoById(id: string | null | undefined): Todo | null {
+    return id ? this.todosById().get(id) ?? null : null;
+  }
+
   addTodos(titles: string[]) {
     const clean = titles.map((t) => t.trim()).filter((t) => t.length > 0);
     if (clean.length === 0) return;
@@ -537,7 +642,81 @@ toggleFavorite(id: string) {
     this.todos.update(items =>
       items.map(item => item.id === id ? { ...item, completed } : item),
     );
-    this.updateOnServer(id, { completed });
+
+    // Beim Abhaken einer wiederkehrenden Aufgabe legt der SERVER die naechste
+    // Ausgabe an. Der Client kann sie nicht erraten, also holt er die Liste
+    // danach neu; sonst fehlt die neue Zeile bis zum naechsten Reload.
+    const spawnsNext = completed && current.repeat !== null;
+    this.updateOnServer(id, { completed }, spawnsNext);
+  }
+
+  // ---- Archiv ----
+  //
+  // Weggelegt heisst: nicht mehr in der Liste, nicht mehr in der Statistik,
+  // aber auch nicht geloescht. Der Server liefert Archiviertes gar nicht erst
+  // mit, solange niemand danach fragt — deshalb genuegt es hier, die Zeile
+  // lokal zu entfernen.
+
+  /** Zahl der erledigten Todos, die noch in der Liste stehen. */
+  readonly archivableCount = computed(
+    () => this.todos().filter((t) => t.completed && t.archivedAt === null).length,
+  );
+
+  /** Ein einzelnes Todo weglegen. */
+  archiveTodo(id: string) {
+    const snapshot = this.todos();
+    this.todos.update((items) => items.filter((item) => item.id !== id));
+
+    this.http
+      .patch<TodoDto>(`${this.apiUrl}/${id}/archive`, { archived: true })
+      .subscribe({
+        error: (err) => {
+          console.error('Archivieren fehlgeschlagen', err);
+          this.toast.error('Could not archive');
+          this.todos.set(snapshot);
+        },
+      });
+  }
+
+  /**
+   * Alles Erledigte auf einmal weglegen.
+   *
+   * Ohne Vorwegnahme in der Oberflaeche: hier verschwinden auf einen Schlag
+   * hunderte Zeilen, und das ist kein Zustand, den man raten sollte. Erst die
+   * Antwort, dann die neue Liste.
+   */
+  archiveCompleted() {
+    this.http
+      .post<{ archived: number }>(`${this.apiUrl}/archive-completed`, {})
+      .subscribe({
+        next: (res) => {
+          this.loadTodos();
+          this.toast.show(
+            res.archived === 1
+              ? '1 todo archived'
+              : `${res.archived} todos archived`,
+          );
+        },
+        error: (err) => {
+          console.error('Archivieren fehlgeschlagen', err);
+          this.toast.error('Could not archive');
+        },
+      });
+  }
+
+  // ---- Wiederholung ----
+
+  /** Wiederholung setzen oder (mit null) abschalten. */
+  setRepeat(id: string, repeat: RepeatRule | null) {
+    this.todos.update((items) =>
+      items.map((item) => (item.id === id ? { ...item, repeat } : item)),
+    );
+
+    this.updateOnServer(id, {
+      repeatEvery: repeat?.every ?? null,
+      repeatUnit: repeat?.unit ?? null,
+      repeatFrom: repeat?.from ?? null,
+    });
   }
 
   private updateOnServer(
@@ -547,8 +726,18 @@ toggleFavorite(id: string) {
       completed: boolean;
       isFavorite: boolean;
       scheduledDate: string | null;
-    }>  ) {
+      repeatEvery: number | null;
+      repeatUnit: string | null;
+      repeatFrom: string | null;
+      planId: string | null;
+    }>,
+    /** true, wenn der Server dabei etwas anlegt, das der Client nicht kennt. */
+    reloadAfter = false,
+  ) {
     this.http.put<TodoDto>(`${this.apiUrl}/${id}`, changes).subscribe({
+      next: () => {
+        if (reloadAfter) this.loadTodos();
+      },
       error: (err) => {
         console.error('Todo aktualisieren fehlgeschlagen', err);
         this.toast.error('Could not save change');
