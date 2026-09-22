@@ -182,10 +182,16 @@ toggleFolderList(): void {
    * Versatz einer Zeile beim Einlaufen, gedeckelt.
    *
    * Ungedeckelt wuerde die letzte von 200 Zeilen erst nach viereinhalb
-   * Sekunden erscheinen. Nach acht Zeilen ist der Effekt ohnehin gelesen.
+   * Sekunden erscheinen. Nach ein paar Zeilen ist der Effekt ohnehin gelesen.
+   *
+   * Der Deckel lag zuerst bei acht: mit 22ms Schritt und 380ms Dauer war die
+   * letzte Zeile erst nach gut einer halben Sekunde da. Waehrend der
+   * Verzoegerung steht eine Zeile auf Deckkraft 0, und wer schnell zwischen
+   * den Filtern klickt, sieht sie blinken statt einlaufen. Fuenf Schritte
+   * reichen fuer den Eindruck und bleiben unter Apples Richtwert von 0,3-0,4s.
    */
   stagger(index: number): number {
-    return Math.min(index, 8);
+    return Math.min(index, 5);
   }
 
   /** Titel für die Ansicht — ohne das Prioritäts-Präfix. */
