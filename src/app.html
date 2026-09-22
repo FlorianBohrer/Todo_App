@@ -19,13 +19,18 @@
         und Pläne (max-w-6xl) breiter sind als ihre Kopfzeile. Auf der Liste
         steht der Titel dafür exakt über der Karte. -->
    <div class="app-masthead">
-     <div class="flex items-center justify-end gap-3 p-4">
+     <div class="flex items-center justify-end gap-1.5 px-4 pt-3">
        <app-user-account />
        <app-device-pairing />
+       <!-- Rot erst beim Zeigen. Dauerhaft rot zieht den Blick auf die
+            seltenste und unumkehrbarste Handlung der Seite; erkennbar bleibt
+            sie am Symbol und am Tooltip. -->
        <button
-         class="text-xs text-danger transition hover:opacity-80"
-         (click)="signOut()">
-         Logout
+         type="button"
+         class="grid h-7 w-7 place-items-center rounded-lg text-subtle transition hover:bg-fill hover:text-danger"
+         (click)="signOut()"
+         title="Log out" aria-label="Log out">
+         <lucide-icon [img]="LogoutIcon" class="h-4 w-4"></lucide-icon>
        </button>
      </div>
 
