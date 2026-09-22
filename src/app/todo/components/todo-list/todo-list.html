@@ -40,7 +40,10 @@
       class="space-y-2 max-h-[min(70vh,44rem)] overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
       cdkDropList
       (cdkDropListDropped)="drop($event)">
-      @for (todo of todos(); track todo.id) {
+      @for (row of rows(); track row.id) {
+        <!-- @let haelt alle todo.-Zugriffe unveraendert; ersetzt sind nur die
+             Aufrufe, die pro Durchlauf gerechnet haben. -->
+        @let todo = row.todo;
         
         <li
       cdkDrag
@@ -52,7 +55,7 @@
       "
       [class.todo-card--leaving]="leavingTodoIds().has(todo.id)"
       [class.todo-card--new]="newTodoId() === todo.id"
-      [style.--i]="stagger($index)"
+      [style.--i]="row.stagger"
     >
           <!-- Platzhalter beim Ziehen -->
           <div
@@ -83,11 +86,11 @@
             <!-- Gradient-Icon-Kachel in Label-Farbe (Farb-Identität der Zeile) -->
             <span
               class="flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
-              [class]="tileClass(todo.labelIds)">
+              [class]="row.tileClass">
               <lucide-icon
-                [img]="tileIcon(todo.labelIds)"
+                [img]="row.tileIcon"
                 class="h-4 w-4"
-                [class]="tileTextClass(todo.labelIds)"></lucide-icon>
+                [class]="row.tileTextClass"></lucide-icon>
             </span>
 
             <button
@@ -104,11 +107,11 @@
             </button>
 
             <!-- Prioritäts-Badge (Präfix /must-have bzw. /could-have) -->
-            @if (priorityBadge(todo.title); as badge) {
+            @if (row.badge) {
               <span
                 class="flex-none rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
-                [class]="badgeClass(badge)">
-                {{ badgeLabel(badge) }}
+                [class]="row.badgeClass">
+                {{ row.badgeLabel }}
               </span>
             }
 
@@ -122,38 +125,38 @@
               (keydown.escape)="cancelEditing(todo, todoText)"
               class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-lg bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-text"
               [class.todo-collapsed]="
-                canExpand(todo.title) &&
+                row.canExpand &&
                 !isExpanded(todo.id)
               "
               [class.todo-title--completed]="
                 todo.completed ||
                 completingTodoIds().has(todo.id)
               "
-              [value]="editingId() === todo.id ? todo.title : displayTitle(todo.title)"
-              [class.hidden]="showsDetail(todo)"
+              [value]="editingId() === todo.id ? todo.title : row.displayTitle"
+              [class.hidden]="showsDetail(row)"
             ></textarea>
 
             <!-- Aufgeklappt: nur die erste Zeile steht hier, die Unterpunkte
                  kommen als eigener Block unter die Kopfzeile. Das Textfeld
                  bleibt im DOM, damit Bearbeiten und Autosize unveraendert
                  funktionieren. -->
-            @if (showsDetail(todo)) {
+            @if (showsDetail(row)) {
               <p class="todo-title todo-title-line min-w-0 flex-1 cursor-text"
                  [class.todo-title--completed]="
                    todo.completed || completingTodoIds().has(todo.id)
                  "
                  (click)="startEditing(todo, todoText)">
-                {{ firstLine(todo.title) }}
+                {{ row.firstLine }}
               </p>
             }
           </div>
 
-          @if (showsDetail(todo)) {
-            <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)">{{ detailLines(todo.title) }}</div>
+          @if (showsDetail(row)) {
+            <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)">{{ row.detailLines }}</div>
           }
 
           <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
-          @if (canExpand(todo.title)) {
+          @if (row.canExpand) {
             <button
               type="button"
               class="flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
@@ -176,7 +179,7 @@
                    transition sm:flex"
             [class]="todo.scheduledDate === null
               ? 'border-transparent px-1.5 text-muted/60 hover:border-indigo-500/60 hover:text-indigo-300'
-              : (isLate(todo)
+              : (row.isLate
                   ? 'border-amber-500/60 text-amber-300 hover:border-amber-400'
                   : 'border-indigo-500/50 text-indigo-300 hover:border-indigo-400')"
             (click)="toggleScheduleMenu(todo.id)"
@@ -184,10 +187,10 @@
             [attr.aria-expanded]="openScheduleId() === todo.id"
             [attr.aria-label]="todo.scheduledDate === null
               ? 'Schedule this todo'
-              : 'Scheduled for ' + scheduleText(todo) + ', change'">
+              : 'Scheduled for ' + row.scheduleText + ', change'">
             <lucide-icon [img]="ScheduleIcon" class="h-3.5 w-3.5"></lucide-icon>
             @if (todo.scheduledDate !== null) {
-              <span>{{ scheduleText(todo) }}</span>
+              <span>{{ row.scheduleText }}</span>
             }
           </button>
 
@@ -234,18 +237,18 @@
           
             class="hidden sm:flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-3 py-1.5
                    text-sm text-text transition hover:bg-panel/10"
-            [class]="labelService.borderClassFor(primaryLabelId(todo.labelIds))"
+            [class]="labelService.borderClassFor(row.primaryLabelId)"
             (click)="toggleMenu(todo.id)"
             aria-haspopup="listbox"
             [attr.aria-expanded]="openMenuId() === todo.id"
-            [attr.title]="labelTitle(todo.labelIds)"
-            [attr.aria-label]="'Labels: ' + labelTitle(todo.labelIds)">
+            [attr.title]="row.labelTitle"
+            [attr.aria-label]="'Labels: ' + row.labelTitle">
             <!-- Farbpunkte: einer je Label; kein Label = grauer Punkt -->
             @if (todo.labelIds.length === 0) {
               <span class="text-subtle">●</span>
             } @else {
-              @for (lid of todo.labelIds; track lid) {
-                <span [class]="dotClass(lid)">●</span>
+              @for (dot of row.dotClasses; track $index) {
+                <span [class]="dot">●</span>
               }
             }
             <lucide-icon [img]="ChevronDownIcon" class="h-3.5 w-3.5 text-muted"></lucide-icon>
@@ -389,7 +392,7 @@
 
     <!-- Current selection stays readable while collapsed -->
     <span class="ml-auto min-w-0 truncate text-right text-xs text-muted">
-      {{ todo.labelIds.length ? labelTitle(todo.labelIds) : 'None' }}
+      {{ todo.labelIds.length ? row.labelTitle : 'None' }}
     </span>
 
     <lucide-icon
