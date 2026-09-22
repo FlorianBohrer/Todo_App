@@ -281,7 +281,7 @@
                     </button>
                   } @empty {
                     <p class="px-2.5 py-2 text-xs text-subtle">
-                      No plan matches — close with <span class="font-mono">]]</span> to link a new one.
+                      No plan matches. Close with <span class="font-mono">]]</span> to link a new one.
                     </p>
                   }
                 </div>
@@ -494,7 +494,7 @@
                   [value]="asDiagram(block).code"
                   (input)="updateCode(block.id, $any($event.target).value)"></textarea>
                 <p class="mt-1.5 text-xs text-subtle">
-                  Mermaid syntax — <code class="font-mono">A --&gt; B</code> draws an arrow.
+                  Mermaid syntax: <code class="font-mono">A --&gt; B</code> draws an arrow.
                 </p>
               </div>
 
@@ -626,7 +626,7 @@
           <div class="mt-4 border-t border-line pt-3">
             @if (suggestExhausted()) {
               <p class="px-2 text-2xs leading-relaxed text-subtle">
-                Daily limit reached — more tomorrow.
+                Daily limit reached. More tomorrow.
               </p>
             } @else {
               <!-- Ein gescheiterter Aufruf sieht sonst aus wie „das Modell
@@ -689,7 +689,7 @@
             type="text"
             autocomplete="off"
             class="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-subtle"
-            placeholder="Search plans — title and content…"
+            placeholder="Search plans by title and content…"
             [value]="overviewQuery()"
             (input)="overviewQuery.set(planSearch.value)"
             (keydown.escape)="$event.stopPropagation(); overviewQuery.set(''); planSearch.value = ''"

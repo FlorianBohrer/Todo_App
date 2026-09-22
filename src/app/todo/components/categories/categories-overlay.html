@@ -247,7 +247,7 @@
                       [class]="label.isFavorite ? 'text-amber-400' : 'text-muted hover:text-amber-300'"
                       [disabled]="!label.isFavorite && favoritesFull()"
                       [attr.title]="!label.isFavorite && favoritesFull()
-                        ? 'Maximum four favorites — remove a star first'
+                        ? 'Maximum four favorites. Remove a star first'
                         : null"
                       (click)="toggleFavorite(label.id, $event)"
                       [attr.aria-pressed]="label.isFavorite"
@@ -313,7 +313,7 @@
                     class="min-w-0 flex-1 rounded-lg bg-black/25 px-2 py-1 text-sm text-text
                            outline-none ring-1 ring-line-strong placeholder:text-subtle
                            focus:ring-2 focus:ring-indigo-500"
-                    placeholder="None — type a name to create one"
+                    placeholder="No collection. Type a name to create one"
                     [value]="label.collection ?? ''"
                     (click)="$event.stopPropagation()"
                     (keydown.enter)="$event.stopPropagation(); assignCollection(label.id, collectionInput.value); collectionInput.blur()"

@@ -22,7 +22,7 @@ const HEIGHT = 520;
   template: `
     @if (!plans().length) {
       <p class="rounded-xl border border-line bg-bg2 p-6 text-center text-muted">
-        No plans yet — the graph fills up as you create and link them.
+        No plans yet. The graph fills up as you create and link them.
       </p>
     } @else {
       <div class="overflow-hidden rounded-xl border border-line bg-black/20">
@@ -62,7 +62,7 @@ const HEIGHT = 520;
 
       @if (!graph().lines.length) {
         <p class="mt-3 text-center text-sm text-subtle">
-          No links yet — write <span class="font-mono text-muted">[[Plan title]]</span>
+          No links yet. Write <span class="font-mono text-muted">[[Plan title]]</span>
           in a plan to connect two of them.
         </p>
       }

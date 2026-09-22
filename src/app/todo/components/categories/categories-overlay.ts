@@ -230,7 +230,7 @@ pickColor(id: string, color: string, event: Event) {
         return 'Folders whose names start with the same word stand together.';
       case 'custom':
         return this.collections().length === 0
-          ? 'No collections yet — open a folder with the pencil and name one.'
+          ? 'No collections yet. Open a folder with the pencil and name one.'
           : 'Drag a folder into another collection, or set it while editing.';
       default:
         return null;
