@@ -51,3 +51,32 @@
   outline: 2px dashed rgba(129, 140, 248, 0.4);
   outline-offset: 2px;
 }
+
+/* Kartentext auf drei Zeilen.
+   
+   Ungekuerzt brach „Determine which data must actually be in the payload."
+   auf sechs Zeilen um. Ein Tag mit sechs Todos zeigte dann noch vier auf dem
+   ganzen Bildschirm, und die Woche verlor genau das, wofuer es sie gibt: den
+   Ueberblick. Der volle Text steht im Tooltip und in der Liste. */
+.week-card-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* Hinweis, dass der Streifen seitlich weitergeht.
+   
+   Das Raster ist mindestens 980px breit; passt das Fenster nicht, scrollt man
+   waagerecht. Ohne Kante sah der letzte Tag abgeschnitten aus statt
+   fortgesetzt — ein Unterschied, der darueber entscheidet, ob man zu scrollen
+   versucht. Die Grenze liegt knapp ueber der Mindestbreite: darueber passen
+   alle sieben Tage, und dann gibt es nichts anzudeuten. */
+@media (min-width: 640px) and (max-width: 1040px) {
+  .week-strip {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  }
+}
