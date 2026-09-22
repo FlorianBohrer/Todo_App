@@ -820,25 +820,31 @@ select {
    Schwebende Leiste
    --------------------------------------------------------------------------- */
 
-/* Die Leiste war Glas, das nichts tat: bg-bg2/80 auf einer bg-bg2-Seite ist
-   dieselbe Farbe zu 80% ueber sich selbst. Sichtbar wurde davon nur der
-   Weichzeichner auf durchscrollendem Inhalt; als Material war sie nicht da.
+/* Der Kopfbereich hat KEINE eigene Flaeche. Er liegt auf dem Seitengrund, und
+   die Leiste liegt bei ungescrollter Seite auf demselben. Damit gibt es oben
+   keine einzige waagerechte Kante, bevor der Inhalt anfaengt.
 
-   Jetzt liegt eine hellere Flaeche darueber (panel1 statt bg2), damit die
-   Leiste als angehobene Schicht liest statt als Loch in der Seite. Dazu
-   saturate, weil ein Weichzeichner Farben ausblasst, und eine helle Oberkante:
-   Licht, das sich im Material faengt. */
-/* Kopfbereich und Leiste tragen dieselbe Flaeche, damit sie als eine lesen.
-   Die Farbe steht deshalb in EINER Regel: zwei getrennte Werte waeren
-   irgendwann auseinandergelaufen, und die Naht saehe man sofort. */
-.app-masthead,
-.app-chrome {
-  background: color-mix(in srgb, var(--color-panel1) 70%, transparent);
-}
+   Der Weg dahin war ein Umweg. Zuerst trug nur die Leiste ein helleres
+   Material, was drei Baender uebereinander ergab. Dann trugen Kopf und Leiste
+   gemeinsam das helle Material — eine Flaeche, aber die falsche: sie kam mit
+   ~#1F2735 heraus, waehrend die Karte mit den Todos darunter auf #222B3A
+   sitzt. Drei Punkte je Kanal Unterschied. Damit war die Chrome so hell wie
+   der Inhalt, „angehoben" bedeutete nichts mehr, und die groessere Flaeche
+   gewann den ersten Blick gegen die eigentliche Arbeit.
 
-/* Den Weichzeichner braucht nur die Leiste: unter dem Kopfbereich scrollt
-   nichts durch, dort waere er Rechenzeit ohne Bild. */
+   Vereinheitlicht wird deshalb nach unten, auf den Seitengrund, nicht nach
+   oben auf das Material. */
+
+/* Die Leiste faerbt sich mit dem Seitengrund ein, nicht mit einer helleren
+   Flaeche.
+
+   Dadurch ist sie am Seitenanfang unsichtbar (Grund auf Grund ergibt den
+   Grund) und materialisiert sich erst, wenn beim Scrollen Inhalt darunter
+   durchzieht: die 22% Durchlass nehmen dessen Farbe auf, der Weichzeichner
+   macht daraus eine Flaeche. Sie ist also genau dann zu sehen, wenn sie
+   wirklich etwas verdeckt. */
 .app-chrome {
+  background: color-mix(in srgb, var(--color-bg2) 78%, transparent);
   backdrop-filter: blur(20px) saturate(180%);
 }
 
@@ -938,9 +944,11 @@ select {
      Die Leiste braucht dabei beides: ohne Weichzeichner liesse eine
      80%-Flaeche den Inhalt darunter durchscheinen, und das Durchscheinen ist
      ja das, was abgestellt werden soll. Also wird sie deckend. */
-  .app-masthead,
+  /* Der Kopfbereich hat keine eigene Flaeche, hier ist nur die Leiste zu
+     regeln: ohne Weichzeichner liesse ihr 22%-Durchlass den Inhalt sichtbar
+     hindurchscheinen, und genau das soll die Einstellung abstellen. */
   .app-chrome {
-    background: var(--color-panel1);
+    background: var(--color-bg2);
     backdrop-filter: none;
   }
 
@@ -963,13 +971,12 @@ select {
   /* Bei angefordertem Kontrast ist eine weiche Verlaufskante zu wenig: die
      Leiste braucht eine benannte Grenze und eine Flaeche, durch die nichts
      durchscheint. */
-  .app-masthead,
+  /* Eine Leiste, die sich erst beim Scrollen zeigt, ist bei angefordertem
+     Kontrast zu wenig: sie bekommt eine feste Flaeche und eine benannte
+     Grenze, statt sich auf Durchscheinen zu verlassen. */
   .app-chrome {
-    background: var(--color-panel1);
+    background: var(--color-bg2);
     backdrop-filter: none;
-  }
-
-  .app-chrome {
     border-bottom: 1px solid var(--color-line-strong);
   }
 
