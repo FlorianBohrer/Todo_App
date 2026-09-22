@@ -737,9 +737,19 @@ toggleFavorite(id: string) {
 
   /** Wiederholung setzen oder (mit null) abschalten. */
   setRepeat(id: string, repeat: RepeatRule | null) {
+    const current = this.todos().find((item) => item.id === id);
+
     this.todos.update((items) =>
       items.map((item) => (item.id === id ? { ...item, repeat } : item)),
     );
+
+    // Auf etwas bereits Erledigtem passiert erst einmal nichts, und das ist
+    // die unangenehmste Art von nichts: still. Die naechste Ausgabe entsteht
+    // beim UEBERGANG auf erledigt, und der liegt hier schon in der
+    // Vergangenheit. Ohne diesen Satz wartet man auf etwas, das nicht kommt.
+    if (repeat && current?.completed) {
+      this.toast.show('Saved. The next one appears when you tick it off again');
+    }
 
     this.updateOnServer(id, {
       repeatEvery: repeat?.every ?? null,
