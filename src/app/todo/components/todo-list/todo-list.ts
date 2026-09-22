@@ -1,4 +1,5 @@
-import {ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import type { LucideIconData } from 'lucide-angular';
 import {
   ConnectedPosition,
   OverlayModule,
@@ -39,6 +40,50 @@ import {
   Folder,
 } from 'lucide-angular';
 
+/** Ab dieser Laenge (oder bei einem Umbruch) laesst sich eine Zeile aufklappen. */
+const EXPAND_THRESHOLD = 40;
+
+/**
+ * Eine Zeile, fertig gerechnet.
+ *
+ * Die Vorlage rief pro Zeile rund zwanzig Methoden auf, davon ein halbes
+ * Dutzend mit String-Arbeit: Praefix abschneiden, an Zeilenumbruechen
+ * zerlegen, Labelnamen zusammensetzen. Das lief bei JEDEM Durchlauf der
+ * Aenderungserkennung, also bei jedem Tastendruck in der Suche, und zwar fuer
+ * alle Zeilen. Bei zweihundert Todos sind das gut tausend String-Allokationen
+ * pro Anschlag, fuer ein Ergebnis, das sich nur aendert, wenn sich der Titel
+ * aendert.
+ *
+ * Hier steht es einmal je Datenstand. Die Vorlage liest danach nur noch
+ * Eigenschaften.
+ */
+interface TodoRow {
+  id: string;
+  todo: Todo;
+  /** Titel ohne Prioritaets-Praefix. */
+  displayTitle: string;
+  /** Erste Zeile und der Rest, fuer den aufgeklappten Zustand. */
+  firstLine: string;
+  detailLines: string;
+  /** Hat der Text ueberhaupt etwas unter der ersten Zeile? */
+  hasDetail: boolean;
+  canExpand: boolean;
+  badge: MoscowLevel | null;
+  badgeLabel: string;
+  badgeClass: string;
+  tileClass: string;
+  tileTextClass: string;
+  tileIcon: LucideIconData;
+  primaryLabelId: string | null;
+  /** Ein Punkt je Label, in Labelfarbe. */
+  dotClasses: string[];
+  labelTitle: string;
+  scheduleText: string;
+  isLate: boolean;
+  /** Versatz beim Einlaufen, gedeckelt. */
+  stagger: number;
+}
+
 @Component({
   selector: 'app-todo-list',
   imports: [
@@ -60,6 +105,48 @@ export class TodoList {
   protected readonly labelService = inject(LabelService);
 
   protected readonly todos = this.todoService.filteredTodos;
+
+  /**
+   * Die Zeilen, fertig gerechnet.
+   *
+   * Laeuft neu, wenn sich die gefilterten Todos oder die Folder aendern, und
+   * sonst nie. Der Zustand, der sich beim Bedienen aendert (aufgeklappt, in
+   * Bearbeitung, verschwindend), steht bewusst NICHT drin: sonst wuerde ein
+   * Klick auf einen Pfeil alle zweihundert Zeilen neu rechnen. Der bleibt in
+   * eigenen Signalen und wird in der Vorlage abgefragt, wo er billig ist.
+   */
+  protected readonly rows = computed<TodoRow[]>(() =>
+    this.todos().map((todo, index) => {
+      const badge = priorityBadge(todo.title);
+      const stripped = stripPriorityPrefix(todo.title);
+      const [first, ...rest] = stripped.split('\n');
+      const detail = rest.join('\n').trim();
+
+      return {
+        id: todo.id,
+        todo,
+        displayTitle: stripped,
+        firstLine: first.trim(),
+        detailLines: detail,
+        hasDetail: detail.length > 0,
+        canExpand:
+          todo.title.length > EXPAND_THRESHOLD || todo.title.includes('\n'),
+        badge,
+        badgeLabel: badge ? MOSCOW_LABEL[badge] : '',
+        badgeClass: badge ? this.badgeClass(badge) : '',
+        tileClass: this.tileClass(todo.labelIds),
+        tileTextClass: this.tileTextClass(todo.labelIds),
+        tileIcon: this.tileIcon(todo.labelIds),
+        primaryLabelId: todo.labelIds[0] ?? null,
+        dotClasses: todo.labelIds.map((id) => this.dotClass(id)),
+        labelTitle: this.labelTitle(todo.labelIds),
+        scheduleText:
+          todo.scheduledDate === null ? '' : scheduleLabel(todo.scheduledDate),
+        isLate: !todo.completed && isOverdueDate(todo.scheduledDate),
+        stagger: Math.min(index, 5),
+      };
+    }),
+  );
   protected readonly stats = this.todoService.stats;
   protected readonly filter = this.todoService.filter;
   protected readonly favoritesAllDone = this.todoService.favoritesAllDone;
@@ -108,8 +195,6 @@ toggleFolderList(): void {
     signal<ReadonlySet<string>>(new Set());
 
     protected readonly editingId = signal<string | null>(null);
-
-  private readonly EXPAND_THRESHOLD = 40;
 
   protected readonly overlayPositions: ConnectedPosition[] = [
     {
@@ -192,21 +277,6 @@ toggleFolderList(): void {
    */
   stagger(index: number): number {
     return Math.min(index, 5);
-  }
-
-  /** Titel für die Ansicht — ohne das Prioritäts-Präfix. */
-  displayTitle(title: string): string {
-    return stripPriorityPrefix(title);
-  }
-
-  /** Die MoSCoW-Stufe eines Titels — für das Badge in der Zeile. */
-  priorityBadge(title: string): MoscowLevel | null {
-    return priorityBadge(title);
-  }
-
-  /** Beschriftung des Badges. */
-  badgeLabel(level: MoscowLevel): string {
-    return MOSCOW_LABEL[level];
   }
 
   /**
@@ -342,20 +412,23 @@ closeOptionsMenu(): void {
     return rest.join('\n').trim();
   }
 
-  /** Nur im aufgeklappten Zustand und ausserhalb des Bearbeitens aufteilen. */
-  showsDetail(todo: { id: string; title: string }): boolean {
+  /**
+   * Nur im aufgeklappten Zustand und ausserhalb des Bearbeitens aufteilen.
+   *
+   * Nimmt die fertige Zeile statt des Todos: ob es ueberhaupt etwas unter der
+   * ersten Zeile gibt, steht dort schon. Vorher zerlegte diese Methode den
+   * Titel bei jedem Aufruf neu, und die Vorlage ruft sie dreimal je Zeile.
+   */
+  showsDetail(row: TodoRow): boolean {
     return (
-      this.isExpanded(todo.id) &&
-      this.editingId() !== todo.id &&
-      this.detailLines(todo.title).length > 0
+      row.hasDetail &&
+      this.isExpanded(row.id) &&
+      this.editingId() !== row.id
     );
   }
 
   canExpand(title: string): boolean {
-    return (
-      title.length > this.EXPAND_THRESHOLD ||
-      title.includes('\n')
-    );
+    return title.length > EXPAND_THRESHOLD || title.includes('\n');
   }
 
   isExpanded(id: string): boolean {
