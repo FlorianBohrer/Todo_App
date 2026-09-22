@@ -804,13 +804,16 @@ select {
    Ansichtswechsel Liste / Woche / Plaene
    --------------------------------------------------------------------------- */
 
-/* Die neue Ansicht kommt aus der Richtung herein, in die auch die Pille
-   wandert: nach rechts geschaltet heisst von rechts herein. Dadurch fuehlt
-   sich der Umschalter wie eine Reihe an und nicht wie drei Schalter.
+/* Ein kurzes Aufblenden, mehr nicht.
 
-   Nur die ANKOMMENDE Ansicht bewegt sich. Die alte erst hinauslaufen zu
-   lassen hiesse, den Wechsel um ihre Dauer zu verzoegern, und die App fuehlte
-   sich dabei langsamer an, nicht schoener.
+   Die erste Fassung schob die ganze Ansicht seitlich herein und skalierte sie
+   dabei. Auf einem Element von Bildschirmgroesse ist das keine Ueberblendung
+   mehr, sondern eine Bewegung, der man zusieht: der Blick folgt der Kante,
+   statt gleich den Inhalt zu lesen. Beim dritten Umschalten stoert genau das.
+
+   Was bleibt, ist der kleinste Hinweis, dass sich etwas ausgetauscht hat:
+   200ms Blende und sechs Pixel Anheben. Kein Seitwaertsweg, kein Massstab,
+   keine Richtung.
 
    Bewusst nur ein from-Keyframe: der Endzustand ist der normale Zustand des
    Elements. Ein ausgeschriebenes to { transform: translate3d(0,0,0) } wuerde
@@ -819,12 +822,12 @@ select {
 @keyframes view-in {
   from {
     opacity: 0;
-    transform: translate3d(calc(var(--slide, 1) * 28px), 0, 0) scale(0.985);
+    transform: translate3d(0, 6px, 0);
   }
 }
 
 .view-swap {
-  animation: view-in 380ms var(--spring);
+  animation: view-in 200ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

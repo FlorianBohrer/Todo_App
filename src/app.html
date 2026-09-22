@@ -94,27 +94,25 @@
          ist, mit der jeder anfängt. @defer schneidet sie heraus und lädt sie,
          sobald sie gebraucht werden: `on immediate` heißt „jetzt sofort", nicht
          „irgendwann im Leerlauf" — sie sind ja bereits ausgewählt. -->
-    <!-- Der Wrapper steht AUSSERHALB von @defer, damit der Einlauf einmal beim
-         Umschalten laeuft und nicht noch einmal, wenn der nachgeladene Teil
-         den Platzhalter ersetzt. -->
+    <!-- Der Wrapper steht INNERHALB von @defer, um den fertigen Inhalt.
+         Aussen herum lief die Blende bereits auf dem Platzhalter, und der
+         wurde mitten in der Bewegung durch die echte Ansicht ersetzt: erst
+         „Opening plans…", dann ohne Halt der Plan, beides in einem Zug. Das
+         las sich wie ein Ruckler, nicht wie ein Wechsel. -->
     @if (view() === 'plans') {
-      <div class="view-swap" [style.--slide]="slide()">
-        @defer (on immediate) {
-          <app-plans-view></app-plans-view>
-        } @placeholder {
-          <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening plans…</p>
-        }
-      </div>
+      @defer (on immediate) {
+        <div class="view-swap"><app-plans-view></app-plans-view></div>
+      } @placeholder {
+        <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening plans…</p>
+      }
     } @else if (view() === 'week') {
-      <div class="view-swap" [style.--slide]="slide()">
-        @defer (on immediate) {
-          <app-week-view></app-week-view>
-        } @placeholder {
-          <p class="mx-auto max-w-6xl px-5 text-sm text-subtle">Opening the week…</p>
-        }
-      </div>
+      @defer (on immediate) {
+        <div class="view-swap"><app-week-view></app-week-view></div>
+      } @placeholder {
+        <p class="mx-auto max-w-6xl px-5 text-sm text-subtle">Opening the week…</p>
+      }
     } @else {
-      <div class="view-swap" [style.--slide]="slide()">
+      <div class="view-swap">
         <app-favorite-folders></app-favorite-folders>
 
         <section class="mx-auto max-w-3xl rounded-xl border border-line bg-panel1 p-3 sm:p-6">

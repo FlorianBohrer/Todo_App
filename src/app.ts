@@ -69,19 +69,8 @@ export class App {
   /** Treibt die gleitende Pille im Umschalter — drei gleich breite Laschen. */
   protected readonly viewIndex = computed(() => App.VIEWS.indexOf(this.view()));
 
-  /**
-   * Aus welcher Richtung die neue Ansicht hereinkommt: 1 = von rechts, -1 = von
-   * links. Folgt der Pille im Umschalter, damit beide dieselbe Bewegung
-   * erzaehlen statt zwei widersprechende.
-   */
-  protected readonly slide = signal(1);
-
   setView(view: View) {
     if (this.view() === view) return;
-
-    this.slide.set(
-      App.VIEWS.indexOf(view) > App.VIEWS.indexOf(this.view()) ? 1 : -1,
-    );
     this.todoService.view.set(view);
 
     // Nach oben springen. Die Ansichten sind unterschiedlich hoch: wer in der
