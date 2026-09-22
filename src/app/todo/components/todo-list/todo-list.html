@@ -19,7 +19,13 @@
       @switch (filter()) {
         @case ('active')    { No active todos at the moment }
         @case ('completed') { No completed todos yet }
-        @case ('favorites') { No favorites yet, tap the star on a todo }
+        @case ('favorites') {
+          @if (favoritesAllDone()) {
+            All favorites done — nothing left to keep an eye on
+          } @else {
+            No favorites yet, tap the star on a todo
+          }
+        }
         @default            { No todos found }
       }
     </p>
