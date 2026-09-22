@@ -334,6 +334,15 @@
        nur die Kurve zu verlieren. Betraf .progress-fill und die Filter-Pille.
        (--ease-out kommt aus Tailwinds Theme und bleibt deshalb unangetastet.) */
     --spring: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Dieselbe Federung, aber mit Nachschwingen: der Kontrollpunkt über 1
+       schiebt den Wert kurz über das Ziel hinaus und lässt ihn zurückfallen.
+       Das ist der "Pop" beim Knopfdruck.
+
+       Bewusst ein eigenes Token und keine Kopie der Kurve: sie stand vorher
+       einmal wörtlich in .btn, und genau solche Einzelstücke waren der Grund,
+       warum die Federung zwölfmal im Code stand. */
+    --pop: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   html, body {
@@ -386,15 +395,21 @@
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-5 py-2 font-medium
            rounded-lg disabled:pointer-events-none disabled:opacity-50;
-    /* Der Druck fuehlt sich hier genauso an wie bei jedem anderen Knopf.
-       Vorher stand hier eine ueberschwingende Kurve (1.56 als Kontrollpunkt)
-       ueber 150ms, waehrend die globale button-Regel 110ms ohne Ueberschwingen
-       faehrt. Zwei Dinge daran waren falsch: gleich aussehende Knoepfe
-       verhielten sich unterschiedlich, und ein Nachfedern gehoert an eine
-       Bewegung, die Schwung hatte — ein Tastendruck hat keinen. */
+    /* Der Pop ist gewollt: der Knopf schwingt beim Loslassen kurz ueber 1
+       hinaus, bevor er sich setzt.
+
+       Apples Regel sagt, Nachfedern gehoere an eine Bewegung, die Schwung
+       hatte, und ein Tastendruck habe keinen. Hier zaehlt die Entscheidung
+       schwerer: der Pop ist das Handgefuehl dieser App, und ein Knopf ist die
+       Stelle, an der sie zurueckantwortet. Die Regel bleibt aber richtig fuer
+       alles, was von selbst erscheint — Menues, Karten, Ansichten federn
+       nicht nach.
+
+       Gilt nur fuer .btn. Die uebrigen Knoepfe (Icons, Laschen) laufen weiter
+       ueber die globale button-Regel ohne Ueberschwingen. */
     transition:
       background-color 150ms ease,
-      transform 110ms var(--ease-out),
+      transform 150ms var(--pop),
       box-shadow 150ms ease;
   }
 
