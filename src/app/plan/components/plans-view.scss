@@ -531,3 +531,130 @@
 .item-promote:focus-visible {
   opacity: 1;
 }
+
+// ---- Tabellen ----
+//
+// Naeher an Obsidian: die Tabelle zeigt Inhalt, nicht ihr Werkzeug. Was zum
+// Bearbeiten gehoert (Loeschen von Zeile und Spalte), erscheint beim Zeigen.
+.plan-table {
+  // Auto-Layout: die Spalten richten sich nach dem Inhalt statt nach einer
+  // gesetzten Mindestbreite. Genau die hat vorher jede Tabelle ueber den Rand
+  // geschoben, auch wenn zwei kurze Woerter darin standen.
+  table-layout: auto;
+}
+
+.plan-th,
+.plan-td {
+  border: 1px solid var(--color-line-strong);
+  padding: 0;
+  vertical-align: top;
+  position: relative;
+}
+
+.plan-th {
+  background: var(--color-fill);
+  text-align: left;
+  font-weight: 600;
+}
+
+// Die schmale Spalte ganz rechts traegt den Loeschknopf der Zeile. Sie hat
+// keinen Rahmen, damit die Tabelle rechts sauber abschliesst.
+.plan-th-gutter,
+.plan-td-gutter {
+  width: 1.75rem;
+  border: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
+// Zebrastreifen, sehr leise. Bei vielen Zeilen ist er der Unterschied
+// zwischen „ich finde meine Zeile wieder" und „ich zaehle mit dem Finger".
+.plan-table tbody tr:nth-child(even) .plan-td {
+  background: rgb(255 255 255 / 0.018);
+}
+
+.plan-table tbody tr:hover .plan-td {
+  background: rgb(255 255 255 / 0.04);
+}
+
+// Der Text in der Zelle. Bricht um, anders als ein input, und behaelt eine
+// Mindesthoehe, damit eine leere Zelle trotzdem zu treffen ist.
+.plan-cell {
+  min-height: 1.75rem;
+  padding: 0.35rem 0.55rem;
+  cursor: text;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.plan-cell:focus-visible {
+  outline: 2px solid var(--plan-accent);
+  outline-offset: -2px;
+}
+
+.plan-cell-input {
+  width: 100%;
+  background: var(--color-fill-strong);
+  padding: 0.35rem 0.55rem;
+  color: var(--color-text);
+  outline: none;
+}
+
+// Loeschen von Zeile und Spalte: nur beim Zeigen. Dauerhaft war es ein Kreuz
+// in jeder Kopfzelle und eine Extraspalte voller Kreuze, die mit dem Inhalt
+// der Tabelle nichts zu tun haben.
+.plan-table-x {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  border-radius: 0.25rem;
+  padding: 0 0.25rem;
+  font-size: 0.6875rem;
+  line-height: 1.25;
+  color: var(--color-subtle);
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+
+.plan-td-gutter .plan-table-x {
+  position: static;
+  opacity: 0;
+}
+
+.plan-th:hover .plan-table-x,
+.plan-th:focus-within .plan-table-x,
+tr:hover .plan-td-gutter .plan-table-x,
+tr:focus-within .plan-td-gutter .plan-table-x,
+.plan-table-x:focus-visible {
+  opacity: 1;
+}
+
+.plan-table-x:hover {
+  color: var(--color-danger);
+}
+
+@media (hover: none) {
+  // Ohne Hover gaebe es keinen Weg zu den Knoepfen.
+  .plan-table-x { opacity: 0.6; }
+}
+
+// ---- Diagramme ----
+//
+// Der Schalter zum Quelltext tritt zurueck wie die Ziehgriffe. Offen bleibt er
+// stehen: sonst verschwaende der einzige Weg zurueck, sobald die Maus ins
+// Textfeld geht.
+.plan-dia-edit {
+  opacity: 0;
+  transition: opacity 130ms ease-out, background-color 130ms ease-out,
+    color 130ms ease-out;
+}
+
+.plan-diagram:hover .plan-dia-edit,
+.plan-diagram:focus-within .plan-dia-edit,
+.plan-dia-edit.is-open {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .plan-dia-edit { opacity: 0.7; }
+}
