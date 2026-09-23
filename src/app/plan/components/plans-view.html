@@ -442,45 +442,80 @@
           } @else if (block.type === 'divider') {
             <hr class="my-2 border-0 border-t border-line" />
           } @else if (block.type === 'table') {
-            <!-- Tabelle -->
-            <div class="overflow-x-auto">
-              <table class="w-full border-collapse text-sm">
+            <!-- Tabelle im Obsidian-Sinn: sie zeigt ihren Inhalt, nicht ihr
+                 Bearbeitungswerkzeug. Vorher war JEDE Zelle dauerhaft ein
+                 Eingabefeld — ein Raster aus Formularen, das man nicht lesen
+                 konnte, ohne an Formulare zu denken. Und ein input bricht
+                 keinen Text um: was nicht in die feste Breite passte, war
+                 schlicht weg.
+
+                 Jetzt steht Text da. Klick oder Enter macht genau die eine
+                 Zelle zum Feld, Escape verwirft, Enter uebernimmt. Die
+                 Zellen sind fokussierbar, also kommt man mit Tab hindurch. -->
+            <div class="plan-table-wrap overflow-x-auto">
+              <table class="plan-table w-full border-collapse text-sm">
                 <thead>
                   <tr>
                     @for (col of asTable(block).columns; track $index; let ci = $index) {
-                      <th class="border border-line p-0">
-                        <div class="flex items-center">
+                      <th class="plan-th group/col">
+                        @if (isEditingCell(block.id, -1, ci)) {
                           <input
                             type="text"
-                            class="min-w-24 flex-1 bg-fill px-2 py-1.5 font-semibold text-text focus:bg-fill focus:outline-none"
+                            [id]="cellId(block.id, -1, ci)"
+                            class="plan-cell-input font-semibold"
                             [value]="col"
                             (input)="setColumn(block.id, ci, $any($event.target).value)"
+                            (blur)="stopCellEdit()"
+                            (keydown.enter)="stopCellEdit()"
+                            (keydown.escape)="stopCellEdit()"
                             aria-label="Column name" />
-                          <button type="button"
-                            class="px-1.5 text-subtle hover:text-danger"
-                            (click)="deleteColumn(block.id, ci)" aria-label="Delete column">✕</button>
-                        </div>
+                        } @else {
+                          <div class="plan-cell" tabindex="0" role="button"
+                            (click)="startCellEdit(block.id, -1, ci)"
+                            (keydown.enter)="$event.preventDefault(); startCellEdit(block.id, -1, ci)">
+                            {{ col || 'Column' }}
+                          </div>
+                        }
+
+                        <!-- Erscheint beim Zeigen. Dauerhaft sichtbar war es
+                             ein Kreuz in jeder Kopfzelle, das nichts mit dem
+                             Inhalt zu tun hat. -->
+                        <button type="button"
+                          class="plan-table-x"
+                          (click)="deleteColumn(block.id, ci)" aria-label="Delete column">✕</button>
                       </th>
                     }
-                    <th class="w-8 border border-line"></th>
+                    <th class="plan-th-gutter"></th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (row of asTable(block).rows; track $index; let ri = $index) {
-                    <tr>
+                    <tr class="group/row">
                       @for (cell of row; track $index; let ci = $index) {
-                        <td class="border border-line p-0">
-                          <input
-                            type="text"
-                            class="min-w-24 w-full bg-transparent px-2 py-1.5 text-text focus:bg-fill focus:outline-none"
-                            [value]="cell"
-                            (input)="setCell(block.id, ri, ci, $any($event.target).value)"
-                            aria-label="Cell" />
+                        <td class="plan-td">
+                          @if (isEditingCell(block.id, ri, ci)) {
+                            <input
+                              type="text"
+                              [id]="cellId(block.id, ri, ci)"
+                              class="plan-cell-input"
+                              [value]="cell"
+                              (input)="setCell(block.id, ri, ci, $any($event.target).value)"
+                              (blur)="stopCellEdit()"
+                              (keydown.enter)="stopCellEdit()"
+                              (keydown.escape)="stopCellEdit()"
+                              aria-label="Cell" />
+                          } @else {
+                            <div class="plan-cell" tabindex="0" role="button"
+                              (click)="startCellEdit(block.id, ri, ci)"
+                              (keydown.enter)="$event.preventDefault(); startCellEdit(block.id, ri, ci)">
+                              {{ cell }}
+                            </div>
+                          }
                         </td>
                       }
-                      <td class="border border-line text-center">
+                      <td class="plan-td-gutter">
                         <button type="button"
-                          class="px-1.5 text-subtle hover:text-danger"
+                          class="plan-table-x"
                           (click)="deleteRow(block.id, ri)" aria-label="Delete row">✕</button>
                       </td>
                     </tr>
@@ -493,34 +528,48 @@
               <button type="button" class="rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted" (click)="addColumn(block.id)">+ Column</button>
             </div>
           } @else {
-            <!-- Ablaufdiagramm: Quelltext und Zeichnung nebeneinander.
-                 Am Handy steht die Zeichnung oben — dort wird gelesen,
-                 nicht getippt. -->
-            <div class="grid gap-3 md:grid-cols-2 md:items-start">
-              <div class="order-2 min-w-0 md:order-1">
-                <label class="mb-1.5 block text-xs font-medium text-subtle"
-                  [attr.for]="'diagram-code-' + block.id">
-                  Flow
-                </label>
-                <textarea
-                  appAutosize
-                  rows="4"
-                  spellcheck="false"
-                  autocapitalize="off"
-                  autocorrect="off"
-                  [id]="'diagram-code-' + block.id"
-                  class="w-full resize-none rounded-lg border border-line bg-black/20 px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
-                  placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
-                  [value]="asDiagram(block).code"
-                  (input)="updateCode(block.id, $any($event.target).value)"></textarea>
-                <p class="mt-1.5 text-xs text-subtle">
-                  Mermaid syntax: <code class="font-mono">A --&gt; B</code> draws an arrow.
-                </p>
-              </div>
+            <!-- Ablaufdiagramm nach Obsidian-Art: gezeigt wird die Zeichnung,
+                 der Quelltext erst auf Wunsch.
 
-              <div class="order-1 min-w-0 rounded-lg bg-fill p-2 md:order-2">
+                 Vorher standen beide dauerhaft nebeneinander. Das kostete die
+                 Haelfte der Breite fuer etwas, das man beim Lesen nie braucht,
+                 und es liess jeden Plan wie einen Editor aussehen statt wie ein
+                 Dokument. Wer ein Diagramm liest, will es sehen; wer es
+                 aendert, sagt das mit einem Klick. -->
+            <div class="plan-diagram group/dia relative">
+              <div class="rounded-lg bg-fill p-3">
                 <app-mermaid-diagram [code]="asDiagram(block).code"></app-mermaid-diagram>
               </div>
+
+              <!-- Tritt zurueck wie die Ziehgriffe, bis der Block ueberfahren
+                   wird. Offen bleibt er stehen, sonst verschwaende der einzige
+                   Weg zurueck, sobald die Maus ins Textfeld geht. -->
+              <button type="button"
+                class="plan-dia-edit absolute right-2 top-2 rounded-lg px-2 py-1 text-2xs text-subtle transition hover:bg-fill-strong hover:text-text"
+                [class.is-open]="openDiagramSource() === block.id"
+                [attr.aria-expanded]="openDiagramSource() === block.id"
+                (click)="toggleDiagramSource(block.id)">
+                {{ openDiagramSource() === block.id ? 'Hide source' : 'Edit source' }}
+              </button>
+
+              @if (openDiagramSource() === block.id) {
+                <div class="mt-2">
+                  <textarea
+                    appAutosize
+                    rows="4"
+                    spellcheck="false"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    [id]="'diagram-code-' + block.id"
+                    class="w-full resize-none rounded-lg border border-line bg-black/20 px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
+                    placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
+                    [value]="asDiagram(block).code"
+                    (input)="updateCode(block.id, $any($event.target).value)"></textarea>
+                  <p class="mt-1.5 text-xs text-subtle">
+                    Mermaid syntax: <code class="font-mono">A --&gt; B</code> draws an arrow.
+                  </p>
+                </div>
+              }
             </div>
           }
         </div>

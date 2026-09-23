@@ -948,6 +948,58 @@ export class PlansView {
     );
   }
 
+  // ---- Tabellen ----
+  //
+  // Eine Zelle zeigt Text und wird erst beim Hineingehen zum Eingabefeld.
+  // Vorher war jede Zelle dauerhaft ein input: ein Raster aus Formularen, in
+  // dem nichts umbrach, weil ein input keinen Text umbricht. Was nicht in die
+  // feste Breite passte, war beim Lesen schlicht nicht da.
+
+  /** Welche Zelle gerade bearbeitet wird. row -1 ist die Kopfzeile. */
+  protected readonly editingCell = signal<{
+    id: string;
+    row: number;
+    col: number;
+  } | null>(null);
+
+  /** Eindeutig je Zelle, damit der Fokus nach dem Umschalten hinfindet. */
+  cellId(blockId: string, row: number, col: number): string {
+    return `cell-${blockId}-${row}-${col}`;
+  }
+
+  isEditingCell(blockId: string, row: number, col: number): boolean {
+    const cell = this.editingCell();
+    return cell?.id === blockId && cell.row === row && cell.col === col;
+  }
+
+  startCellEdit(blockId: string, row: number, col: number) {
+    this.editingCell.set({ id: blockId, row, col });
+
+    // Das Feld entsteht erst im naechsten Durchlauf; vorher gibt es nichts zu
+    // fokussieren. Der Cursor landet am Ende, nicht am Anfang: man will
+    // weiterschreiben, nicht davor.
+    requestAnimationFrame(() => {
+      const el = document.getElementById(
+        this.cellId(blockId, row, col),
+      ) as HTMLInputElement | null;
+      el?.focus();
+      el?.setSelectionRange(el.value.length, el.value.length);
+    });
+  }
+
+  stopCellEdit() {
+    this.editingCell.set(null);
+  }
+
+  // ---- Diagramme ----
+
+  /** Block, dessen Quelltext gerade offen liegt. null = nur die Zeichnung. */
+  protected readonly openDiagramSource = signal<string | null>(null);
+
+  toggleDiagramSource(blockId: string) {
+    this.openDiagramSource.update((cur) => (cur === blockId ? null : blockId));
+  }
+
   toggleListItem(blockId: string, index: number) {
     // Verknüpft? Dann gehört der Haken dem Todo, und nur dort wird er gesetzt.
     const block = this.findBlock(blockId);
