@@ -4,7 +4,7 @@
     (click)="close()">
     <!-- Klicks im Blatt sollen es nicht schließen -->
     <div
-      class="sheet-in w-full max-w-lg rounded-xl border border-line bg-panel1 p-5 shadow-lg"
+      class="sheet-in flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl border border-line bg-panel1 p-5 shadow-lg"
       role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"
       (click)="$event.stopPropagation()">
 
@@ -15,29 +15,84 @@
           (click)="close()" aria-label="Close">✕</button>
       </div>
 
-      <div class="grid gap-5 sm:grid-cols-2">
-        @for (group of groups; track group.title) {
-          <section>
+      @if (problem(); as message) {
+        <p class="mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-300" role="status">
+          {{ message }}
+        </p>
+      }
+
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        <!-- Änderbar: jede Zeile trägt ihre eigene Taste zum Neubelegen. -->
+        @for (group of editable(); track group.title) {
+          <section class="mb-5">
             <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">{{ group.title }}</h3>
-            <ul class="space-y-1.5">
-              @for (item of group.items; track item.description) {
-                <li class="flex items-baseline justify-between gap-3">
-                  <span class="text-sm text-muted">{{ item.description }}</span>
-                  <span class="flex flex-none gap-1">
-                    @for (key of item.keys; track key) {
-                      <kbd class="rounded-lg border border-line-strong bg-bg3 px-1.5 py-0.5 font-mono text-2xs text-text">{{ key }}</kbd>
+            <ul class="space-y-0.5">
+              @for (item of group.items; track item.action) {
+                <li class="group/row flex items-center justify-between gap-3 rounded-lg px-1 py-1 transition hover:bg-fill">
+                  <span class="min-w-0 flex-1 truncate text-sm text-muted">{{ item.label }}</span>
+
+                  @if (recording() === item.action) {
+                    <span class="flex-none animate-pulse text-2xs text-indigo-300">
+                      Press a key… (Esc cancels)
+                    </span>
+                  } @else {
+                    @if (item.custom) {
+                      <!-- Nur dann, wenn es etwas zurueckzusetzen gibt. -->
+                      <button type="button"
+                        class="flex-none rounded px-1 text-2xs text-subtle opacity-0 transition hover:text-text group-hover/row:opacity-100 focus-visible:opacity-100"
+                        (click)="resetOne(item.action)"
+                        [attr.aria-label]="'Reset ' + item.label">reset</button>
                     }
-                  </span>
+
+                    <button type="button"
+                      class="flex flex-none gap-1 rounded-lg px-1 py-0.5 transition hover:bg-fill-strong"
+                      (click)="startRecording(item.action)"
+                      [attr.aria-label]="'Change the shortcut for ' + item.label">
+                      @for (key of item.keys; track $index) {
+                        <kbd class="rounded-lg border border-line-strong bg-bg3 px-1.5 py-0.5 font-mono text-2xs text-text">{{ key }}</kbd>
+                      }
+                    </button>
+                  }
                 </li>
               }
             </ul>
           </section>
         }
+
+        <!-- Fest: „/" und „[[" sind keine Tastenkürzel, sondern getippte
+             Zeichen mit einer Bedeutung im Text. Sie umzubelegen hiesse, die
+             Syntax zu ändern, nicht eine Taste. -->
+        <div class="grid gap-5 border-t border-line pt-4 sm:grid-cols-2">
+          @for (group of fixed; track group.title) {
+            <section>
+              <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">{{ group.title }}</h3>
+              <ul class="space-y-1.5">
+                @for (item of group.items; track item.description) {
+                  <li class="flex items-baseline justify-between gap-3">
+                    <span class="text-sm text-muted">{{ item.description }}</span>
+                    <span class="flex flex-none gap-1">
+                      @for (key of item.keys; track key) {
+                        <kbd class="rounded-lg border border-line-strong bg-bg3 px-1.5 py-0.5 font-mono text-2xs text-text">{{ key }}</kbd>
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
       </div>
 
-      <p class="mt-5 text-xs text-subtle">
-        Shortcuts stay out of the way while you type. They only fire outside input fields.
-      </p>
+      <div class="mt-4 flex items-center gap-3 border-t border-line pt-3">
+        <p class="min-w-0 flex-1 text-xs text-subtle">
+          Click a key to change it. Shortcuts stay out of the way while you type.
+        </p>
+        @if (isCustomised()) {
+          <button type="button"
+            class="flex-none rounded-lg border border-line px-2 py-1 text-2xs text-muted transition hover:border-line-strong hover:text-text"
+            (click)="resetAll()">Reset all</button>
+        }
+      </div>
     </div>
   </div>
 }
