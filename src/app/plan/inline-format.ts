@@ -1,7 +1,7 @@
 /**
  * Kleines, bewusst begrenztes Inline-Markup für Plan-Texte — die Teilmenge,
  * die beim Schreiben tatsächlich benutzt wird: Code, fett, kursiv,
- * durchgestrichen und Obsidian-Wikilinks.
+ * unterstrichen, durchgestrichen und Obsidian-Wikilinks.
  *
  * Sicherheit: Es wird IMMER zuerst escaped und erst danach die erlaubte
  * Auszeichnung eingesetzt. Aus Nutzertext kann so kein Markup entstehen.
@@ -50,6 +50,12 @@ export function formatInline(raw: string): string {
       );
 
       out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+      // Unterstreichen. Markdown kennt es nicht, also braucht es eine eigene
+      // Schreibweise. __ statt _, weil einzelne Unterstriche mitten in
+      // gewoehnlichem Text vorkommen (datei_name, snake_case) und dort nichts
+      // unterstreichen sollen.
+      out = out.replace(/__([^_]+)__/g, '<u>$1</u>');
       out = out.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
       out = out.replace(/~~([^~]+)~~/g, '<s>$1</s>');
 

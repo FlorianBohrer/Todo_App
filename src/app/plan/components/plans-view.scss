@@ -172,6 +172,14 @@
   strong { font-weight: 650; }
   em { font-style: italic; }
   s { opacity: 0.6; }
+
+  // Etwas Abstand zur Grundlinie, sonst schneidet der Strich durch die
+  // Unterlaengen von g, j und p.
+  u {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+  }
 }
 
 // Leerer Block bleibt anklickbar: ohne Mindesthoehe waere die Trefferflaeche
