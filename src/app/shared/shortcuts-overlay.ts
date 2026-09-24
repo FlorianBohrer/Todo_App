@@ -1,5 +1,23 @@
-import {ChangeDetectionStrategy, Component, HostListener, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { isTypingTarget } from '../todo/shared/keyboard';
+import { ShortcutService } from './shortcut.service';
+import {
+  Binding,
+  DEFAULT_BINDINGS,
+  SHORTCUT_INFO,
+  ShortcutAction,
+  ShortcutInfo,
+  bindingFromEvent,
+  formatBinding,
+  sameBinding,
+} from './shortcuts';
 
 interface Shortcut {
   keys: string[];
@@ -12,11 +30,15 @@ interface ShortcutGroup {
 }
 
 /**
- * Tastenkürzel zum Nachschlagen.
+ * Tastenkürzel zum Nachschlagen — und zum Ändern.
  *
- * Die App hat inzwischen ein gutes Dutzend davon. Ein Kürzel, das niemand
- * kennt, ist keins — deshalb steht hier alles an einer Stelle, erreichbar
- * über „?", die Taste, die im Web genau dafür da ist.
+ * Die App hat ein gutes Dutzend davon. Ein Kürzel, das niemand kennt, ist
+ * keins; deshalb steht hier alles an einer Stelle, erreichbar über „?", die
+ * Taste, die im Web genau dafür da ist.
+ *
+ * Geändert wird dort, wo man nachschlägt. Eine eigene Einstellungsseite wäre
+ * ein zweiter Ort für dieselbe Sache, und man sucht die Belegung ohnehin
+ * genau dann, wenn man sie ändern will.
  */
 @Component({
   selector: 'app-shortcuts-overlay',
@@ -24,27 +46,53 @@ interface ShortcutGroup {
   templateUrl: './shortcuts-overlay.html',
 })
 export class ShortcutsOverlay {
+  private readonly shortcuts = inject(ShortcutService);
+
   readonly open = signal(false);
 
-  protected readonly groups: ShortcutGroup[] = [
+  /** Handlung, deren Taste gerade aufgenommen wird. null = niemand. */
+  protected readonly recording = signal<ShortcutAction | null>(null);
+
+  /** Meldung nach einem misslungenen Versuch, etwa bei Doppelbelegung. */
+  protected readonly problem = signal<string | null>(null);
+
+  protected readonly isCustomised = this.shortcuts.isCustomised;
+
+  /** Die änderbaren Kürzel, nach Bereich gebündelt. */
+  protected readonly editable = computed(() => {
+    const bindings = this.shortcuts.all();
+    const groups = new Map<string, (ShortcutInfo & { keys: string[]; custom: boolean })[]>();
+
+    for (const info of SHORTCUT_INFO) {
+      const binding = bindings[info.action];
+      const row = {
+        ...info,
+        keys: formatBinding(binding),
+        custom: !sameBinding(binding, DEFAULT_BINDINGS[info.action]),
+      };
+      groups.set(info.group, [...(groups.get(info.group) ?? []), row]);
+    }
+
+    return [...groups.entries()].map(([title, items]) => ({ title, items }));
+  });
+
+  /**
+   * Was sich nicht umbelegen lässt.
+   *
+   * Nicht aus Bequemlichkeit: „/" und „[[" sind keine Tastenkürzel, sondern
+   * getippte Zeichen, die im Text eine Bedeutung haben. Sie umzubelegen hiesse,
+   * die Syntax zu ändern, nicht eine Taste. Escape gehört dem Dialog.
+   */
+  protected readonly fixed: ShortcutGroup[] = [
     {
       title: 'Anywhere',
-      items: [
-        { keys: ['?'], description: 'Show this list' },
-        { keys: ['f'], description: 'Folders, open and close' },
-        { keys: ['1'], description: 'List view' },
-        { keys: ['2'], description: 'Week view' },
-        { keys: ['3'], description: 'Plans view' },
-        { keys: ['Esc'], description: 'Close what is open' },
-      ],
+      items: [{ keys: ['Esc'], description: 'Close what is open' }],
     },
     {
       title: 'List',
       items: [
         { keys: ['n'], description: 'New todo' },
         { keys: ['/'], description: 'Search' },
-        // Kein Tastenkürzel, aber dieselbe Sorte Wissen: getippte Konvention,
-        // die man kennen muss, um sie zu nutzen. Hier sucht man danach.
         { keys: ['/must'], description: 'MoSCoW: without it the delivery is worthless' },
         { keys: ['/should'], description: 'MoSCoW: painful to drop, but there is a workaround' },
         { keys: ['/could'], description: 'MoSCoW: the contingency you drop when time runs short' },
@@ -64,18 +112,80 @@ export class ShortcutsOverlay {
       items: [
         { keys: ['⌘', 'K'], description: 'Jump to a plan' },
         { keys: ['/'], description: 'Block commands, anywhere in a line' },
-        { keys: ['[[' ], description: 'Link to another plan' },
-        // Ohne Auswahl nehmen sie das Wort unter dem Cursor.
-        { keys: ['⌘', 'B'], description: 'Bold' },
-        { keys: ['⌘', 'I'], description: 'Italic' },
-        { keys: ['⌘', 'U'], description: 'Underline' },
-        { keys: ['⌘', 'X'], description: 'Strikethrough' },
+        { keys: ['[['], description: 'Link to another plan' },
       ],
     },
   ];
 
-  toggle() { this.open.update((o) => !o); }
-  close() { this.open.set(false); }
+  toggle() {
+    this.open.update((o) => !o);
+    this.stopRecording();
+  }
+
+  close() {
+    this.open.set(false);
+    this.stopRecording();
+  }
+
+  // ---- Umbelegen ----
+
+  startRecording(action: ShortcutAction) {
+    this.problem.set(null);
+    this.recording.set(action);
+
+    // In der Aufnahmephase gehoert JEDER Tastendruck der Aufnahme. Der
+    // Listener laeuft in der Capture-Phase und stoppt dort: sonst wuerde die
+    // gedrueckte Taste nebenbei noch ihre alte Handlung ausloesen, und man
+    // wechselt beim Belegen von „2" versehentlich in die Wochenansicht.
+    document.addEventListener('keydown', this.capture, true);
+  }
+
+  private stopRecording() {
+    if (this.recording() !== null) {
+      document.removeEventListener('keydown', this.capture, true);
+    }
+    this.recording.set(null);
+  }
+
+  private readonly capture = (event: KeyboardEvent) => {
+    const action = this.recording();
+    if (!action) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.key === 'Escape') {
+      this.stopRecording();
+      return;
+    }
+
+    const binding = bindingFromEvent(event);
+    if (!binding) return; // reine Zusatztaste: der Nutzer sucht noch
+
+    const conflict = this.shortcuts.set(action, binding);
+    if (conflict) {
+      this.problem.set(
+        `${formatBinding(binding).join(' ')} is already used by "${this.labelOf(conflict)}"`,
+      );
+      return;
+    }
+
+    this.stopRecording();
+  };
+
+  resetOne(action: ShortcutAction) {
+    this.shortcuts.reset(action);
+    this.problem.set(null);
+  }
+
+  resetAll() {
+    this.shortcuts.resetAll();
+    this.problem.set(null);
+  }
+
+  private labelOf(action: ShortcutAction): string {
+    return SHORTCUT_INFO.find((i) => i.action === action)?.label ?? action;
+  }
 
   @HostListener('document:keydown', ['$event'])
   onKey(event: KeyboardEvent): void {
@@ -85,11 +195,8 @@ export class ShortcutsOverlay {
       return;
     }
 
-    // „?" ist je nach Tastaturlayout Shift+/ oder Shift+ß — event.key kennt
-    // beide Wege und liefert am Ende dasselbe Zeichen.
-    if (event.key !== '?') return;
-    if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (isTypingTarget(event.target)) return;
+    if (this.shortcuts.match(event) !== 'help.toggle') return;
 
     event.preventDefault();
     this.toggle();

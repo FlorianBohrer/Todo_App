@@ -30,6 +30,7 @@ import { TodoService } from './app/todo/services/todo';
 import { ToastContainer } from './app/shared/toast-container';
 import { ShortcutsOverlay } from './app/shared/shortcuts-overlay';
 import { isTypingTarget } from './app/todo/shared/keyboard';
+import { ShortcutService } from './app/shared/shortcut.service';
 import type { View } from './app/todo/services/todo';
 
 @Component({
@@ -61,6 +62,7 @@ export class App {
   private readonly labelService = inject(LabelService);
   private readonly todoService = inject(TodoService);
   protected readonly clerk = inject(ClerkService);
+  private readonly shortcuts = inject(ShortcutService);
 
   /** Aktive Ansicht: Liste, Woche oder Pläne. */
   protected readonly view = this.todoService.view;
@@ -88,30 +90,43 @@ export class App {
    * herspringt, greift sonst jedes Mal zur Maus; die Ziffern stehen im
    * „?"-Blatt und als Tooltip an den Laschen.
    */
+  /**
+   * Der eine Ort, an dem ein Tastendruck zu einer Handlung wird.
+   *
+   * Gefragt wird nach der HANDLUNG, nicht nach der Taste. Welche Taste das ist,
+   * weiss allein der ShortcutService — deshalb muss hier nichts geaendert
+   * werden, wenn der Nutzer sie umbelegt.
+   */
   @HostListener('document:keydown', ['$event'])
   onShortcut(event: KeyboardEvent): void {
-    if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (isTypingTarget(event.target)) return;
 
-    // f oeffnet die Folder-Uebersicht und schliesst sie wieder. Toggle und
-    // nicht nur oeffnen: wer sie mit einer Taste aufmacht, greift zum
-    // Zumachen nicht zur Maus. Escape schliesst sie ebenfalls, aber das
-    // funktioniert nur, solange der Fokus im Dialog liegt.
-    //
-    // Gross und klein gelten beide: Shift oder Feststelltaste sollen das
-    // Kuerzel nicht verschlucken. Die Suche im Dialog faengt das nicht ab,
-    // die haelt isTypingTarget vorher schon auf.
-    if (event.key.toLowerCase() === 'f') {
-      event.preventDefault();
-      this.toggleCategories();
-      return;
+    const action = this.shortcuts.match(event);
+    if (!action) return;
+
+    switch (action) {
+      // Toggle und nicht nur oeffnen: wer die Uebersicht mit einer Taste
+      // aufmacht, greift zum Zumachen nicht zur Maus.
+      case 'folders.toggle':
+        event.preventDefault();
+        this.toggleCategories();
+        return;
+      case 'view.list':
+        event.preventDefault();
+        this.setView('list');
+        return;
+      case 'view.week':
+        event.preventDefault();
+        this.setView('week');
+        return;
+      case 'view.plans':
+        event.preventDefault();
+        this.setView('plans');
+        return;
+      default:
+        // help.toggle und die Formatierung gehoeren anderen Komponenten.
+        return;
     }
-
-    const index = ['1', '2', '3'].indexOf(event.key);
-    if (index === -1) return;
-
-    event.preventDefault();
-    this.setView(App.VIEWS[index]);
   }
 
   /** true, wenn das Clerk-Script nicht geladen werden konnte (Netzwerk/Limit). */

@@ -63,6 +63,8 @@ import {
 } from '../plan.model';
 import { formatBlock, formatInline } from '../inline-format';
 import { InlineMarker, toggleInline } from '../inline-toggle';
+import { ShortcutService } from '../../shared/shortcut.service';
+import type { ShortcutAction } from '../../shared/shortcuts';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
@@ -132,6 +134,7 @@ export class PlansView {
   // Beide Dienste stehen ohnehin app-weit bereit; die Planansicht liest hier
   // nur den Zustand, den die Liste schon geladen hat. Kein zweiter Abruf.
   private readonly todoService = inject(TodoService);
+  private readonly shortcuts = inject(ShortcutService);
 
   protected readonly BackIcon = ChevronLeft;
   protected readonly PlusIcon = Plus;
@@ -528,13 +531,14 @@ export class PlansView {
    * Unterstreichen kennt Markdown nicht, deshalb __so__. Doppelte Unterstriche,
    * weil einzelne in gewoehnlichem Text vorkommen (datei_name) und dort nichts
    * unterstreichen sollen.
+   *
+   * Die Tasten selbst stehen im ShortcutService und sind umbelegbar.
    */
-  private readonly INLINE_KEYS: Record<string, InlineMarker> = {
-    b: '**',
-    i: '*',
-    u: '__',
-    // Wie in Obsidian und Notion: Umschalt dazu fuer durchgestrichen.
-    x: '~~',
+  private readonly INLINE_MARKERS: Partial<Record<ShortcutAction, InlineMarker>> = {
+    'format.bold': '**',
+    'format.italic': '*',
+    'format.underline': '__',
+    'format.strike': '~~',
   };
 
   private applyInlineFormat(
@@ -560,12 +564,13 @@ export class PlansView {
   }
 
   onTextKeydown(event: KeyboardEvent, blockId: string) {
-    if (event.metaKey || event.ctrlKey) {
-      const marker = this.INLINE_KEYS[event.key.toLowerCase()];
-      if (marker) {
-        this.applyInlineFormat(event, blockId, marker);
-        return;
-      }
+    // Welche Taste das ist, weiss der ShortcutService; hier zaehlt nur die
+    // Handlung. Belegt der Nutzer sie um, aendert sich an dieser Stelle nichts.
+    const action = this.shortcuts.match(event);
+    const marker = action ? this.INLINE_MARKERS[action] : undefined;
+    if (marker) {
+      this.applyInlineFormat(event, blockId, marker);
+      return;
     }
 
     // Der Wikilink-Vorschlag liegt vorn: er ist offen, waehrend getippt wird.
