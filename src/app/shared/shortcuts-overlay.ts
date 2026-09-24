@@ -65,6 +65,11 @@ export class ShortcutsOverlay {
         { keys: ['⌘', 'K'], description: 'Jump to a plan' },
         { keys: ['/'], description: 'Block commands, anywhere in a line' },
         { keys: ['[[' ], description: 'Link to another plan' },
+        // Ohne Auswahl nehmen sie das Wort unter dem Cursor.
+        { keys: ['⌘', 'B'], description: 'Bold' },
+        { keys: ['⌘', 'I'], description: 'Italic' },
+        { keys: ['⌘', 'U'], description: 'Underline' },
+        { keys: ['⌘', 'X'], description: 'Strikethrough' },
       ],
     },
   ];

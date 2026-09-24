@@ -62,6 +62,7 @@ import {
   PlanQuoteBlock,
 } from '../plan.model';
 import { formatBlock, formatInline } from '../inline-format';
+import { InlineMarker, toggleInline } from '../inline-toggle';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
@@ -517,7 +518,56 @@ export class PlansView {
     });
   }
 
+  /**
+   * Fett, kursiv, unterstrichen und durchgestrichen per Tastenkuerzel.
+   *
+   * Steht ganz vorn, noch vor dem Wikilink-Vorschlag: mit gedrueckter
+   * Befehlstaste ist nie ein Vorschlag gemeint. Ohne Auswahl nimmt es das Wort
+   * unter dem Cursor, wie in jedem Editor.
+   *
+   * Unterstreichen kennt Markdown nicht, deshalb __so__. Doppelte Unterstriche,
+   * weil einzelne in gewoehnlichem Text vorkommen (datei_name) und dort nichts
+   * unterstreichen sollen.
+   */
+  private readonly INLINE_KEYS: Record<string, InlineMarker> = {
+    b: '**',
+    i: '*',
+    u: '__',
+    // Wie in Obsidian und Notion: Umschalt dazu fuer durchgestrichen.
+    x: '~~',
+  };
+
+  private applyInlineFormat(
+    event: KeyboardEvent,
+    blockId: string,
+    marker: InlineMarker,
+  ): void {
+    const field = event.target as HTMLTextAreaElement;
+    event.preventDefault();
+
+    const out = toggleInline(
+      field.value,
+      field.selectionStart ?? 0,
+      field.selectionEnd ?? 0,
+      marker,
+    );
+
+    // Erst ins Feld, dann in den Zustand: sonst setzt Angular den alten Wert
+    // zurueck, bevor die Auswahl steht, und der Cursor springt an den Anfang.
+    field.value = out.text;
+    field.setSelectionRange(out.selectionStart, out.selectionEnd);
+    this.updateText(blockId, out.text);
+  }
+
   onTextKeydown(event: KeyboardEvent, blockId: string) {
+    if (event.metaKey || event.ctrlKey) {
+      const marker = this.INLINE_KEYS[event.key.toLowerCase()];
+      if (marker) {
+        this.applyInlineFormat(event, blockId, marker);
+        return;
+      }
+    }
+
     // Der Wikilink-Vorschlag liegt vorn: er ist offen, waehrend getippt wird.
     const pick = this.wikiPick();
     if (pick && pick.blockId === blockId) {
