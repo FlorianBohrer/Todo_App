@@ -200,7 +200,12 @@
           </div>
 
           @if (!asGroup(block).collapsed) {
-            <div class="ml-[13px] space-y-1 border-l border-line pl-4 pt-1"
+            <!-- Nur Einzug, keine Linie. Sie sollte die Zugehoerigkeit zeigen,
+                 zog sich aber ueber die ganze Hoehe jedes Toggles und legte
+                 damit ein Gitter ueber ein Dokument, das ruhig sein soll. Der
+                 Einzug sagt dasselbe, ohne etwas zu zeichnen — so macht es
+                 Notion auch. -->
+            <div class="ml-[13px] space-y-1 pl-4 pt-1"
                  cdkDropList
                  [cdkDropListData]="block.id"
                  (cdkDropListDropped)="dropBlock($event)">
