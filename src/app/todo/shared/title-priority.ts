@@ -82,20 +82,17 @@ export function taskLevel(title: string): TaskLevel | null {
 }
 
 /**
- * Sortiert nach Priorität und hält Unteraufgaben bei ihrer Hauptaufgabe.
+ * Bündelt die Liste: jede Hauptaufgabe mit den Unteraufgaben, die ihr folgen.
  *
- * Ohne diese Bündelung wäre die Einrückung eine Lüge. Sortiert wird nach
- * MoSCoW; eine Unteraufgabe trägt keine eigene Stufe und läge damit bei den
- * unbewerteten, während ihre Hauptaufgabe als /must nach oben rutscht. Die
- * eingerückte Zeile stünde dann unter irgendeiner fremden Aufgabe und sähe aus,
- * als gehöre sie dorthin.
+ * Die eine Stelle, an der „wozu gehört diese Zeile" beantwortet wird.
+ * Sortieren, Einklappen und Verschieben müssen dieselbe Antwort bekommen —
+ * sonst landet eine gezogene Zeile an einer Stelle, an der sie laut Einrückung
+ * nicht liegt, und das Einklappen versteckt die falschen Zeilen.
  *
- * Also: erst gruppieren (jede Hauptaufgabe mit den Unteraufgaben, die ihr
- * folgen), dann die GRUPPEN sortieren, dann wieder ausrollen. Eine
- * Unteraufgabe ohne Hauptaufgabe darüber bleibt für sich — sie ist dann eben
- * eine gewöhnliche Aufgabe mit Einzug.
+ * Eine Unteraufgabe ohne Hauptaufgabe darüber bildet ihre eigene Gruppe: sie
+ * ist dann eben eine gewöhnliche Aufgabe mit Einzug.
  */
-export function orderWithSubtasks<T extends { title: string }>(items: T[]): T[] {
+export function subtaskGroups<T extends { title: string }>(items: readonly T[]): T[][] {
   const groups: T[][] = [];
 
   for (const item of items) {
@@ -107,13 +104,92 @@ export function orderWithSubtasks<T extends { title: string }>(items: T[]): T[] 
     }
   }
 
+  return groups;
+}
+
+/**
+ * Sortiert nach Priorität und hält Unteraufgaben bei ihrer Hauptaufgabe.
+ *
+ * Ohne diese Bündelung wäre die Einrückung eine Lüge. Sortiert wird nach
+ * MoSCoW; eine Unteraufgabe trägt keine eigene Stufe und läge damit bei den
+ * unbewerteten, während ihre Hauptaufgabe als /must nach oben rutscht. Die
+ * eingerückte Zeile stünde dann unter irgendeiner fremden Aufgabe und sähe aus,
+ * als gehöre sie dorthin.
+ *
+ * Also: erst gruppieren, dann die GRUPPEN sortieren, dann wieder ausrollen.
+ */
+export function orderWithSubtasks<T extends { title: string }>(items: T[]): T[] {
   // Stabil: gleich priorisierte Gruppen behalten die Reihenfolge, die der
   // Nutzer selbst gezogen hat.
-  const sorted = [...groups].sort(
+  const sorted = [...subtaskGroups(items)].sort(
     (a, b) => titlePriority(a[0].title) - titlePriority(b[0].title),
   );
 
   return sorted.flat();
+}
+
+/** Erste Zeile nach der Gruppe, zu der `index` gehört. */
+function groupEnd(items: readonly { title: string }[], index: number): number {
+  let end = index + 1;
+  while (end < items.length && taskLevel(items[end].title) === 'sub') end++;
+  return end;
+}
+
+/** Kopfzeile der Gruppe, zu der `index` gehört. */
+function groupStart(items: readonly { title: string }[], index: number): number {
+  let start = index;
+  while (start > 0 && taskLevel(items[start].title) === 'sub') start--;
+  return start;
+}
+
+/**
+ * Neue Reihenfolge nach einem Zug — mit den Unteraufgaben im Schlepptau.
+ *
+ * Eine Hauptaufgabe zieht ihre Unteraufgaben mit. Sonst blieben sie liegen und
+ * würden, weil die Zugehörigkeit an der Position hängt, beim nächsten
+ * Durchlauf der fremden Zeile darüber zugeschlagen: man schiebt eine Aufgabe
+ * und verliert dabei ihre Teilschritte an den Nachbarn. Zugeklappt wäre das
+ * nicht einmal sichtbar.
+ *
+ * Eine Unteraufgabe zieht dagegen allein — genau so wechselt sie die
+ * Hauptaufgabe.
+ *
+ * Fällt eine Hauptaufgabe mitten in eine fremde Gruppe, rastet sie an deren
+ * Rand ein: eine Gruppe aufzutrennen würde die dahinter liegenden
+ * Unteraufgaben an die eingeschobene Zeile hängen.
+ *
+ * Gibt die vollständige neue Reihenfolge als IDs zurück, oder null, wenn der
+ * Zug nichts ändert.
+ */
+export function moveWithSubtasks<T extends { id: string; title: string }>(
+  items: readonly T[],
+  movedId: string,
+  targetId: string,
+): string[] | null {
+  const from = items.findIndex((i) => i.id === movedId);
+  const to = items.findIndex((i) => i.id === targetId);
+  if (from === -1 || to === -1 || from === to) return null;
+
+  const alone = taskLevel(items[from].title) === 'sub';
+  const start = from;
+  const end = alone ? from + 1 : groupEnd(items, from);
+
+  // Ziel innerhalb des bewegten Blocks: eine Hauptaufgabe auf die eigene
+  // Unteraufgabe zu ziehen hat kein sinnvolles Ergebnis.
+  if (to >= start && to < end) return null;
+
+  const down = to > from;
+  const anchorIndex = alone
+    ? (down ? to + 1 : to)
+    : (down ? groupEnd(items, to) : groupStart(items, to));
+  const anchorId = items[anchorIndex]?.id ?? null;
+
+  const moved = items.slice(start, end);
+  const rest = [...items.slice(0, start), ...items.slice(end)];
+  const found = anchorId === null ? -1 : rest.findIndex((i) => i.id === anchorId);
+  const at = found === -1 ? rest.length : found;
+
+  return [...rest.slice(0, at), ...moved, ...rest.slice(at)].map((i) => i.id);
 }
 
 /** Anzeigetext ohne Präfix (und ohne die folgenden Leerzeichen). */
@@ -122,6 +198,26 @@ export function stripPriorityPrefix(title: string): string {
   if (!found) return title;
   const trimmed = title.trimStart();
   return trimmed.slice(found.match.length).trimStart();
+}
+
+/**
+ * Setzt die Gliederungsstufe wieder an einen bearbeiteten Titel.
+ *
+ * Beim Bearbeiten steht im Feld der Text OHNE „/sub" — ein Steuerzeichen,
+ * das man einmal tippt, will man danach nicht jedes Mal wieder vor der Nase
+ * haben. Gespeichert wird aber weiter mit Präfix: es trägt die Zugehörigkeit.
+ * Ohne dieses Anfügen würde jede Bearbeitung eine Unteraufgabe stillschweigend
+ * aus ihrer Hauptaufgabe herauslösen.
+ *
+ * Ein selbst getipptes Präfix gewinnt. Das ist zugleich der Weg zurück: wer
+ * „/main " davorschreibt, macht aus der Unteraufgabe wieder eine
+ * Hauptaufgabe.
+ */
+export function withTaskLevel(title: string, level: TaskLevel | null): string {
+  if (level === null) return title;
+  const trimmed = title.trimStart();
+  if (trimmed === '' || findPrefix(trimmed)) return title;
+  return `/${level} ${trimmed}`;
 }
 
 /** Beschriftung des Badges. */

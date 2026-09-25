@@ -141,6 +141,21 @@ li.todo-expanded-row {
   }
 }
 
+/* Das Dreieck dreht sich, statt umzuspringen: die Drehung zeigt, dass die
+   Zeilen darunter nicht weg sind, sondern nur zusammengeschoben. */
+.todo-chevron {
+  display: inline-flex;
+  transition: transform 220ms var(--spring);
+}
+
+.todo-chevron.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .todo-chevron { transition: none; }
+}
+
 /* Hauptaufgaben (/main) treten minimal hervor. Nur das Gewicht, keine Farbe:
    sie sind der Normalfall, nicht der Sonderfall. */
 .todo-card.todo-main .todo-title,
