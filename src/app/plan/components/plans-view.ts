@@ -42,6 +42,8 @@ import {
   ChevronDown,
   GripVertical,
   Search,
+  Undo2,
+  Redo2,
 } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
@@ -64,6 +66,7 @@ import {
 import { RichText } from '../rich-text.directive';
 import { focusRich, replaceRange } from '../rich-text';
 import { levelOf, listMarkers } from '../list-markers';
+import { TypingRun, continuesRun } from '../edit-history';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
@@ -158,6 +161,8 @@ export class PlansView {
   protected readonly TrashIcon = Trash2;
   protected readonly GripIcon = GripVertical;
   protected readonly SearchIcon = Search;
+  protected readonly UndoIcon = Undo2;
+  protected readonly RedoIcon = Redo2;
 
   /** Datenwert der obersten Blockliste; getippt, damit er zu den Section-Listen passt. */
   protected readonly rootList: string | null = null;
@@ -918,7 +923,7 @@ export class PlansView {
 
   /** Ueberschrift und Zitat: nur speichern, hier wandelt sich nichts um. */
   onProseChange(blockId: string, change: { value: string; caret: number }): void {
-    this.updateContent((bs) => this.setBlockText(bs, blockId, change.value));
+    this.updateContent((bs) => this.setBlockText(bs, blockId, change.value), `text:${blockId}`);
   }
 
   /**
@@ -927,7 +932,7 @@ export class PlansView {
    * „[[" die Planvorschlaege.
    */
   onTextChange(blockId: string, change: { value: string; caret: number }): void {
-    this.updateContent((bs) => this.setBlockText(bs, blockId, change.value));
+    this.updateContent((bs) => this.setBlockText(bs, blockId, change.value), `text:${blockId}`);
 
     const shortcut = detectMarkdownShortcut(change.value);
     if (shortcut) {
@@ -1218,6 +1223,22 @@ export class PlansView {
       return;
     }
     if (event.key === 'Escape' && this.switcherOpen()) this.switcherOpen.set(false);
+
+    // ⌘Z fuer das Dokument, nicht fuer ein einzelnes Feld.
+    //
+    // Die schlichten Felder (Titel, Code, Tabellenzelle) behalten ihr eigenes
+    // Rueckgaengig — dort erwartet man das Verhalten eines Eingabefeldes. In
+    // allem anderen zaehlt der Zug am Dokument: einen geloeschten Block holt
+    // kein Textfeld zurueck.
+    if (!this.selected()) return;
+    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return;
+
+    const target = event.target as HTMLElement | null;
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+
+    event.preventDefault();
+    if (event.shiftKey) this.redo();
+    else this.undo();
   }
 
   closeSwitcher() {
@@ -1260,15 +1281,20 @@ export class PlansView {
   private mapItems(
     blockId: string,
     fn: (items: PlanListItem[]) => PlanListItem[],
+    typing: string | null = null,
   ): void {
-    this.updateContent((bs) =>
-      this.mapById(bs, blockId, (x) => (x.type !== 'list' ? x : { ...x, items: fn(x.items) })),
+    this.updateContent(
+      (bs) =>
+        this.mapById(bs, blockId, (x) => (x.type !== 'list' ? x : { ...x, items: fn(x.items) })),
+      typing,
     );
   }
 
   setItemText(blockId: string, index: number, text: string): void {
-    this.mapItems(blockId, (items) =>
-      items.map((it, i) => (i === index ? { ...it, text } : it)),
+    this.mapItems(
+      blockId,
+      (items) => items.map((it, i) => (i === index ? { ...it, text } : it)),
+      `item:${blockId}:${index}`,
     );
   }
 
@@ -1374,12 +1400,16 @@ export class PlansView {
    * die niemand mehr lesen kann.
    */
   indentItem(blockId: string, index: number, dir: 1 | -1): void {
-    this.mapItems(blockId, (items) => {
-      const current = levelOf(items[index]);
-      const above = index > 0 ? levelOf(items[index - 1]) : -1;
-      const wanted = Math.max(0, Math.min(current + dir, Math.min(above + 1, MAX_LIST_LEVEL)));
-      if (wanted === current) return items;
+    const block = this.findBlock(blockId);
+    if (!block || block.type !== 'list' || !block.items[index]) return;
 
+    const current = levelOf(block.items[index]);
+    const above = index > 0 ? levelOf(block.items[index - 1]) : -1;
+    const wanted = Math.max(0, Math.min(current + dir, Math.min(above + 1, MAX_LIST_LEVEL)));
+    // Sonst legt jeder Tabulator am Anschlag einen Zug an, der nichts tut.
+    if (wanted === current) return;
+
+    this.mapItems(blockId, (items) => {
       const next = [...items];
       next[index] = { ...next[index], level: wanted };
       return next;
@@ -1548,13 +1578,15 @@ export class PlansView {
     return block as PlanCodeBlock;
   }
   updateCodeText(blockId: string, code: string) {
-    this.updateContent((bs) =>
-      this.mapById(bs, blockId, (x) => (x.type === 'code' ? { ...x, code } : x)),
+    this.updateContent(
+      (bs) => this.mapById(bs, blockId, (x) => (x.type === 'code' ? { ...x, code } : x)),
+      `code:${blockId}`,
     );
   }
   setCodeLanguage(blockId: string, language: string) {
-    this.updateContent((bs) =>
-      this.mapById(bs, blockId, (x) => (x.type === 'code' ? { ...x, language } : x)),
+    this.updateContent(
+      (bs) => this.mapById(bs, blockId, (x) => (x.type === 'code' ? { ...x, language } : x)),
+      `lang:${blockId}`,
     );
   }
 
@@ -1851,10 +1883,103 @@ export class PlansView {
   }
 
   // ---- Editor: Blöcke ----
-  private updateContent(fn: (blocks: PlanBlock[]) => PlanBlock[]) {
+
+  /**
+   * Die eine Stelle, durch die JEDE Aenderung am Dokument laeuft — und damit
+   * die einzige, an der die Geschichte mitgeschrieben werden muss.
+   *
+   * `typing` fasst zusammen: beim Schreiben kommt hier ein Aufruf je
+   * Tastendruck an, und ein Rueckgaengig, das einen Buchstaben zurueckholt,
+   * ist keins. Gleiche Kennung und kurz hintereinander heisst: derselbe Zug.
+   */
+  private updateContent(
+    fn: (blocks: PlanBlock[]) => PlanBlock[],
+    typing: string | null = null,
+  ) {
     const plan = this.selected();
     if (!plan) return;
+
+    this.remember(plan.id, plan.content, typing);
     this.planService.patchPlan(plan.id, { content: fn([...plan.content]) });
+  }
+
+  // ---- Rueckgaengig ----
+  //
+  // Die Textfelder bringen ihr eigenes Rueckgaengig mit, aber nur fuer den Text
+  // IN einem Feld. Alles, was ein Dokument ausmacht — Bloecke teilen,
+  // zusammenfuegen, umwandeln, verschieben, loeschen —, faellt dort heraus.
+  // Genau davon will man sich aber erholen: ein verlorener Absatz wiegt
+  // schwerer als ein verlorenes Wort.
+  //
+  // Gemerkt wird der Zustand VOR der Aenderung. Das ist die ganze Mechanik:
+  // ein Stapel nach hinten, einer nach vorn.
+
+  /** Laenger lohnt nicht: wer 200 Schritte zurueck will, will den alten Stand. */
+  private static readonly HISTORY_LIMIT = 120;
+
+  private readonly past = signal<PlanBlock[][]>([]);
+  private readonly future = signal<PlanBlock[][]>([]);
+
+  /**
+   * Zu welchem Plan die Geschichte gehoert.
+   *
+   * Ein Signal, weil die Knoepfe davon abhaengen: sonst zeigte nach dem
+   * Wechsel in einen anderen Plan noch der Stapel des vorigen an — und ein
+   * Klick haette dessen Inhalt in dieses Dokument geschrieben.
+   */
+  private readonly historyOf = signal<string | null>(null);
+  /** Der Schreibfluss, der gerade laeuft — siehe edit-history.ts. */
+  private run: TypingRun | null = null;
+
+  private readonly forThisPlan = computed(
+    () => this.historyOf() !== null && this.historyOf() === (this.selected()?.id ?? null),
+  );
+  protected readonly canUndo = computed(() => this.forThisPlan() && this.past().length > 0);
+  protected readonly canRedo = computed(() => this.forThisPlan() && this.future().length > 0);
+
+  private remember(planId: string, before: PlanBlock[], typing: string | null): void {
+    // Anderer Plan: seine Geschichte ist nicht diese.
+    if (this.historyOf() !== planId) {
+      this.historyOf.set(planId);
+      this.past.set([]);
+      this.future.set([]);
+      this.run = null;
+    }
+
+    const now = Date.now();
+    if (continuesRun(this.run, typing, now)) {
+      // Derselbe Zug: der Stand davor liegt schon auf dem Stapel.
+      this.run = { ...this.run!, at: now };
+      return;
+    }
+
+    this.run = { key: typing, at: now, since: now };
+
+    this.past.update((stack) => [...stack, before].slice(-PlansView.HISTORY_LIMIT));
+    // Ein neuer Zug macht den Weg nach vorn ungueltig.
+    if (this.future().length) this.future.set([]);
+  }
+
+  undo(): void {
+    const plan = this.selected();
+    const stack = this.past();
+    if (!plan || !stack.length || !this.forThisPlan()) return;
+
+    this.run = null; // nach einem Sprung nichts mehr zusammenfassen
+    this.past.set(stack.slice(0, -1));
+    this.future.update((f) => [...f, plan.content]);
+    this.planService.patchPlan(plan.id, { content: stack[stack.length - 1] });
+  }
+
+  redo(): void {
+    const plan = this.selected();
+    const stack = this.future();
+    if (!plan || !stack.length || !this.forThisPlan()) return;
+
+    this.run = null;
+    this.future.set(stack.slice(0, -1));
+    this.past.update((p) => [...p, plan.content]);
+    this.planService.patchPlan(plan.id, { content: stack[stack.length - 1] });
   }
 
   private newId(): string {
@@ -1928,18 +2053,28 @@ export class PlansView {
   }
 
   // ---- Section (aufklappbarer Container) ----
+  /**
+   * Auf- und Zuklappen ist Ansicht, kein Zug am Dokument — es steht nur
+   * deshalb im Inhalt, weil es den Reload ueberleben soll. In der Geschichte
+   * hat es nichts verloren: ⌘Z soll den geloeschten Absatz zurueckholen, nicht
+   * einen Toggle wieder aufklappen.
+   */
   toggleGroup(groupId: string) {
-    this.updateContent((b) =>
-      this.mapById(b, groupId, (x) =>
+    const plan = this.selected();
+    if (!plan) return;
+    this.planService.patchPlan(plan.id, {
+      content: this.mapById([...plan.content], groupId, (x) =>
         x.type === 'group' ? { ...x, collapsed: !x.collapsed } : x,
       ),
-    );
+    });
   }
   setGroupTitle(groupId: string, title: string) {
-    this.updateContent((b) =>
-      this.mapById(b, groupId, (x) =>
-        x.type === 'group' ? { ...x, title: title.trim() || 'Toggle' } : x,
-      ),
+    this.updateContent(
+      (b) =>
+        this.mapById(b, groupId, (x) =>
+          x.type === 'group' ? { ...x, title: title.trim() || 'Toggle' } : x,
+        ),
+      `group:${groupId}`,
     );
   }
   /** Den ersten Absatz in einen leeren Toggle setzen; alles Weitere per „/". */
@@ -2057,8 +2192,9 @@ export class PlansView {
 
   // ---- Editor: Diagramm ----
   updateCode(blockId: string, code: string) {
-    this.updateContent((b) =>
-      this.mapById(b, blockId, (x) => (x.type === 'diagram' ? { ...x, code } : x)),
+    this.updateContent(
+      (b) => this.mapById(b, blockId, (x) => (x.type === 'diagram' ? { ...x, code } : x)),
+      `diagram:${blockId}`,
     );
   }
   asDiagram(block: PlanBlock): PlanDiagramBlock {
@@ -2066,24 +2202,37 @@ export class PlansView {
   }
 
   // ---- Editor: Tabelle ----
-  private mapTable(blockId: string, fn: (t: PlanTableBlock) => PlanTableBlock) {
-    this.updateContent((b) =>
-      this.mapById(b, blockId, (x) => (x.type === 'table' ? fn(x) : x)),
+  private mapTable(
+    blockId: string,
+    fn: (t: PlanTableBlock) => PlanTableBlock,
+    typing: string | null = null,
+  ) {
+    this.updateContent(
+      (b) => this.mapById(b, blockId, (x) => (x.type === 'table' ? fn(x) : x)),
+      typing,
     );
   }
   setColumn(blockId: string, c: number, value: string) {
-    this.mapTable(blockId, (t) => {
-      const columns = [...t.columns];
-      columns[c] = value;
-      return { ...t, columns };
-    });
+    this.mapTable(
+      blockId,
+      (t) => {
+        const columns = [...t.columns];
+        columns[c] = value;
+        return { ...t, columns };
+      },
+      `column:${blockId}:${c}`,
+    );
   }
   setCell(blockId: string, r: number, c: number, value: string) {
-    this.mapTable(blockId, (t) => {
-      const rows = t.rows.map((row) => [...row]);
-      rows[r][c] = value;
-      return { ...t, rows };
-    });
+    this.mapTable(
+      blockId,
+      (t) => {
+        const rows = t.rows.map((row) => [...row]);
+        rows[r][c] = value;
+        return { ...t, rows };
+      },
+      `cell:${blockId}:${r}:${c}`,
+    );
   }
   addRow(blockId: string) {
     this.mapTable(blockId, (t) => ({

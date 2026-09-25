@@ -127,6 +127,8 @@ export class ShortcutsOverlay {
         { keys: ['Tab'], description: 'Indent a list item' },
         { keys: ['↑', '↓'], description: 'Step into the block above or below' },
         { keys: ['# ', '- ', '1. '], description: 'Turn the line into a heading or list' },
+        { keys: ['⌘', 'Z'], description: 'Undo — blocks too, not just the text' },
+        { keys: ['⇧', '⌘', 'Z'], description: 'Redo' },
       ],
     },
   ];
