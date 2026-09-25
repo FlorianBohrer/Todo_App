@@ -27,14 +27,22 @@ export interface PlanHeadingBlock {
 }
 
 /**
- * Aufzählung, nummerierte Liste oder Checkliste. Ein Block hält die ganze
- * Liste: beim Bearbeiten ist eine Zeile ein Eintrag, angezeigt wird echtes
- * ul/ol. Das hält das Umsortieren einfach — Notion macht daraus je einen
- * eigenen Block, was ohne contenteditable kaum zu bedienen wäre.
+ * Aufzählung, nummerierte Liste oder Checkliste.
+ *
+ * Ein Block hält die ganze Liste, jeder Eintrag aber sein eigenes Schreibfeld —
+ * wie in Notion, wo jeder Punkt für sich steht: Enter legt den nächsten an,
+ * Tabulator rückt ein, Rückschritt am Anfang führt in den vorigen zurück.
  */
 export interface PlanListItem {
   text: string;
   checked: boolean;
+  /**
+   * Einrücktiefe, 0 = oberste Ebene (Tabulator, wie in Notion).
+   *
+   * Fehlt sie, ist es 0 — ältere Pläne haben das Feld nicht und sollen
+   * unverändert aussehen.
+   */
+  level?: number;
   /**
    * Das echte Todo, zu dem dieser Eintrag geworden ist.
    *
