@@ -1,10 +1,13 @@
 import {
   MOSCOW_LABEL,
+  moveWithSubtasks,
   orderWithSubtasks,
   priorityBadge,
   stripPriorityPrefix,
+  subtaskGroups,
   taskLevel,
   titlePriority,
+  withTaskLevel,
 } from './title-priority';
 
 describe('priorityBadge', () => {
@@ -154,5 +157,127 @@ describe('orderWithSubtasks', () => {
 
   it('handles an empty list', () => {
     expect(orderWithSubtasks([])).toEqual([]);
+  });
+});
+
+describe('subtaskGroups', () => {
+  const t = (title: string) => ({ title });
+
+  it('puts each main task together with the subtasks below it', () => {
+    const groups = subtaskGroups([
+      t('/main Einkaufen'),
+      t('/sub Milch'),
+      t('/sub Brot'),
+      t('Fenster putzen'),
+    ]);
+
+    expect(groups.map((g) => g.map((x) => x.title))).toEqual([
+      ['/main Einkaufen', '/sub Milch', '/sub Brot'],
+      ['Fenster putzen'],
+    ]);
+  });
+
+  it('lets a plain task carry subtasks too', () => {
+    // „/main" ist eine Auszeichnung, keine Bedingung: was ueber einer
+    // Unteraufgabe steht, ist ihre Hauptaufgabe.
+    const groups = subtaskGroups([t('Einkaufen'), t('/sub Milch')]);
+    expect(groups).toHaveLength(1);
+  });
+
+  it('gives an orphaned subtask its own group', () => {
+    const groups = subtaskGroups([t('/sub verwaist'), t('/main danach')]);
+    expect(groups.map((g) => g.length)).toEqual([1, 1]);
+  });
+});
+
+describe('moveWithSubtasks', () => {
+  // Titel = ID, das macht die Erwartungen lesbar.
+  const list = (...titles: string[]) => titles.map((title) => ({ id: title, title }));
+
+  it('drags the subtasks along when the main task moves down', () => {
+    // Der Fall, der ohne Mitnehmen Teilschritte verschenkt: A zieht an B
+    // vorbei, a1/a2 blieben oben liegen und wuerden beim naechsten Sortieren
+    // zu Unteraufgaben von B.
+    const items = list('A', '/sub a1', '/sub a2', 'B', '/sub b1');
+    expect(moveWithSubtasks(items, 'A', 'B')).toEqual([
+      'B', '/sub b1', 'A', '/sub a1', '/sub a2',
+    ]);
+  });
+
+  it('drags the subtasks along when the main task moves up', () => {
+    const items = list('A', '/sub a1', 'B', '/sub b1');
+    expect(moveWithSubtasks(items, 'B', 'A')).toEqual([
+      'B', '/sub b1', 'A', '/sub a1',
+    ]);
+  });
+
+  it('snaps to the edge of a group instead of splitting it', () => {
+    // Zwischen B und b1 eingeschoben wuerde b1 zur Unteraufgabe von A.
+    const items = list('A', 'B', '/sub b1', 'C');
+    expect(moveWithSubtasks(items, 'A', '/sub b1')).toEqual([
+      'B', '/sub b1', 'A', 'C',
+    ]);
+  });
+
+  it('moves a single subtask on its own, so it can change parents', () => {
+    const items = list('A', '/sub a1', 'B');
+    expect(moveWithSubtasks(items, '/sub a1', 'B')).toEqual(['A', 'B', '/sub a1']);
+  });
+
+  it('puts a subtask dragged upwards in front of the row it was dropped on', () => {
+    const items = list('A', '/sub a1', 'B', '/sub b1');
+    expect(moveWithSubtasks(items, '/sub b1', '/sub a1')).toEqual([
+      'A', '/sub b1', '/sub a1', 'B',
+    ]);
+  });
+
+  it('refuses to drop a main task onto its own subtask', () => {
+    const items = list('A', '/sub a1');
+    expect(moveWithSubtasks(items, 'A', '/sub a1')).toBeNull();
+  });
+
+  it('returns null when there is nothing to move', () => {
+    const items = list('A', 'B');
+    expect(moveWithSubtasks(items, 'A', 'A')).toBeNull();
+    expect(moveWithSubtasks(items, 'gibt es nicht', 'B')).toBeNull();
+    expect(moveWithSubtasks(items, 'A', 'gibt es nicht')).toBeNull();
+  });
+
+  it('loses nothing and adds nothing', () => {
+    const items = list('A', '/sub a1', 'B', '/sub b1', 'C');
+    const out = moveWithSubtasks(items, 'C', 'A');
+    expect(out).not.toBeNull();
+    expect([...out!].sort()).toEqual(items.map((i) => i.id).sort());
+  });
+});
+
+describe('withTaskLevel', () => {
+  it('puts the prefix back after an edit', () => {
+    // Die Runde, die eine Unteraufgabe ueberleben muss: Praefix weg fuers
+    // Feld, Text geaendert, Praefix wieder dran.
+    const stored = '/sub Milch';
+    const shown = stripPriorityPrefix(stored);
+    expect(shown).toBe('Milch');
+    expect(withTaskLevel('Hafermilch', taskLevel(stored))).toBe('/sub Hafermilch');
+  });
+
+  it('leaves a task without a level alone', () => {
+    expect(withTaskLevel('Milch', null)).toBe('Milch');
+    expect(withTaskLevel('/must Milch', null)).toBe('/must Milch');
+  });
+
+  it('lets a typed prefix win — that is the way back out', () => {
+    expect(withTaskLevel('/main Einkaufen', 'sub')).toBe('/main Einkaufen');
+    expect(withTaskLevel('/must Milch', 'sub')).toBe('/must Milch');
+  });
+
+  it('keeps empty text empty, so an emptied field stays discardable', () => {
+    expect(withTaskLevel('', 'sub')).toBe('');
+    expect(withTaskLevel('   ', 'sub')).toBe('   ');
+  });
+
+  it('round-trips a main task as well', () => {
+    expect(withTaskLevel('Einkaufen', 'main')).toBe('/main Einkaufen');
+    expect(taskLevel(withTaskLevel('Einkaufen', 'main'))).toBe('main');
   });
 });

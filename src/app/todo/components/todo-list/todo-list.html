@@ -40,7 +40,7 @@
       class="space-y-2 max-h-[min(70vh,44rem)] overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
       cdkDropList
       (cdkDropListDropped)="drop($event)">
-      @for (row of rows(); track row.id) {
+      @for (row of visibleRows(); track row.id) {
         <!-- @let haelt alle todo.-Zugriffe unveraendert; ersetzt sind nur die
              Aufrufe, die pro Durchlauf gerechnet haben. -->
         @let todo = row.todo;
@@ -85,6 +85,27 @@
 
           <!-- Drag-handle -->
            <div class="flex flex-1 items-center gap-3 min-w-0">
+            <!-- Gliederungs-Dreieck: klappt die Unteraufgaben weg.
+                 Der Platz bleibt in JEDER Zeile stehen, auch wo es nichts
+                 einzuklappen gibt — sonst säßen die Kacheln versetzt und die
+                 Liste franst an ihrer linken Kante aus. -->
+            @if (row.subCount > 0) {
+              <button
+                type="button"
+                class="-m-1 flex-none rounded p-1 text-muted/70 transition hover:text-text"
+                (click)="toggleSubtasks(todo.id)"
+                [attr.aria-expanded]="!isCollapsed(todo.id)"
+                [attr.aria-label]="(isCollapsed(todo.id) ? 'Show ' : 'Hide ') + row.subCount
+                  + (row.subCount === 1 ? ' subtask' : ' subtasks')">
+                <lucide-icon
+                  [img]="ChevronDownIcon"
+                  class="todo-chevron h-4 w-4"
+                  [class.is-collapsed]="isCollapsed(todo.id)"></lucide-icon>
+              </button>
+            } @else {
+              <span class="w-4 flex-none" aria-hidden="true"></span>
+            }
+
             <!-- Gradient-Icon-Kachel in Label-Farbe (Farb-Identität der Zeile) -->
             <span
               class="flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
@@ -144,9 +165,21 @@
                 todo.completed ||
                 completingTodoIds().has(todo.id)
               "
-              [value]="editingId() === todo.id ? todo.title : row.displayTitle"
+              [value]="editingId() === todo.id ? row.editTitle : row.displayTitle"
               [class.hidden]="showsDetail(row)"
             ></textarea>
+
+            <!-- Zugeklappt: die Zahl sagt, was darunter liegt. Ohne sie wäre
+                 eine eingeklappte Aufgabe von einer ohne Teilschritte nicht zu
+                 unterscheiden. Für die Tastatur reicht das Dreieck, deshalb
+                 bleibt die Zahl der Vorlesesoftware verborgen. -->
+            @if (row.subCount > 0 && isCollapsed(todo.id)) {
+              <button
+                type="button"
+                class="flex-none rounded-full bg-fill px-1.5 py-0.5 text-2xs text-subtle transition hover:text-text"
+                (click)="toggleSubtasks(todo.id)"
+                tabindex="-1" aria-hidden="true">{{ row.subCount }}</button>
+            }
 
             <!-- Aufgeklappt: nur die erste Zeile steht hier, die Unterpunkte
                  kommen als eigener Block unter die Kopfzeile. Das Textfeld

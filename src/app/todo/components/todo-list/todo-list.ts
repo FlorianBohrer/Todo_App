@@ -20,10 +20,13 @@ import { folderColorClass } from '../../shared/folder-color';
 import {
   MoscowLevel,
   MOSCOW_LABEL,
+  moveWithSubtasks,
   stripPriorityPrefix,
   priorityBadge,
+  subtaskGroups,
   taskLevel,
   TaskLevel,
+  withTaskLevel,
 } from '../../shared/title-priority';
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
@@ -50,6 +53,26 @@ import {
 const EXPAND_THRESHOLD = 40;
 
 /**
+ * Zugeklappte Hauptaufgaben, ueber das Neuladen hinweg.
+ *
+ * Eingeklappt bleibt eingeklappt: wer eine erledigte Teilliste wegraeumt, will
+ * sie nicht beim naechsten Oeffnen wieder vor sich haben. Die IDs liegen
+ * lokal, weil es eine Ansichtssache ist und keine Eigenschaft des Todos.
+ */
+const COLLAPSED_KEY = 'todos.collapsed';
+
+function readCollapsed(): ReadonlySet<string> {
+  try {
+    const raw = localStorage.getItem(COLLAPSED_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((id): id is string => typeof id === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+/**
  * Eine Zeile, fertig gerechnet.
  *
  * Die Vorlage rief pro Zeile rund zwanzig Methoden auf, davon ein halbes
@@ -68,6 +91,16 @@ interface TodoRow {
   todo: Todo;
   /** Titel ohne Prioritaets-Praefix. */
   displayTitle: string;
+  /**
+   * Was im Feld steht, sobald man die Zeile bearbeitet.
+   *
+   * Bei einer Unteraufgabe ohne „/sub": das Praefix ist gesetzt, es steht als
+   * Einzug in der Liste, und ein zweites Mal als Text davor will es niemand
+   * lesen. Beim Speichern kommt es zurueck (siehe finishEditing). Bei den
+   * MoSCoW-Praefixen bleibt der Rohtext stehen: sie sind der einzige Weg, eine
+   * Stufe wieder zu aendern oder zu entfernen.
+   */
+  editTitle: string;
   /** Erste Zeile und der Rest, fuer den aufgeklappten Zustand. */
   firstLine: string;
   detailLines: string;
@@ -78,6 +111,10 @@ interface TodoRow {
   badgeLabel: string;
   /** Haupt- oder Unteraufgabe. Traegt die Einrueckung in der Liste. */
   level: TaskLevel | null;
+  /** Die Hauptaufgabe darueber, wenn diese Zeile eine Unteraufgabe ist. */
+  parentId: string | null;
+  /** Wie viele Unteraufgaben an dieser Zeile haengen. 0 = keine. */
+  subCount: number;
   badgeClass: string;
   tileClass: string;
   tileTextClass: string;
@@ -123,24 +160,39 @@ export class TodoList {
    * Klick auf einen Pfeil alle zweihundert Zeilen neu rechnen. Der bleibt in
    * eigenen Signalen und wird in der Vorlage abgefragt, wo er billig ist.
    */
-  protected readonly rows = computed<TodoRow[]>(() =>
-    this.todos().map((todo, index) => {
+  protected readonly rows = computed<TodoRow[]>(() => {
+    const items = this.todos();
+
+    // Wer gehoert zu wem: ein Durchgang, dieselbe Regel wie beim Sortieren.
+    const parentOf = new Map<string, string>();
+    const subCounts = new Map<string, number>();
+    for (const [head, ...subs] of subtaskGroups(items)) {
+      if (subs.length === 0) continue;
+      subCounts.set(head.id, subs.length);
+      for (const sub of subs) parentOf.set(sub.id, head.id);
+    }
+
+    return items.map((todo, index) => {
       const badge = priorityBadge(todo.title);
       const stripped = stripPriorityPrefix(todo.title);
       const [first, ...rest] = stripped.split('\n');
       const detail = rest.join('\n').trim();
+      const level = taskLevel(todo.title);
 
       return {
         id: todo.id,
         todo,
         displayTitle: stripped,
+        editTitle: level ? stripped : todo.title,
         firstLine: first.trim(),
         detailLines: detail,
         hasDetail: detail.length > 0,
         canExpand:
           todo.title.length > EXPAND_THRESHOLD || todo.title.includes('\n'),
         badge,
-        level: taskLevel(todo.title),
+        level,
+        parentId: parentOf.get(todo.id) ?? null,
+        subCount: subCounts.get(todo.id) ?? 0,
         badgeLabel: badge ? MOSCOW_LABEL[badge] : '',
         badgeClass: badge ? this.badgeClass(badge) : '',
         tileClass: this.tileClass(todo.labelIds),
@@ -154,8 +206,25 @@ export class TodoList {
         isLate: !todo.completed && isOverdueDate(todo.scheduledDate),
         stagger: Math.min(index, 5),
       };
-    }),
-  );
+    });
+  });
+
+  /**
+   * Die Zeilen, die wirklich dastehen: ohne die Unteraufgaben zugeklappter
+   * Hauptaufgaben.
+   *
+   * Bewusst eine zweite Ebene ueber `rows`. Das Zuklappen ist Bedienzustand;
+   * stuende es in `rows`, wuerde ein Klick auf ein Dreieck saemtliche Titel neu
+   * zerlegen. Hier wird nur gefiltert, und im Normalfall — nichts zugeklappt —
+   * faellt auch das weg.
+   */
+  protected readonly visibleRows = computed<TodoRow[]>(() => {
+    const collapsed = this.collapsedIds();
+    if (collapsed.size === 0) return this.rows();
+    return this.rows().filter(
+      (row) => row.parentId === null || !collapsed.has(row.parentId),
+    );
+  });
   protected readonly stats = this.todoService.stats;
   protected readonly filter = this.todoService.filter;
   protected readonly favoritesAllDone = this.todoService.favoritesAllDone;
@@ -206,6 +275,15 @@ toggleFolderList(): void {
 
   private readonly expandedIds =
     signal<ReadonlySet<string>>(new Set());
+
+  /**
+   * Hauptaufgaben, deren Unteraufgaben gerade eingeklappt sind.
+   *
+   * Nicht dasselbe wie expandedIds: dort geht es um langen Text in EINER
+   * Zeile, hier um die Zeilen darunter.
+   */
+  private readonly collapsedIds =
+    signal<ReadonlySet<string>>(readCollapsed());
 
     protected readonly editingId = signal<string | null>(null);
 
@@ -306,6 +384,36 @@ toggleFolderList(): void {
     }
   }
 
+  // ---- Unteraufgaben ein- und ausklappen ----
+
+  isCollapsed(id: string): boolean {
+    return this.collapsedIds().has(id);
+  }
+
+  toggleSubtasks(id: string): void {
+    this.collapsedIds.update((current) => {
+      const updated = new Set(current);
+      if (!updated.delete(id)) updated.add(id);
+      return updated;
+    });
+
+    // Beim Sichern ausduennen: eine Hauptaufgabe kann geloescht, erledigt oder
+    // zur gewoehnlichen Aufgabe geworden sein. Ohne das waechst die Liste
+    // still vor sich hin und haelt IDs fest, die es nicht mehr gibt.
+    const alive = new Set(this.rows().filter((r) => r.subCount > 0).map((r) => r.id));
+    const keep = [...this.collapsedIds()].filter((known) => alive.has(known));
+    try {
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify(keep));
+    } catch {
+      // Privater Modus, volles Kontingent: das Einklappen soll trotzdem gehen.
+    }
+  }
+
+  /** Was beim Bearbeiten im Feld steht — ohne „/sub", mit allem anderen. */
+  private editText(todo: Todo): string {
+    return taskLevel(todo.title) ? stripPriorityPrefix(todo.title) : todo.title;
+  }
+
   startEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
     this.editingId.set(todo.id);
     if (this.canExpand(todo.title) && !this.isExpanded(todo.id)) {
@@ -318,21 +426,28 @@ toggleFolderList(): void {
     });
   }
 
-  /** Beim Verlassen des Felds speichern; leerer Text wird verworfen. */
+  /**
+   * Beim Verlassen des Felds speichern; leerer Text wird verworfen.
+   *
+   * Das Feld zeigt bei einer Unteraufgabe den Text ohne „/sub". Gespeichert
+   * wird trotzdem mit — sonst haette jede Bearbeitung die Zeile aus ihrer
+   * Hauptaufgabe herausgeloest, und zwar unsichtbar.
+   */
   finishEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
     if (this.editingId() !== todo.id) return;
     this.editingId.set(null);
-    const title = textarea.value.trim();
-    if (title && title !== todo.title) {
+    const typed = textarea.value.trim();
+    const title = withTaskLevel(typed, taskLevel(todo.title));
+    if (typed && title !== todo.title) {
       this.renameTodo(todo.id, title);
     } else {
-      textarea.value = todo.title;
+      textarea.value = this.editText(todo);
     }
   }
 
   /** Escape: Änderung verwerfen. */
   cancelEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
-    textarea.value = todo.title;
+    textarea.value = this.editText(todo);
     this.editingId.set(null);
     textarea.blur();
   }
@@ -633,11 +748,19 @@ closeOptionsMenu(): void {
     this.todoService.toggleFavorite(id);
   }
 
+  /**
+   * Die Indizes des CDK zaehlen die SICHTBAREN Zeilen; zugeklappte
+   * Unteraufgaben stehen nicht darin. Deshalb nur die beiden IDs weitergeben
+   * und die neue Reihenfolge dort ausrechnen, wo die Gliederung bekannt ist.
+   */
   drop(event: CdkDragDrop<unknown>): void {
-    this.todoService.reorder(
-      event.previousIndex,
-      event.currentIndex,
-    );
+    const visible = this.visibleRows();
+    const moved = visible[event.previousIndex];
+    const target = visible[event.currentIndex];
+    if (!moved || !target) return;
+
+    const ordered = moveWithSubtasks(this.todos(), moved.id, target.id);
+    if (ordered) this.todoService.reorderTo(ordered);
   }
 
 }

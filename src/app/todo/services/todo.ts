@@ -570,20 +570,29 @@ toggleFavorite(id: string) {
 
 
   /**
-   * Sortiert die aktuell SICHTBARE (gefilterte) Liste um. Die Indizes beziehen
-   * sich auf `filteredTodos()`. Ausgefilterte Todos behalten ihre absolute Position.
+   * Sortiert die aktuell SICHTBARE (gefilterte) Liste um. Ausgefilterte Todos
+   * behalten ihre absolute Position.
+   *
+   * Nimmt die fertige Reihenfolge statt zweier Indizes: ein Zug kann mehr als
+   * eine Zeile bewegen, weil eine Hauptaufgabe ihre Unteraufgaben mitnimmt,
+   * und zugeklappte Unteraufgaben stehen gar nicht in der Liste, aus der die
+   * Indizes stammen. Das Ausrechnen gehoert dorthin, wo die Gliederung bekannt
+   * ist — hier wird nur uebernommen.
    */
-  reorder(previousIndex: number, currentIndex: number) {
-    if (previousIndex === currentIndex) return;
+  reorderTo(orderedIds: string[]) {
     const visible = this.filteredTodos();
-    if (
-      previousIndex < 0 || currentIndex < 0 ||
-      previousIndex >= visible.length || currentIndex >= visible.length
-    ) return;
+    if (orderedIds.length !== visible.length) return;
 
-    const reordered = [...visible];
-    const [moved] = reordered.splice(previousIndex, 1);
-    reordered.splice(currentIndex, 0, moved);
+    const byId = new Map(visible.map(t => [t.id, t]));
+    const reordered: Todo[] = [];
+    for (const id of orderedIds) {
+      const todo = byId.get(id);
+      // Fremde oder doppelte ID: lieber gar nicht sortieren als eine Zeile
+      // verlieren. byId gibt jede ID nur einmal her.
+      if (!todo) return;
+      byId.delete(id);
+      reordered.push(todo);
+    }
 
     const visibleIds = new Set(visible.map(t => t.id));
     let qi = 0;
