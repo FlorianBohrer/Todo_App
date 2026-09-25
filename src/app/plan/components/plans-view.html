@@ -39,6 +39,42 @@
           <option [value]="label.id">{{ label.name }}</option>
         }
       </select>
+
+      <!-- Einmal pro Dokument, nicht unter jedem Absatz.
+           Was man tippen kann, entsteht beim Schreiben über „/" — das hier ist
+           für die Blöcke, die man nicht tippt, und es hängt am Dokument, nicht
+           an der Stelle, an der man gerade steht. -->
+      <button type="button" cdkOverlayOrigin #addAnchor="cdkOverlayOrigin"
+        class="inline-flex flex-none items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5
+               text-sm text-muted transition hover:border-line-strong hover:text-text"
+        (click)="toggleAddMenu()"
+        [attr.aria-expanded]="addMenuOpen()" aria-haspopup="menu" aria-label="Add a block">
+        <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon>
+        <span class="hidden sm:inline">Add</span>
+      </button>
+
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="addAnchor"
+        [cdkConnectedOverlayOpen]="addMenuOpen()"
+        [cdkConnectedOverlayPositions]="menuPositions"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+        (backdropClick)="closeAddMenu()"
+        (detach)="closeAddMenu()"
+        (overlayKeydown)="$event.key === 'Escape' && closeAddMenu()">
+        <div role="menu" class="popover w-52 px-1">
+          @for (option of addOptions; track option.kind) {
+            <button role="menuitem" type="button" class="block-menu-item"
+              (click)="addFromMenu(option.kind)">
+              <lucide-icon [img]="option.icon" class="h-4 w-4"></lucide-icon> {{ option.label }}
+            </button>
+          }
+          <p class="px-2 pb-1.5 pt-1 text-2xs leading-snug text-subtle">
+            Between paragraphs: type „/" where you want it.
+          </p>
+        </div>
+      </ng-template>
     </div>
 
     <!-- Canvas: alle Blöcke fließen auf einer ruhigen Fläche; eine Section
@@ -176,23 +212,17 @@
                 </div>
               }
 
-              <div class="flex flex-wrap gap-1 pl-2 pt-0.5">
+              <!-- Nur solange nichts drin ist: ein leerer Toggle hat keinen
+                   Block, in den man tippen koennte, und waere sonst eine
+                   Sackgasse. Steht erst einmal etwas darin, uebernimmt „/"
+                   wie ueberall sonst. -->
+              @if (!asGroup(block).blocks.length) {
                 <button type="button"
-                  class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted"
-                  (click)="addToGroup(block.id, 'text')">
-                  <lucide-icon [img]="TextIcon" class="h-3.5 w-3.5"></lucide-icon> Text
+                  class="w-full cursor-text rounded-lg px-2 py-1.5 text-left text-sm text-subtle transition hover:bg-fill"
+                  (click)="addToGroup(block.id)">
+                  Empty. Click to write, then „/" for anything else.
                 </button>
-                <button type="button"
-                  class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted"
-                  (click)="addToGroup(block.id, 'diagram')">
-                  <lucide-icon [img]="DiagramIcon" class="h-3.5 w-3.5"></lucide-icon> Diagram
-                </button>
-                <button type="button"
-                  class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted"
-                  (click)="addToGroup(block.id, 'table')">
-                  <lucide-icon [img]="TableIcon" class="h-3.5 w-3.5"></lucide-icon> Table
-                </button>
-              </div>
+              }
             </div>
           }
         </div>
@@ -577,32 +607,6 @@
       <div class="page-tail" (click)="appendBlock()" aria-hidden="true"></div>
     }
 
-    <!-- Blöcke anlegen — am Zeigergerät übernehmen „/" und das „+" in der
-         Randspalte diese Aufgabe, dort ist die Leiste ausgeblendet. -->
-    <div class="add-bar mt-4 flex flex-wrap items-center gap-1 border-t border-line pt-3"
-      [class.add-bar--always]="!plan.content.length">
-      <span class="px-1 text-xs font-medium uppercase tracking-wide text-subtle">Add</span>
-      <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-fill hover:text-text"
-        (click)="addTextBlock()">
-        <lucide-icon [img]="TextIcon" class="h-4 w-4"></lucide-icon> Text
-      </button>
-      <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-fill hover:text-text"
-        (click)="addTableBlock()">
-        <lucide-icon [img]="TableIcon" class="h-4 w-4"></lucide-icon> Table
-      </button>
-      <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-fill hover:text-text"
-        (click)="addDiagramBlock()">
-        <lucide-icon [img]="DiagramIcon" class="h-4 w-4"></lucide-icon> Diagram
-      </button>
-      <button type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-fill hover:text-text"
-        (click)="addGroupBlock()">
-        <lucide-icon [img]="SectionIcon" class="h-4 w-4"></lucide-icon> Toggle
-      </button>
-    </div>
 
     <!-- Linked mentions (Obsidian): welche Pläne zeigen hierher? Erst dadurch
          wird aus einzelnen Notizen ein zusammenhängendes Netz. -->

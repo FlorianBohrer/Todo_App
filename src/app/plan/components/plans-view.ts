@@ -82,8 +82,6 @@ import {
 import { MermaidDiagram } from './mermaid-diagram';
 import { PlanGraph } from './plan-graph';
 
-type BlockKind = 'text' | 'diagram' | 'table';
-
 /** Was das Slash-Menü einfügen kann. */
 type SlashKind =
   | 'text'
@@ -180,6 +178,46 @@ export class PlansView {
   protected readonly CopyIcon = Copy;
   protected readonly UpIcon = ChevronUp;
   protected readonly DownIcon = ChevronDown;
+
+  // ---- Blöcke anlegen (einmal pro Dokument, oben rechts) ----
+  //
+  // Vorher stand unter dem Text eine Leiste mit Text/Tabelle/Diagramm/Toggle.
+  // Sie klebte damit immer unter dem Absatz, an dem man gerade schrieb, und
+  // behauptete, das Dokument ende hier und jetzt — dabei gehoert „was kann ich
+  // anlegen" zum Dokument, nicht zur Schreibstelle. Was man beim Schreiben
+  // braucht, macht ohnehin „/" an genau der Stelle, an der der Cursor steht.
+
+  protected readonly addMenuOpen = signal(false);
+
+  /**
+   * Nur die Bloecke, die man nicht tippen kann.
+   *
+   * Ueberschriften, Listen und Zitate stehen bewusst NICHT hier: sie entstehen
+   * beim Schreiben („# ", „- ", „> ") oder ueber „/". Ein zweiter Weg zu
+   * denselben Dingen macht das Menue lang und die Entscheidung schwer.
+   */
+  protected readonly addOptions: { kind: SlashKind; label: string; icon: LucideIconData }[] = [
+    { kind: 'text', label: 'Text', icon: this.TextIcon },
+    { kind: 'table', label: 'Table', icon: this.TableIcon },
+    { kind: 'diagram', label: 'Diagram', icon: this.DiagramIcon },
+    { kind: 'toggle', label: 'Toggle', icon: this.SectionIcon },
+  ];
+
+  toggleAddMenu(): void {
+    this.addMenuOpen.update((open) => !open);
+  }
+
+  closeAddMenu(): void {
+    this.addMenuOpen.set(false);
+  }
+
+  /** Haengt den Block ans Ende des Dokuments und springt hinein. */
+  addFromMenu(kind: SlashKind): void {
+    this.closeAddMenu();
+    const created = this.makeConverted(this.newId(), kind);
+    this.updateContent((bs) => [...bs, created]);
+    this.focusConverted(created.id, kind);
+  }
 
   // ---- Blockaktionen ----
   //
@@ -1823,22 +1861,6 @@ export class PlansView {
     return crypto.randomUUID();
   }
 
-  private makeBlock(kind: BlockKind): PlanBlock {
-    switch (kind) {
-      case 'text':
-        return { id: this.newId(), type: 'text', text: '' };
-      case 'diagram':
-        return { id: this.newId(), type: 'diagram', code: DIAGRAM_TEMPLATE };
-      case 'table':
-        return {
-          id: this.newId(),
-          type: 'table',
-          columns: ['Column 1', 'Column 2'],
-          rows: [['', '']],
-        };
-    }
-  }
-
   // --- Rekursive Helfer: wirken auf jeden Block, egal wie tief in Gruppen ---
   /** Einen Block im Baum suchen (Sections enthalten wieder Bloecke). */
   private findBlock(id: string, blocks = this.selected()?.content ?? []): PlanBlock | null {
@@ -1905,31 +1927,7 @@ export class PlansView {
     );
   }
 
-  // ---- Blöcke auf oberster Ebene anlegen ----
-  addTextBlock() {
-    this.updateContent((b) => [...b, this.makeBlock('text')]);
-  }
-  addTableBlock() {
-    this.updateContent((b) => [...b, this.makeBlock('table')]);
-  }
-  addDiagramBlock() {
-    this.updateContent((b) => [...b, this.makeBlock('diagram')]);
-  }
-
   // ---- Section (aufklappbarer Container) ----
-  /** Neue Section, vorbefüllt mit Diagramm + Beschreibungstext. */
-  addGroupBlock() {
-    this.updateContent((b) => [
-      ...b,
-      {
-        id: this.newId(),
-        type: 'group',
-        title: 'Toggle',
-        collapsed: false,
-        blocks: [this.makeBlock('diagram'), this.makeBlock('text')],
-      },
-    ]);
-  }
   toggleGroup(groupId: string) {
     this.updateContent((b) =>
       this.mapById(b, groupId, (x) =>
@@ -1944,12 +1942,15 @@ export class PlansView {
       ),
     );
   }
-  addToGroup(groupId: string, kind: BlockKind) {
+  /** Den ersten Absatz in einen leeren Toggle setzen; alles Weitere per „/". */
+  addToGroup(groupId: string) {
+    const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
     this.updateContent((b) =>
       this.mapById(b, groupId, (x) =>
-        x.type === 'group' ? { ...x, blocks: [...x.blocks, this.makeBlock(kind)] } : x,
+        x.type === 'group' ? { ...x, blocks: [...x.blocks, created] } : x,
       ),
     );
+    this.beginEdit(created.id, 0);
   }
   asGroup(block: PlanBlock): PlanGroupBlock {
     return block as PlanGroupBlock;
