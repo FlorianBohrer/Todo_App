@@ -93,6 +93,8 @@ export class ShortcutsOverlay {
       items: [
         { keys: ['n'], description: 'New todo' },
         { keys: ['/'], description: 'Search' },
+        { keys: ['/main'], description: 'A main task' },
+        { keys: ['/sub'], description: 'A step of the task above it, shown indented' },
         { keys: ['/must'], description: 'MoSCoW: without it the delivery is worthless' },
         { keys: ['/should'], description: 'MoSCoW: painful to drop, but there is a workaround' },
         { keys: ['/could'], description: 'MoSCoW: the contingency you drop when time runs short' },

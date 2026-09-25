@@ -6,7 +6,7 @@ import { environment } from '../../../environments/enviroment';
 import { RepeatRule, Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
-import { titlePriority } from '../shared/title-priority';
+import { orderWithSubtasks } from '../shared/title-priority';
 import { scheduleLabel } from '../shared/schedule';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
@@ -159,9 +159,12 @@ export class TodoService {
       items = items.filter(i => i.title.toLowerCase().includes(term));
     }
 
-    // Priorität per Titel-Präfix: /must-have zuerst, /could-have danach.
-    // Stabile Sortierung -> Reihenfolge innerhalb jeder Gruppe bleibt erhalten.
-    items = [...items].sort((a, b) => titlePriority(a.title) - titlePriority(b.title));
+    // Priorität per Titel-Präfix: /must zuerst, /could danach. Unteraufgaben
+    // (/sub) bleiben dabei bei ihrer Hauptaufgabe — ohne das waere die
+    // Einrueckung in der Liste eine Luege, weil eine Unteraufgabe keine
+    // eigene Stufe traegt und allein zurueckbliebe, sobald ihre Hauptaufgabe
+    // nach oben rutscht.
+    items = orderWithSubtasks(items);
 
     return items;
   });
