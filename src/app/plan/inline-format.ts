@@ -49,6 +49,9 @@ export function formatInline(raw: string): string {
           `<span class="plan-link" data-plan="${name.trim()}" role="link" tabindex="0">${name.trim()}</span>`,
       );
 
+      // Fett UND kursiv zuerst: sonst nimmt die Fett-Regel die beiden ersten
+      // Sternchen und laesst ein einzelnes stehen, aus dem nichts mehr wird.
+      out = out.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
       out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
       // Unterstreichen. Markdown kennt es nicht, also braucht es eine eigene

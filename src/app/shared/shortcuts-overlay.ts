@@ -115,6 +115,18 @@ export class ShortcutsOverlay {
         { keys: ['⌘', 'K'], description: 'Jump to a plan' },
         { keys: ['/'], description: 'Block commands, anywhere in a line' },
         { keys: ['[['], description: 'Link to another plan' },
+        { keys: ['⌘', 'click'], description: 'Open a linked plan' },
+      ],
+    },
+    {
+      title: 'Writing',
+      items: [
+        { keys: ['Enter'], description: 'Split into a new block' },
+        { keys: ['⇧', 'Enter'], description: 'Line break inside the block' },
+        { keys: ['⌫'], description: 'At the start: drop the style, then merge up' },
+        { keys: ['Tab'], description: 'Indent a list item' },
+        { keys: ['↑', '↓'], description: 'Step into the block above or below' },
+        { keys: ['# ', '- ', '1. '], description: 'Turn the line into a heading or list' },
       ],
     },
   ];

@@ -91,6 +91,23 @@
         (overlayKeydown)="$event.key === 'Escape' && closeBlockMenu()">
         <div role="menu"
           class="popover w-52 px-1">
+          <!-- „Turn into" wie in Notion, nur ohne Untermenü: die Typen sind
+               ohnehin Symbole, und zwei Klicks fuer „das sollte eine
+               Ueberschrift sein" sind einer zu viel. -->
+          <p class="px-2 pb-1 pt-1.5 text-2xs font-medium uppercase tracking-wide text-subtle">
+            Turn into
+          </p>
+          <div class="turn-row mb-1 flex flex-wrap gap-0.5 px-1 pb-1.5">
+            @for (option of turnOptions; track option.kind) {
+              <button type="button" role="menuitem"
+                class="turn-key grid h-7 w-7 place-items-center rounded-lg text-muted transition hover:bg-fill hover:text-text"
+                (click)="turnInto(id, option.kind)"
+                [attr.title]="option.label" [attr.aria-label]="'Turn into ' + option.label">
+                <lucide-icon [img]="option.icon" class="h-4 w-4"></lucide-icon>
+              </button>
+            }
+          </div>
+
           <button role="menuitem" type="button" class="block-menu-item" (click)="menuMove(id, -1)">
             <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon> Move up
           </button>
@@ -139,6 +156,7 @@
                 [class.-rotate-90]="asGroup(block).collapsed"></lucide-icon>
             </button>
             <input type="text"
+              [id]="blockFieldId(block.id)"
               class="min-w-0 flex-1 bg-transparent text-lg font-semibold tracking-tight text-text placeholder:text-subtle focus:outline-none"
               [value]="asGroup(block).title"
               (input)="setGroupTitle(block.id, $any($event.target).value)"
@@ -218,30 +236,23 @@
 
           @if (block.type === 'text') {
             <div class="relative">
-              <!-- Live Preview: gelesen wird formatierter Text, erst der Klick
-                   macht daraus wieder Rohtext (Obsidian-Prinzip). -->
-              @if (isEditing(block.id)) {
-                <textarea
-                  [id]="'block-edit-' + block.id"
-                  appAutosize
-                  rows="1"
-                  class="w-full resize-none bg-transparent text-prose text-text placeholder:text-subtle focus:outline-none"
-                  placeholder="Press '/' for commands…"
-                  [value]="block.text"
-                  (blur)="endEdit(block.id)"
-                  (input)="onTextInput(block.id, $event)"
-                  (paste)="onTextPaste(block.id, $event)"
-                  (keydown)="onTextKeydown($event, block.id)"></textarea>
-              } @else {
-                <div class="plan-prose min-h-[1.7em] cursor-text text-prose text-text"
-                  (click)="onRenderedClick($event, block.id)">
-                  @if (block.text) {
-                    <span [innerHTML]="renderText(block.text)"></span>
-                  } @else {
-                    <span class="text-subtle">Press '/' for commands…</span>
-                  }
-                </div>
-              }
+              <!-- Ein Zustand, nicht zwei: hier steht formatierter Text, und
+                   der Cursor steht mittendrin. Aus „**fett**" wird fett, sobald
+                   die zweiten Sternchen stehen — Rohtext sieht man nie. -->
+              <div
+                [id]="blockFieldId(block.id)"
+                class="plan-prose text-prose text-text"
+                [appRichText]="block.text"
+                [richTextMenuOpen]="menuOpenFor(block.id)"
+                data-placeholder="Press '/' for commands…"
+                (textChange)="onTextChange(block.id, $event)"
+                (split)="splitBlock(block.id, $event.before, $event.after)"
+                (mergeBack)="mergeBack(block.id)"
+                (navigate)="stepFromBlock(block.id, $event)"
+                (blurred)="onProseBlur(block.id)"
+                (pasted)="onTextPaste(block.id, $event)"
+                (click)="onFieldClick($event)"
+                (keydown)="onTextKeydown($event, block.id)"></div>
 
               <!-- Slash-Menü (Notion-Stil): erscheint, sobald ein Textblock mit
                    „/" beginnt; Pfeiltasten wählen, Enter oder Klick fügt ein. -->
@@ -288,111 +299,87 @@
               }
             </div>
           } @else if (block.type === 'heading') {
-            @if (isEditing(block.id)) {
-              <textarea
-                [id]="'block-edit-' + block.id"
-                appAutosize
-                rows="1"
-                class="w-full resize-none bg-transparent text-text placeholder:text-subtle focus:outline-none"
-                [ngClass]="headingClass(asHeading(block).level)"
-                [attr.placeholder]="'Heading ' + asHeading(block).level"
-                [value]="block.text"
-                (blur)="endEdit(block.id)"
-                (input)="updateHeadingText(block.id, $any($event.target).value)"></textarea>
-            } @else {
-              <div class="plan-prose cursor-text text-text"
-                [ngClass]="headingClass(asHeading(block).level)"
-                (click)="onRenderedClick($event, block.id)">
-                @if (block.text) {
-                  <span [innerHTML]="renderInline(block.text)"></span>
-                } @else {
-                  <span class="text-subtle">Heading {{ asHeading(block).level }}</span>
-                }
-              </div>
-            }
+            <!-- Die leere Ueberschrift zeigt ihre Stufe auch unfokussiert
+                 (data-ghost): sonst waere sie eine unsichtbare Leerzeile. -->
+            <div
+              [id]="blockFieldId(block.id)"
+              class="plan-prose text-text"
+              [ngClass]="headingClass(asHeading(block).level)"
+              [appRichText]="block.text"
+              data-ghost="true"
+              [attr.data-placeholder]="'Heading ' + asHeading(block).level"
+              (textChange)="onProseChange(block.id, $event)"
+              (split)="splitBlock(block.id, $event.before, $event.after)"
+              (mergeBack)="mergeBack(block.id)"
+              (navigate)="stepFromBlock(block.id, $event)"
+              (blurred)="onProseBlur(block.id)"
+              (click)="onFieldClick($event)"></div>
           } @else if (block.type === 'list') {
-            <!-- Beim Bearbeiten eine Zeile je Eintrag; angezeigt echtes ul/ol.
-                 Die Haken der Checkliste bleiben dabei an ihrer Position. -->
-            @if (isEditing(block.id)) {
-              <textarea
-                [id]="'block-edit-' + block.id"
-                appAutosize
-                rows="1"
-                class="w-full resize-none bg-transparent text-prose/[1.8] text-text placeholder:text-subtle focus:outline-none"
-                placeholder="One item per line"
-                [value]="listAsText(asList(block))"
-                (blur)="endEdit(block.id)"
-                (input)="setListText(block.id, $any($event.target).value)"></textarea>
-            } @else {
-              <div class="plan-prose cursor-text" (click)="onRenderedClick($event, block.id)">
-                @switch (asList(block).variant) {
-                  @case ('number') {
-                    <ol class="list-decimal space-y-1 pl-5 text-prose text-text marker:text-muted">
-                      @for (item of asList(block).items; track $index; let i = $index) {
-                        <li class="list-item-row">
-                          <span [innerHTML]="renderInline(item.text)"></span>
-                          <ng-container
-                            *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
-                        </li>
-                      }
-                    </ol>
+            <!-- Jeder Punkt ist ein eigenes Schreibfeld, wie in Notion: Enter
+                 legt den naechsten an, Tabulator rueckt ein, Rueckschritt am
+                 Anfang fuehrt in den vorigen zurueck. Vorher war die ganze
+                 Liste EIN Textfeld mit einer Zeile je Eintrag — man musste
+                 wissen, dass Zeilen hier Punkte sind. -->
+            @let list = asList(block);
+            @let markers = markersFor(list);
+            <div class="plan-list text-prose text-text">
+              @for (item of list.items; track $index; let i = $index) {
+                <div class="list-item-row group/item flex items-start gap-2"
+                     [style.padding-left.rem]="itemIndent(item)">
+                  @if (list.variant === 'todo') {
+                    <!-- Ist der Eintrag mit einem Todo verknuepft, zeigt und
+                         setzt die Box dessen Zustand. Es gibt dann genau einen
+                         Haken, nicht zwei. -->
+                    <button type="button"
+                      class="todo-box mt-[5px] grid h-4 w-4 flex-none place-items-center rounded-lg border text-2xs leading-none"
+                      [class]="itemChecked(item)
+                        ? 'border-brand-2 bg-brand-2 text-white'
+                        : 'border-line-strong text-transparent hover:border-line-strong'"
+                      (click)="toggleListItem(block.id, i)"
+                      [attr.aria-pressed]="itemChecked(item)"
+                      aria-label="Toggle item">✓</button>
+                  } @else {
+                    <span class="list-marker mt-[1px] flex-none select-none text-muted"
+                          aria-hidden="true">{{ markers[i] }}</span>
                   }
-                  @case ('todo') {
-                    <ul class="space-y-1 text-prose text-text">
-                      @for (item of asList(block).items; track $index; let i = $index) {
-                        <li class="list-item-row flex items-start gap-2">
-                          <!-- Ist der Eintrag mit einem Todo verknuepft, zeigt
-                               und setzt die Box dessen Zustand. Es gibt dann
-                               genau einen Haken, nicht zwei. -->
-                          <button type="button"
-                            class="todo-box mt-[5px] grid h-4 w-4 flex-none place-items-center rounded-lg border text-2xs leading-none"
-                            [class]="itemChecked(item)
-                              ? 'border-brand-2 bg-brand-2 text-white'
-                              : 'border-line-strong text-transparent hover:border-line-strong'"
-                            (click)="$event.stopPropagation(); toggleListItem(block.id, i)"
-                            [attr.aria-pressed]="itemChecked(item)"
-                            aria-label="Toggle item">✓</button>
-                          <span
-                            [class.line-through]="itemChecked(item)"
-                            [class.text-subtle]="itemChecked(item)"
-                            [innerHTML]="renderInline(item.text)"></span>
 
-                          @if (itemTodo(item); as linked) {
-                            <!-- Schon eine echte Aufgabe. Das Zeichen sagt,
-                                 dass dieser Haken anderswo mitzaehlt. -->
-                            <span class="mt-[3px] flex-none text-2xs text-brand-2"
-                                  [attr.title]="'This is a todo in your list' + (linked.scheduledDate ? ', planned for ' + linked.scheduledDate : '')">
-                              ↗ todo
-                            </span>
-                          } @else {
-                            <button type="button"
-                              class="item-promote mt-[3px] flex-none rounded px-1 text-2xs text-subtle transition hover:text-brand-2"
-                              (click)="$event.stopPropagation(); promoteToTodo(block.id, i)"
-                              title="Make this a todo in your list">
-                              → todo
-                            </button>
-                          }
+                  <div
+                    [id]="itemFieldId(block.id, i)"
+                    class="min-w-0 flex-1"
+                    [appRichText]="item.text"
+                    data-placeholder="List item"
+                    [class.line-through]="list.variant === 'todo' && itemChecked(item)"
+                    [class.text-subtle]="list.variant === 'todo' && itemChecked(item)"
+                    (textChange)="setItemText(block.id, i, $event.value)"
+                    (split)="splitItem(block.id, i, $event.before, $event.after)"
+                    (mergeBack)="mergeItemBack(block.id, i)"
+                    (indent)="indentItem(block.id, i, $event)"
+                    (navigate)="stepFromItem(block.id, i, $event)"
+                    (click)="onFieldClick($event)"></div>
 
-                          <ng-container
-                            *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
-                        </li>
-                      }
-                    </ul>
+                  @if (list.variant === 'todo') {
+                    @if (itemTodo(item); as linked) {
+                      <!-- Schon eine echte Aufgabe. Das Zeichen sagt, dass
+                           dieser Haken anderswo mitzaehlt. -->
+                      <span class="mt-[3px] flex-none text-2xs text-brand-2"
+                            [attr.title]="'This is a todo in your list' + (linked.scheduledDate ? ', planned for ' + linked.scheduledDate : '')">
+                        ↗ todo
+                      </span>
+                    } @else {
+                      <button type="button"
+                        class="item-promote mt-[3px] flex-none rounded px-1 text-2xs text-subtle transition hover:text-brand-2"
+                        (click)="promoteToTodo(block.id, i)"
+                        title="Make this a todo in your list">
+                        → todo
+                      </button>
+                    }
                   }
-                  @default {
-                    <ul class="list-disc space-y-1 pl-5 text-prose text-text marker:text-muted">
-                      @for (item of asList(block).items; track $index; let i = $index) {
-                        <li class="list-item-row">
-                          <span [innerHTML]="renderInline(item.text)"></span>
-                          <ng-container
-                            *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
-                        </li>
-                      }
-                    </ul>
-                  }
-                }
-              </div>
-            }
+
+                  <ng-container
+                    *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
+                </div>
+              }
+            </div>
           } @else if (block.type === 'code') {
             <!-- Code bleibt immer Rohtext: hier gibt es nichts zu formatieren. -->
             <div class="overflow-hidden rounded-lg border border-line bg-black/25">
@@ -406,6 +393,7 @@
                   aria-label="Code language" />
               </div>
               <textarea
+                [id]="blockFieldId(block.id)"
                 appAutosize
                 rows="3"
                 spellcheck="false"
@@ -418,26 +406,18 @@
             </div>
           } @else if (block.type === 'quote') {
             <div class="border-l-2 border-brand-2/50 pl-3">
-              @if (isEditing(block.id)) {
-                <textarea
-                  [id]="'block-edit-' + block.id"
-                  appAutosize
-                  rows="1"
-                  class="w-full resize-none bg-transparent text-prose italic text-text placeholder:text-subtle focus:outline-none"
-                  placeholder="Quote or callout…"
-                  [value]="block.text"
-                  (blur)="endEdit(block.id)"
-                  (input)="updateQuoteText(block.id, $any($event.target).value)"></textarea>
-              } @else {
-                <div class="plan-prose cursor-text text-prose italic text-muted"
-                  (click)="onRenderedClick($event, block.id)">
-                  @if (block.text) {
-                    <span [innerHTML]="renderText(block.text)"></span>
-                  } @else {
-                    <span class="text-subtle">Quote or callout…</span>
-                  }
-                </div>
-              }
+              <div
+                [id]="blockFieldId(block.id)"
+                class="plan-prose text-prose italic text-muted"
+                [appRichText]="block.text"
+                data-ghost="true"
+                data-placeholder="Quote or callout…"
+                (textChange)="onProseChange(block.id, $event)"
+                (split)="splitBlock(block.id, $event.before, $event.after)"
+                (mergeBack)="mergeBack(block.id)"
+                (navigate)="stepFromBlock(block.id, $event)"
+                (blurred)="onProseBlur(block.id)"
+                (click)="onFieldClick($event)"></div>
             </div>
           } @else if (block.type === 'divider') {
             <hr class="my-2 border-0 border-t border-line" />
@@ -589,6 +569,13 @@
         <lucide-icon [img]="TrashIcon" class="h-3 w-3"></lucide-icon>
       </button>
     </ng-template>
+
+    <!-- Die Flaeche unter dem letzten Block schreibt weiter (Notion). Ohne sie
+         muesste man ans Ende des letzten Absatzes zielen, um anzufangen — das
+         ist bei einem Dokument, das unten offen ist, genau der falsche Ort. -->
+    @if (plan.content.length) {
+      <div class="page-tail" (click)="appendBlock()" aria-hidden="true"></div>
+    }
 
     <!-- Blöcke anlegen — am Zeigergerät übernehmen „/" und das „+" in der
          Randspalte diese Aufgabe, dort ist die Leiste ausgeblendet. -->
@@ -900,6 +887,31 @@
           }
         }
       </div>
+    </div>
+  }
+
+  <!-- Auswahl-Werkzeugleiste: markieren, und sie steht da (Notion).
+       mousedown wird abgefangen — sonst verlaesst der Klick das Feld, die
+       Auswahl faellt weg und es gaebe nichts mehr zu formatieren. -->
+  @if (toolbar(); as at) {
+    <div class="format-bar" [style.left.px]="at.x" [style.top.px]="at.y"
+         role="toolbar" aria-label="Format selection"
+         (mousedown)="$event.preventDefault()">
+      <button type="button" class="format-key font-bold" (click)="applyFormat('bold')"
+        aria-label="Bold">B</button>
+      <button type="button" class="format-key italic" (click)="applyFormat('italic')"
+        aria-label="Italic">i</button>
+      <button type="button" class="format-key underline" (click)="applyFormat('underline')"
+        aria-label="Underline">U</button>
+      <button type="button" class="format-key line-through" (click)="applyFormat('strikeThrough')"
+        aria-label="Strikethrough">S</button>
+      <span class="format-split"></span>
+      <button type="button" class="format-key font-mono" (click)="wrapSelection('`', '`')"
+        aria-label="Code">&lt;&gt;</button>
+      <button type="button" class="format-key" (click)="wrapSelection('[[', ']]')"
+        aria-label="Link to a plan">
+        <lucide-icon [img]="LinkIcon" class="h-3.5 w-3.5"></lucide-icon>
+      </button>
     </div>
   }
 </section>

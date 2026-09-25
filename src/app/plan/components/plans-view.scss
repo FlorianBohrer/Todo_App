@@ -188,6 +188,99 @@
   word-break: break-word;
 }
 
+// ---- Schreibfeld ----
+//
+// Ein contenteditable ohne Zutun sieht aus wie ein Formularfeld: Rahmen beim
+// Fokus, gequetschte Zeilen, verschluckte Leerzeichen. Hier soll es aussehen
+// wie Text auf Papier — man merkt erst am blinkenden Cursor, dass man drin ist.
+.rich-text {
+  outline: none;
+  cursor: text;
+  // pre-wrap, sonst fallen aufeinanderfolgende Leerzeichen zusammen und der
+  // Cursor steht beim Tippen woanders als der Text.
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-height: 1.7em;
+}
+
+// Der Hinweis steht nur im Feld, in dem der Cursor ist — ein Dokument voller
+// grauer „Press '/' for commands" waere Rauschen. Ausnahme sind Ueberschrift
+// und Zitat (data-ghost): leer und ohne Hinweis waeren sie unsichtbar.
+.rich-text[data-empty='true']:focus::before,
+.rich-text[data-empty='true'][data-ghost='true']::before {
+  content: attr(data-placeholder);
+  color: var(--color-subtle);
+  pointer-events: none;
+}
+
+// Die Schreibflaeche unter dem letzten Block. Hoch genug, um sie zu treffen,
+// und ohne jede Andeutung — sie soll wirken wie leeres Papier, nicht wie ein
+// Knopf.
+.page-tail {
+  min-height: 6rem;
+  cursor: text;
+}
+
+// ---- Listen ----
+.list-marker {
+  min-width: 1.25rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.7;
+}
+
+// ---- Auswahl-Werkzeugleiste ----
+//
+// Sitzt ueber der Markierung und folgt ihr. Fixed, weil die Koordinaten aus
+// getBoundingClientRect kommen — die sind zum Fenster, nicht zum Dokument.
+.format-bar {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  transform: translate(-50%, calc(-100% - 8px));
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-bg3, #202024);
+  padding: 0.25rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  animation: format-bar-in 120ms ease-out;
+}
+
+.format-key {
+  display: grid;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 0.375rem;
+  padding: 0 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  transition: background-color 100ms ease-out, color 100ms ease-out;
+}
+
+.format-key:hover {
+  background: var(--color-fill);
+  color: var(--color-text);
+}
+
+.format-split {
+  width: 1px;
+  height: 1rem;
+  margin: 0 0.125rem;
+  background: var(--color-line);
+}
+
+@keyframes format-bar-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 2px)); }
+  to   { opacity: 1; transform: translate(-50%, calc(-100% - 8px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .format-bar { animation: none; }
+}
+
 // ---- Blockaktionen-Menue ----
 .block-menu-item {
   display: flex;

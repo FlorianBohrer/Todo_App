@@ -61,10 +61,9 @@ import {
   PlanCodeBlock,
   PlanQuoteBlock,
 } from '../plan.model';
-import { formatBlock, formatInline } from '../inline-format';
-import { InlineMarker, toggleInline } from '../inline-toggle';
-import { ShortcutService } from '../../shared/shortcut.service';
-import type { ShortcutAction } from '../../shared/shortcuts';
+import { RichText } from '../rich-text.directive';
+import { focusRich, replaceRange } from '../rich-text';
+import { levelOf, listMarkers } from '../list-markers';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
@@ -101,6 +100,26 @@ type SlashKind =
   | 'table'
   | 'diagram';
 
+/**
+ * Tiefste Einrueckung einer Liste.
+ *
+ * Drei Ebenen sind kein technisches Limit, sondern eins der Lesbarkeit: was
+ * tiefer geschachtelt ist, gehoert in einen eigenen Plan. Notion laesst mehr
+ * zu und niemand nutzt es sinnvoll.
+ */
+const MAX_LIST_LEVEL = 2;
+
+/**
+ * Text in Listeneintraege zerlegen — eine Zeile, ein Punkt.
+ *
+ * Beim Typwechsel ist das der ganze Unterschied zwischen „meine drei Zeilen
+ * sind jetzt drei Punkte" und einem einzigen Punkt, in dem alles klebt.
+ */
+function toItems(text: string): PlanListItem[] {
+  const lines = text.split('\n').filter((line) => line.trim() !== '');
+  return lines.length ? lines.map((line) => ({ text: line, checked: false })) : [{ text: '', checked: false }];
+}
+
 /** Startvorlage: ein neuer Diagrammblock zeigt sofort etwas Gezeichnetes,
  *  statt den Nutzer vor ein leeres Feld und eine fremde Syntax zu setzen. */
 const DIAGRAM_TEMPLATE = `flowchart TD
@@ -123,6 +142,7 @@ const DIAGRAM_TEMPLATE = `flowchart TD
     CdkDragPlaceholder,
     OverlayModule,
     PlanGraph,
+    RichText,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plans-view.html',
@@ -134,7 +154,6 @@ export class PlansView {
   // Beide Dienste stehen ohnehin app-weit bereit; die Planansicht liest hier
   // nur den Zustand, den die Liste schon geladen hat. Kein zweiter Abruf.
   private readonly todoService = inject(TodoService);
-  private readonly shortcuts = inject(ShortcutService);
 
   protected readonly BackIcon = ChevronLeft;
   protected readonly PlusIcon = Plus;
@@ -205,6 +224,56 @@ export class PlansView {
     this.moveBlock(blockId, dir);
     this.closeBlockMenu();
   }
+  /**
+   * Was ein Block werden kann, ohne neu getippt zu werden.
+   *
+   * Die haeufigen Faelle, nicht alle: aus einem Absatz eine Ueberschrift, aus
+   * Zeilen eine Liste. Tabelle und Diagramm stehen nicht dabei — dorthin gibt
+   * es keinen sinnvollen Weg aus reinem Text.
+   */
+  protected readonly turnOptions: { kind: SlashKind; label: string; icon: LucideIconData }[] = [
+    { kind: 'text', label: 'Text', icon: this.TextIcon },
+    { kind: 'heading1', label: 'Heading 1', icon: this.H1Icon },
+    { kind: 'heading2', label: 'Heading 2', icon: this.H2Icon },
+    { kind: 'heading3', label: 'Heading 3', icon: this.H3Icon },
+    { kind: 'bullet', label: 'Bulleted list', icon: this.BulletIcon },
+    { kind: 'number', label: 'Numbered list', icon: this.NumberIcon },
+    { kind: 'todo', label: 'To-do list', icon: this.TodoIcon },
+    { kind: 'quote', label: 'Quote', icon: this.QuoteIcon },
+    { kind: 'code', label: 'Code', icon: this.CodeIcon },
+  ];
+
+  /** Der Text eines Blocks, gleich welcher Art — fuer den Typwechsel. */
+  private plainOf(block: PlanBlock): string {
+    switch (block.type) {
+      case 'text':
+      case 'heading':
+      case 'quote':
+        return block.text;
+      case 'list':
+        return block.items.map((i) => i.text).join('\n');
+      case 'code':
+        return block.code;
+      case 'group':
+        return block.title;
+      default:
+        return '';
+    }
+  }
+
+  /** Blocktyp wechseln, Inhalt behalten. */
+  turnInto(blockId: string, kind: SlashKind): void {
+    const block = this.findBlock(blockId);
+    if (!block) return;
+
+    const text = this.plainOf(block);
+    this.closeBlockMenu();
+    this.updateContent((bs) =>
+      this.replaceById(bs, blockId, (id) => this.makeConverted(id, kind, text)),
+    );
+    this.focusConverted(blockId, kind);
+  }
+
   menuDelete(blockId: string) {
     this.deleteBlock(blockId);
     this.closeBlockMenu();
@@ -429,48 +498,6 @@ export class PlansView {
     return detectSlashToken(value, caret);
   }
 
-  onTextInput(blockId: string, event: Event) {
-    const field = event.target as HTMLTextAreaElement;
-    const value = field.value;
-    const caret = field.selectionStart ?? value.length;
-    this.updateText(blockId, value);
-
-    // Markdown hat Vorrang: der Block wandelt sich sofort um.
-    const shortcut = detectMarkdownShortcut(value);
-    if (shortcut) {
-      this.applyMarkdownShortcut(blockId, shortcut.kind, shortcut.rest);
-      return;
-    }
-
-    // Offener Wikilink „[[…" — Vorschlaege aus den vorhandenen Plaenen.
-    const wiki = detectWikiToken(value, caret);
-    if (wiki) {
-      this.slash.set(null);
-      const current = this.wikiPick();
-      this.wikiPick.set({
-        blockId,
-        index: current && current.blockId === blockId ? current.index : 0,
-        start: wiki.start,
-        query: wiki.query,
-      });
-      return;
-    }
-    if (this.wikiPick()?.blockId === blockId) this.wikiPick.set(null);
-
-    const token = this.detectSlash(value, caret);
-    if (token) {
-      const current = this.slash();
-      this.slash.set({
-        blockId,
-        index: current && current.blockId === blockId ? current.index : 0,
-        start: token.start,
-        query: token.query,
-      });
-    } else if (this.slash()?.blockId === blockId) {
-      this.slash.set(null);
-    }
-  }
-
   // ---- Wikilink-Vervollstaendigung ----
 
   /** Offener „[[…"-Vorschlag: Block, Markierung, Position und Query. */
@@ -504,75 +531,70 @@ export class PlansView {
     this.wikiPick.set(null);
     if (!pick) return;
 
-    const plan = this.selected();
-    const block = plan ? this.findById(plan.content, blockId) : null;
-    if (!block || block.type !== 'text') return;
+    const field = this.field(this.blockFieldId(blockId));
+    if (!field) return;
 
-    const before = block.text.slice(0, pick.start);
-    const after = block.text.slice(pick.start + 2 + pick.query.length);
-    this.updateText(blockId, `${before}[[${title}]]${after}`);
-
-    const caret = before.length + title.length + 4;
-    requestAnimationFrame(() => {
-      const el = document.getElementById('block-edit-' + blockId);
-      if (!(el instanceof HTMLTextAreaElement)) return;
-      el.focus();
-      el.setSelectionRange(caret, caret);
-    });
+    // Ueber den Browser ersetzen statt am Modell: so bleibt der
+    // Rueckgaengig-Stapel heil, und das Feld nimmt den neuen Stand selbst auf.
+    replaceRange(field, pick.start, pick.start + 2 + pick.query.length, `[[${title}]]`);
   }
 
-  /**
-   * Fett, kursiv, unterstrichen und durchgestrichen per Tastenkuerzel.
-   *
-   * Steht ganz vorn, noch vor dem Wikilink-Vorschlag: mit gedrueckter
-   * Befehlstaste ist nie ein Vorschlag gemeint. Ohne Auswahl nimmt es das Wort
-   * unter dem Cursor, wie in jedem Editor.
-   *
-   * Unterstreichen kennt Markdown nicht, deshalb __so__. Doppelte Unterstriche,
-   * weil einzelne in gewoehnlichem Text vorkommen (datei_name) und dort nichts
-   * unterstreichen sollen.
-   *
-   * Die Tasten selbst stehen im ShortcutService und sind umbelegbar.
-   */
-  private readonly INLINE_MARKERS: Partial<Record<ShortcutAction, InlineMarker>> = {
-    'format.bold': '**',
-    'format.italic': '*',
-    'format.underline': '__',
-    'format.strike': '~~',
-  };
+  // ---- Auswahl-Werkzeugleiste ----
+  //
+  // Notions auffaelligstes Bedienelement: markieren, und die Leiste steht da.
+  // Tastenkuerzel gibt es weiter, aber niemand lernt sie, ohne sie einmal
+  // gesehen zu haben — und mit der Maus markiert man ohnehin schon.
 
-  private applyInlineFormat(
-    event: KeyboardEvent,
-    blockId: string,
-    marker: InlineMarker,
-  ): void {
-    const field = event.target as HTMLTextAreaElement;
-    event.preventDefault();
+  /** Bildschirmposition der Leiste, oder null wenn nichts markiert ist. */
+  protected readonly toolbar = signal<{ x: number; y: number } | null>(null);
 
-    const out = toggleInline(
-      field.value,
-      field.selectionStart ?? 0,
-      field.selectionEnd ?? 0,
-      marker,
-    );
-
-    // Erst ins Feld, dann in den Zustand: sonst setzt Angular den alten Wert
-    // zurueck, bevor die Auswahl steht, und der Cursor springt an den Anfang.
-    field.value = out.text;
-    field.setSelectionRange(out.selectionStart, out.selectionEnd);
-    this.updateText(blockId, out.text);
-  }
-
-  onTextKeydown(event: KeyboardEvent, blockId: string) {
-    // Welche Taste das ist, weiss der ShortcutService; hier zaehlt nur die
-    // Handlung. Belegt der Nutzer sie um, aendert sich an dieser Stelle nichts.
-    const action = this.shortcuts.match(event);
-    const marker = action ? this.INLINE_MARKERS[action] : undefined;
-    if (marker) {
-      this.applyInlineFormat(event, blockId, marker);
+  @HostListener('document:selectionchange')
+  onSelectionChange(): void {
+    const selection = document.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+      this.toolbar.set(null);
       return;
     }
 
+    const range = selection.getRangeAt(0);
+    const node = range.commonAncestorContainer;
+    const el = node instanceof Element ? node : node.parentElement;
+    if (!el?.closest('.rich-text')) {
+      this.toolbar.set(null);
+      return;
+    }
+
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      this.toolbar.set(null);
+      return;
+    }
+    this.toolbar.set({ x: rect.left + rect.width / 2, y: rect.top });
+  }
+
+  /** Auszeichnung auf die Auswahl anwenden. */
+  applyFormat(command: 'bold' | 'italic' | 'underline' | 'strikeThrough'): void {
+    // Ohne das schreibt der Browser <span style="…"> statt <b>, und aus einem
+    // style-Attribut laesst sich kein Markdown machen.
+    document.execCommand('styleWithCSS', false, 'false');
+    document.execCommand(command);
+  }
+
+  /**
+   * Zeichen um die Auswahl legen — fuer die beiden Faelle, die kein
+   * Browserbefehl kennt: Code und Wikilink.
+   */
+  wrapSelection(before: string, after: string): void {
+    const text = document.getSelection()?.toString() ?? '';
+    if (!text) return;
+    document.execCommand('insertText', false, `${before}${text}${after}`);
+  }
+
+  /**
+   * Nur die offenen Menues — Fett, Kursiv und das Verhalten der Tasten im Text
+   * liegen in der Editor-Direktive.
+   */
+  onTextKeydown(event: KeyboardEvent, blockId: string) {
     // Der Wikilink-Vorschlag liegt vorn: er ist offen, waehrend getippt wird.
     const pick = this.wikiPick();
     if (pick && pick.blockId === blockId) {
@@ -643,6 +665,7 @@ export class PlansView {
       this.updateContent((b) =>
         this.replaceById(b, blockId, (id) => this.makeConverted(id, kind)),
       );
+      this.focusConverted(blockId, kind);
       return;
     }
 
@@ -656,7 +679,22 @@ export class PlansView {
         created,
       ),
     );
-    this.beginEdit(created.id);
+    this.focusConverted(created.id, kind);
+  }
+
+  /**
+   * In den frisch umgewandelten Block springen.
+   *
+   * Eine Liste hat kein Feld am Block, sondern eins je Eintrag; eine
+   * Trennlinie, eine Tabelle und ein Diagramm haben gar keins zum Schreiben.
+   */
+  private focusConverted(blockId: string, kind: SlashKind): void {
+    if (kind === 'bullet' || kind === 'number' || kind === 'todo') {
+      this.focusItem(blockId, 0, 'end');
+      return;
+    }
+    if (kind === 'divider' || kind === 'table' || kind === 'diagram') return;
+    this.beginEdit(blockId);
   }
 
   /**
@@ -675,11 +713,11 @@ export class PlansView {
       case 'heading3':
         return { id, type: 'heading', level: 3, text: initial };
       case 'bullet':
-        return { id, type: 'list', variant: 'bullet', items: [{ text: initial, checked: false }] };
+        return { id, type: 'list', variant: 'bullet', items: toItems(initial) };
       case 'number':
-        return { id, type: 'list', variant: 'number', items: [{ text: initial, checked: false }] };
+        return { id, type: 'list', variant: 'number', items: toItems(initial) };
       case 'todo':
-        return { id, type: 'list', variant: 'todo', items: [{ text: initial, checked: false }] };
+        return { id, type: 'list', variant: 'todo', items: toItems(initial) };
       case 'code':
         return { id, type: 'code', language: '', code: initial };
       case 'quote':
@@ -702,52 +740,315 @@ export class PlansView {
   private applyMarkdownShortcut(blockId: string, kind: MarkdownBlockKind, rest: string) {
     this.slash.set(null);
     this.wikiPick.set(null);
+
+    // Eine Trennlinie nimmt den Absatz mit, in dem man gerade schreibt. Ohne
+    // einen frischen darunter stuende der Cursor nach „---" im Nichts.
+    if (kind === 'divider') {
+      const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
+      this.updateContent((bs) =>
+        this.insertAfterById(
+          this.replaceById(bs, blockId, (id) => ({ id, type: 'divider' })),
+          blockId,
+          created,
+        ),
+      );
+      this.beginEdit(created.id, 0);
+      return;
+    }
+
     this.updateContent((bs) =>
       this.replaceById(bs, blockId, (id) => this.makeConverted(id, kind, rest)),
     );
-    if (kind === 'divider') {
-      this.editingBlock.set(null);
-      return;
-    }
-    // Der Block ist durch einen anderen Typ ersetzt worden — das Eingabefeld
-    // im Template ist ein neues Element und braucht Fokus und Cursor erneut.
-    this.editingBlock.set(null);
-    this.beginEdit(blockId);
+    // Der Block ist durch einen anderen Typ ersetzt worden — das Feld im
+    // Template ist ein neues Element und braucht Fokus und Cursor erneut.
+    this.focusConverted(blockId, kind);
   }
 
-  // ---- Live Preview (Obsidian) ----
+  // ---- Editor ----
   //
-  // Geschriebenes Markup soll man LESEN, nicht entziffern. Ein Block zeigt
-  // deshalb formatierten Text und wird erst beim Anklicken zum Rohtext-Feld.
+  // Es gibt keinen Lese- und keinen Schreibmodus. Ein Block ist immer beides:
+  // formatierter Text, in dem der Cursor steht. Getipptes „**fett**" wird fett,
+  // sobald die zweiten Sternchen stehen — Rohtext bekommt man nie zu sehen.
+  //
+  // Die Uebersetzung zwischen Ansicht und gespeichertem Markdown steht in
+  // rich-text.ts, das Verhalten der Tasten in der Direktive. Hier steht nur,
+  // was ein Tastendruck mit dem DOKUMENT macht: teilen, zusammenfuegen,
+  // umwandeln, springen.
 
-  /** Block, der gerade im Rohtext-Modus steht. */
-  protected readonly editingBlock = signal<string | null>(null);
-
-  isEditing(blockId: string): boolean {
-    return this.editingBlock() === blockId;
+  /** Kennung des Schreibfeldes eines Blocks bzw. eines Listeneintrags. */
+  blockFieldId(blockId: string): string {
+    return 'block-edit-' + blockId;
+  }
+  itemFieldId(blockId: string, index: number): string {
+    return `item-edit-${blockId}-${index}`;
   }
 
-  beginEdit(blockId: string) {
-    if (this.editingBlock() === blockId) return;
-    this.editingBlock.set(blockId);
-    // Das Feld existiert erst nach dem naechsten Rendern.
+  private field(id: string): HTMLElement | null {
+    const el = document.getElementById(id);
+    return el instanceof HTMLElement ? el : null;
+  }
+
+  /**
+   * In ein Feld springen, sobald es gezeichnet ist.
+   *
+   * Ein gerade angelegter Block existiert im DOM erst nach dem naechsten
+   * Durchlauf; ohne das Warten liefe der Fokus ins Leere und der Cursor bliebe
+   * im alten Block stehen.
+   */
+  private focusField(id: string, at: number | 'end'): void {
     requestAnimationFrame(() => {
-      const el = document.getElementById('block-edit-' + blockId);
-      if (!(el instanceof HTMLTextAreaElement)) return;
-      el.focus();
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-      const end = el.value.length;
-      el.setSelectionRange(end, end);
+      const el = this.field(id);
+      if (!el) return;
+
+      // Code und der Titel eines Toggles sind bewusst schlichte Felder — dort
+      // gibt es nichts zu formatieren, also auch keinen Rich-Text-Cursor.
+      if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+        el.focus();
+        const pos = at === 'end' ? el.value.length : Math.min(at, el.value.length);
+        el.setSelectionRange(pos, pos);
+        return;
+      }
+
+      focusRich(el, at);
     });
   }
 
-  endEdit(blockId: string) {
-    // Eintraege im Slash-Menue verhindern den Fokusverlust selbst
-    // (mousedown/preventDefault). Ein echtes blur heisst also immer: der Cursor
-    // ist woanders — dann darf auch das Menue zu.
+  /** Cursor in diesen Block setzen. */
+  beginEdit(blockId: string, at: number | 'end' = 'end'): void {
+    this.focusField(this.blockFieldId(blockId), at);
+  }
+
+  private focusItem(blockId: string, index: number, at: number | 'end'): void {
+    this.focusField(this.itemFieldId(blockId, index), at);
+  }
+
+  /** Ist an diesem Block ein Menue offen? Dann gehoeren ihm Pfeile und Enter. */
+  menuOpenFor(blockId: string): boolean {
+    return this.slash()?.blockId === blockId || this.wikiPick()?.blockId === blockId;
+  }
+
+  /** Alle Schreibstellen des Plans in Dokumentreihenfolge. */
+  private fieldOrder(): string[] {
+    const out: string[] = [];
+    const walk = (blocks: PlanBlock[]) => {
+      for (const b of blocks) {
+        if (b.type === 'text' || b.type === 'heading' || b.type === 'quote') {
+          out.push(this.blockFieldId(b.id));
+        } else if (b.type === 'list') {
+          b.items.forEach((_, i) => out.push(this.itemFieldId(b.id, i)));
+        } else if (b.type === 'group') {
+          walk(b.blocks);
+        }
+      }
+    };
+    walk(this.selected()?.content ?? []);
+    return out;
+  }
+
+  /**
+   * Pfeiltaste ueber die Kante des Blocks hinaus: ins naechste Feld, Cursor an
+   * dessen nahes Ende. Ohne das kaeme man von Block zu Block nur mit der Maus.
+   */
+  private step(fieldId: string, dir: 'up' | 'down'): void {
+    const ids = this.fieldOrder();
+    const next = ids[ids.indexOf(fieldId) + (dir === 'up' ? -1 : 1)];
+    const el = next ? this.field(next) : null;
+    if (el) focusRich(el, dir === 'up' ? 'end' : 0);
+  }
+
+  stepFromBlock(blockId: string, dir: 'up' | 'down'): void {
+    this.step(this.blockFieldId(blockId), dir);
+  }
+  stepFromItem(blockId: string, index: number, dir: 'up' | 'down'): void {
+    this.step(this.itemFieldId(blockId, index), dir);
+  }
+
+  /** Text eines Absatzes, einer Ueberschrift oder eines Zitats setzen. */
+  private setBlockText(blocks: PlanBlock[], blockId: string, text: string): PlanBlock[] {
+    return this.mapById(blocks, blockId, (x) =>
+      x.type === 'text' || x.type === 'heading' || x.type === 'quote' ? { ...x, text } : x,
+    );
+  }
+
+  /** Der Text eines Blocks, soweit er ueberhaupt einen traegt. */
+  private textOf(block: PlanBlock | null): string | null {
+    if (!block) return null;
+    return block.type === 'text' || block.type === 'heading' || block.type === 'quote'
+      ? block.text
+      : null;
+  }
+
+  /** Ueberschrift und Zitat: nur speichern, hier wandelt sich nichts um. */
+  onProseChange(blockId: string, change: { value: string; caret: number }): void {
+    this.updateContent((bs) => this.setBlockText(bs, blockId, change.value));
+  }
+
+  /**
+   * Eingabe im Absatz: speichern — und schauen, ob daraus gerade etwas anderes
+   * werden soll. Ein Kurzbefehl wandelt den Block um, „/" oeffnet das Menue,
+   * „[[" die Planvorschlaege.
+   */
+  onTextChange(blockId: string, change: { value: string; caret: number }): void {
+    this.updateContent((bs) => this.setBlockText(bs, blockId, change.value));
+
+    const shortcut = detectMarkdownShortcut(change.value);
+    if (shortcut) {
+      this.applyMarkdownShortcut(blockId, shortcut.kind, shortcut.rest);
+      return;
+    }
+
+    this.trackMenus(blockId, change.value, change.caret);
+  }
+
+  /** Offene Menues am Cursor nachfuehren. */
+  private trackMenus(blockId: string, value: string, caret: number): void {
+    const at = caret < 0 ? value.length : caret;
+
+    const wiki = detectWikiToken(value, at);
+    if (wiki) {
+      this.slash.set(null);
+      const current = this.wikiPick();
+      this.wikiPick.set({
+        blockId,
+        index: current && current.blockId === blockId ? current.index : 0,
+        start: wiki.start,
+        query: wiki.query,
+      });
+      return;
+    }
+    if (this.wikiPick()?.blockId === blockId) this.wikiPick.set(null);
+
+    const token = this.detectSlash(value, at);
+    if (token) {
+      const current = this.slash();
+      this.slash.set({
+        blockId,
+        index: current && current.blockId === blockId ? current.index : 0,
+        start: token.start,
+        query: token.query,
+      });
+    } else if (this.slash()?.blockId === blockId) {
+      this.slash.set(null);
+    }
+  }
+
+  /**
+   * Enter teilt den Block (Notion).
+   *
+   * Der neue Block ist ein Absatz — ausser man teilt eine Ueberschrift oder ein
+   * Zitat mittendrin, dann bleibt der Typ erhalten. Enter am ENDE einer
+   * Ueberschrift heisst „jetzt kommt der Text dazu"; eine zweite, leere
+   * Ueberschrift wollte noch nie jemand.
+   */
+  splitBlock(blockId: string, before: string, after: string): void {
+    const block = this.findBlock(blockId);
+    if (!block) return;
+
+    const id = this.newId();
+    const keep = after.trim() !== '';
+    const created: PlanBlock =
+      keep && block.type === 'heading'
+        ? { id, type: 'heading', level: block.level, text: after }
+        : keep && block.type === 'quote'
+          ? { id, type: 'quote', text: after }
+          : { id, type: 'text', text: after };
+
+    this.slash.set(null);
+    this.wikiPick.set(null);
+    this.updateContent((bs) =>
+      this.insertAfterById(this.setBlockText(bs, blockId, before), blockId, created),
+    );
+    this.beginEdit(created.id, 0);
+  }
+
+  /**
+   * Rueckschritt am Blockanfang — in zwei Stufen, wie in Notion.
+   *
+   * Erst faellt die Auszeichnung weg: aus der Ueberschrift wird ein Absatz. Wer
+   * wirklich loeschen will, drueckt noch einmal. Das ist der Unterschied
+   * zwischen „das sollte keine Ueberschrift sein" und „weg damit" — und beides
+   * kommt vor, das erste haeufiger.
+   */
+  mergeBack(blockId: string): void {
+    const block = this.findBlock(blockId);
+    if (!block) return;
+
+    if (block.type === 'heading' || block.type === 'quote') {
+      const text = block.text;
+      this.updateContent((bs) =>
+        this.replaceById(bs, blockId, (id) => ({ id, type: 'text', text })),
+      );
+      this.beginEdit(blockId, 0);
+      return;
+    }
+    if (block.type !== 'text') return;
+
+    const previous = this.blockBefore(blockId);
+    if (!previous) return;
+
+    // Eine Trennlinie traegt keinen Text; sie verschwindet einfach.
+    if (previous.type === 'divider') {
+      this.updateContent((bs) => this.removeById(bs, previous.id));
+      this.beginEdit(blockId, 0);
+      return;
+    }
+
+    // In den letzten Eintrag der Liste darueber hineinlaufen.
+    if (previous.type === 'list') {
+      const index = previous.items.length - 1;
+      const joined = previous.items[index]?.text ?? '';
+      this.updateContent((bs) =>
+        this.removeById(
+          this.mapById(bs, previous.id, (x) =>
+            x.type !== 'list'
+              ? x
+              : {
+                  ...x,
+                  items: x.items.map((it, i) =>
+                    i === index ? { ...it, text: it.text + block.text } : it,
+                  ),
+                },
+          ),
+          blockId,
+        ),
+      );
+      this.focusItem(previous.id, index, joined.length);
+      return;
+    }
+
+    // Tabelle, Diagramm, Code: da ist nichts zusammenzufuegen.
+    const head = this.textOf(previous);
+    if (head === null) return;
+
+    this.updateContent((bs) =>
+      this.removeById(this.setBlockText(bs, previous.id, head + block.text), blockId),
+    );
+    this.focusField(this.blockFieldId(previous.id), head.length);
+  }
+
+  /** Der Block davor in Dokumentreihenfolge — auch ueber Gruppengrenzen. */
+  private blockBefore(blockId: string): PlanBlock | null {
+    const flat: PlanBlock[] = [];
+    const walk = (blocks: PlanBlock[]) => {
+      for (const b of blocks) {
+        flat.push(b);
+        if (b.type === 'group') walk(b.blocks);
+      }
+    };
+    walk(this.selected()?.content ?? []);
+
+    const at = flat.findIndex((b) => b.id === blockId);
+    return at > 0 ? flat[at - 1] : null;
+  }
+
+  /**
+   * Feld verlassen. Eintraege im Slash-Menue verhindern den Fokusverlust selbst
+   * (mousedown/preventDefault); ein echtes blur heisst also: der Cursor ist
+   * woanders, das Menue darf zu.
+   */
+  onProseBlur(blockId: string): void {
     if (this.slash()?.blockId === blockId) this.slash.set(null);
-    if (this.editingBlock() === blockId) this.editingBlock.set(null);
+    if (this.wikiPick()?.blockId === blockId) this.wikiPick.set(null);
 
     // Absatz fertig geschrieben: steht darueber keine Ueberschrift, eine setzen.
     void this.titleUnheadedBlock(blockId);
@@ -784,25 +1085,25 @@ export class PlansView {
     this.acceptSuggestion(blockId, title);
   }
 
-  /** Klick auf gerenderten Text: Wikilink folgt, sonst Bearbeiten. */
-  onRenderedClick(event: MouseEvent, blockId: string) {
+  /**
+   * Klick ins Feld.
+   *
+   * Der Cursor landet, wo man hinklickt — dafuer ist ein Schreibfeld da. Ein
+   * Wikilink oeffnet sich deshalb mit Befehls- bzw. Strg-Taste, wie in jedem
+   * Editor, in dem Links auch bearbeitet werden koennen. Ein einfacher Klick
+   * auf den Link wuerde sonst die Stelle anspringen, an der man gerade etwas
+   * aendern wollte.
+   */
+  onFieldClick(event: MouseEvent): void {
+    if (!event.metaKey && !event.ctrlKey) return;
+
     const target = event.target as HTMLElement | null;
     const link = target?.closest?.('[data-plan]') as HTMLElement | null;
-    if (link) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.openByTitle(link.dataset['plan'] ?? '');
-      return;
-    }
-    this.beginEdit(blockId);
-  }
+    if (!link) return;
 
-  /** Formatierter Text (mehrzeilig bzw. einzeilig). */
-  renderText(raw: string): string {
-    return formatBlock(raw);
-  }
-  renderInline(raw: string): string {
-    return formatInline(raw);
+    event.preventDefault();
+    event.stopPropagation();
+    this.openByTitle(link.textContent ?? '');
   }
 
   // ---- Wikilinks & Backlinks (Obsidian) ----
@@ -908,23 +1209,143 @@ export class PlansView {
   asList(block: PlanBlock): PlanListBlock {
     return block as PlanListBlock;
   }
-  /** Bearbeitet wird die ganze Liste als Text: eine Zeile = ein Eintrag. */
-  listAsText(block: PlanListBlock): string {
-    return block.items.map((i) => i.text).join('\n');
+  /** Die Zeichen links vom Eintrag — Punkt, Zahl oder Buchstabe, je nach Ebene. */
+  markersFor(block: PlanListBlock): string[] {
+    return listMarkers(block.items, block.variant);
   }
-  setListText(blockId: string, value: string) {
-    const lines = value.split('\n');
+
+  /** Einrueckung eines Eintrags in rem. */
+  itemIndent(item: PlanListItem): number {
+    return levelOf(item) * 1.5;
+  }
+
+  private mapItems(
+    blockId: string,
+    fn: (items: PlanListItem[]) => PlanListItem[],
+  ): void {
     this.updateContent((bs) =>
-      this.mapById(bs, blockId, (x) => {
-        if (x.type !== 'list') return x;
-        // Haken bleiben an ihrer Position haengen, damit Tippen sie nicht loescht.
-        const items = lines.map((text, i) => ({
-          text,
-          checked: x.items[i]?.checked ?? false,
-        }));
-        return { ...x, items: items.length ? items : [{ text: '', checked: false }] };
-      }),
+      this.mapById(bs, blockId, (x) => (x.type !== 'list' ? x : { ...x, items: fn(x.items) })),
     );
+  }
+
+  setItemText(blockId: string, index: number, text: string): void {
+    this.mapItems(blockId, (items) =>
+      items.map((it, i) => (i === index ? { ...it, text } : it)),
+    );
+  }
+
+  /**
+   * Enter im Eintrag: teilen, der Rest wird der naechste Punkt.
+   *
+   * Auf einem leeren Punkt heisst Enter dagegen „fertig" — erst eine Ebene
+   * heraus, und auf der obersten raus aus der Liste. Ohne das kaeme man aus
+   * einer Aufzaehlung nur mit der Maus wieder heraus.
+   */
+  splitItem(blockId: string, index: number, before: string, after: string): void {
+    const block = this.findBlock(blockId);
+    if (!block || block.type !== 'list') return;
+    const level = levelOf(block.items[index] ?? { text: '', checked: false });
+
+    if (before === '' && after === '') {
+      if (level > 0) {
+        this.indentItem(blockId, index, -1);
+        return;
+      }
+
+      const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
+      if (block.items.length === 1) {
+        this.updateContent((bs) => this.replaceById(bs, blockId, () => created));
+      } else {
+        this.updateContent((bs) =>
+          this.insertAfterById(
+            this.mapById(bs, blockId, (x) =>
+              x.type !== 'list' ? x : { ...x, items: x.items.filter((_, i) => i !== index) },
+            ),
+            blockId,
+            created,
+          ),
+        );
+      }
+      this.beginEdit(created.id, 0);
+      return;
+    }
+
+    this.mapItems(blockId, (items) => {
+      const next = [...items];
+      next[index] = { ...next[index], text: before };
+      // Der neue Punkt erbt die Ebene, aber NICHT die Verknuepfung zum Todo:
+      // ein Haken gehoert genau einer Aufgabe.
+      next.splice(index + 1, 0, { text: after, checked: false, level });
+      return next;
+    });
+    this.focusItem(blockId, index + 1, 0);
+  }
+
+  /**
+   * Rueckschritt am Anfang eines Eintrags: in den vorigen hineinlaufen.
+   *
+   * Beim ersten Punkt faellt stattdessen die Auszeichnung weg — aus ihm wird
+   * ein Absatz, der Rest der Liste bleibt stehen. Dieselbe Zweistufigkeit wie
+   * bei den Ueberschriften.
+   */
+  mergeItemBack(blockId: string, index: number): void {
+    const block = this.findBlock(blockId);
+    if (!block || block.type !== 'list') return;
+
+    const item = block.items[index];
+    if (!item) return;
+
+    if (levelOf(item) > 0) {
+      this.indentItem(blockId, index, -1);
+      return;
+    }
+
+    if (index > 0) {
+      const target = block.items[index - 1];
+      const at = target.text.length;
+      this.mapItems(blockId, (items) => {
+        const next = [...items];
+        next[index - 1] = { ...target, text: target.text + item.text };
+        next.splice(index, 1);
+        return next;
+      });
+      this.focusItem(blockId, index - 1, at);
+      return;
+    }
+
+    const created: PlanBlock = { id: this.newId(), type: 'text', text: item.text };
+    const rest = block.items.slice(1);
+    this.updateContent((bs) =>
+      rest.length === 0
+        ? this.replaceById(bs, blockId, () => created)
+        : this.insertBeforeById(
+            this.mapById(bs, blockId, (x) => (x.type !== 'list' ? x : { ...x, items: rest })),
+            blockId,
+            created,
+          ),
+    );
+    this.beginEdit(created.id, item.text.length);
+  }
+
+  /**
+   * Tabulator: eine Ebene rein oder raus.
+   *
+   * Der erste Eintrag kann nicht einruecken — ueber ihm steht nichts, worunter
+   * er gehoeren koennte. Und tiefer als eine Stufe unter dem Vorgaenger geht es
+   * nicht: ein Sprung von der ersten in die dritte Ebene waere eine Gliederung,
+   * die niemand mehr lesen kann.
+   */
+  indentItem(blockId: string, index: number, dir: 1 | -1): void {
+    this.mapItems(blockId, (items) => {
+      const current = levelOf(items[index]);
+      const above = index > 0 ? levelOf(items[index - 1]) : -1;
+      const wanted = Math.max(0, Math.min(current + dir, Math.min(above + 1, MAX_LIST_LEVEL)));
+      if (wanted === current) return items;
+
+      const next = [...items];
+      next[index] = { ...next[index], level: wanted };
+      return next;
+    });
   }
   /**
    * Einen einzelnen Eintrag entfernen — wie in Notion, wo jeder Punkt für sich
@@ -1102,11 +1523,6 @@ export class PlansView {
   asQuote(block: PlanBlock): PlanQuoteBlock {
     return block as PlanQuoteBlock;
   }
-  updateQuoteText(blockId: string, text: string) {
-    this.updateContent((bs) =>
-      this.mapById(bs, blockId, (x) => (x.type === 'quote' ? { ...x, text } : x)),
-    );
-  }
 
   // ---- Block darunter einfuegen (das „+" in der Randspalte) ----
 
@@ -1124,6 +1540,24 @@ export class PlansView {
     return blocks.map((b) =>
       b.type === 'group'
         ? { ...b, blocks: this.insertAfterById(b.blocks, id, newBlock) }
+        : b,
+    );
+  }
+
+  private insertBeforeById(
+    blocks: PlanBlock[],
+    id: string,
+    newBlock: PlanBlock,
+  ): PlanBlock[] {
+    const i = blocks.findIndex((b) => b.id === id);
+    if (i >= 0) {
+      const copy = [...blocks];
+      copy.splice(i, 0, newBlock);
+      return copy;
+    }
+    return blocks.map((b) =>
+      b.type === 'group'
+        ? { ...b, blocks: this.insertBeforeById(b.blocks, id, newBlock) }
         : b,
     );
   }
@@ -1153,7 +1587,6 @@ export class PlansView {
 
     this.slash.set(null);
     this.wikiPick.set(null);
-    this.editingBlock.set(null);
     this.updateContent((bs) => this.spliceById(bs, blockId, incoming, isEmpty));
   }
 
@@ -1199,6 +1632,25 @@ export class PlansView {
     const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
     this.updateContent((bs) => this.insertAfterById(bs, blockId, created));
     this.beginEdit(created.id);
+  }
+
+  /**
+   * Klick unter den letzten Block: weiterschreiben.
+   *
+   * Steht dort schon ein leerer Absatz, wird er angesprungen statt ein zweiter
+   * angelegt — sonst sammelt sich unter jedem Plan eine Reihe leerer Zeilen.
+   */
+  appendBlock(): void {
+    const content = this.selected()?.content ?? [];
+    const last = content[content.length - 1];
+    if (last?.type === 'text' && last.text === '') {
+      this.beginEdit(last.id);
+      return;
+    }
+
+    const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
+    this.updateContent((bs) => [...bs, created]);
+    this.beginEdit(created.id, 0);
   }
 
   /**
@@ -1293,7 +1745,7 @@ export class PlansView {
   /**
    * Nachtraeglich fuer alles, was schon dasteht.
    *
-   * Beim Schreiben passiert das von selbst (siehe endEdit). Dieser Weg ist fuer
+   * Beim Schreiben passiert das von selbst (siehe onProseBlur). Dieser Weg ist fuer
    * Dokumente, die es vorher schon gab — und er SETZT genauso, statt
    * vorzuschlagen: zwei Verhalten fuer dieselbe Sache waeren nur verwirrend.
    * Der Reihe nach, weil jede eingefuegte Ueberschrift die Liste veraendert.
@@ -1322,24 +1774,6 @@ export class PlansView {
 
   dismissSuggestion(blockId: string) {
     this.titles.forget(blockId);
-  }
-
-  private insertBeforeById(
-    blocks: PlanBlock[],
-    id: string,
-    newBlock: PlanBlock,
-  ): PlanBlock[] {
-    const i = blocks.findIndex((b) => b.id === id);
-    if (i >= 0) {
-      const copy = [...blocks];
-      copy.splice(i, 0, newBlock);
-      return copy;
-    }
-    return blocks.map((b) =>
-      b.type === 'group'
-        ? { ...b, blocks: this.insertBeforeById(b.blocks, id, newBlock) }
-        : b,
-    );
   }
 
   jumpTo(blockId: string) {
@@ -1599,18 +2033,7 @@ export class PlansView {
     });
   }
 
-  updateText(blockId: string, text: string) {
-    this.updateContent((b) =>
-      this.mapById(b, blockId, (x) => (x.type === 'text' ? { ...x, text } : x)),
-    );
-  }
-
   // ---- Editor: Überschrift ----
-  updateHeadingText(blockId: string, text: string) {
-    this.updateContent((b) =>
-      this.mapById(b, blockId, (x) => (x.type === 'heading' ? { ...x, text } : x)),
-    );
-  }
   asHeading(block: PlanBlock): PlanHeadingBlock {
     return block as PlanHeadingBlock;
   }
