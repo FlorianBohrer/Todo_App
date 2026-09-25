@@ -22,6 +22,8 @@ import {
   MOSCOW_LABEL,
   stripPriorityPrefix,
   priorityBadge,
+  taskLevel,
+  TaskLevel,
 } from '../../shared/title-priority';
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
@@ -74,6 +76,8 @@ interface TodoRow {
   canExpand: boolean;
   badge: MoscowLevel | null;
   badgeLabel: string;
+  /** Haupt- oder Unteraufgabe. Traegt die Einrueckung in der Liste. */
+  level: TaskLevel | null;
   badgeClass: string;
   tileClass: string;
   tileTextClass: string;
@@ -136,6 +140,7 @@ export class TodoList {
         canExpand:
           todo.title.length > EXPAND_THRESHOLD || todo.title.includes('\n'),
         badge,
+        level: taskLevel(todo.title),
         badgeLabel: badge ? MOSCOW_LABEL[badge] : '',
         badgeClass: badge ? this.badgeClass(badge) : '',
         tileClass: this.tileClass(todo.labelIds),

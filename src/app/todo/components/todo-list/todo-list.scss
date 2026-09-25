@@ -115,3 +115,35 @@ li.todo-expanded-row {
     opacity: 0.6;
   }
 }
+
+/* Unteraufgaben (/sub).
+   
+   Einrueckung plus eine Fuehrungslinie links. Der Einzug allein reicht auf
+   einer Liste aus gerahmten Karten nicht: man sieht einen Versatz, aber nicht,
+   WOZU die Zeile gehoert. Die Linie zieht den Blick nach oben zur Hauptaufgabe.
+   
+   Die Zeile tritt ausserdem leicht zurueck (kleinere Schrift, gedaempfter
+   Rand): ein Teilschritt ist dem Ganzen untergeordnet, und das darf man sehen,
+   ohne es zu lesen. */
+.todo-card.todo-sub {
+  margin-left: 1.5rem;
+  border-left-width: 2px;
+  border-left-color: var(--color-line-strong);
+  border-top-left-radius: 0.375rem;
+  border-bottom-left-radius: 0.375rem;
+  font-size: 0.9375rem;
+}
+
+/* Auf schmalen Bildschirmen kostet der volle Einzug zu viel Textbreite. */
+@media (max-width: 480px) {
+  .todo-card.todo-sub {
+    margin-left: 0.75rem;
+  }
+}
+
+/* Hauptaufgaben (/main) treten minimal hervor. Nur das Gewicht, keine Farbe:
+   sie sind der Normalfall, nicht der Sonderfall. */
+.todo-card.todo-main .todo-title,
+.todo-card.todo-main .todo-title-line {
+  font-weight: 600;
+}

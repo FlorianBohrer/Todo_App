@@ -55,6 +55,8 @@
       "
       [class.todo-card--leaving]="leavingTodoIds().has(todo.id)"
       [class.todo-card--new]="newTodoId() === todo.id"
+      [class.todo-sub]="row.level === 'sub'"
+      [class.todo-main]="row.level === 'main'"
       [style.--i]="row.stagger"
     >
           <!-- Platzhalter beim Ziehen -->

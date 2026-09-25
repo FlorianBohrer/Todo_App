@@ -1,7 +1,9 @@
 import {
   MOSCOW_LABEL,
+  orderWithSubtasks,
   priorityBadge,
   stripPriorityPrefix,
+  taskLevel,
   titlePriority,
 } from './title-priority';
 
@@ -82,5 +84,75 @@ describe('MOSCOW_LABEL', () => {
     expect(MOSCOW_LABEL.should).toBe('Should');
     expect(MOSCOW_LABEL.could).toBe('Could');
     expect(MOSCOW_LABEL.wont).toBe("Won't");
+  });
+});
+
+describe('taskLevel', () => {
+  it('reads the two structure prefixes', () => {
+    expect(taskLevel('/main Einkaufen')).toBe('main');
+    expect(taskLevel('/sub Milch')).toBe('sub');
+  });
+
+  it('is null for everything else', () => {
+    expect(taskLevel('/must Einkaufen')).toBeNull();
+    expect(taskLevel('Einkaufen')).toBeNull();
+    // Ohne Leerzeichen ist es kein Praefix, sondern Text.
+    expect(taskLevel('/submarine')).toBeNull();
+  });
+
+  it('strips the prefix from the shown title', () => {
+    expect(stripPriorityPrefix('/sub Milch')).toBe('Milch');
+    expect(stripPriorityPrefix('/main Einkaufen')).toBe('Einkaufen');
+  });
+
+  it('leaves structure prefixes unprioritised', () => {
+    // Gliederung ist keine Gewichtung: beide zaehlen wie ohne Praefix.
+    expect(titlePriority('/main x')).toBe(titlePriority('x'));
+    expect(titlePriority('/sub x')).toBe(titlePriority('x'));
+  });
+});
+
+describe('orderWithSubtasks', () => {
+  const t = (title: string) => ({ title });
+
+  it('keeps subtasks under their main task when the main task moves up', () => {
+    // Genau der Fall, der die Einrueckung zur Luege machen wuerde: die
+    // Hauptaufgabe rutscht als /must nach oben, die Unteraufgaben traegen
+    // keine Stufe und blieben sonst unten zurueck.
+    const out = orderWithSubtasks([
+      t('/could Aufraeumen'),
+      t('/must Einkaufen'),
+      t('/sub Milch'),
+      t('/sub Brot'),
+    ]);
+
+    expect(out.map((x) => x.title)).toEqual([
+      '/must Einkaufen',
+      '/sub Milch',
+      '/sub Brot',
+      '/could Aufraeumen',
+    ]);
+  });
+
+  it('keeps equally ranked groups in the order the user dragged them', () => {
+    const out = orderWithSubtasks([t('B'), t('/sub b1'), t('A'), t('/sub a1')]);
+    expect(out.map((x) => x.title)).toEqual(['B', '/sub b1', 'A', '/sub a1']);
+  });
+
+  it('treats a subtask without a main task above it as its own task', () => {
+    const out = orderWithSubtasks([t('/sub verwaist'), t('/must wichtig')]);
+    expect(out.map((x) => x.title)).toEqual(['/must wichtig', '/sub verwaist']);
+  });
+
+  it('loses nothing and adds nothing', () => {
+    const input = [t('a'), t('/sub a1'), t('/must b'), t('/sub b1'), t('c')];
+    const out = orderWithSubtasks(input);
+    expect(out).toHaveLength(input.length);
+    expect([...out].sort((x, y) => x.title.localeCompare(y.title)))
+      .toEqual([...input].sort((x, y) => x.title.localeCompare(y.title)));
+  });
+
+  it('handles an empty list', () => {
+    expect(orderWithSubtasks([])).toEqual([]);
   });
 });
