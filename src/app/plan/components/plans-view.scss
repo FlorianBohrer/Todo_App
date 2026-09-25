@@ -317,21 +317,6 @@
   margin-top: 0;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  // Am Zeigergeraet erledigen „/" und das „+" in der Randspalte dasselbe —
-  // die Leiste waere nur noch Wiederholung. Auf Touch bleibt sie, dort gibt es
-  // kein „+".
-  .add-bar {
-    display: none;
-  }
-
-  // Ausnahme: solange der Plan leer ist, gibt es keinen Block und damit auch
-  // kein „+". Dann muss die Leiste da sein, sonst ist der Plan eine Sackgasse.
-  .add-bar--always {
-    display: flex;
-  }
-}
-
 // ---- Outline ----
 //
 // Erst ab 1280px: darunter reicht der Rand neben der zentrierten Textspalte
