@@ -45,6 +45,7 @@ import {
   Redo2,
   CornerDownRight,
   CornerUpLeft,
+  ListTree,
 } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
@@ -161,6 +162,7 @@ export class PlansView {
   protected readonly TrashIcon = Trash2;
   protected readonly GripIcon = GripVertical;
   protected readonly SearchIcon = Search;
+  protected readonly OutlineIcon = ListTree;
   protected readonly NestIcon = CornerDownRight;
   protected readonly LiftIcon = CornerUpLeft;
   protected readonly UndoIcon = Undo2;
@@ -257,6 +259,20 @@ export class PlansView {
     const created = this.makeConverted(this.newId(), kind);
     this.updateContent((bs) => [...bs, created]);
     this.focusConverted(created.id, kind);
+  }
+
+  /**
+   * Die Gliederung im Popover — fuer jedes Fenster, das der Seitenleiste
+   * keinen Platz laesst.
+   */
+  protected readonly outlineOpen = signal(false);
+
+  toggleOutline() {
+    this.outlineOpen.update((open) => !open);
+  }
+
+  closeOutline() {
+    this.outlineOpen.set(false);
   }
 
   // ---- Blockaktionen ----

@@ -1,4 +1,8 @@
-<section class="w-full px-1">
+<!-- Luft nach unten. Ein Dokument, dessen letzte Zeile am Fensterrand klebt,
+     laesst sich nicht zu Ende lesen, ohne dass man den Kopf senkt — und beim
+     Schreiben will man die Zeile, an der man ist, in der Mitte haben, nicht
+     ganz unten. -->
+<section class="w-full px-1 pb-32">
 
   @if (selected(); as plan) {
     <!-- Drei Spalten: Blindspalte, Inhalt, Outline. Die Outline steht rechts
@@ -42,6 +46,36 @@
           <option [value]="label.id">{{ label.name }}</option>
         }
       </select>
+
+      <!-- Die Gliederung als Knopf, solange die Seitenleiste keinen Platz hat.
+           In einem halben Bildschirm — geteiltes Fenster, schmaler Monitor —
+           verschwand sie bisher ersatzlos, und mit ihr der einzige Weg, in
+           einem langen Dokument zu springen. Ab 1280px uebernimmt wieder die
+           Leiste, dann waere der Knopf doppelt. -->
+      @if (outline().length) {
+        <button type="button" cdkOverlayOrigin #outlineAnchor="cdkOverlayOrigin"
+          class="hidden flex-none items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5
+                 text-sm text-muted transition hover:border-line-strong hover:text-text sm:inline-flex xl:hidden"
+          (click)="toggleOutline()"
+          [attr.aria-expanded]="outlineOpen()" aria-haspopup="menu" aria-label="Outline">
+          <lucide-icon [img]="OutlineIcon" class="h-4 w-4"></lucide-icon>
+        </button>
+
+        <ng-template
+          cdkConnectedOverlay
+          [cdkConnectedOverlayOrigin]="outlineAnchor"
+          [cdkConnectedOverlayOpen]="outlineOpen()"
+          [cdkConnectedOverlayPositions]="menuPositions"
+          [cdkConnectedOverlayHasBackdrop]="true"
+          cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+          (backdropClick)="closeOutline()"
+          (detach)="closeOutline()"
+          (overlayKeydown)="$event.key === 'Escape' && closeOutline()">
+          <div class="popover max-h-[70vh] w-64 overflow-y-auto px-1 py-1">
+            <ng-container *ngTemplateOutlet="outlineTpl"></ng-container>
+          </div>
+        </ng-template>
+      }
 
       <!-- Zurueck und vor. Steht immer da, auch wenn es nichts zurueckzunehmen
            gibt: man sucht es genau in dem Moment, in dem gerade etwas
@@ -726,6 +760,13 @@
         </div>
       </div>
       <nav class="outline-nav" aria-label="Outline">
+        <ng-container *ngTemplateOutlet="outlineTpl"></ng-container>
+      </nav>
+    </div>
+
+    <!-- Einmal geschrieben, zweimal gezeigt: in der Seitenleiste, solange sie
+         Platz hat, und sonst im Popover am Knopf oben. -->
+    <ng-template #outlineTpl>
         @if (outline().length) {
           <p class="mb-2 px-2 text-2xs font-medium uppercase tracking-wide text-subtle">
             Outline
@@ -737,7 +778,7 @@
                   class="outline-link block w-full truncate rounded-lg py-1 pr-2 text-left text-sm transition"
                   [style.padding-left.rem]="0.5 + (item.level - 1) * 0.7"
                   [title]="item.text"
-                  (click)="jumpTo(item.id)">{{ item.text }}</button>
+                  (click)="jumpTo(item.id); closeOutline()">{{ item.text }}</button>
               </li>
             }
           </ul>
@@ -780,8 +821,7 @@
             }
           </div>
         }
-      </nav>
-    </div>
+    </ng-template>
 
   } @else {
     <!-- ===== Übersicht ===== -->
