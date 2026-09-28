@@ -340,15 +340,39 @@
   // Seitenbereich, das Dokument daneben bleibt auf der ruhigen Canvas.
   .outline-nav {
     position: sticky;
-    top: 1.5rem;
+    // Unter der App-Leiste, nicht dahinter: mit top:1.5rem schob sich die
+    // Gliederung beim Scrollen unter die durchscheinende Leiste und war zur
+    // Haelfte verdeckt.
+    top: calc(var(--chrome-h, 3.75rem) + 1rem);
     align-self: flex-start;
-    max-height: calc(100vh - 3rem);
+    max-height: calc(100vh - var(--chrome-h, 3.75rem) - 2.5rem);
     overflow-y: auto;
     border: 1px solid rgb(255 255 255 / 0.07);
     border-radius: 0.75rem;
     background: rgb(255 255 255 / 0.022);
     padding: 0.75rem 0.5rem;
   }
+}
+
+// ---- Kopf des Dokuments ----
+//
+// Klebt unter der App-Leiste. Der Versatz kommt aus --chrome-h, weil die
+// Leiste auf schmalen Schirmen umbricht und dann doppelt so hoch ist; ein
+// fester Wert waere dort falsch. Die Ersatzangabe gilt nur fuer den ersten
+// Wimpernschlag, bevor gemessen wurde.
+//
+// Eine Stufe UNTER der Leiste (z-index), damit beim Umbruch nicht der
+// Dokumentkopf ueber der Navigation liegt.
+// Seitlich ein Stueck ueber die Textspalte hinaus: sonst schiebt sich beim
+// Scrollen Inhalt an der Kante der Flaeche vorbei, statt darunter zu
+// verschwinden.
+.doc-head {
+  position: sticky;
+  top: var(--chrome-h, 3.75rem);
+  z-index: 9;
+  padding-block: 0.5rem;
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
 }
 
 // ---- Ablageflaeche eines Toggles ----

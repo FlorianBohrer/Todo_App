@@ -16,7 +16,17 @@
       <div class="min-w-0 flex-1">
         <div class="mx-auto w-full max-w-3xl">
     <!-- ===== Editor ===== -->
-    <div class="mb-5 flex items-center gap-2">
+    <!-- Der Kopf bleibt oben stehen. In einem langen Dokument sind Titel,
+         Rueckweg, Gliederung und Rueckgaengig genau das, was man braucht,
+         WAEHREND man unten liest — sie nach oben zu suchen ist ein Scrollweg
+         fuer nichts.
+
+         app-chrome ist dieselbe Flaeche wie bei der Leiste darueber: sie faerbt
+         sich erst ein, wenn Inhalt darunter durchzieht, und die drei
+         prefers-Abfragen schalten beide gemeinsam um. Geklebt wird unter der
+         Leiste — deren Hoehe steht in --chrome-h, weil sie auf schmalen
+         Schirmen umbricht. -->
+    <div class="doc-head app-chrome mb-5 flex items-center gap-2">
       <button
         type="button"
         class="grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition hover:bg-fill-strong hover:text-text"
