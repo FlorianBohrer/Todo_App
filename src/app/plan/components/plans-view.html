@@ -331,7 +331,25 @@
 
   } @else {
     <!-- ===== Übersicht ===== -->
-    <div class="mx-auto w-full max-w-3xl">
+    <!-- Dateien darf man auch einfach fallen lassen. Das Ziehen der Kacheln
+         laeuft ueber Zeigerereignisse und kommt sich damit nicht in die
+         Quere: hier reagiert nur, was Dateien mitbringt. -->
+    <div class="relative mx-auto w-full max-w-3xl"
+      (dragenter)="onFileDragEnter($event)"
+      (dragover)="onFileDragOver($event)"
+      (dragleave)="onFileDragLeave($event)"
+      (drop)="onFileDrop($event)">
+
+    @if (fileOver()) {
+      <div class="pointer-events-none absolute inset-0 z-30 grid place-items-center rounded-2xl
+                  border-2 border-dashed border-brand-2 bg-bg/80 backdrop-blur-sm">
+        <p class="flex items-center gap-2 text-sm font-medium text-text">
+          <lucide-icon [img]="ImportIcon" class="h-4 w-4"></lucide-icon>
+          Drop markdown files to import
+        </p>
+      </div>
+    }
+
     <div class="mb-5 flex flex-wrap items-center gap-3">
       <h2 class="text-lg font-medium text-text">Plans</h2>
 
@@ -422,9 +440,25 @@
         </ng-template>
       }
 
+      <!-- Der Weg herein. Steht auch dann da, wenn es noch keinen Plan gibt —
+           gerade dann will man welche mitbringen. -->
+      <input #importField type="file" class="hidden" multiple
+        accept=".md,.markdown,.txt,.zip,text/markdown,text/plain,application/zip"
+        (change)="onImportPicked(importField)" />
+      <button type="button"
+        class="inline-flex items-center gap-2 rounded-full border border-line px-3 py-2
+               text-sm text-muted transition hover:border-line-strong hover:text-text
+               disabled:pointer-events-none disabled:opacity-50"
+        [class.ml-auto]="!plans().length"
+        [disabled]="importing()"
+        (click)="importField.click()"
+        title="Import markdown files">
+        <lucide-icon [img]="ImportIcon" class="h-4 w-4"></lucide-icon>
+        <span class="hidden sm:inline">{{ importing() ? 'Importing…' : 'Import' }}</span>
+      </button>
+
       <button type="button"
         class="inline-flex items-center gap-2 rounded-full bg-brand-2 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
-        [class.ml-auto]="!plans().length"
         (click)="newPlan()">
         <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon> New plan
       </button>

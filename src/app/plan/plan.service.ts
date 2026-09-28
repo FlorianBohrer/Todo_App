@@ -1,10 +1,10 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
-import { distinctUntilChanged, map } from 'rxjs';
+import { distinctUntilChanged, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../environments/enviroment';
 import { ToastService } from '../shared/toast.service';
-import { Plan } from './plan.model';
+import { Plan, PlanBlock } from './plan.model';
 
 interface PlanListResponse {
   plans: Plan[];
@@ -172,6 +172,28 @@ export class PlanService {
           this.toast.error('Could not create plan');
         },
       });
+  }
+
+  /**
+   * Einen fertigen Plan anlegen — mit Inhalt (Import).
+   *
+   * Zwei Schritte, weil das Anlegen serverseitig nur Titel und Folder kennt:
+   * erst der leere Plan, dann der Inhalt über denselben Weg wie jede andere
+   * Änderung. Damit hängt der Import an der Speicherlogik mit Wiederholung
+   * statt an einem eigenen, ungetesteten Pfad.
+   *
+   * Fehler fliegen weiter: der Aufrufer importiert mehrere Dateien und muss
+   * am Ende sagen können, wie viele davon angekommen sind.
+   */
+  async importPlan(title: string, categoryId: string | null, content: PlanBlock[]): Promise<Plan> {
+    const created = await firstValueFrom(
+      this.http.post<Plan>(this.apiUrl, { title: title.trim() || 'Untitled', categoryId }),
+    );
+
+    const plan = { ...created, content };
+    this.plans.update((list) => [plan, ...list]);
+    this.patchPlan(plan.id, { content });
+    return plan;
   }
 
   /** Änderung sofort lokal anzeigen und (entprellt) speichern. */
