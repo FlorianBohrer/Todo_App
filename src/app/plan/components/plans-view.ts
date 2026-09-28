@@ -14,7 +14,6 @@ import {
   CdkDragHandle,
   CdkDragPlaceholder,
   CdkDropList,
-  CdkDropListGroup,
   CdkDragDrop,
 } from '@angular/cdk/drag-drop';
 import {
@@ -138,7 +137,6 @@ const DIAGRAM_TEMPLATE = `flowchart TD
     MermaidDiagram,
     NgTemplateOutlet,
     NgClass,
-    CdkDropListGroup,
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
@@ -170,6 +168,39 @@ export class PlansView {
 
   /** Datenwert der obersten Blockliste; getippt, damit er zu den Section-Listen passt. */
   protected readonly rootList: string | null = null;
+
+  // ---- Die Ablageflaechen kennen einander ueber IDs ----
+  //
+  // cdkDropListGroup verbindet Listen ueber die Injektor-Hierarchie. Die
+  // Blockvorlage wird aber per ngTemplateOutlet eingesetzt, und eine
+  // eingebettete Ansicht sucht ihre Abhaengigkeiten dort, wo sie DEKLARIERT
+  // ist — die Vorlage steht ausserhalb der Gruppe. Die Listen in den Toggles
+  // haben die Gruppe deshalb nie gefunden und waren keine Nachbarn der
+  // obersten Liste: es liess sich kein Block in ein Toggle ziehen und keiner
+  // heraus, und zwar von Anfang an.
+  //
+  // Ueber IDs laeuft die Verbindung an der Hierarchie vorbei: das CDK haelt
+  // alle Listen in einem eigenen Verzeichnis und sucht sie dort.
+
+  protected readonly ROOT_LIST = 'plan-list-root';
+
+  listId(groupId: string): string {
+    return 'plan-list-' + groupId;
+  }
+
+  /** Alle Ablageflaechen des Dokuments — jede kennt jede. */
+  protected readonly listIds = computed<string[]>(() => {
+    const ids = [this.ROOT_LIST];
+    const walk = (blocks: PlanBlock[]) => {
+      for (const block of blocks) {
+        if (block.type !== 'group') continue;
+        ids.push(this.listId(block.id));
+        walk(block.blocks);
+      }
+    };
+    walk(this.selected()?.content ?? []);
+    return ids;
+  });
   protected readonly TextIcon = Type;
   protected readonly TableIcon = TableIcon;
   protected readonly DiagramIcon = Workflow;
