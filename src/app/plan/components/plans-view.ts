@@ -468,19 +468,26 @@ export class PlansView {
     event.preventDefault();
     this.dragDepth = 0;
     this.fileOver.set(false);
-    void this.importFiles(event.dataTransfer?.files ?? null);
+    void this.importFiles(Array.from(event.dataTransfer?.files ?? []));
   }
 
   private hasFiles(event: DragEvent): boolean {
     return !!event.dataTransfer?.types.includes('Files');
   }
 
-  /** Der Knopf: der Dateidialog haengt an einem unsichtbaren Feld. */
+  /**
+   * Der Knopf: der Dateidialog haengt an einem unsichtbaren Feld.
+   *
+   * Erst abschreiben, dann zuruecksetzen. `input.files` ist keine Kopie,
+   * sondern die Liste des Feldes selbst — das Zuruecksetzen leert damit auch
+   * die Liste, die man gerade weitergeben wollte, und es kam nie etwas an.
+   * Zuruecksetzen muss man trotzdem, sonst loest dieselbe Datei beim zweiten
+   * Mal kein „change" mehr aus.
+   */
   onImportPicked(input: HTMLInputElement) {
-    const files = input.files;
-    // Zuruecksetzen, sonst loest dieselbe Datei beim zweiten Mal nichts aus.
+    const chosen = Array.from(input.files ?? []);
     input.value = '';
-    void this.importFiles(files);
+    void this.importFiles(chosen);
   }
 
   /**
@@ -490,8 +497,7 @@ export class PlansView {
    * herausgegeben hat. Schlaegt eine Datei fehl, laufen die anderen weiter:
    * bei zwanzig Notizen waere Abbrechen die schlechtere Antwort.
    */
-  private async importFiles(files: FileList | null) {
-    const chosen = Array.from(files ?? []);
+  private async importFiles(chosen: readonly File[]) {
     if (!chosen.length || this.importing()) return;
 
     this.importing.set(true);
