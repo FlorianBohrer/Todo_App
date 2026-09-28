@@ -627,6 +627,22 @@ textarea::-webkit-resizer { display: none; }
 .plan-drag-preview {
   border-radius: 0.75rem;
 
+  /* Gedeckelt.
+
+     Die Vorschau ist eine Kopie des Blocks in Originalgroesse. Bei einem
+     Absatz sind das zwei Zeilen unter dem Zeiger; bei einer Tabelle haengen
+     dreihundert Pixel daran. Man zielt dann mit dem, was man SIEHT — und der
+     Zeiger, auf den es ankommt, steht oben am Griff, eine halbe Tabelle
+     ueber der Stelle, die man treffen will. Deshalb liess sich eine Tabelle
+     nicht in ein Toggle legen, ein Absatz aber schon.
+
+     Gekappt bleibt die Vorschau ein Streifen dicht am Zeiger; der Verlauf
+     unten sagt, dass mehr daran haengt. */
+  max-height: 4.5rem;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 2.75rem, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 2.75rem, transparent);
+
   background: color-mix(in srgb, var(--color-panel1) 82%, transparent);
   backdrop-filter: blur(14px) saturate(160%);
 
