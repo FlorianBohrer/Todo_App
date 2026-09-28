@@ -192,6 +192,34 @@ export function moveWithSubtasks<T extends { id: string; title: string }>(
   return [...rest.slice(0, at), ...moved, ...rest.slice(at)].map((i) => i.id);
 }
 
+/**
+ * Legt ein Todo ans Ende der Gruppe einer Hauptaufgabe.
+ *
+ * Ans ENDE, nicht direkt dahinter: wer drei Schritte nacheinander tippt, meint
+ * ihre Reihenfolge. Direkt hinter der Hauptaufgabe eingesetzt stünde der
+ * zuletzt getippte oben, und die Liste läse sich rückwärts.
+ *
+ * Gibt die Liste unverändert zurück, wenn es eines von beiden nicht gibt —
+ * eine halb ausgeführte Umsortierung wäre schlimmer als gar keine.
+ */
+export function appendUnder<T extends { id: string; title: string }>(
+  items: readonly T[],
+  movedId: string,
+  parentId: string,
+): T[] {
+  const moved = items.find((i) => i.id === movedId);
+  if (!moved || movedId === parentId) return [...items];
+
+  const rest = items.filter((i) => i.id !== movedId);
+  const at = rest.findIndex((i) => i.id === parentId);
+  if (at === -1) return [...items];
+
+  let end = at + 1;
+  while (end < rest.length && taskLevel(rest[end].title) === 'sub') end++;
+
+  return [...rest.slice(0, end), moved, ...rest.slice(end)];
+}
+
 /** Anzeigetext ohne Präfix (und ohne die folgenden Leerzeichen). */
 export function stripPriorityPrefix(title: string): string {
   const found = findPrefix(title);

@@ -1,13 +1,30 @@
 <section class="mt-4 p-4 sm:p-0">
+  <!-- Angeklickte Hauptaufgabe: das Feld sagt, wohin das Getippte geht.
+       Ohne diese Zeile waere die Auswahl eine unsichtbare Voreinstellung —
+       man legt ein Todo an und findet es woanders wieder. -->
+  @if (parent()) {
+    <div class="mb-2 flex items-center gap-2 rounded-lg bg-fill px-3 py-1.5 text-xs text-muted">
+      <lucide-icon [img]="SubIcon" class="h-3.5 w-3.5 flex-none text-brand-2"></lucide-icon>
+      <span class="flex-none">Step of</span>
+      <span class="min-w-0 flex-1 truncate text-text">{{ parentTitle() }}</span>
+      <button type="button"
+        class="grid h-5 w-5 flex-none place-items-center rounded text-subtle transition hover:bg-fill-strong hover:text-text"
+        (click)="clearParent()" aria-label="Add to the list instead">
+        <lucide-icon [img]="ClearIcon" class="h-3.5 w-3.5"></lucide-icon>
+      </button>
+    </div>
+  }
+
  <div class="flex items-end gap-3">
   <textarea
     #newTodoField
     appAutosize
     rows="1"
     class="min-h-11 flex-1 resize-none overflow-hidden rounded-xl bg-bg2 px-4 py-3 text-text"
-    placeholder="Add a todo..."
+    [placeholder]="parent() ? 'Add a step…' : 'Add a todo...'"
     [(ngModel)]="newTitle"
     (keydown.enter)="$event.preventDefault(); addTodo()"
+    (keydown.escape)="onEscape()"
     aria-label="New todo"
   ></textarea>
 

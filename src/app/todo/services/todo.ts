@@ -6,7 +6,7 @@ import { environment } from '../../../environments/enviroment';
 import { RepeatRule, Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
-import { orderWithSubtasks } from '../shared/title-priority';
+import { appendUnder, orderWithSubtasks } from '../shared/title-priority';
 import { scheduleLabel } from '../shared/schedule';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
@@ -420,7 +420,7 @@ toggleFavorite(id: string) {
   // ---- Schreiben ----
   // Änderungen werden sofort lokal angezeigt (optimistic update) und ans
   // Backend geschickt. Schlägt der Request fehl, laden wir den Serverstand neu.
-  addTodo(title: string, scheduledDate: string | null = null) {
+  addTodo(title: string, scheduledDate: string | null = null, parentId: string | null = null) {
     const t = title.trim();
     if (t === '') return;
     this.http
@@ -430,7 +430,10 @@ toggleFavorite(id: string) {
         scheduledDate,                                  // Woche: direkt auf einen Tag
       })
       .subscribe({
-        next: (dto) => this.todos.update(items => [...items, this.toTodo(dto)]),
+        next: (dto) => {
+          this.todos.update(items => [...items, this.toTodo(dto)]);
+          if (parentId) this.placeUnder(dto.id, parentId);
+        },
         error: (err) => {
           console.error('Todo anlegen fehlgeschlagen', err);
           this.toast.error('Could not create todo');
@@ -480,11 +483,11 @@ toggleFavorite(id: string) {
     return id ? this.todosById().get(id) ?? null : null;
   }
 
-  addTodos(titles: string[]) {
+  addTodos(titles: string[], parentId: string | null = null) {
     const clean = titles.map((t) => t.trim()).filter((t) => t.length > 0);
     if (clean.length === 0) return;
     if (clean.length === 1) {
-      this.addTodo(clean[0]);
+      this.addTodo(clean[0], null, parentId);
       return;
     }
 
@@ -496,6 +499,7 @@ toggleFavorite(id: string) {
         if (hadError) {
           this.toast.error('Could not create some todos');
         }
+        if (parentId) this.persistOrder();
         return;
       }
       this.http
@@ -503,6 +507,9 @@ toggleFavorite(id: string) {
         .subscribe({
           next: (dto) => {
             this.todos.update((items) => [...items, this.toTodo(dto)]);
+            // Einsortieren ja, sichern erst am Ende: sonst geht fuer jede
+            // eingefuegte Zeile eine eigene Reihenfolge an den Server.
+            if (parentId) this.placeUnder(dto.id, parentId, false);
             postNext(index + 1);
           },
           error: (err) => {
@@ -600,7 +607,11 @@ toggleFavorite(id: string) {
       all.map(item => (visibleIds.has(item.id) ? reordered[qi++] : item)),
     );
 
-    // Komplette neue Reihenfolge persistieren (Index = Position).
+    this.persistOrder();
+  }
+
+  /** Komplette Reihenfolge sichern (Index = Position). */
+  private persistOrder() {
     this.http
       .put<void>(`${this.apiUrl}/reorder`, { ids: this.todos().map(t => t.id) })
       .subscribe({
@@ -610,6 +621,38 @@ toggleFavorite(id: string) {
           this.loadTodos();
         },
       });
+  }
+
+  // ---- Unteraufgaben anlegen ----
+  //
+  // „/sub" allein haengt einen Schritt an die Zeile darueber — beim Tippen
+  // unten im Feld ist das die letzte Aufgabe der Liste, nicht die, um die es
+  // geht. Deshalb laesst sich eine Hauptaufgabe anklicken: sie ist dann das
+  // Ziel, und was man anlegt, landet bei ihr.
+
+  /** Hauptaufgabe, unter der neue Todos landen. null = ans Ende. */
+  private readonly parentId = signal<string | null>(null);
+
+  readonly activeParentId = this.parentId.asReadonly();
+
+  /** Die gewaehlte Hauptaufgabe — null, sobald es sie nicht mehr gibt. */
+  readonly activeParent = computed<Todo | null>(() => this.todoById(this.parentId()));
+
+  selectParent(id: string | null) {
+    this.parentId.set(id);
+  }
+
+  /**
+   * Schiebt ein frisch angelegtes Todo ans Ende der Gruppe seiner
+   * Hauptaufgabe.
+   *
+   * Ans ENDE, nicht direkt dahinter: wer drei Schritte nacheinander tippt,
+   * meint ihre Reihenfolge. Direkt hinter die Hauptaufgabe gesetzt stuende der
+   * zuletzt getippte oben, und die Liste laese sich rueckwaerts.
+   */
+  private placeUnder(movedId: string, parentId: string, persist = true) {
+    this.todos.update(items => appendUnder(items, movedId, parentId));
+    if (persist) this.persistOrder();
   }
 
   /**

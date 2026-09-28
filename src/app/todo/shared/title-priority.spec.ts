@@ -1,4 +1,5 @@
 import {
+  appendUnder,
   MOSCOW_LABEL,
   moveWithSubtasks,
   orderWithSubtasks,
@@ -248,6 +249,46 @@ describe('moveWithSubtasks', () => {
     const out = moveWithSubtasks(items, 'C', 'A');
     expect(out).not.toBeNull();
     expect([...out!].sort()).toEqual(items.map((i) => i.id).sort());
+  });
+});
+
+describe('appendUnder', () => {
+  const list = (...titles: string[]) => titles.map((title) => ({ id: title, title }));
+
+  it('puts a new step behind the steps that are already there', () => {
+    // Der Grund fuer „ans Ende": drei Schritte nacheinander getippt sollen in
+    // der Reihenfolge stehen, in der man sie gedacht hat.
+    const items = list('A', '/sub a1', '/sub a2', 'B', '/sub neu');
+    expect(appendUnder(items, '/sub neu', 'A').map((i) => i.id)).toEqual([
+      'A', '/sub a1', '/sub a2', '/sub neu', 'B',
+    ]);
+  });
+
+  it('works for a main task without any steps yet', () => {
+    const items = list('A', 'B', '/sub neu');
+    expect(appendUnder(items, '/sub neu', 'A').map((i) => i.id)).toEqual([
+      'A', '/sub neu', 'B',
+    ]);
+  });
+
+  it('stops at the next main task, not at the end of the list', () => {
+    const items = list('A', '/sub a1', 'B', '/sub b1', '/sub neu');
+    expect(appendUnder(items, '/sub neu', 'A').map((i) => i.id)).toEqual([
+      'A', '/sub a1', '/sub neu', 'B', '/sub b1',
+    ]);
+  });
+
+  it('leaves the list alone when either side is missing', () => {
+    const items = list('A', 'B');
+    expect(appendUnder(items, 'gibt es nicht', 'A').map((i) => i.id)).toEqual(['A', 'B']);
+    expect(appendUnder(items, 'B', 'gibt es nicht').map((i) => i.id)).toEqual(['A', 'B']);
+    expect(appendUnder(items, 'A', 'A').map((i) => i.id)).toEqual(['A', 'B']);
+  });
+
+  it('loses nothing', () => {
+    const items = list('A', '/sub a1', 'B', 'C');
+    const out = appendUnder(items, 'C', 'A');
+    expect([...out].map((i) => i.id).sort()).toEqual(items.map((i) => i.id).sort());
   });
 });
 
