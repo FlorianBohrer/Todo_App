@@ -440,28 +440,72 @@
         </ng-template>
       }
 
-      <!-- Der Weg herein. Steht auch dann da, wenn es noch keinen Plan gibt —
-           gerade dann will man welche mitbringen. -->
       <input #importField type="file" class="hidden" multiple
         accept=".md,.markdown,.txt,.zip,text/markdown,text/plain,application/zip"
         (change)="onImportPicked(importField)" />
-      <button type="button"
-        class="inline-flex items-center gap-2 rounded-full border border-line px-3 py-2
-               text-sm text-muted transition hover:border-line-strong hover:text-text
-               disabled:pointer-events-none disabled:opacity-50"
-        [class.ml-auto]="!plans().length"
-        [disabled]="importing()"
-        (click)="importField.click()"
-        title="Import markdown files">
-        <lucide-icon [img]="ImportIcon" class="h-4 w-4"></lucide-icon>
-        <span class="hidden sm:inline">{{ importing() ? 'Importing…' : 'Import' }}</span>
-      </button>
 
-      <button type="button"
-        class="inline-flex items-center gap-2 rounded-full bg-brand-2 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
-        (click)="newPlan()">
-        <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon> New plan
-      </button>
+      <!-- Einen Plan anlegen — leer oder aus einer Datei.
+           Beides ist dieselbe Absicht und steht deshalb in einem Element.
+           Geteilt statt als Menü, damit der Regelfall ein Klick bleibt: die
+           Pfeilhälfte zeigt, dass es einen zweiten Weg gibt, ohne ihn dem
+           ersten in den Weg zu stellen. Beim Import dreht sich dort ein
+           Ring — der Knopf links bleibt benutzbar, ein Import hindert
+           niemanden daran, nebenher einen leeren Plan anzufangen. -->
+      <!-- Die Haelften runden sich selbst, statt dass der Rahmen sie
+           beschneidet: ein abgeschnittener Fokusring waere der Preis, und
+           die Tastatur soll hier genauso zu sehen sein wie ueberall sonst. -->
+      <div class="split-button flex flex-none items-stretch rounded-full bg-brand-2 text-sm font-medium text-white"
+        [class.ml-auto]="!plans().length">
+        <button type="button"
+          class="inline-flex items-center gap-2 rounded-l-full py-2 pl-4 pr-3 transition hover:bg-white/15"
+          (click)="newPlan()">
+          <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon> New plan
+        </button>
+
+        <span class="my-1.5 w-px flex-none bg-white/25" aria-hidden="true"></span>
+
+        <button type="button" cdkOverlayOrigin #addPlanAnchor="cdkOverlayOrigin"
+          class="grid w-9 place-items-center rounded-r-full transition hover:bg-white/15"
+          (click)="toggleNewMenu()"
+          [attr.aria-expanded]="newMenuOpen()" aria-haspopup="menu"
+          [attr.aria-label]="importing() ? 'Importing' : 'More ways to add a plan'">
+          @if (importing()) {
+            <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent"
+                  role="status" aria-live="polite"></span>
+          } @else {
+            <lucide-icon [img]="DownIcon" class="h-4 w-4"></lucide-icon>
+          }
+        </button>
+      </div>
+
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="addPlanAnchor"
+        [cdkConnectedOverlayOpen]="newMenuOpen()"
+        [cdkConnectedOverlayPositions]="menuPositions"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+        (backdropClick)="closeNewMenu()"
+        (detach)="closeNewMenu()"
+        (overlayKeydown)="$event.key === 'Escape' && closeNewMenu()">
+        <div role="menu" class="popover w-64 px-1">
+          <button role="menuitem" type="button" class="popover-item text-sm text-text"
+            (click)="newPlanFromMenu()">
+            <lucide-icon [img]="BlankIcon" class="h-4 w-4 flex-none text-muted"></lucide-icon>
+            Blank plan
+          </button>
+          <button role="menuitem" type="button"
+            class="popover-item text-sm text-text disabled:pointer-events-none disabled:opacity-50"
+            [disabled]="importing()"
+            (click)="pickImport(importField)">
+            <lucide-icon [img]="ImportIcon" class="h-4 w-4 flex-none text-muted"></lucide-icon>
+            {{ importing() ? 'Importing…' : 'From markdown files…' }}
+          </button>
+          <p class="px-3 pb-1.5 pt-1 text-2xs leading-snug text-subtle">
+            .md or a .zip of them — or just drop files on this page.
+          </p>
+        </div>
+      </ng-template>
     </div>
 
     <!-- Suche und Folder-Filter. Nur für die Kacheln: der Graph lebt von den

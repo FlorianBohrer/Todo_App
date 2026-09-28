@@ -275,6 +275,24 @@
 }
 
 
+// ---- Geteilter Knopf: neuer Plan, leer oder aus einer Datei ----
+//
+// Der Fokusring liegt um das Ganze. Ein Rechteck um eine Hälfte schnitte
+// quer durch die Pille — sichtbar wäre es, schön nicht. Welche Hälfte
+// gemeint ist, sagt stattdessen die Aufhellung darunter; beides zusammen
+// beantwortet die zwei Fragen, die die Tastatur stellt: wo bin ich, und
+// was löst die Eingabetaste aus.
+.split-button:has(> button:focus-visible) {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 2px;
+}
+
+.split-button > button:focus-visible {
+  outline: none;
+  background-color: rgb(255 255 255 / 0.2);
+}
+
+
 // ---- Folder-Filter der Übersicht ----
 //
 // Bewusst flacher als die Umschalter darüber: das hier ist eine Einschränkung
