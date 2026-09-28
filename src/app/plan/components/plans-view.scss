@@ -1,46 +1,10 @@
-// Rechts liegt jetzt gar nichts mehr — die Blockaktionen sitzen hinter dem
-// Ziehgriff in der linken Randspalte. Die gesamte rechte Reserve faellt weg
-// und geht an den Text.
-.block-row {
-  padding-right: 0.5rem;
-  padding-left: 44px; // Randspalte fuer den Ziehgriff
-  min-height: 52px; // haelt den 44px-Griff auf Touch im Block
-}
-
-.block-handle {
-  width: 44px;
-  height: 44px;
-}
-
-// Randspalte: auf Touch nur der Ziehgriff. Zwei 44px-Flaechen nebeneinander
-// wuerden dort die halbe Textbreite auffressen.
-.block-add {
-  display: none;
-}
-
-.block-grip {
-  left: 0;
-}
+// Stile der Plan-Ansicht.
+//
+// Was der einzelne Block braucht, steht in plan-block.scss — Angular bindet
+// Stile an die Elemente IHRER Komponente, und die des Blocks gehoeren seit dem
+// Schnitt nicht mehr hierher. Was beide Vorlagen benutzen, steht in beiden.
 
 @media (hover: hover) and (pointer: fine) {
-   .block-row {
-    padding-right: 0.5rem;
-    padding-left: 56px; // „+" und Griff nebeneinander, wie in Notion
-    min-height: 0;
-  }
-
-  .block-add {
-    display: grid;
-  }
-
-  .block-grip {
-    left: 28px;
-  }
-
-  .block-handle {
-    width: 28px;
-    height: 28px;
-  }
 
   // Am Zeigergeraet treten die Griffe zurueck, bis der Block ueberfahren wird —
   // auf Touch bleiben sie stehen, dort gibt es kein Hover.
@@ -58,8 +22,8 @@
   .drag-handle:focus-visible,
   .drag-handle.is-open {
     opacity: 1;
-  }
-}
+  }}
+
 
 // ---- Drag & Drop ----
 //
@@ -82,6 +46,7 @@
   --shift-ms: 295ms;
 }
 
+
 // Der Platzhalter zeigt, wo der Block landet — als Umriss, nicht als Loch.
 .drop-preview {
   height: 2.25rem;
@@ -91,10 +56,12 @@
   animation: drop-preview-in 430ms linear(0.0000, 0.0249, 0.0890, 0.1780, 0.2809, 0.3887, 0.4951, 0.5955, 0.6867, 0.7670, 0.8357, 0.8929, 0.9390, 0.9750, 1.0021, 1.0214, 1.0343, 1.0419, 1.0454, 1.0458, 1.0439, 1.0405, 1.0361, 1.0312, 1.0263, 1.0215, 1.0170, 1.0130, 1.0095, 1.0065, 1.0041, 1.0021, 1.0006, 0.9995, 0.9988, 0.9983, 0.9980, 0.9979, 0.9979, 0.9980, 0.9982, 0.9984, 0.9986, 0.9989, 1.0000) both;
 }
 
+
 @keyframes drop-preview-in {
   from { opacity: 0; transform: scaleY(0.6); }
   to { opacity: 1; transform: scaleY(1); }
 }
+
 
 // Das Zurueckschnappen nach dem Loslassen — die Geste hatte Schwung, also
 // darf es minimal ueberschwingen.
@@ -102,10 +69,12 @@
   transition: transform var(--settle-ms) var(--spring-settle);
 }
 
+
 // Nachbarn, die Platz machen, hatten keinen Schwung: straff und ohne Nachfedern.
 .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
   transition: transform var(--shift-ms) var(--spring-shift);
 }
+
 
 // Zielliste dezent hervorheben, statt sie hart zu umranden.
 .cdk-drop-list-receiving {
@@ -115,11 +84,13 @@
   transition: outline-color 140ms ease-out;
 }
 
+
 // Rueckmeldung auf den Druck, nicht erst auf das Loslassen.
 .drag-handle:active {
   scale: 0.92;
   transition: scale 90ms ease-out;
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   .cdk-drag-animating,
@@ -127,91 +98,8 @@
     transition: none;
   }
   .drop-preview { animation: none; }
-  .drag-handle:active { scale: 1; }
-}
+  .drag-handle:active { scale: 1; }}
 
-// Aktiver Eintrag im Slash-Menü (Tastatur-/Maus-Auswahl). Der Balken links
-// macht die Auswahl auch dann eindeutig, wenn die Maus ueber einem anderen
-// Eintrag steht.
-.slash-item--active {
-  background-color: var(--plan-accent-soft);
-  box-shadow: inset 2px 0 0 var(--plan-accent);
-}
-
-// ---- Gerenderter Text (Live Preview) ----
-//
-// Alles unter .plan-prose entsteht ueber [innerHTML]. Solche Elemente tragen
-// KEIN Angular-Encapsulation-Attribut, deshalb ::ng-deep — sonst greift hier
-// keine einzige Regel. Der :host-Prefix haelt es trotzdem auf diese Komponente
-// begrenzt.
-:host ::ng-deep {
-  .plan-code {
-    border-radius: 0.3rem;
-    background: rgb(255 255 255 / 0.07);
-    padding: 0.1em 0.35em;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.875em;
-    color: #f8a3a3; // wie im Referenzbild: Code hebt sich farblich ab
-  }
-
-  // Wikilink: als Verweis erkennbar, ohne die Zeile zu zerreissen. Violett
-  // statt Indigo — das trennt Verweise klar von den blauen Aktionsflaechen der
-  // App und ist der Ton, den Obsidian fuer Links setzt.
-  .plan-link {
-    border-bottom: 1px solid rgb(167 139 250 / 0.45);
-    color: #c4b5fd;
-    cursor: pointer;
-    transition: color 120ms ease-out, border-color 120ms ease-out;
-  }
-
-  .plan-link:hover {
-    border-bottom-color: rgb(196 181 253 / 0.9);
-    color: #ddd6fe;
-  }
-
-  strong { font-weight: 650; }
-  em { font-style: italic; }
-  s { opacity: 0.6; }
-
-  // Etwas Abstand zur Grundlinie, sonst schneidet der Strich durch die
-  // Unterlaengen von g, j und p.
-  u {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.22em;
-  }
-}
-
-// Leerer Block bleibt anklickbar: ohne Mindesthoehe waere die Trefferflaeche
-// eines leeren Absatzes null.
-.plan-prose {
-  word-break: break-word;
-}
-
-// ---- Schreibfeld ----
-//
-// Ein contenteditable ohne Zutun sieht aus wie ein Formularfeld: Rahmen beim
-// Fokus, gequetschte Zeilen, verschluckte Leerzeichen. Hier soll es aussehen
-// wie Text auf Papier — man merkt erst am blinkenden Cursor, dass man drin ist.
-.rich-text {
-  outline: none;
-  cursor: text;
-  // pre-wrap, sonst fallen aufeinanderfolgende Leerzeichen zusammen und der
-  // Cursor steht beim Tippen woanders als der Text.
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  min-height: 1.7em;
-}
-
-// Der Hinweis steht nur im Feld, in dem der Cursor ist — ein Dokument voller
-// grauer „Press '/' for commands" waere Rauschen. Ausnahme sind Ueberschrift
-// und Zitat (data-ghost): leer und ohne Hinweis waeren sie unsichtbar.
-.rich-text[data-empty='true']:focus::before,
-.rich-text[data-empty='true'][data-ghost='true']::before {
-  content: attr(data-placeholder);
-  color: var(--color-subtle);
-  pointer-events: none;
-}
 
 // Die Schreibflaeche unter dem letzten Block. Hoch genug, um sie zu treffen,
 // und ohne jede Andeutung — sie soll wirken wie leeres Papier, nicht wie ein
@@ -221,13 +109,6 @@
   cursor: text;
 }
 
-// ---- Listen ----
-.list-marker {
-  min-width: 1.25rem;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.7;
-}
 
 // ---- Auswahl-Werkzeugleiste ----
 //
@@ -248,6 +129,7 @@
   animation: format-bar-in 120ms ease-out;
 }
 
+
 .format-key {
   display: grid;
   min-width: 1.75rem;
@@ -260,10 +142,12 @@
   transition: background-color 100ms ease-out, color 100ms ease-out;
 }
 
+
 .format-key:hover {
   background: var(--color-fill);
   color: var(--color-text);
 }
+
 
 .format-split {
   width: 1px;
@@ -272,14 +156,16 @@
   background: var(--color-line);
 }
 
+
 @keyframes format-bar-in {
   from { opacity: 0; transform: translate(-50%, calc(-100% - 2px)); }
   to   { opacity: 1; transform: translate(-50%, calc(-100% - 8px)); }
 }
 
+
 @media (prefers-reduced-motion: reduce) {
-  .format-bar { animation: none; }
-}
+  .format-bar { animation: none; }}
+
 
 // ---- Blockaktionen-Menue ----
 .block-menu-item {
@@ -295,27 +181,11 @@
   transition: background-color 120ms ease-out, color 120ms ease-out;
 }
 
+
 .block-menu-item:hover {
   background-color: var(--plan-accent-soft);
 }
 
-.block-menu-item--danger:hover {
-  background-color: rgb(244 73 93 / 0.15);
-  color: var(--color-danger);
-}
-
-// ---- Vertikaler Rhythmus ----
-//
-// Eine Ueberschrift braucht oben mehr Luft als unten, sonst klebt sie am
-// vorherigen Absatz und liest sich wie dessen Fortsetzung. Beim ersten Block
-// faellt der Abstand weg — dort gibt es nichts, wovon man sich absetzen muss.
-.block-heading {
-  margin-top: 1.5rem;
-}
-
-.cdk-drag:first-child .block-heading {
-  margin-top: 0;
-}
 
 // ---- Outline ----
 //
@@ -325,6 +195,7 @@
 .outline-spacer {
   display: none;
 }
+
 
 @media (min-width: 1280px) {
   .outline-nav,
@@ -351,8 +222,8 @@
     border-radius: 0.75rem;
     background: rgb(255 255 255 / 0.022);
     padding: 0.75rem 0.5rem;
-  }
-}
+  }}
+
 
 // ---- Kopf des Dokuments ----
 //
@@ -375,38 +246,13 @@
   padding-inline: 0.5rem;
 }
 
-// ---- Ablageflaeche eines Toggles ----
-//
-// Zugeklappt ist der Koerper nicht da — aber als Ablageflaeche angemeldet.
-// display:none haelt ihn aus dem Layout, ohne ihn aus dem Dokument zu nehmen;
-// sobald jemand einen Block am Griff hat, wird daraus ein Streifen, den man
-// treffen kann. Ohne diesen Zwischenzustand haette ein zugeklapptes Toggle
-// entweder dauerhaft eine leere Zeile unter sich oder waere kein Ziel.
-.section-body--shut:not(.section-body--drop) {
-  display: none;
-}
-
-.section-body--drop {
-  display: flex;
-  align-items: center;
-  min-height: 2rem;
-  margin-top: 0.25rem;
-  border: 1px dashed var(--color-line-strong);
-  border-radius: 0.5rem;
-  background: var(--color-fill);
-}
-
-.drop-note {
-  padding-left: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--color-subtle);
-}
 
 // Ein leeres, aufgeklapptes Toggle ist nur so hoch wie seine Hinweiszeile —
 // als Ziel ein Strich. Waehrend des Zugs bekommt es Hoehe.
 .is-grabbing .section-body:not(.section-body--shut) {
   min-height: 2rem;
 }
+
 
 // ---- Umschalter Notes / Graph ----
 .mode-tab {
@@ -417,14 +263,17 @@
   transition: background-color 130ms ease-out, color 130ms ease-out;
 }
 
+
 .mode-tab:hover {
   color: var(--color-text);
 }
+
 
 .mode-tab--active {
   background-color: var(--plan-accent-soft);
   color: var(--plan-accent);
 }
+
 
 // ---- Folder-Filter der Übersicht ----
 //
@@ -446,10 +295,12 @@
     color 130ms ease-out;
 }
 
+
 .folder-filter:hover {
   border-color: var(--color-line-strong);
   color: var(--color-text);
 }
+
 
 .folder-filter--active {
   border-color: transparent;
@@ -457,16 +308,19 @@
   color: var(--plan-accent);
 }
 
+
 // ---- Outline-Einträge ----
 .outline-link {
   color: var(--color-muted);
   transition: background-color 120ms ease-out, color 120ms ease-out;
 }
 
+
 .outline-link:hover {
   background-color: var(--plan-accent-soft);
   color: var(--plan-accent);
 }
+
 
 // ---- Micro-Animationen ----
 //
@@ -479,19 +333,6 @@
   to   { opacity: 1; transform: none; }
 }
 
-// Laeuft, wenn ein Block neu ins DOM kommt: nach dem Einfuegen, nach „/",
-// nach dem „+". Beim Oeffnen eines Plans liest es sich als kurzes Setzen.
-.block-row,
-.section-block {
-  animation: block-enter 220ms var(--spring-settle) both;
-}
-
-// Die Ziehvorschau ist eine Kopie und soll sofort unter dem Finger kleben,
-// nicht erst einfliegen.
-.cdk-drag-preview .block-row,
-.cdk-drag-preview .section-block {
-  animation: none;
-}
 
 // Der Trenner zieht sich von links auf — die einzige Stelle, an der eine
 // Linie tatsaechlich entsteht.
@@ -500,10 +341,6 @@
   to   { opacity: 1; transform: none; }
 }
 
-.block-row hr {
-  transform-origin: left center;
-  animation: rule-draw 280ms var(--spring-settle) both;
-}
 
 // Menues kommen aus ihrem Ausloeser heraus, statt einfach da zu sein.
 @keyframes menu-pop {
@@ -511,11 +348,6 @@
   to   { opacity: 1; transform: none; }
 }
 
-.slash-menu,
-[role="menu"] {
-  transform-origin: top left;
-  animation: menu-pop 150ms var(--spring) both;
-}
 
 // Quick Switcher: die Zentrierung steht in der Grundregel, damit sie auch
 // haelt, wenn die Animation abgeschaltet ist.
@@ -524,19 +356,23 @@
   animation: switcher-in 240ms var(--spring-settle) both;
 }
 
+
 @keyframes switcher-in {
   from { opacity: 0; transform: translate(-50%, -10px) scale(0.97); }
   to   { opacity: 1; transform: translateX(-50%); }
 }
 
+
 .switcher-backdrop {
   animation: backdrop-fade 200ms ease-out both;
 }
+
 
 @keyframes backdrop-fade {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
 
 // Rueckmeldung auf den Druck, nicht erst auf das Loslassen.
 .block-menu-item,
@@ -548,6 +384,7 @@
               color 130ms ease-out;
 }
 
+
 .block-menu-item:active,
 .mode-tab:active,
 .slash-item:active,
@@ -555,26 +392,6 @@
   transform: scale(0.97);
 }
 
-// Die Checkbox gibt sofort nach und ploppt beim Setzen kurz auf.
-.todo-box {
-  transition: transform 160ms var(--spring),
-              background-color 140ms ease-out,
-              border-color 140ms ease-out;
-}
-
-.todo-box:active {
-  transform: scale(0.85);
-}
-
-.todo-box[aria-pressed="true"] {
-  animation: check-pop 260ms var(--spring-settle);
-}
-
-@keyframes check-pop {
-  0%   { transform: scale(0.8); }
-  55%  { transform: scale(1.14); }
-  100% { transform: scale(1); }
-}
 
 // Outline: ein kleiner Schubs zur Seite macht den Eintrag greifbar.
 .outline-link {
@@ -583,35 +400,13 @@
               transform 120ms var(--spring);
 }
 
+
 .outline-link:hover {
   transform: translateX(2px);
 }
 
-// ---- Listenpunkte einzeln entfernen ----
-// Der Knopf gehoert zur Zeile, nicht zur Ansicht: dauerhaft sichtbar wuerde er
-// jede Liste in eine Werkzeugleiste verwandeln.
-.list-item-remove {
-  opacity: 0;
-  vertical-align: middle;
-  transition: opacity 140ms ease-out;
-}
-
-.list-item-row:hover .list-item-remove,
-.list-item-remove:focus-visible {
-  opacity: 1;
-}
-
-// Ohne Zeigergeraet gibt es kein Ueberfahren — dort steht er leise da.
-@media (hover: none) {
-  .list-item-remove {
-    opacity: 0.5;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
-  .list-item-remove {
-    transition: none;
-  }
 
   .block-row,
   .section-block,
@@ -636,177 +431,4 @@
   // Die Zentrierung ist Layout, keine Bewegung — sie bleibt.
   .switcher-panel {
     transform: translateX(-50%);
-  }
-}
-
-// Ein Vorschlag ist noch kein Titel — er gehoert sichtbar in eine andere
-// Kategorie als die echten Outline-Eintraege, sonst haelt man ihn fuer Inhalt.
-.outline-link--suggested {
-  color: var(--color-subtle);
-  font-style: italic;
-}
-
-.outline-link--suggested::before {
-  content: '✦';
-  margin-right: 0.35rem;
-  font-style: normal;
-  opacity: 0.7;
-}
-
-.suggestion-row:hover .outline-link--suggested {
-  color: var(--plan-accent);
-}
-
-// Der Weg vom Plan in die Liste. Tritt zurueck, bis die Zeile ueberfahren
-// wird: er gehoert zum Eintrag, soll ihn beim Lesen aber nicht zerreissen.
-// Auf Touch bleibt er stehen, dort gibt es kein Hover.
-.item-promote {
-  opacity: 0;
-  transition: opacity 120ms ease-out, color 120ms ease-out;
-}
-
-@media (hover: none) {
-  .item-promote { opacity: 0.7; }
-}
-
-.list-item-row:hover .item-promote,
-.list-item-row:focus-within .item-promote,
-.item-promote:focus-visible {
-  opacity: 1;
-}
-
-// ---- Tabellen ----
-//
-// Naeher an Obsidian: die Tabelle zeigt Inhalt, nicht ihr Werkzeug. Was zum
-// Bearbeiten gehoert (Loeschen von Zeile und Spalte), erscheint beim Zeigen.
-.plan-table {
-  // Auto-Layout: die Spalten richten sich nach dem Inhalt statt nach einer
-  // gesetzten Mindestbreite. Genau die hat vorher jede Tabelle ueber den Rand
-  // geschoben, auch wenn zwei kurze Woerter darin standen.
-  table-layout: auto;
-
-  // Eine feste Flaeche aus der Rampe. Vorher trug die Tabelle nur Alphawerte
-  // (5% Weiss im Kopf, 1.8% in den Zebrastreifen) und stand damit direkt auf
-  // dem Seitengrund: was darunter lag, schien durch, und die Streifen waren
-  // eher zu ahnen als zu sehen. Auf einer gedeckten Flaeche tun dieselben
-  // Prozente, was sie sollen.
-  background: var(--color-bg3);
-}
-
-.plan-th,
-.plan-td {
-  border: 1px solid var(--color-line-strong);
-  padding: 0;
-  vertical-align: top;
-  position: relative;
-}
-
-.plan-th {
-  background: var(--color-bg2);
-  text-align: left;
-  font-weight: 600;
-}
-
-// Die schmale Spalte ganz rechts traegt den Loeschknopf der Zeile. Sie hat
-// keinen Rahmen, damit die Tabelle rechts sauber abschliesst.
-.plan-th-gutter,
-.plan-td-gutter {
-  width: 1.75rem;
-  border: 0;
-  text-align: center;
-  vertical-align: middle;
-}
-
-// Zebrastreifen, sehr leise. Bei vielen Zeilen ist er der Unterschied
-// zwischen „ich finde meine Zeile wieder" und „ich zaehle mit dem Finger".
-.plan-table tbody tr:nth-child(even) .plan-td {
-  background: rgb(255 255 255 / 0.018);
-}
-
-.plan-table tbody tr:hover .plan-td {
-  background: rgb(255 255 255 / 0.04);
-}
-
-// Der Text in der Zelle. Bricht um, anders als ein input, und behaelt eine
-// Mindesthoehe, damit eine leere Zelle trotzdem zu treffen ist.
-.plan-cell {
-  min-height: 1.75rem;
-  padding: 0.35rem 0.55rem;
-  cursor: text;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
-.plan-cell:focus-visible {
-  outline: 2px solid var(--plan-accent);
-  outline-offset: -2px;
-}
-
-.plan-cell-input {
-  width: 100%;
-  // Deckend und dunkler als die Zelle: das Feld liegt IN der Tabelle, es
-  // schwebt nicht darueber.
-  background: var(--color-bg);
-  padding: 0.35rem 0.55rem;
-  color: var(--color-text);
-  outline: none;
-}
-
-// Loeschen von Zeile und Spalte: nur beim Zeigen. Dauerhaft war es ein Kreuz
-// in jeder Kopfzelle und eine Extraspalte voller Kreuze, die mit dem Inhalt
-// der Tabelle nichts zu tun haben.
-.plan-table-x {
-  position: absolute;
-  top: 0.15rem;
-  right: 0.15rem;
-  border-radius: 0.25rem;
-  padding: 0 0.25rem;
-  font-size: 0.6875rem;
-  line-height: 1.25;
-  color: var(--color-subtle);
-  opacity: 0;
-  transition: opacity 120ms ease-out, color 120ms ease-out;
-}
-
-.plan-td-gutter .plan-table-x {
-  position: static;
-  opacity: 0;
-}
-
-.plan-th:hover .plan-table-x,
-.plan-th:focus-within .plan-table-x,
-tr:hover .plan-td-gutter .plan-table-x,
-tr:focus-within .plan-td-gutter .plan-table-x,
-.plan-table-x:focus-visible {
-  opacity: 1;
-}
-
-.plan-table-x:hover {
-  color: var(--color-danger);
-}
-
-@media (hover: none) {
-  // Ohne Hover gaebe es keinen Weg zu den Knoepfen.
-  .plan-table-x { opacity: 0.6; }
-}
-
-// ---- Diagramme ----
-//
-// Der Schalter zum Quelltext tritt zurueck wie die Ziehgriffe. Offen bleibt er
-// stehen: sonst verschwaende der einzige Weg zurueck, sobald die Maus ins
-// Textfeld geht.
-.plan-dia-edit {
-  opacity: 0;
-  transition: opacity 130ms ease-out, background-color 130ms ease-out,
-    color 130ms ease-out;
-}
-
-.plan-diagram:hover .plan-dia-edit,
-.plan-diagram:focus-within .plan-dia-edit,
-.plan-dia-edit.is-open {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .plan-dia-edit { opacity: 0.7; }
-}
+  }}

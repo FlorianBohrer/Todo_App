@@ -51,6 +51,7 @@ import type { ListRow, PlansView } from './plans-view';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plan-block.html',
+  styleUrl: './plan-block.scss',
 })
 export class PlanBlockView {
   @Input({ required: true }) block!: PlanBlock;
