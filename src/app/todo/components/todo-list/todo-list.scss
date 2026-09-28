@@ -38,7 +38,7 @@ li.cdk-drag {
 // sind kurze Beschreibungen, eine Zeile verbirgt zu viel. Der weiche Auslauf
 // zeigt, dass es weitergeht — ein textarea kann kein text-overflow: ellipsis.
 textarea.todo-collapsed {
-  max-height: 3.5rem;
+  max-height: 3rem; // genau zwei Zeilen à 1.5
   mask-image: linear-gradient(to bottom, #000 calc(100% - 0.75rem), transparent);
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 0.75rem), transparent);
 }
@@ -47,11 +47,24 @@ li.todo-expanded-row {
   flex-wrap: wrap;
 }
 
+// Zeilenabstand: 1.5 statt 1.75.
+//
+// Eine Aufgabenliste ist dichter Text, kein Fliesstext — dort wird das Leading
+// enger, nicht weiter (Apple, „The Details of UI Typography"). 24px Zeile auf
+// 16px Schrift liegt ausserdem genau auf der Hoehe des Hakens daneben, und
+// Grundlinie und Bedienelement stehen damit auf einer Linie.
+//
+// Textfeld und gerenderte Zeile MUESSEN denselben Wert haben, sonst springt
+// der Text beim Aufklappen.
+.todo-title,
+.todo-title-line {
+  line-height: 1.5;
+}
+
 // Erste Zeile in der Kopfzeile: dieselbe Optik wie das Textfeld, damit beim
 // Aufklappen nichts springt.
 .todo-title-line {
   margin: 0;
-  line-height: 1.75rem;
   overflow-wrap: anywhere;
 }
 
@@ -70,9 +83,11 @@ li.todo-expanded-row {
   color: rgb(255 255 255 / 62%);
 }
 
+// Genau unter dem Titel, nicht ungefaehr: Dreieck (1rem) + Haken (1.5rem) +
+// Kachel (1.75rem) und dreimal die Luecke von 0.625rem.
 @media (min-width: 640px) {
   .todo-detail {
-    margin-left: 5.25rem;
+    margin-left: 6.125rem;
   }
 }
 
@@ -200,6 +215,48 @@ li.todo-expanded-row {
   }
 }
 
+/* ---- Was die Zeile ZEIGT, und was sie KANN ----
+
+   Vorher stand in jeder Zeile dieselbe Werkzeugleiste: Stern, Termin, Folder,
+   Stift, Kreuz — sechs Knoepfe, bei zwanzig Aufgaben also hundertzwanzig. Die
+   Liste las sich als Leiste mit Text dazwischen, und das Wichtigste, der Titel,
+   musste sich dagegen behaupten.
+
+   Die Regel dagegen ist einfach: sichtbar bleibt, was etwas AUSSAGT. Ein
+   gesetzter Termin, ein vergebener Folder, ein gesetzter Stern sind Zustand
+   und stehen da. Dieselben Knoepfe ohne Inhalt sind nur Handlungen — sie
+   kommen beim Ueberfahren. Das ist dasselbe Muster, das die App im Plan-Editor
+   schon benutzt. */
+.row-action {
+  opacity: 0;
+  transition: opacity 140ms ease-out, transform 120ms var(--spring);
+}
+
+/* Traegt der Knopf einen Zustand, bleibt er stehen. */
+.row-action--kept,
+.todo-card:hover .row-action,
+.todo-card:focus-within .row-action,
+.row-action:focus-visible {
+  opacity: 1;
+}
+
+/* Ohne Zeigergeraet gibt es kein Ueberfahren — dort stehen sie leise da,
+   sonst waeren sie auf dem Telefon unerreichbar. */
+@media (hover: none) {
+  .row-action { opacity: 0.6; }
+}
+
+/* Antwort auf den Druck, nicht auf das Loslassen (Apple: „Response"). Der
+   Haken bringt seine eigene Stauchung schon mit. */
+.row-action:active {
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-action { transition: none; }
+  .row-action:active { transform: none; }
+}
+
 /* ---- Ziel fuer neue Schritte ----
 
    Angeklickt heisst: was ich jetzt anlege, gehoert hierher. Das muss man
@@ -213,6 +270,19 @@ li.todo-expanded-row {
 
 .todo-card.todo-target:hover {
   border-color: color-mix(in srgb, var(--color-brand-2) 75%, transparent);
+}
+
+/* Bei hohem Kontrast traegt eine halbdurchsichtige Farbe nicht: dort ein
+   voller Rand. Und die Handlungen stehen immer da — sich etwas zu
+   erschliessen, das erst beim Ueberfahren erscheint, ist genau das, was in
+   diesem Modus vermieden werden soll. */
+@media (prefers-contrast: more) {
+  .todo-card.todo-target {
+    border-color: var(--color-brand-2);
+    box-shadow: 0 0 0 1px var(--color-brand-2);
+  }
+
+  .row-action { opacity: 1; }
 }
 
 /* Das Dreieck dreht sich, statt umzuspringen: die Drehung zeigt, dass die
