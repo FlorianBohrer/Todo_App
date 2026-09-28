@@ -37,7 +37,7 @@
          Fenster und bleibt trotzdem begrenzt, damit Kopf und Statistik stehen. -->
     <ul
       role="list"
-      class="space-y-2 max-h-[min(70vh,44rem)] overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
+      class="space-y-1.5 max-h-[min(70vh,44rem)] overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
       cdkDropList
       (cdkDropListDropped)="drop($event)">
       @for (row of visibleRows(); track row.id) {
@@ -50,7 +50,7 @@
       [cdkDragStartDelay]="dragStartDelay"
       (cdkDragStarted)="onDragStarted()"
       (cdkDragEnded)="onDragEnded()"
-      class="todo-card group flex items-center justify-between gap-3 rounded-xl border border-line bg-panel2 p-3 transition hover:border-line-strong"
+      class="todo-card group flex items-center justify-between gap-2.5 rounded-xl border border-line bg-panel2 px-3 py-2.5 transition hover:border-line-strong"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
         todo.completed || completingTodoIds().has(todo.id)
@@ -71,26 +71,8 @@
             class="h-12 rounded-xl border-2 border-dashed border-border bg-fill">
           </div>
 
-          <!-- Favoriten-Stern (mobil im 3-Punkte-Menü) -->
-
-          <button
-            type="button"
-            class="hidden sm:block flex-shrink-0 rounded-full p-1 text-subtle transition hover:text-amber-400"
-            [class.text-amber-400]="todo.isFavorite"
-            [attr.aria-pressed]="todo.isFavorite"
-            [attr.aria-label]="todo.isFavorite
-              ? 'Remove from favorites'
-              : 'Add to favorites'"
-            (click)="toggleFavorite(todo.id)">
-            <lucide-icon
-              [img]="StarIcon"
-              class="h-5 w-5"
-              [class.fill-amber-400]="todo.isFavorite">
-            </lucide-icon>
-          </button>
-
           <!-- Drag-handle -->
-           <div class="flex flex-1 items-center gap-3 min-w-0">
+           <div class="flex flex-1 items-center gap-2.5 min-w-0">
             <!-- Gliederungs-Dreieck: klappt die Unteraufgaben weg.
                  Der Platz bleibt in JEDER Zeile stehen, auch wo es nichts
                  einzuklappen gibt — sonst säßen die Kacheln versetzt und die
@@ -112,16 +94,9 @@
               <span class="w-4 flex-none" aria-hidden="true"></span>
             }
 
-            <!-- Gradient-Icon-Kachel in Label-Farbe (Farb-Identität der Zeile) -->
-            <span
-              class="todo-tile flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
-              [class]="row.tileClass">
-              <lucide-icon
-                [img]="row.tileIcon"
-                class="h-4 w-4"
-                [class]="row.tileTextClass"></lucide-icon>
-            </span>
-
+            <!-- Der Haken zuerst: das ist die Handlung, um die es in einer
+                 Aufgabenliste geht. Danach erst die Kachel, die nur sagt,
+                 woher die Zeile kommt. -->
             <button
               type="button"
               class="todo-checkbox"
@@ -134,6 +109,16 @@
             >
               <!-- SVG -->
             </button>
+
+            <!-- Gradient-Icon-Kachel in Label-Farbe (Farb-Identität der Zeile) -->
+            <span
+              class="todo-tile flex h-7 w-7 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
+              [class]="row.tileClass">
+              <lucide-icon
+                [img]="row.tileIcon"
+                class="h-4 w-4"
+                [class]="row.tileTextClass"></lucide-icon>
+            </span>
 
             <!-- Prioritäts-Badge (Präfix /must-have bzw. /could-have) -->
             <!-- Aus einem Plan entstanden. Nur das Zeichen, nicht der
@@ -210,7 +195,8 @@
           @if (row.canExpand) {
             <button
               type="button"
-              class="flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
+              class="row-action flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
+              [class.row-action--kept]="isExpanded(todo.id)"
               [class.text-text]="isExpanded(todo.id)"
               (click)="toggleExpanded(todo.id, todoText)"
               [attr.aria-expanded]="isExpanded(todo.id)"
@@ -226,8 +212,9 @@
           <button
             type="button"
             cdkOverlayOrigin #scheduleTrigger="cdkOverlayOrigin"
-            class="hidden flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs
+            class="row-action hidden flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs
                    transition sm:flex"
+            [class.row-action--kept]="todo.scheduledDate !== null"
             [class]="todo.scheduledDate === null
               ? 'border-transparent px-1.5 text-muted/60 hover:border-indigo-500/60 hover:text-indigo-300'
               : (row.isLate
@@ -330,8 +317,9 @@
             cdkOverlayOrigin #trigger="cdkOverlayOrigin"
 
           
-            class="hidden sm:flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-3 py-1.5
+            class="row-action hidden sm:flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-2.5 py-1
                    text-sm text-text transition hover:bg-panel/10"
+            [class.row-action--kept]="todo.labelIds.length > 0"
             [class]="labelService.borderClassFor(row.primaryLabelId)"
             (click)="toggleMenu(todo.id)"
             aria-haspopup="listbox"
@@ -389,9 +377,29 @@
               }
             </div>
           </ng-template>
+          <!-- Der Stern steht bei den uebrigen Handlungen, nicht mehr an der
+               Spitze der Zeile: er ist ein Merkzeichen, kein Einstieg. Gesetzt
+               bleibt er sichtbar — dann ist er Zustand. -->
           <button
             type="button"
-            class="hidden sm:block flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
+            class="row-action hidden sm:block flex-shrink-0 rounded-full p-1 text-subtle transition hover:text-amber-400"
+            [class.row-action--kept]="todo.isFavorite"
+            [class.text-amber-400]="todo.isFavorite"
+            [attr.aria-pressed]="todo.isFavorite"
+            [attr.aria-label]="todo.isFavorite
+              ? 'Remove from favorites'
+              : 'Add to favorites'"
+            (click)="toggleFavorite(todo.id)">
+            <lucide-icon
+              [img]="StarIcon"
+              class="h-[18px] w-[18px]"
+              [class.fill-amber-400]="todo.isFavorite">
+            </lucide-icon>
+          </button>
+
+          <button
+            type="button"
+            class="row-action ml-0.5 hidden sm:block flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
             (click)="startEditing(todo, todoText)"
             aria-label="Edit text">
             <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
@@ -408,8 +416,9 @@
             </button>
           } @else {
             <button
-              class="hidden sm:block rounded-lg px-2 py-1 flex-none text-text transition hover:text-red-400"
-              (click)="removeTodos(todo.id)">
+              class="row-action hidden sm:block rounded-lg px-2 py-1 flex-none text-muted transition hover:text-red-400"
+              (click)="removeTodos(todo.id)"
+              aria-label="Delete">
               ✕
             </button>
           }
