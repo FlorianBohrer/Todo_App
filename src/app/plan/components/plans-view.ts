@@ -47,7 +47,9 @@ import {
   CornerUpLeft,
   ListTree,
   Download,
+  Upload,
 } from 'lucide-angular';
+import { ToastService } from '../../shared/toast.service';
 import { LabelService } from '../../todo/services/label.service';
 import { TodoService } from '../../todo/services/todo';
 import type { Todo } from '../../todo/model/todo.model';
@@ -69,7 +71,8 @@ import { focusRich, replaceRange } from '../rich-text';
 import { levelOf, listMarkers } from '../list-markers';
 import { TypingRun, continuesRun } from '../edit-history';
 import { fileNameFor, planToMarkdown, uniqueNames } from '../plan-markdown';
-import { makeZip } from '../zip';
+import { markdownToPlan, titleFromFileName } from '../markdown-import';
+import { makeZip, readZip, ZipEntry } from '../zip';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
@@ -169,6 +172,7 @@ export class PlansView {
   // Beide Dienste stehen ohnehin app-weit bereit; die Planansicht liest hier
   // nur den Zustand, den die Liste schon geladen hat. Kein zweiter Abruf.
   private readonly todoService = inject(TodoService);
+  private readonly toast = inject(ToastService);
 
   protected readonly BackIcon = ChevronLeft;
   readonly PlusIcon = Plus;
@@ -177,6 +181,7 @@ export class PlansView {
   protected readonly SearchIcon = Search;
   protected readonly OutlineIcon = ListTree;
   protected readonly ExportIcon = Download;
+  protected readonly ImportIcon = Upload;
   readonly NestIcon = CornerDownRight;
   readonly LiftIcon = CornerUpLeft;
   protected readonly UndoIcon = Undo2;
@@ -416,6 +421,151 @@ export class PlansView {
     link.download = name;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
+  // ---- Import ----
+  //
+  // Der Weg herein. Er muss mehr aushalten als der Weg hinaus: was der
+  // Export geschrieben hat, kommt hier zurueck, aber genauso eine Datei aus
+  // Obsidian, aus Bear oder aus einem Ordner voller Notizen. Was sich nicht
+  // einordnen laesst, wird ein Absatz — verloren geht nichts.
+
+  /** Nur Text wird gelesen. Ein Bild waere kein Plan. */
+  private static readonly TEXT_FILE = /\.(md|markdown|txt)$/i;
+
+  protected readonly importing = signal(false);
+
+  /** Liegt gerade eine Datei ueber der Uebersicht? */
+  protected readonly fileOver = signal(false);
+
+  /**
+   * Ziehen meldet sich fuer jedes Kindelement erneut; ohne Zaehler flackert
+   * der Hinweis, sobald der Zeiger ueber eine Kachel faehrt.
+   */
+  private dragDepth = 0;
+
+  onFileDragEnter(event: DragEvent) {
+    if (!this.hasFiles(event)) return;
+    this.dragDepth++;
+    this.fileOver.set(true);
+  }
+
+  onFileDragOver(event: DragEvent) {
+    if (!this.hasFiles(event)) return;
+    // Ohne das oeffnet der Browser die Datei einfach selbst.
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+  }
+
+  onFileDragLeave(event: DragEvent) {
+    if (!this.hasFiles(event)) return;
+    this.dragDepth = Math.max(0, this.dragDepth - 1);
+    if (!this.dragDepth) this.fileOver.set(false);
+  }
+
+  onFileDrop(event: DragEvent) {
+    if (!this.hasFiles(event)) return;
+    event.preventDefault();
+    this.dragDepth = 0;
+    this.fileOver.set(false);
+    void this.importFiles(event.dataTransfer?.files ?? null);
+  }
+
+  private hasFiles(event: DragEvent): boolean {
+    return !!event.dataTransfer?.types.includes('Files');
+  }
+
+  /** Der Knopf: der Dateidialog haengt an einem unsichtbaren Feld. */
+  onImportPicked(input: HTMLInputElement) {
+    const files = input.files;
+    // Zuruecksetzen, sonst loest dieselbe Datei beim zweiten Mal nichts aus.
+    input.value = '';
+    void this.importFiles(files);
+  }
+
+  /**
+   * Dateien einlesen und je Datei einen Plan anlegen.
+   *
+   * Ein Archiv wird ausgepackt — damit kommt zurueck, was der Export als ZIP
+   * herausgegeben hat. Schlaegt eine Datei fehl, laufen die anderen weiter:
+   * bei zwanzig Notizen waere Abbrechen die schlechtere Antwort.
+   */
+  private async importFiles(files: FileList | null) {
+    const chosen = Array.from(files ?? []);
+    if (!chosen.length || this.importing()) return;
+
+    this.importing.set(true);
+    try {
+      const documents: ZipEntry[] = [];
+      let unreadable = 0;
+
+      for (const file of chosen) {
+        try {
+          if (/\.zip$/i.test(file.name)) {
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            documents.push(...(await readZip(bytes)).filter((e) => PlansView.TEXT_FILE.test(e.name)));
+          } else if (PlansView.TEXT_FILE.test(file.name)) {
+            documents.push({ name: file.name, text: await file.text() });
+          } else {
+            unreadable++;
+          }
+        } catch {
+          unreadable++;
+        }
+      }
+
+      if (!documents.length) {
+        this.toast.error(unreadable ? 'Nothing to import in those files' : 'No markdown found');
+        return;
+      }
+
+      // Von hinten: jeder neue Plan kommt oben auf die Liste, und so steht am
+      // Ende die erste Datei auch wieder oben.
+      let made = 0;
+      let single: string | null = null;
+
+      for (const doc of [...documents].reverse()) {
+        const parsed = markdownToPlan(doc.text, titleFromFileName(doc.name));
+        try {
+          const plan = await this.planService.importPlan(
+            parsed.title,
+            this.folderIdByName(parsed.folder),
+            parsed.content,
+          );
+          made++;
+          single = plan.id;
+        } catch {
+          unreadable++;
+        }
+      }
+
+      // Uebersprungenes gehoert in dieselbe Meldung: „Imported 1 plan", wenn
+      // drei Dateien danebengingen, waere die halbe Wahrheit.
+      const skipped = unreadable ? `, ${unreadable} skipped` : '';
+
+      if (!made) {
+        this.toast.error('Could not import');
+      } else {
+        this.toast.success(`Imported ${made} plan${made === 1 ? '' : 's'}${skipped}`);
+        // Eine einzelne Notiz will man sofort sehen; bei zwanzig bleibt man
+        // in der Uebersicht und sucht sich selbst aus, wo man anfaengt.
+        if (made === 1) this.planService.select(single);
+      }
+    } finally {
+      this.importing.set(false);
+    }
+  }
+
+  /**
+   * Der Ordner aus dem Dateikopf, sofern es ihn hier gibt.
+   *
+   * Angelegt wird keiner: ein Import, der nebenbei Ordner erfindet, haette
+   * nach zehn Dateien eine Seitenleiste, die niemand so wollte.
+   */
+  private folderIdByName(name: string | null): string | null {
+    if (!name) return null;
+    const wanted = name.trim().toLowerCase();
+    return this.labels().find((label) => label.name.trim().toLowerCase() === wanted)?.id ?? null;
   }
 
   // ---- Blockaktionen ----
