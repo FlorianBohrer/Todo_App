@@ -115,6 +115,8 @@ interface TodoRow {
   parentId: string | null;
   /** Wie viele Unteraufgaben an dieser Zeile haengen. 0 = keine. */
   subCount: number;
+  /** Letzte Unteraufgabe ihrer Gruppe — dort endet die Fuehrungslinie. */
+  lastOfGroup: boolean;
   badgeClass: string;
   tileClass: string;
   tileTextClass: string;
@@ -166,10 +168,12 @@ export class TodoList {
     // Wer gehoert zu wem: ein Durchgang, dieselbe Regel wie beim Sortieren.
     const parentOf = new Map<string, string>();
     const subCounts = new Map<string, number>();
+    const lastSubs = new Set<string>();
     for (const [head, ...subs] of subtaskGroups(items)) {
       if (subs.length === 0) continue;
       subCounts.set(head.id, subs.length);
       for (const sub of subs) parentOf.set(sub.id, head.id);
+      lastSubs.add(subs[subs.length - 1].id);
     }
 
     return items.map((todo, index) => {
@@ -193,6 +197,7 @@ export class TodoList {
         level,
         parentId: parentOf.get(todo.id) ?? null,
         subCount: subCounts.get(todo.id) ?? 0,
+        lastOfGroup: lastSubs.has(todo.id),
         badgeLabel: badge ? MOSCOW_LABEL[badge] : '',
         badgeClass: badge ? this.badgeClass(badge) : '',
         tileClass: this.tileClass(todo.labelIds),
@@ -382,6 +387,54 @@ toggleFolderList(): void {
       case 'could':  return 'bg-fill-strong text-muted';
       case 'wont':   return 'bg-fill text-subtle line-through';
     }
+  }
+
+  // ---- Ziel fuer neue Unteraufgaben ----
+  //
+  // „/sub" haengt einen Schritt an die Zeile darueber. Unten im Eingabefeld
+  // ist das die letzte Aufgabe der Liste — fast nie die, um die es geht. Ein
+  // Klick auf die Hauptaufgabe sagt stattdessen, wohin.
+
+  protected readonly activeParentId = this.todoService.activeParentId;
+
+  /**
+   * Klick auf die Zeile waehlt sie als Ziel; ein zweiter Klick loest wieder.
+   *
+   * Auf eine Unteraufgabe geklickt ist IHRE Hauptaufgabe gemeint: von dort aus
+   * will man den naechsten Schritt danebenlegen, nicht darunter.
+   */
+  /** Waehrend und unmittelbar nach dem Ziehen ist ein Klick kein Klick. */
+  private dragging = false;
+
+  onDragStarted(): void {
+    this.dragging = true;
+  }
+
+  onDragEnded(): void {
+    // Das click-Ereignis kommt nach dem Loslassen noch hinterher; erst danach
+    // darf wieder ausgewaehlt werden, sonst waehlt jedes Verschieben mit aus.
+    setTimeout(() => (this.dragging = false));
+  }
+
+  selectParent(row: TodoRow, event: MouseEvent): void {
+    if (this.dragging) return;
+
+    // Sterne, Haken, Menues und das Textfeld haben ihre eigene Bedeutung.
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a, input, textarea, select, [role="listbox"]')) return;
+
+    const id = row.level === 'sub' ? row.parentId : row.id;
+    if (!id) return;
+
+    if (this.activeParentId() === id) {
+      this.todoService.selectParent(null);
+      return;
+    }
+
+    this.todoService.selectParent(id);
+    // Zugeklappt waere der neue Schritt unsichtbar angelegt. Wer eine Aufgabe
+    // als Ziel waehlt, will sehen, was schon darunter steht.
+    if (this.isCollapsed(id)) this.toggleSubtasks(id);
   }
 
   // ---- Unteraufgaben ein- und ausklappen ----

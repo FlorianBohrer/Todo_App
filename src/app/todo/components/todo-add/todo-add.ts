@@ -8,7 +8,8 @@ import {ChangeDetectionStrategy,
 import { FormsModule } from '@angular/forms';
 import { TodoService } from '../../services/todo';
 import { isTypingTarget } from '../../shared/keyboard';
-import { Plus,LucideAngularModule } from "lucide-angular";
+import { stripPriorityPrefix, withTaskLevel } from '../../shared/title-priority';
+import { CornerDownRight, Plus, X, LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-todo-add',
@@ -19,6 +20,17 @@ import { Plus,LucideAngularModule } from "lucide-angular";
 export class TodoAdd {
   protected readonly todoService = inject(TodoService);
   readonly Plus = Plus;
+  protected readonly SubIcon = CornerDownRight;
+  protected readonly ClearIcon = X;
+
+  /** Die angeklickte Hauptaufgabe; neue Todos landen bei ihr. */
+  protected readonly parent = this.todoService.activeParent;
+
+  /** Ihr Titel ohne Präfix — im Feld steht nichts Technisches. */
+  protected parentTitle(): string {
+    const parent = this.parent();
+    return parent ? stripPriorityPrefix(parent.title).split('\n')[0] : '';
+  }
 
   newTitle = '';
 
@@ -35,12 +47,37 @@ export class TodoAdd {
     this.field()?.nativeElement.focus();
   }
 
+  /**
+   * Anlegen — und zwar dort, wo es hingehoert.
+   *
+   * Ist eine Hauptaufgabe angeklickt, wird daraus ein Schritt von ihr: das
+   * Praefix setzt die Einrueckung, die ID sagt, wohin in der Liste. Ein selbst
+   * getipptes Praefix bleibt stehen (withTaskLevel) — wer ausdruecklich
+   * „/must" schreibt, meint das auch.
+   */
   addTodo() {
-      const titles = this.parseTitles(this.newTitle);
-      if (titles.length === 0) return;
-      this.todoService.addTodos(titles);
-      this.newTitle = '';
+    const parent = this.parent();
+    const titles = this.parseTitles(this.newTitle).map((title) =>
+      parent ? withTaskLevel(title, 'sub') : title,
+    );
+    if (titles.length === 0) return;
+
+    this.todoService.addTodos(titles, parent?.id ?? null);
+    this.newTitle = '';
+  }
+
+  clearParent(): void {
+    this.todoService.selectParent(null);
+  }
+
+  /** Escape im Feld: erst das Ziel loslassen, dann den Text. */
+  onEscape(): void {
+    if (this.parent()) {
+      this.clearParent();
+      return;
     }
+    this.newTitle = '';
+  }
 
      private parseTitles(raw: string): string[] {
     return raw

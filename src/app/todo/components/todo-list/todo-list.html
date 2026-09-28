@@ -48,6 +48,8 @@
         <li
       cdkDrag
       [cdkDragStartDelay]="dragStartDelay"
+      (cdkDragStarted)="onDragStarted()"
+      (cdkDragEnded)="onDragEnded()"
       class="todo-card group flex items-center justify-between gap-3 rounded-xl border border-line bg-panel2 p-3 transition hover:border-line-strong"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
@@ -56,8 +58,12 @@
       [class.todo-card--leaving]="leavingTodoIds().has(todo.id)"
       [class.todo-card--new]="newTodoId() === todo.id"
       [class.todo-sub]="row.level === 'sub'"
+      [class.todo-sub--last]="row.lastOfGroup"
       [class.todo-main]="row.level === 'main'"
+      [class.todo-parent]="row.subCount > 0"
+      [class.todo-target]="activeParentId() === row.id"
       [style.--i]="row.stagger"
+      (click)="selectParent(row, $event)"
     >
           <!-- Platzhalter beim Ziehen -->
           <div
@@ -108,7 +114,7 @@
 
             <!-- Gradient-Icon-Kachel in Label-Farbe (Farb-Identität der Zeile) -->
             <span
-              class="flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
+              class="todo-tile flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
               [class]="row.tileClass">
               <lucide-icon
                 [img]="row.tileIcon"
