@@ -46,6 +46,7 @@ import {
   CornerDownRight,
   CornerUpLeft,
   ListTree,
+  Download,
 } from 'lucide-angular';
 import { LabelService } from '../../todo/services/label.service';
 import { TodoService } from '../../todo/services/todo';
@@ -67,6 +68,8 @@ import {
 import { focusRich, replaceRange } from '../rich-text';
 import { levelOf, listMarkers } from '../list-markers';
 import { TypingRun, continuesRun } from '../edit-history';
+import { fileNameFor, planToMarkdown, uniqueNames } from '../plan-markdown';
+import { makeZip } from '../zip';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
@@ -173,6 +176,7 @@ export class PlansView {
   readonly GripIcon = GripVertical;
   protected readonly SearchIcon = Search;
   protected readonly OutlineIcon = ListTree;
+  protected readonly ExportIcon = Download;
   readonly NestIcon = CornerDownRight;
   readonly LiftIcon = CornerUpLeft;
   protected readonly UndoIcon = Undo2;
@@ -303,6 +307,115 @@ export class PlansView {
 
   closeOutline() {
     this.outlineOpen.set(false);
+  }
+
+  // ---- Export ----
+  //
+  // Der Weg nach draussen. Der Inhalt IST schon Markdown — die Bloecke halten
+  // den Text so, wie er getippt wurde —, also ist das hier kein Umbau, sondern
+  // eine Uebersetzung der Gliederung drumherum (plan-markdown.ts) und ein
+  // Archiv darum (zip.ts). Wer die App morgen nicht mehr benutzen will, nimmt
+  // seine Notizen mit; und ein Knopf, der alles herausgibt, ist zugleich die
+  // einfachste Sicherung, die es fuer diese Daten gibt.
+
+  exportOpen = signal(false);
+
+  /** Welche Plaene ausgewaehlt sind. Beim Oeffnen: alle. */
+  exportPicks = signal<ReadonlySet<string>>(new Set());
+
+  exportLabel = computed(() => {
+    const count = this.exportPicks().size;
+    if (count === 0) return 'Nothing selected';
+    return count === 1 ? 'Export 1 plan' : `Export ${count} plans`;
+  });
+
+  /**
+   * Die Auswahl steht auf dem, was die Uebersicht gerade zeigt.
+   *
+   * Ohne Filter ist das alles. Mit Filter waere beides falsch: nur die
+   * gefilterten anzubieten macht die uebrigen unerreichbar, alle anzuhaken
+   * widerspricht dem, was auf dem Schirm steht. Also stehen alle in der Liste,
+   * angehakt ist das Sichtbare.
+   *
+   * Im Graph greift der Filter nicht sichtbar — dort waere eine Vorauswahl
+   * nach einer Suche, die man nicht mehr sieht, nicht nachvollziehbar.
+   */
+  openExport() {
+    const shown = this.overviewMode() === 'list' ? this.visiblePlans() : this.plans();
+    this.exportPicks.set(new Set(shown.map((p) => p.id)));
+    this.exportOpen.set(true);
+  }
+
+  closeExport() {
+    this.exportOpen.set(false);
+  }
+
+  toggleExportPick(id: string) {
+    this.exportPicks.update((picks) => {
+      const next = new Set(picks);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }
+
+  pickAllExports(all: boolean) {
+    this.exportPicks.set(all ? new Set(this.plans().map((p) => p.id)) : new Set());
+  }
+
+  /** Einen einzelnen Plan als Datei — aus dem Dokument heraus. */
+  exportOne(plan: Plan) {
+    const text = planToMarkdown(plan, this.planFolder(plan));
+    this.save(new Blob([text], { type: 'text/markdown;charset=utf-8' }), fileNameFor(plan.title));
+  }
+
+  /**
+   * Die ausgewaehlten Plaene.
+   *
+   * Einer wird eine Datei, mehrere werden ein Archiv: ein ZIP mit genau einem
+   * Eintrag ist eine Verpackung um nichts, und den Umweg ueber das Entpacken
+   * spart man sich damit.
+   */
+  exportPicked() {
+    const picks = this.exportPicks();
+    const chosen = this.plans().filter((p) => picks.has(p.id));
+    if (!chosen.length) return;
+
+    this.closeExport();
+
+    if (chosen.length === 1) {
+      this.exportOne(chosen[0]);
+      return;
+    }
+
+    const names = uniqueNames(chosen.map((p) => p.title));
+    const zip = makeZip(
+      chosen.map((plan, i) => ({
+        name: names[i],
+        text: planToMarkdown(plan, this.planFolder(plan)),
+      })),
+    );
+
+    const day = new Date().toISOString().slice(0, 10);
+    this.save(zip, `plans-${day}.zip`);
+  }
+
+  private planFolder(plan: Plan): string | null {
+    return plan.categoryId ? this.folderName(plan.categoryId) : null;
+  }
+
+  /**
+   * Herunterladen.
+   *
+   * Die Adresse wird verzoegert freigegeben: gibt man sie sofort zurueck, ist
+   * der Download in manchen Browsern abgebrochen, bevor er angefangen hat.
+   */
+  private save(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 
   // ---- Blockaktionen ----
