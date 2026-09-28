@@ -57,6 +57,16 @@
         }
       </select>
 
+      <!-- Diesen einen Plan herausschreiben. Im Dokument braucht es dafuer
+           keine Auswahl — gemeint ist immer das, was man gerade offen hat. -->
+      <button type="button"
+        class="hidden flex-none place-items-center rounded-lg p-1.5 text-muted transition
+               hover:bg-fill hover:text-text sm:grid"
+        (click)="exportOne(plan)"
+        title="Export as markdown" aria-label="Export this plan as markdown">
+        <lucide-icon [img]="ExportIcon" class="h-4 w-4"></lucide-icon>
+      </button>
+
       <!-- Speicherzustand. Im Normalfall steht hier nichts: „gespeichert" ist
            die Erwartung, und eine Bestaetigung fuer das Erwartete ist Rauschen.
            Zu sehen ist nur, was davon abweicht — und „retrying" faellt auf,
@@ -340,8 +350,81 @@
           (click)="setOverviewMode('graph')">Graph</button>
       </div>
 
+      <!-- Der Weg nach draussen. Steht neben „New plan", weil beides dasselbe
+           Thema hat: was aus diesen Notizen wird. -->
+      @if (plans().length) {
+        <button type="button" cdkOverlayOrigin #exportAnchor="cdkOverlayOrigin"
+          class="ml-auto inline-flex items-center gap-2 rounded-full border border-line px-3 py-2
+                 text-sm text-muted transition hover:border-line-strong hover:text-text"
+          (click)="openExport()"
+          [attr.aria-expanded]="exportOpen()" aria-haspopup="dialog">
+          <lucide-icon [img]="ExportIcon" class="h-4 w-4"></lucide-icon>
+          <span class="hidden sm:inline">Export</span>
+        </button>
+
+        <ng-template
+          cdkConnectedOverlay
+          [cdkConnectedOverlayOrigin]="exportAnchor"
+          [cdkConnectedOverlayOpen]="exportOpen()"
+          [cdkConnectedOverlayPositions]="menuPositions"
+          [cdkConnectedOverlayHasBackdrop]="true"
+          cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+          (backdropClick)="closeExport()"
+          (detach)="closeExport()"
+          (overlayKeydown)="$event.key === 'Escape' && closeExport()">
+          <div class="popover flex max-h-[70vh] w-80 max-w-[calc(100vw-2rem)] flex-col px-1"
+               role="dialog" aria-label="Export plans">
+            <div class="flex items-baseline justify-between gap-2 px-2 pb-1 pt-1.5">
+              <p class="text-2xs font-medium uppercase tracking-wide text-subtle">
+                As markdown
+              </p>
+              <button type="button"
+                class="rounded px-1 text-2xs text-subtle transition hover:text-text"
+                (click)="pickAllExports(exportPicks().size !== plans().length)">
+                {{ exportPicks().size === plans().length ? 'None' : 'All' }}
+              </button>
+            </div>
+
+            <div class="min-h-0 flex-1 overflow-y-auto">
+              @for (p of plans(); track p.id) {
+                <button type="button" role="checkbox"
+                  class="popover-item text-sm text-text transition"
+                  [attr.aria-checked]="exportPicks().has(p.id)"
+                  (click)="toggleExportPick(p.id)">
+                  <span class="grid h-4 w-4 flex-none place-items-center rounded border text-2xs leading-none"
+                        [class]="exportPicks().has(p.id)
+                          ? 'border-brand-2 bg-brand-2 text-white'
+                          : 'border-line-strong text-transparent'">✓</span>
+                  <span class="min-w-0 flex-1 truncate">{{ p.title || 'Untitled' }}</span>
+                  <span [class]="dotClass(p.categoryId)">●</span>
+                </button>
+              }
+            </div>
+
+            <div class="border-t border-line px-2 pb-1.5 pt-2">
+              <button type="button"
+                class="w-full rounded-lg bg-brand-2 px-3 py-1.5 text-sm font-medium text-white transition
+                       hover:opacity-90 disabled:opacity-40"
+                [disabled]="!exportPicks().size"
+                (click)="exportPicked()">
+                {{ exportLabel() }}
+              </button>
+              <p class="px-1 pt-1.5 text-2xs leading-snug text-subtle">
+                One file per plan. Several become a zip.
+              </p>
+              @if (overviewMode() === 'list' && overviewFiltered()) {
+                <p class="px-1 pt-1 text-2xs leading-snug text-subtle">
+                  Ticked are the ones your filter shows.
+                </p>
+              }
+            </div>
+          </div>
+        </ng-template>
+      }
+
       <button type="button"
-        class="ml-auto inline-flex items-center gap-2 rounded-full bg-brand-2 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+        class="inline-flex items-center gap-2 rounded-full bg-brand-2 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+        [class.ml-auto]="!plans().length"
         (click)="newPlan()">
         <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon> New plan
       </button>
