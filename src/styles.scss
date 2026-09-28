@@ -952,6 +952,13 @@ select {
   .todo-card--new {
     animation: none;
   }
+
+  /* Der Kreisel darf nicht anhalten — ein stehender sieht aus wie ein
+     Fehler und nicht wie „läuft noch". Er dreht nur langsam genug, dass er
+     am Rand des Blickfeldes nicht mehr zieht. */
+  .animate-spin {
+    animation-duration: 2.4s;
+  }
 }
 
 /* ---------------------------------------------------------------------------

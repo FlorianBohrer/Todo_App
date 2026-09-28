@@ -48,6 +48,7 @@ import {
   ListTree,
   Download,
   Upload,
+  FilePlus,
 } from 'lucide-angular';
 import { ToastService } from '../../shared/toast.service';
 import { LabelService } from '../../todo/services/label.service';
@@ -182,6 +183,7 @@ export class PlansView {
   protected readonly OutlineIcon = ListTree;
   protected readonly ExportIcon = Download;
   protected readonly ImportIcon = Upload;
+  protected readonly BlankIcon = FilePlus;
   readonly NestIcon = CornerDownRight;
   readonly LiftIcon = CornerUpLeft;
   protected readonly UndoIcon = Undo2;
@@ -434,6 +436,33 @@ export class PlansView {
   private static readonly TEXT_FILE = /\.(md|markdown|txt)$/i;
 
   protected readonly importing = signal(false);
+
+  /** Die Pfeilhälfte des geteilten Knopfes. */
+  protected readonly newMenuOpen = signal(false);
+
+  toggleNewMenu() {
+    this.newMenuOpen.update((open) => !open);
+  }
+
+  closeNewMenu() {
+    this.newMenuOpen.set(false);
+  }
+
+  newPlanFromMenu() {
+    this.closeNewMenu();
+    this.newPlan();
+  }
+
+  /**
+   * Der Dateidialog aus dem Menü heraus.
+   *
+   * Erst zuklappen, dann öffnen: der Klick ist noch derselbe Griff des
+   * Nutzers, und nur damit darf eine Seite einen Dateidialog aufmachen.
+   */
+  pickImport(input: HTMLInputElement) {
+    this.closeNewMenu();
+    input.click();
+  }
 
   /** Liegt gerade eine Datei ueber der Uebersicht? */
   protected readonly fileOver = signal(false);
