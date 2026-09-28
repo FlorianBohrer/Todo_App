@@ -104,12 +104,20 @@
          bündelt mehrere Blöcke wie ein Notion-Toggle. Über ein geteiltes
          Template gerendert, damit dieselben Blöcke auch verschachtelt in einer
          Section erscheinen (Rekursion via Outlet). -->
-    <!-- cdkDropListGroup verbindet die oberste Liste mit allen Section-Listen,
-         damit ein Block auch in eine Section hinein- und wieder herausgezogen
-         werden kann. cdkDropListData sagt dem Handler, welche Liste gemeint ist. -->
-    <div cdkDropListGroup [class.is-grabbing]="grabbing()">
+    <!-- Die Listen sind ueber IDS verbunden, nicht ueber cdkDropListGroup.
+         Das ist kein Geschmack, sondern notwendig: die Blockvorlage wird per
+         ngTemplateOutlet eingesetzt, und eine eingebettete Ansicht sucht ihre
+         Abhaengigkeiten dort, wo sie DEKLARIERT ist — und das ist ausserhalb
+         der Gruppe. Die Listen in den Toggles haben die Gruppe also nie
+         gefunden; sie waren keine Nachbarn der obersten Liste, und deshalb
+         liess sich kein Block je in ein Toggle ziehen. Ueber IDs laeuft die
+         Verbindung an der Injektor-Hierarchie vorbei.
+         cdkDropListData sagt dem Handler, welche Liste gemeint ist. -->
+    <div [class.is-grabbing]="grabbing()">
       <div class="space-y-1"
            cdkDropList
+           [id]="ROOT_LIST"
+           [cdkDropListConnectedTo]="listIds()"
            [cdkDropListData]="rootList"
            (cdkDropListDropped)="dropBlock($event)">
         @for (block of plan.content; track block.id) {
@@ -257,6 +265,8 @@
                [class.section-body--shut]="shut"
                [class.section-body--drop]="shut && grabbing()"
                cdkDropList
+               [id]="listId(block.id)"
+               [cdkDropListConnectedTo]="listIds()"
                [cdkDropListData]="block.id"
                (cdkDropListDropped)="dropBlock($event)">
             @if (!shut) {
