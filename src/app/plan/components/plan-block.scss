@@ -340,9 +340,35 @@
 
 // Laeuft, wenn ein Block neu ins DOM kommt: nach dem Einfuegen, nach „/",
 // nach dem „+". Beim Oeffnen eines Plans liest es sich als kurzes Setzen.
+//
+// „backwards", nicht „both" — und das ist kein Detail.
+//
+// Mit „both" behaelt der Browser die Animation nach ihrem Ende im
+// Fuell-Zustand, und damit bleibt der Block ein eigener Stapelkontext. Ein
+// Menue darin ist dann darin GEFANGEN: sein z-index zaehlt nur noch gegen die
+// Geschwister im selben Block, und jeder spaetere Block wird darueber
+// gezeichnet. Das Slash-Menue lag deshalb hinter dem Text, der unter ihm
+// stand, und sah aus wie durchsichtig.
+//
+// „backwards" setzt nur den Anfangszustand vorab und laesst nach dem Lauf
+// nichts stehen. Sichtbar ist das nicht: der Endzustand der Animation
+// (Deckkraft 1, keine Verschiebung) ist ohnehin der natuerliche.
+// Nachgemessen in Chromium — mit „both" verdeckt der uebernaechste Block das
+// Menue, mit „backwards" nicht.
 .block-row,
 .section-block {
-  animation: block-enter 220ms var(--spring-settle) both;
+  animation: block-enter 220ms var(--spring-settle) backwards;
+}
+
+// Solange ein Menue offen ist, liegt der Block ueber den folgenden.
+//
+// „backwards" loest das Problem nach der Animation — waehrend ihrer 220ms ist
+// der Block aber sehr wohl ein Stapelkontext, und genau dann tippt man „/" in
+// einen gerade angelegten Absatz. Ein z-index waehrend der Menuezeit deckt
+// diesen Rest ab: er hebt den ganzen Block ueber seine Nachbarn, egal was die
+// Animation gerade tut.
+.block-row.block-menus {
+  z-index: 20;
 }
 
 

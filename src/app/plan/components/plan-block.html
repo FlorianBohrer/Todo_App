@@ -108,7 +108,8 @@
              treten am Zeigergerät zurück; auf Touch bleiben sie stehen. -->
         <div class="block block-row group/block relative rounded-lg py-2"
           [id]="'block-' + block.id"
-          [class.block-heading]="block.type === 'heading'">
+          [class.block-heading]="block.type === 'heading'"
+          [class.block-menus]="view.menuOpenFor(block.id)">
           <!-- Ziehgriff in der linken Randspalte (wie in Notion): am Text selbst
                zu ziehen wuerde das Markieren und Bearbeiten unmoeglich machen. -->
           <!-- Randspalte wie in Notion: „+" legt einen Block darunter an, der
