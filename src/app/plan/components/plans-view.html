@@ -167,6 +167,24 @@
             }
           </div>
 
+          <!-- Hinein und heraus als Befehl, nicht nur als Zug: je groesser ein
+               Block ist, desto schwerer trifft er den schmalen Streifen im
+               Toggle. Eine Tabelle laesst sich so gar nicht zuverlaessig
+               zuordnen. -->
+          @if (groupAbove(id); as target) {
+            <button role="menuitem" type="button" class="block-menu-item"
+              (click)="nestIntoAbove(id)">
+              <lucide-icon [img]="NestIcon" class="h-4 w-4"></lucide-icon>
+              <span class="min-w-0 flex-1 truncate">Into „{{ target.title }}"</span>
+            </button>
+          }
+          @if (inGroup(id)) {
+            <button role="menuitem" type="button" class="block-menu-item"
+              (click)="liftOut(id)">
+              <lucide-icon [img]="LiftIcon" class="h-4 w-4"></lucide-icon> Out of the toggle
+            </button>
+          }
+
           <button role="menuitem" type="button" class="block-menu-item" (click)="menuMove(id, -1)">
             <lucide-icon [img]="UpIcon" class="h-4 w-4"></lucide-icon> Move up
           </button>
@@ -319,6 +337,7 @@
                 (textChange)="onTextChange(block.id, $event)"
                 (split)="splitBlock(block.id, $event.before, $event.after)"
                 (mergeBack)="mergeBack(block.id)"
+                (indent)="onProseIndent(block.id, $event)"
                 (navigate)="stepFromBlock(block.id, $event)"
                 (blurred)="onProseBlur(block.id)"
                 (pasted)="onTextPaste(block.id, $event)"

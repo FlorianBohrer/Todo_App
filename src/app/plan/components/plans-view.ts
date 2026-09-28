@@ -44,6 +44,8 @@ import {
   Search,
   Undo2,
   Redo2,
+  CornerDownRight,
+  CornerUpLeft,
 } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
@@ -161,6 +163,8 @@ export class PlansView {
   protected readonly TrashIcon = Trash2;
   protected readonly GripIcon = GripVertical;
   protected readonly SearchIcon = Search;
+  protected readonly NestIcon = CornerDownRight;
+  protected readonly LiftIcon = CornerUpLeft;
   protected readonly UndoIcon = Undo2;
   protected readonly RedoIcon = Redo2;
 
@@ -344,6 +348,88 @@ export class PlansView {
       this.replaceById(bs, blockId, (id) => this.makeConverted(id, kind, text)),
     );
     this.focusConverted(blockId, kind);
+  }
+
+  // ---- In ein Toggle hinein und wieder heraus ----
+  //
+  // Ziehen ist der bequeme Weg, aber kein verlaesslicher: ein Block muss in
+  // einem schmalen Streifen landen, und je groesser er ist — eine Tabelle, ein
+  // Diagramm —, desto schwerer trifft man. Fuer eine Zuordnung, die im
+  // Dokument etwas BEDEUTET, ist Zielgenauigkeit die falsche Voraussetzung.
+  //
+  // Also derselbe Schritt als Befehl: hinein in das Toggle darueber, heraus
+  // hinter das Toggle. Beides ist eine Ebene, kein Weg — deshalb reicht je ein
+  // Eintrag, und man muss nicht wissen, wohin genau.
+
+  /** Wo steckt der Block: in welchem Toggle (null = oberste Ebene), an welcher Stelle? */
+  private locate(
+    blockId: string,
+    blocks: PlanBlock[] = this.selected()?.content ?? [],
+    groupId: string | null = null,
+  ): { groupId: string | null; index: number } | null {
+    const index = blocks.findIndex((b) => b.id === blockId);
+    if (index !== -1) return { groupId, index };
+
+    for (const block of blocks) {
+      if (block.type !== 'group') continue;
+      const hit = this.locate(blockId, block.blocks, block.id);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  /** Das Toggle direkt ueber dem Block — nur dort kann er hinein. */
+  groupAbove(blockId: string): PlanGroupBlock | null {
+    const at = this.locate(blockId);
+    if (!at || at.index === 0) return null;
+
+    const list = this.findList(this.selected()?.content ?? [], at.groupId);
+    const above = list?.[at.index - 1];
+    return above?.type === 'group' ? above : null;
+  }
+
+  /** Steckt der Block in einem Toggle? */
+  inGroup(blockId: string): boolean {
+    return this.locate(blockId)?.groupId != null;
+  }
+
+  /** Ans Ende des Toggles darueber — und aufklappen, damit man es sieht. */
+  nestIntoAbove(blockId: string) {
+    const target = this.groupAbove(blockId);
+    const block = this.findBlock(blockId);
+    if (!target || !block) return;
+
+    this.closeBlockMenu();
+    this.updateContent((root) =>
+      this.mapById(this.removeById(root, blockId), target.id, (x) =>
+        x.type !== 'group' ? x : { ...x, collapsed: false, blocks: [...x.blocks, block] },
+      ),
+    );
+  }
+
+  /** Aus dem Toggle heraus, direkt dahinter. */
+  liftOut(blockId: string) {
+    const at = this.locate(blockId);
+    const block = this.findBlock(blockId);
+    if (!at?.groupId || !block) return;
+
+    this.closeBlockMenu();
+    const groupId = at.groupId;
+    this.updateContent((root) =>
+      this.insertAfterById(this.removeById(root, blockId), groupId, block),
+    );
+  }
+
+  /**
+   * Tabulator im Absatz: eine Ebene hinein oder heraus.
+   *
+   * Dasselbe wie die beiden Menueeintraege, nur ohne Maus — und die Taste, die
+   * in Notion genau das tut.
+   */
+  onProseIndent(blockId: string, dir: 1 | -1) {
+    if (dir === 1) this.nestIntoAbove(blockId);
+    else this.liftOut(blockId);
+    this.beginEdit(blockId);
   }
 
   menuDelete(blockId: string) {
