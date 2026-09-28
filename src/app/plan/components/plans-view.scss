@@ -351,6 +351,39 @@
   }
 }
 
+// ---- Ablageflaeche eines Toggles ----
+//
+// Zugeklappt ist der Koerper nicht da — aber als Ablageflaeche angemeldet.
+// display:none haelt ihn aus dem Layout, ohne ihn aus dem Dokument zu nehmen;
+// sobald jemand einen Block am Griff hat, wird daraus ein Streifen, den man
+// treffen kann. Ohne diesen Zwischenzustand haette ein zugeklapptes Toggle
+// entweder dauerhaft eine leere Zeile unter sich oder waere kein Ziel.
+.section-body--shut:not(.section-body--drop) {
+  display: none;
+}
+
+.section-body--drop {
+  display: flex;
+  align-items: center;
+  min-height: 2rem;
+  margin-top: 0.25rem;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: 0.5rem;
+  background: var(--color-fill);
+}
+
+.drop-note {
+  padding-left: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+}
+
+// Ein leeres, aufgeklapptes Toggle ist nur so hoch wie seine Hinweiszeile —
+// als Ziel ein Strich. Waehrend des Zugs bekommt es Hoehe.
+.is-grabbing .section-body:not(.section-body--shut) {
+  min-height: 2rem;
+}
+
 // ---- Umschalter Notes / Graph ----
 .mode-tab {
   border-radius: 9999px;
@@ -627,6 +660,13 @@
   // gesetzten Mindestbreite. Genau die hat vorher jede Tabelle ueber den Rand
   // geschoben, auch wenn zwei kurze Woerter darin standen.
   table-layout: auto;
+
+  // Eine feste Flaeche aus der Rampe. Vorher trug die Tabelle nur Alphawerte
+  // (5% Weiss im Kopf, 1.8% in den Zebrastreifen) und stand damit direkt auf
+  // dem Seitengrund: was darunter lag, schien durch, und die Streifen waren
+  // eher zu ahnen als zu sehen. Auf einer gedeckten Flaeche tun dieselben
+  // Prozente, was sie sollen.
+  background: var(--color-bg3);
 }
 
 .plan-th,
@@ -638,7 +678,7 @@
 }
 
 .plan-th {
-  background: var(--color-fill);
+  background: var(--color-bg2);
   text-align: left;
   font-weight: 600;
 }
@@ -680,7 +720,9 @@
 
 .plan-cell-input {
   width: 100%;
-  background: var(--color-fill-strong);
+  // Deckend und dunkler als die Zelle: das Feld liegt IN der Tabelle, es
+  // schwebt nicht darueber.
+  background: var(--color-bg);
   padding: 0.35rem 0.55rem;
   color: var(--color-text);
   outline: none;
