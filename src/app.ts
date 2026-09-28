@@ -1,5 +1,15 @@
 // src/app.ts
-import {ChangeDetectionStrategy, Component, HostListener, inject, computed, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { firstValueFrom, take } from 'rxjs';
 import { ClerkService } from 'ngx-clerk';
@@ -67,6 +77,17 @@ export class App {
   /** Aktive Ansicht: Liste, Woche oder Pläne. */
   protected readonly view = this.todoService.view;
 
+  /**
+   * Die Hoehe der klebenden Leiste, als CSS-Variable fuer die ganze App.
+   *
+   * Wer unter ihr ebenfalls kleben will — der Kopf eines Plans etwa —, muss
+   * wissen, wie hoch sie ist. Ein fester Wert waere falsch, sobald sie
+   * umbricht: auf dem Telefon stehen Folders und die drei Laschen
+   * untereinander, und der Kopf des Dokuments laege dahinter.
+   */
+  private readonly chrome = viewChild<ElementRef<HTMLElement>>('chrome');
+
+
   private static readonly VIEWS: View[] = ['list', 'week', 'plans'];
 
   /** Treibt die gleitende Pille im Umschalter — drei gleich breite Laschen. */
@@ -133,6 +154,20 @@ export class App {
   protected readonly clerkFailed = signal(false);
 
   constructor() {
+    // Die Hoehe der Leiste steht ab jetzt in --chrome-h.
+    effect((onCleanup) => {
+      const el = this.chrome()?.nativeElement;
+      if (!el) return;
+
+      const publish = () =>
+        document.documentElement.style.setProperty('--chrome-h', `${el.offsetHeight}px`);
+      publish();
+
+      const watch = new ResizeObserver(publish);
+      watch.observe(el);
+      onCleanup(() => watch.disconnect());
+    });
+
     this.clerk.__init({ publishableKey: 'pk_test_d2lzZS1za3lsYXJrLTY3LmNsZXJrLmFjY291bnRzLmRldiQ' });
 
     // Schlägt der Script-Load fehl, gibt es keinen Retry — ohne diesen Hinweis
