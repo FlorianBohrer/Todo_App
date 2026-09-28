@@ -474,6 +474,12 @@ toggleFavorite(id: string) {
     });
   }
 
+  /**
+   * Der Stand aller Todos als Signal — fuer Ansichten, die daran haengen,
+   * ohne ihn zu aendern. Zum Schreiben gibt es die Methoden darueber.
+   */
+  readonly snapshot = this.todos.asReadonly();
+
   /** Ein Todo in konstanter Zeit. null, wenn es keins (mehr) gibt. */
   private readonly todosById = computed(
     () => new Map(this.todos().map((todo) => [todo.id, todo])),
