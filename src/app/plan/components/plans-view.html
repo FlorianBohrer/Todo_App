@@ -107,7 +107,7 @@
     <!-- cdkDropListGroup verbindet die oberste Liste mit allen Section-Listen,
          damit ein Block auch in eine Section hinein- und wieder herausgezogen
          werden kann. cdkDropListData sagt dem Handler, welche Liste gemeint ist. -->
-    <div cdkDropListGroup>
+    <div cdkDropListGroup [class.is-grabbing]="grabbing()">
       <div class="space-y-1"
            cdkDropList
            [cdkDropListData]="rootList"
@@ -194,6 +194,7 @@
           <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-fill">
             <div class="relative flex-none">
               <button type="button" cdkDragHandle
+                (pointerdown)="onGrab()"
                 cdkOverlayOrigin #sectionMenuAnchor="cdkOverlayOrigin"
                 class="drag-handle grid h-6 w-6 flex-none cursor-grab touch-none place-items-center rounded-lg
                        text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
@@ -222,16 +223,25 @@
               placeholder="Toggle" aria-label="Toggle title" />
           </div>
 
-          @if (!asGroup(block).collapsed) {
-            <!-- Nur Einzug, keine Linie. Sie sollte die Zugehoerigkeit zeigen,
-                 zog sich aber ueber die ganze Hoehe jedes Toggles und legte
-                 damit ein Gitter ueber ein Dokument, das ruhig sein soll. Der
-                 Einzug sagt dasselbe, ohne etwas zu zeichnen — so macht es
-                 Notion auch. -->
-            <div class="ml-[13px] space-y-1 pl-4 pt-1"
-                 cdkDropList
-                 [cdkDropListData]="block.id"
-                 (cdkDropListDropped)="dropBlock($event)">
+          <!-- Der Koerper ist IMMER eine Ablageflaeche — auch zugeklappt.
+               Das CDK sammelt die moeglichen Ziele in dem Moment, in dem man
+               einen Block anfasst; was danach entsteht, zaehlt nicht mehr.
+               Eine Flaeche, die erst beim Aufklappen existiert, ist deshalb
+               nie erreichbar, und genau daran scheiterte das Verschieben in
+               ein zugeklapptes Toggle.
+
+               Zugeklappt ist sie unsichtbar und wird zum Streifen, sobald
+               jemand einen Block am Griff hat. Nur Einzug, keine Linie: die
+               zog sich sonst ueber die ganze Hoehe und legte ein Gitter ueber
+               ein Dokument, das ruhig sein soll. -->
+          @let shut = asGroup(block).collapsed;
+          <div class="section-body ml-[13px] space-y-1 pl-4 pt-1"
+               [class.section-body--shut]="shut"
+               [class.section-body--drop]="shut && grabbing()"
+               cdkDropList
+               [cdkDropListData]="block.id"
+               (cdkDropListDropped)="dropBlock($event)">
+            @if (!shut) {
               @for (child of asGroup(block).blocks; track child.id) {
                 <div cdkDrag cdkDragPreviewClass="plan-drag-preview"
             (cdkDragStarted)="onDragStarted()" (cdkDragEnded)="onDragEnded()">
@@ -251,8 +261,10 @@
                   Empty. Click to write, then „/" for anything else.
                 </button>
               }
-            </div>
-          }
+            } @else if (grabbing()) {
+              <span class="drop-note">Drop inside</span>
+            }
+          </div>
         </div>
       } @else {
         <!-- Normaler Block: flach auf der Fläche, hebt sich erst beim Überfahren
@@ -278,6 +290,7 @@
           <div class="block-grip absolute top-1">
             <div class="relative">
               <button type="button" cdkDragHandle
+                (pointerdown)="onGrab()"
                 cdkOverlayOrigin #blockMenuAnchor="cdkOverlayOrigin"
                 class="drag-handle block-handle grid cursor-grab touch-none place-items-center
                        rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
@@ -440,7 +453,11 @@
             </div>
           } @else if (block.type === 'code') {
             <!-- Code bleibt immer Rohtext: hier gibt es nichts zu formatieren. -->
-            <div class="overflow-hidden rounded-lg border border-line bg-black/25">
+            <!-- Feste Flaeche aus der Elevation-Rampe statt Schwarz mit
+                 Durchlass: ein Codeblock ist eine eigene Flaeche, kein Schatten
+                 auf der Seite. Durchscheinender Text darunter macht Code
+                 ausserdem schlechter lesbar als jede Farbe. -->
+            <div class="overflow-hidden rounded-lg border border-line bg-bg3">
               <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
                 <lucide-icon [img]="CodeIcon" class="h-3.5 w-3.5 flex-none text-subtle"></lucide-icon>
                 <input type="text"
@@ -599,7 +616,7 @@
                     autocapitalize="off"
                     autocorrect="off"
                     [id]="'diagram-code-' + block.id"
-                    class="w-full resize-none rounded-lg border border-line bg-black/20 px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
+                    class="w-full resize-none rounded-lg border border-line bg-bg3 px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
                     placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
                     [value]="asDiagram(block).code"
                     (input)="updateCode(block.id, $any($event.target).value)"></textarea>

@@ -249,11 +249,40 @@ export class PlansView {
    */
   private lastDragEnd = 0;
 
+  /**
+   * Jemand hat einen Block am Griff — die Ablageflaechen zeigen sich.
+   *
+   * Am Griff, nicht erst beim Ziehen: das CDK sammelt die moeglichen Ziele in
+   * dem Moment, in dem der Zug beginnt (beforeStarted), und was danach ins
+   * Dokument kommt, ist fuer diesen Zug nicht mehr da. Der Streifen im
+   * zugeklappten Toggle muss also schon stehen, bevor die Hand sich bewegt.
+   */
+  protected readonly grabbing = signal(false);
+
+  /** Laeuft gerade ein echter Zug? Dann raeumt erst sein Ende wieder auf. */
+  private dragActive = false;
+
+  onGrab() {
+    this.grabbing.set(true);
+  }
+
+  @HostListener('document:pointerup')
+  @HostListener('document:pointercancel')
+  onRelease() {
+    // Waehrend eines Zuges nicht: das Loslassen gehoert dem CDK, und die
+    // Flaechen duerfen erst verschwinden, wenn es abgelegt hat.
+    if (this.dragActive || !this.grabbing()) return;
+    this.grabbing.set(false);
+  }
+
   onDragStarted() {
+    this.dragActive = true;
     this.closeBlockMenu();
   }
   onDragEnded() {
+    this.dragActive = false;
     this.lastDragEnd = Date.now();
+    this.grabbing.set(false);
   }
 
   toggleBlockMenu(blockId: string) {
@@ -2161,11 +2190,19 @@ export class PlansView {
       const without = this.withList(root, from, (list) =>
         list.filter((_, i) => i !== event.previousIndex),
       );
-      return this.withList(without, to, (list) => {
+      const placed = this.withList(without, to, (list) => {
         const next = [...list];
         next.splice(Math.min(event.currentIndex, next.length), 0, moved);
         return next;
       });
+
+      // In ein zugeklapptes Toggle abgelegt: aufklappen. Sonst verschwindet
+      // der Block scheinbar — man hat ihn irgendwohin gezogen und sieht das
+      // Ergebnis nicht.
+      if (to === null) return placed;
+      return this.mapById(placed, to, (x) =>
+        x.type === 'group' && x.collapsed ? { ...x, collapsed: false } : x,
+      );
     });
   }
 
