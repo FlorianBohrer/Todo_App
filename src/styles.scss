@@ -497,17 +497,29 @@ textarea::-webkit-resizer { display: none; }
     var(--spring);
 }
 
+/* Der Haken.
+ *
+ * Kleiner und leiser als zuvor: 20 statt 24 Pixel, ein duenner Ring in
+ * gedaempftem Grau statt eines 2px-Rings in fast Weiss. Ein leerer Kreis ist
+ * eine Frage, keine Aussage — er muss nur zu finden sein, nicht auffallen. Die
+ * Farbe gehoert dem Moment, in dem er gesetzt wird.
+ *
+ * Deshalb faellt auch der Lichthof beim Abhaken weg und das Groesserwerden:
+ * gefuellt ist deutlich genug, und alles darueber hinaus feiert einen
+ * Handgriff, den man zwanzigmal am Tag macht.
+ */
 .todo-checkbox {
   display: grid;
   place-items: center;
+  position: relative;
 
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
 
   flex-shrink: 0;
 
   padding: 0;
-  border: 2px solid rgb(212 212 216);
+  border: 1.5px solid rgb(255 255 255 / 30%);
   border-radius: 999px;
 
   color: white;
@@ -518,8 +530,20 @@ textarea::-webkit-resizer { display: none; }
   transition:
     transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
     border-color 180ms ease,
-    background-color 180ms ease,
-    box-shadow 180ms ease;
+    background-color 180ms ease;
+}
+
+/* Klein sehen, gross treffen: die Flaeche bleibt bei 44px, auch wenn der
+ * Kreis kleiner geworden ist. Ein Ziel, das man verfehlt, ist kein
+ * minimalistisches, sondern ein schlechtes. */
+.todo-checkbox::before {
+  content: '';
+  position: absolute;
+  /* Senkrecht die vollen 44px, waagerecht nur bis in die Luecke: weiter
+   * gegriffen laege die unsichtbare Flaeche ueber dem Dreieck daneben und
+   * naehme ihm Klicks weg. */
+  inset: -0.75rem -0.375rem;
+  border-radius: 999px;
 }
 
 .todo-checkbox:hover {
@@ -538,11 +562,6 @@ textarea::-webkit-resizer { display: none; }
 .todo-checkbox--checked {
   border-color: rgb(99 102 241);
   background: rgb(99 102 241);
-
-  box-shadow:
-    0 0 0 4px rgb(99 102 241 / 16%);
-
-  transform: scale(1.08);
 }
 
 .todo-checkmark {
