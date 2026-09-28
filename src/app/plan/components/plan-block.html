@@ -1,0 +1,552 @@
+<!-- Ein Block, eine Komponente.
+
+     Vorher rechnete jeder Durchlauf der Aenderungserkennung die Bindungen
+     ALLER Bloecke neu — bei einem Buchstaben im letzten Absatz also auch die
+     des ersten. Mit OnPush prueft Angular einen Block nur, wenn sich seine
+     Eingaben aendern, und die aendern sich nur fuer den Block, den man gerade
+     bearbeitet: jede Aenderung ersetzt unveraenderlich, die uebrigen Bloecke
+     sind danach DIESELBEN Objekte.
+
+     Deshalb kommen die Listenzeilen als Eingabe herein und werden nicht hier
+     aus dem Signal gelesen — ein Signalzugriff in dieser Vorlage wuerde die
+     Komponente bei jeder Aenderung irgendwo im Dokument wieder schmutzig
+     machen und den Gewinn aufheben.
+
+     Die Bedienlogik bleibt in der Ansicht (view): sie spannt ueber Bloecke
+     hinweg — teilen legt einen Nachbarn an, zusammenfuegen greift auf den
+     Block darueber. Sie hierher zu holen hiesse, sie zu zerschneiden. -->
+      @if (block.type === 'group') {
+        <!-- Heisst nach aussen „Toggle" — intern bleibt es der Blocktyp
+             'group' samt PlanGroupBlock und .section-block. Aufklappbarer
+             Container mit Titel und beliebigen Blöcken; der eingerückte Körper
+             trägt links eine Führungslinie, damit die Zugehörigkeit sofort
+             lesbar ist. -->
+        <div class="section-block py-1" [id]="'block-' + block.id">
+          <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-fill">
+            <div class="relative flex-none">
+              <button type="button" cdkDragHandle
+                (pointerdown)="view.onGrab()"
+                cdkOverlayOrigin #sectionMenuAnchor="cdkOverlayOrigin"
+                class="drag-handle grid h-6 w-6 flex-none cursor-grab touch-none place-items-center rounded-lg
+                       text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
+                [class.is-open]="view.openBlockMenu() === block.id"
+                (click)="view.toggleBlockMenu(block.id)"
+                [attr.aria-expanded]="view.openBlockMenu() === block.id"
+                aria-haspopup="menu"
+                aria-label="Drag section, or click for actions">
+                <lucide-icon [img]="view.GripIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id, origin: sectionMenuAnchor }"></ng-container>
+            </div>
+            <button type="button"
+              class="grid h-6 w-6 flex-none place-items-center rounded-lg text-muted transition hover:bg-fill-strong hover:text-text"
+              (click)="view.toggleGroup(block.id)"
+              [attr.aria-expanded]="!view.asGroup(block).collapsed"
+              aria-label="Toggle section">
+              <lucide-icon [img]="view.DownIcon" class="h-4 w-4 transition-transform duration-200"
+                [class.-rotate-90]="view.asGroup(block).collapsed"></lucide-icon>
+            </button>
+            <input type="text"
+              [id]="view.blockFieldId(block.id)"
+              class="min-w-0 flex-1 bg-transparent text-lg font-semibold tracking-tight text-text placeholder:text-subtle focus:outline-none"
+              [value]="view.asGroup(block).title"
+              (input)="view.setGroupTitle(block.id, $any($event.target).value)"
+              placeholder="Toggle" aria-label="Toggle title" />
+          </div>
+
+          <!-- Der Koerper ist IMMER eine Ablageflaeche — auch zugeklappt.
+               Das CDK sammelt die moeglichen Ziele in dem Moment, in dem man
+               einen Block anfasst; was danach entsteht, zaehlt nicht mehr.
+               Eine Flaeche, die erst beim Aufklappen existiert, ist deshalb
+               nie erreichbar, und genau daran scheiterte das Verschieben in
+               ein zugeklapptes Toggle.
+
+               Zugeklappt ist sie unsichtbar und wird zum Streifen, sobald
+               jemand einen Block am Griff hat. Nur Einzug, keine Linie: die
+               zog sich sonst ueber die ganze Hoehe und legte ein Gitter ueber
+               ein Dokument, das ruhig sein soll. -->
+          @let shut = view.asGroup(block).collapsed;
+          <div class="section-body ml-[13px] space-y-1 pl-4 pt-1"
+               [class.section-body--shut]="shut"
+               [class.section-body--drop]="shut && view.grabbing()"
+               cdkDropList
+               [id]="view.listId(block.id)"
+               [cdkDropListConnectedTo]="view.listIds()"
+               [cdkDropListData]="view.listData(block.id)"
+               (cdkDropListDropped)="view.dropBlock($event)">
+            @if (!shut) {
+              @for (child of view.asGroup(block).blocks; track child.id) {
+                <div cdkDrag cdkDragPreviewClass="plan-drag-preview"
+            (cdkDragStarted)="view.onDragStarted()" (cdkDragEnded)="view.onDragEnded()">
+                  <app-plan-block
+                    [block]="child"
+                    [view]="view"
+                    [rows]="view.rowsOf(child.id)"></app-plan-block>
+                  <div class="drop-preview" *cdkDragPlaceholder></div>
+                </div>
+              }
+
+              <!-- Nur solange nichts drin ist: ein leerer Toggle hat keinen
+                   Block, in den man tippen koennte, und waere sonst eine
+                   Sackgasse. Steht erst einmal etwas darin, uebernimmt „/"
+                   wie ueberall sonst. -->
+              @if (!view.asGroup(block).blocks.length) {
+                <button type="button"
+                  class="w-full cursor-text rounded-lg px-2 py-1.5 text-left text-sm text-subtle transition hover:bg-fill"
+                  (click)="view.addToGroup(block.id)">
+                  Empty. Click to write, then „/" for anything else.
+                </button>
+              }
+            } @else if (view.grabbing()) {
+              <span class="drop-note">Drop inside</span>
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- Normaler Block: flach auf der Fläche, hebt sich erst beim Überfahren
+             sanft ab (Notion-Gefühl). Werkzeuge sitzen dezent oben rechts und
+             treten am Zeigergerät zurück; auf Touch bleiben sie stehen. -->
+        <div class="block block-row group/block relative rounded-lg py-2"
+          [id]="'block-' + block.id"
+          [class.block-heading]="block.type === 'heading'">
+          <!-- Ziehgriff in der linken Randspalte (wie in Notion): am Text selbst
+               zu ziehen wuerde das Markieren und Bearbeiten unmoeglich machen. -->
+          <!-- Randspalte wie in Notion: „+" legt einen Block darunter an, der
+               Griff zieht ihn UND öffnet per Klick das Blockmenü. Auf Touch
+               bleibt nur der Griff — zwei 44px-Flaechen wuerden dort die halbe
+               Textbreite fressen. -->
+          <button type="button"
+            class="block-add block-handle drag-handle absolute left-0 top-1 place-items-center
+                   rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
+            (click)="view.addBelow(block.id)"
+            aria-label="Add block below">
+            <lucide-icon [img]="view.PlusIcon" class="h-4 w-4"></lucide-icon>
+          </button>
+
+          <div class="block-grip absolute top-1">
+            <div class="relative">
+              <button type="button" cdkDragHandle
+                (pointerdown)="view.onGrab()"
+                cdkOverlayOrigin #blockMenuAnchor="cdkOverlayOrigin"
+                class="drag-handle block-handle grid cursor-grab touch-none place-items-center
+                       rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
+                [class.is-open]="view.openBlockMenu() === block.id"
+                (click)="view.toggleBlockMenu(block.id)"
+                [attr.aria-expanded]="view.openBlockMenu() === block.id"
+                aria-haspopup="menu"
+                aria-label="Drag block, or click for actions">
+                <lucide-icon [img]="view.GripIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+              <ng-container *ngTemplateOutlet="blockMenuTpl; context: { $implicit: block.id, origin: blockMenuAnchor }"></ng-container>
+            </div>
+          </div>
+
+          @if (block.type === 'text') {
+            <div class="relative">
+              <!-- Ein Zustand, nicht zwei: hier steht formatierter Text, und
+                   der Cursor steht mittendrin. Aus „**fett**" wird fett, sobald
+                   die zweiten Sternchen stehen — Rohtext sieht man nie. -->
+              <div
+                [id]="view.blockFieldId(block.id)"
+                class="plan-prose text-prose text-text"
+                [appRichText]="block.text"
+                [richTextMenuOpen]="view.menuOpenFor(block.id)"
+                data-placeholder="Press '/' for commands…"
+                (textChange)="view.onTextChange(block.id, $event)"
+                (split)="view.splitBlock(block.id, $event.before, $event.after)"
+                (mergeBack)="view.mergeBack(block.id)"
+                (indent)="view.onProseIndent(block.id, $event)"
+                (navigate)="view.stepFromBlock(block.id, $event)"
+                (blurred)="view.onProseBlur(block.id)"
+                (pasted)="view.onTextPaste(block.id, $event)"
+                (click)="view.onFieldClick($event)"
+                (keydown)="view.onTextKeydown($event, block.id)"></div>
+
+              <!-- Slash-Menü (Notion-Stil): erscheint, sobald ein Textblock mit
+                   „/" beginnt; Pfeiltasten wählen, Enter oder Klick fügt ein. -->
+              @if (view.slash()?.blockId === block.id && view.slashResults().length) {
+                <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] px-1">
+                  @for (item of view.slashResults(); track item.kind; let i = $index) {
+                    <button type="button"
+                      class="slash-item flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-fill"
+                      [class.slash-item--active]="i === view.slashActiveIndex()"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="view.chooseSlash(block.id, item.kind)">
+                      <span class="grid h-8 w-8 flex-none place-items-center rounded-lg bg-fill text-muted">
+                        <lucide-icon [img]="item.icon" class="h-4 w-4"></lucide-icon>
+                      </span>
+                      <span class="min-w-0">
+                        <span class="block truncate text-sm font-medium text-text">{{ item.label }}</span>
+                        <span class="block truncate text-xs text-muted">{{ item.hint }}</span>
+                      </span>
+                    </button>
+                  }
+                </div>
+              }
+
+              <!-- Wikilink-Vorschläge: erscheinen bei einem offenen „[[".
+                   Ohne sie müsste man Titel blind und exakt tippen. -->
+              @if (view.wikiPick()?.blockId === block.id) {
+                <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] px-1">
+                  @for (p of view.wikiResults(); track p.id; let i = $index) {
+                    <button type="button"
+                      class="slash-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-fill"
+                      [class.slash-item--active]="i === view.wikiActiveIndex()"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="view.chooseWiki(block.id, p.title)">
+                      <lucide-icon [img]="view.LinkIcon" class="h-4 w-4 flex-none text-muted"></lucide-icon>
+                      <span class="min-w-0 flex-1 truncate text-sm text-text">{{ p.title }}</span>
+                      <span [class]="view.dotClass(p.categoryId)">●</span>
+                    </button>
+                  } @empty {
+                    <p class="px-2.5 py-2 text-xs text-subtle">
+                      No plan matches. Close with <span class="font-mono">]]</span> to link a new one.
+                    </p>
+                  }
+                </div>
+              }
+            </div>
+          } @else if (block.type === 'heading') {
+            <!-- Die leere Ueberschrift zeigt ihre Stufe auch unfokussiert
+                 (data-ghost): sonst waere sie eine unsichtbare Leerzeile. -->
+            <div
+              [id]="view.blockFieldId(block.id)"
+              class="plan-prose text-text"
+              [ngClass]="view.headingClass(view.asHeading(block).level)"
+              [appRichText]="block.text"
+              data-ghost="true"
+              [attr.data-placeholder]="'Heading ' + view.asHeading(block).level"
+              (textChange)="view.onProseChange(block.id, $event)"
+              (split)="view.splitBlock(block.id, $event.before, $event.after)"
+              (mergeBack)="view.mergeBack(block.id)"
+              (navigate)="view.stepFromBlock(block.id, $event)"
+              (blurred)="view.onProseBlur(block.id)"
+              (click)="view.onFieldClick($event)"></div>
+          } @else if (block.type === 'list') {
+            <!-- Jeder Punkt ist ein eigenes Schreibfeld, wie in Notion: Enter
+                 legt den naechsten an, Tabulator rueckt ein, Rueckschritt am
+                 Anfang fuehrt in den vorigen zurueck. Vorher war die ganze
+                 Liste EIN Textfeld mit einer Zeile je Eintrag — man musste
+                 wissen, dass Zeilen hier Punkte sind. -->
+            @let list = view.asList(block);
+            @let todoList = list.variant === 'todo';
+            <div class="plan-list text-prose text-text">
+              @for (row of rows; track $index; let i = $index) {
+                <div class="list-item-row group/item flex items-start gap-2"
+                     [style.padding-left.rem]="row.indent">
+                  @if (todoList) {
+                    <!-- Ist der Eintrag mit einem Todo verknuepft, zeigt und
+                         setzt die Box dessen Zustand. Es gibt dann genau einen
+                         Haken, nicht zwei. -->
+                    <button type="button"
+                      class="todo-box mt-[5px] grid h-4 w-4 flex-none place-items-center rounded-lg border text-2xs leading-none"
+                      [class]="row.checked
+                        ? 'border-brand-2 bg-brand-2 text-white'
+                        : 'border-line-strong text-transparent hover:border-line-strong'"
+                      (click)="view.toggleListItem(block.id, i)"
+                      [attr.aria-pressed]="row.checked"
+                      aria-label="Toggle item">✓</button>
+                  } @else {
+                    <span class="list-marker mt-[1px] flex-none select-none text-muted"
+                          aria-hidden="true">{{ row.marker }}</span>
+                  }
+
+                  <div
+                    [id]="row.fieldId"
+                    class="min-w-0 flex-1"
+                    [appRichText]="row.text"
+                    data-placeholder="List item"
+                    [class.line-through]="todoList && row.checked"
+                    [class.text-subtle]="todoList && row.checked"
+                    (textChange)="view.setItemText(block.id, i, $event.value)"
+                    (split)="view.splitItem(block.id, i, $event.before, $event.after)"
+                    (mergeBack)="view.mergeItemBack(block.id, i)"
+                    (indent)="view.indentItem(block.id, i, $event)"
+                    (navigate)="view.stepFromItem(block.id, i, $event)"
+                    (click)="view.onFieldClick($event)"></div>
+
+                  @if (todoList) {
+                    @if (row.todo; as linked) {
+                      <!-- Schon eine echte Aufgabe. Das Zeichen sagt, dass
+                           dieser Haken anderswo mitzaehlt. -->
+                      <span class="mt-[3px] flex-none text-2xs text-brand-2"
+                            [attr.title]="'This is a todo in your list' + (linked.scheduledDate ? ', planned for ' + linked.scheduledDate : '')">
+                        ↗ todo
+                      </span>
+                    } @else {
+                      <button type="button"
+                        class="item-promote mt-[3px] flex-none rounded px-1 text-2xs text-subtle transition hover:text-brand-2"
+                        (click)="view.promoteToTodo(block.id, i)"
+                        title="Make this a todo in your list">
+                        → todo
+                      </button>
+                    }
+                  }
+
+                  <ng-container
+                    *ngTemplateOutlet="itemDeleteTpl; context: { blockId: block.id, index: i }"></ng-container>
+                </div>
+              }
+            </div>
+          } @else if (block.type === 'code') {
+            <!-- Code bleibt immer Rohtext: hier gibt es nichts zu formatieren. -->
+            <!-- Feste Flaeche aus der Elevation-Rampe statt Schwarz mit
+                 Durchlass: ein Codeblock ist eine eigene Flaeche, kein Schatten
+                 auf der Seite. Durchscheinender Text darunter macht Code
+                 ausserdem schlechter lesbar als jede Farbe. -->
+            <div class="overflow-hidden rounded-lg border border-line bg-bg3">
+              <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
+                <lucide-icon [img]="view.CodeIcon" class="h-3.5 w-3.5 flex-none text-subtle"></lucide-icon>
+                <input type="text"
+                  class="w-32 bg-transparent font-mono text-xs text-muted placeholder:text-subtle focus:outline-none"
+                  placeholder="language"
+                  [value]="view.asCode(block).language"
+                  (input)="view.setCodeLanguage(block.id, $any($event.target).value)"
+                  aria-label="Code language" />
+              </div>
+              <textarea
+                [id]="view.blockFieldId(block.id)"
+                appAutosize
+                rows="3"
+                spellcheck="false"
+                autocapitalize="off"
+                autocorrect="off"
+                class="w-full resize-none bg-transparent px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:outline-none"
+                placeholder="Code…"
+                [value]="view.asCode(block).code"
+                (input)="view.updateCodeText(block.id, $any($event.target).value)"></textarea>
+            </div>
+          } @else if (block.type === 'quote') {
+            <div class="border-l-2 border-brand-2/50 pl-3">
+              <div
+                [id]="view.blockFieldId(block.id)"
+                class="plan-prose text-prose italic text-muted"
+                [appRichText]="block.text"
+                data-ghost="true"
+                data-placeholder="Quote or callout…"
+                (textChange)="view.onProseChange(block.id, $event)"
+                (split)="view.splitBlock(block.id, $event.before, $event.after)"
+                (mergeBack)="view.mergeBack(block.id)"
+                (navigate)="view.stepFromBlock(block.id, $event)"
+                (blurred)="view.onProseBlur(block.id)"
+                (click)="view.onFieldClick($event)"></div>
+            </div>
+          } @else if (block.type === 'divider') {
+            <hr class="my-2 border-0 border-t border-line" />
+          } @else if (block.type === 'table') {
+            <!-- Tabelle im Obsidian-Sinn: sie zeigt ihren Inhalt, nicht ihr
+                 Bearbeitungswerkzeug. Vorher war JEDE Zelle dauerhaft ein
+                 Eingabefeld — ein Raster aus Formularen, das man nicht lesen
+                 konnte, ohne an Formulare zu denken. Und ein input bricht
+                 keinen Text um: was nicht in die feste Breite passte, war
+                 schlicht weg.
+
+                 Jetzt steht Text da. Klick oder Enter macht genau die eine
+                 Zelle zum Feld, Escape verwirft, Enter uebernimmt. Die
+                 Zellen sind fokussierbar, also kommt man mit Tab hindurch. -->
+            <div class="plan-table-wrap overflow-x-auto">
+              <table class="plan-table w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    @for (col of view.asTable(block).columns; track $index; let ci = $index) {
+                      <th class="plan-th group/col">
+                        @if (view.isEditingCell(block.id, -1, ci)) {
+                          <input
+                            type="text"
+                            [id]="view.cellId(block.id, -1, ci)"
+                            class="plan-cell-input font-semibold"
+                            [value]="col"
+                            (input)="view.setColumn(block.id, ci, $any($event.target).value)"
+                            (blur)="view.stopCellEdit()"
+                            (keydown.enter)="view.stopCellEdit()"
+                            (keydown.escape)="view.stopCellEdit()"
+                            aria-label="Column name" />
+                        } @else {
+                          <div class="plan-cell" tabindex="0" role="button"
+                            (click)="view.startCellEdit(block.id, -1, ci)"
+                            (keydown.enter)="$event.preventDefault(); view.startCellEdit(block.id, -1, ci)">
+                            {{ col || 'Column' }}
+                          </div>
+                        }
+
+                        <!-- Erscheint beim Zeigen. Dauerhaft sichtbar war es
+                             ein Kreuz in jeder Kopfzelle, das nichts mit dem
+                             Inhalt zu tun hat. -->
+                        <button type="button"
+                          class="plan-table-x"
+                          (click)="view.deleteColumn(block.id, ci)" aria-label="Delete column">✕</button>
+                      </th>
+                    }
+                    <th class="plan-th-gutter"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of view.asTable(block).rows; track $index; let ri = $index) {
+                    <tr class="group/row">
+                      @for (cell of row; track $index; let ci = $index) {
+                        <td class="plan-td">
+                          @if (view.isEditingCell(block.id, ri, ci)) {
+                            <input
+                              type="text"
+                              [id]="view.cellId(block.id, ri, ci)"
+                              class="plan-cell-input"
+                              [value]="cell"
+                              (input)="view.setCell(block.id, ri, ci, $any($event.target).value)"
+                              (blur)="view.stopCellEdit()"
+                              (keydown.enter)="view.stopCellEdit()"
+                              (keydown.escape)="view.stopCellEdit()"
+                              aria-label="Cell" />
+                          } @else {
+                            <div class="plan-cell" tabindex="0" role="button"
+                              (click)="view.startCellEdit(block.id, ri, ci)"
+                              (keydown.enter)="$event.preventDefault(); view.startCellEdit(block.id, ri, ci)">
+                              {{ cell }}
+                            </div>
+                          }
+                        </td>
+                      }
+                      <td class="plan-td-gutter">
+                        <button type="button"
+                          class="plan-table-x"
+                          (click)="view.deleteRow(block.id, ri)" aria-label="Delete row">✕</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="mt-2 flex gap-1">
+              <button type="button" class="rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted" (click)="view.addRow(block.id)">+ Row</button>
+              <button type="button" class="rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted" (click)="view.addColumn(block.id)">+ Column</button>
+            </div>
+          } @else {
+            <!-- Ablaufdiagramm nach Obsidian-Art: gezeigt wird die Zeichnung,
+                 der Quelltext erst auf Wunsch.
+
+                 Vorher standen beide dauerhaft nebeneinander. Das kostete die
+                 Haelfte der Breite fuer etwas, das man beim Lesen nie braucht,
+                 und es liess jeden Plan wie einen Editor aussehen statt wie ein
+                 Dokument. Wer ein Diagramm liest, will es sehen; wer es
+                 aendert, sagt das mit einem Klick. -->
+            <div class="plan-diagram group/dia relative">
+              <div class="rounded-lg bg-fill p-3">
+                <app-mermaid-diagram [code]="view.asDiagram(block).code"></app-mermaid-diagram>
+              </div>
+
+              <!-- Tritt zurueck wie die Ziehgriffe, bis der Block ueberfahren
+                   wird. Offen bleibt er stehen, sonst verschwaende der einzige
+                   Weg zurueck, sobald die Maus ins Textfeld geht. -->
+              <button type="button"
+                class="plan-dia-edit absolute right-2 top-2 rounded-lg px-2 py-1 text-2xs text-subtle transition hover:bg-fill-strong hover:text-text"
+                [class.is-open]="view.openDiagramSource() === block.id"
+                [attr.aria-expanded]="view.openDiagramSource() === block.id"
+                (click)="view.toggleDiagramSource(block.id)">
+                {{ view.openDiagramSource() === block.id ? 'Hide source' : 'Edit source' }}
+              </button>
+
+              @if (view.openDiagramSource() === block.id) {
+                <div class="mt-2">
+                  <textarea
+                    appAutosize
+                    rows="4"
+                    spellcheck="false"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    [id]="'diagram-code-' + block.id"
+                    class="w-full resize-none rounded-lg border border-line bg-bg3 px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
+                    placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
+                    [value]="view.asDiagram(block).code"
+                    (input)="view.updateCode(block.id, $any($event.target).value)"></textarea>
+                  <p class="mt-1.5 text-xs text-subtle">
+                    Mermaid syntax: <code class="font-mono">A --&gt; B</code> draws an arrow.
+                  </p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+    <!-- Blockaktionen liegen hinter dem Ziehgriff (Notion: ziehen =
+         verschieben, klicken = Menue). Das Menue haengt als CDK-Overlay am
+         <body>: als absolutes Kind des Blocks wurde es von spaeteren Bloecken
+         ueberzeichnet, weil ein z-index nur gegen Geschwister im selben
+         Stapelkontext wirkt. Den Anker reicht jede Stelle ueber den
+         Template-Kontext herein. -->
+    <ng-template #blockMenuTpl let-id let-origin="origin">
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="origin"
+        [cdkConnectedOverlayOpen]="view.openBlockMenu() === id"
+        [cdkConnectedOverlayPositions]="view.menuPositions"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+        (backdropClick)="view.closeBlockMenu()"
+        (detach)="view.closeBlockMenu()"
+        (overlayKeydown)="$event.key === 'Escape' && view.closeBlockMenu()">
+        <div role="menu"
+          class="popover w-52 px-1">
+          <!-- „Turn into" wie in Notion, nur ohne Untermenü: die Typen sind
+               ohnehin Symbole, und zwei Klicks fuer „das sollte eine
+               Ueberschrift sein" sind einer zu viel. -->
+          <p class="px-2 pb-1 pt-1.5 text-2xs font-medium uppercase tracking-wide text-subtle">
+            Turn into
+          </p>
+          <div class="turn-row mb-1 flex flex-wrap gap-0.5 px-1 pb-1.5">
+            @for (option of view.turnOptions; track option.kind) {
+              <button type="button" role="menuitem"
+                class="turn-key grid h-7 w-7 place-items-center rounded-lg text-muted transition hover:bg-fill hover:text-text"
+                (click)="view.turnInto(id, option.kind)"
+                [attr.title]="option.label" [attr.aria-label]="'Turn into ' + option.label">
+                <lucide-icon [img]="option.icon" class="h-4 w-4"></lucide-icon>
+              </button>
+            }
+          </div>
+
+          <!-- Hinein und heraus als Befehl, nicht nur als Zug: je groesser ein
+               Block ist, desto schwerer trifft er den schmalen Streifen im
+               Toggle. Eine Tabelle laesst sich so gar nicht zuverlaessig
+               zuordnen. -->
+          @if (view.groupAbove(id); as target) {
+            <button role="menuitem" type="button" class="block-menu-item"
+              (click)="view.nestIntoAbove(id)">
+              <lucide-icon [img]="view.NestIcon" class="h-4 w-4"></lucide-icon>
+              <span class="min-w-0 flex-1 truncate">Into „{{ target.title }}"</span>
+            </button>
+          }
+          @if (view.inGroup(id)) {
+            <button role="menuitem" type="button" class="block-menu-item"
+              (click)="view.liftOut(id)">
+              <lucide-icon [img]="view.LiftIcon" class="h-4 w-4"></lucide-icon> Out of the toggle
+            </button>
+          }
+
+          <button role="menuitem" type="button" class="block-menu-item" (click)="view.menuMove(id, -1)">
+            <lucide-icon [img]="view.UpIcon" class="h-4 w-4"></lucide-icon> Move up
+          </button>
+          <button role="menuitem" type="button" class="block-menu-item" (click)="view.menuMove(id, 1)">
+            <lucide-icon [img]="view.DownIcon" class="h-4 w-4"></lucide-icon> Move down
+          </button>
+          <button role="menuitem" type="button" class="block-menu-item" (click)="view.duplicateBlock(id)">
+            <lucide-icon [img]="view.CopyIcon" class="h-4 w-4"></lucide-icon> Duplicate
+          </button>
+          <button role="menuitem" type="button" class="block-menu-item block-menu-item--danger" (click)="view.menuDelete(id)">
+            <lucide-icon [img]="view.TrashIcon" class="h-4 w-4"></lucide-icon> Delete
+          </button>
+        </div>
+      </ng-template>
+    </ng-template>
+
+    <!-- Ein einzelner Listenpunkt laesst sich fuer sich loeschen. Ohne das
+         bliebe nur, die Liste als Text zu oeffnen und eine ganze Zeile zu
+         markieren. Zeigt sich beim Ueberfahren der Zeile; stopPropagation,
+         sonst faengt der Klick woanders an. -->
+    <ng-template #itemDeleteTpl let-blockId="blockId" let-index="index">
+      <button type="button"
+        class="list-item-remove ml-1 inline-grid h-5 w-5 flex-none place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-danger"
+        (click)="$event.stopPropagation(); view.removeListItem(blockId, index)"
+        title="Remove this item"
+        aria-label="Remove this item">
+        <lucide-icon [img]="view.TrashIcon" class="h-3 w-3"></lucide-icon>
+      </button>
+    </ng-template>

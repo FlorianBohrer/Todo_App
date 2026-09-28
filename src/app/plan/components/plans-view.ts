@@ -7,7 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { NgClass, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import {
   CdkDrag,
@@ -47,7 +47,6 @@ import {
   CornerUpLeft,
   ListTree,
 } from 'lucide-angular';
-import { Autosize } from '../../directives/autosize.directive';
 import { LabelService } from '../../todo/services/label.service';
 import { TodoService } from '../../todo/services/todo';
 import type { Todo } from '../../todo/model/todo.model';
@@ -65,7 +64,6 @@ import {
   PlanCodeBlock,
   PlanQuoteBlock,
 } from '../plan.model';
-import { RichText } from '../rich-text.directive';
 import { focusRich, replaceRange } from '../rich-text';
 import { levelOf, listMarkers } from '../list-markers';
 import { TypingRun, continuesRun } from '../edit-history';
@@ -84,13 +82,13 @@ import {
   detectWikiToken,
   MarkdownBlockKind,
 } from '../editor-input';
-import { MermaidDiagram } from './mermaid-diagram';
+import { PlanBlockView } from './plan-block';
 import { PlanGraph } from './plan-graph';
 
 /**
  * Eine Listenzeile, fertig gerechnet — siehe listRows.
  */
-interface ListRow {
+export interface ListRow {
   text: string;
   fieldId: string;
   /** Punkt, Zahl oder Buchstabe, je nach Ebene. */
@@ -149,17 +147,14 @@ const DIAGRAM_TEMPLATE = `flowchart TD
   selector: 'app-plans-view',
   imports: [
     LucideAngularModule,
-    Autosize,
-    MermaidDiagram,
     NgTemplateOutlet,
-    NgClass,
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
     CdkDragPlaceholder,
     OverlayModule,
     PlanGraph,
-    RichText,
+    PlanBlockView,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plans-view.html',
@@ -173,13 +168,13 @@ export class PlansView {
   private readonly todoService = inject(TodoService);
 
   protected readonly BackIcon = ChevronLeft;
-  protected readonly PlusIcon = Plus;
-  protected readonly TrashIcon = Trash2;
-  protected readonly GripIcon = GripVertical;
+  readonly PlusIcon = Plus;
+  readonly TrashIcon = Trash2;
+  readonly GripIcon = GripVertical;
   protected readonly SearchIcon = Search;
   protected readonly OutlineIcon = ListTree;
-  protected readonly NestIcon = CornerDownRight;
-  protected readonly LiftIcon = CornerUpLeft;
+  readonly NestIcon = CornerDownRight;
+  readonly LiftIcon = CornerUpLeft;
   protected readonly UndoIcon = Undo2;
   protected readonly RedoIcon = Redo2;
 
@@ -199,14 +194,26 @@ export class PlansView {
   // Ueber IDs laeuft die Verbindung an der Hierarchie vorbei: das CDK haelt
   // alle Listen in einem eigenen Verzeichnis und sucht sie dort.
 
-  protected readonly ROOT_LIST = 'plan-list-root';
+  readonly ROOT_LIST = 'plan-list-root';
 
   listId(groupId: string): string {
     return 'plan-list-' + groupId;
   }
 
+  /**
+   * Der Datenwert einer Toggle-Ablageflaeche.
+   *
+   * Sieht nach nichts aus, hat aber einen Grund: die oberste Liste traegt
+   * null, die Toggles ihre ID. Der Ablage-Handler bekommt dadurch
+   * „string | null", und ohne diese Angleichung waere die Bindung im Block
+   * enger getippt als das Ereignis, das sie ausloest.
+   */
+  listData(groupId: string): string | null {
+    return groupId;
+  }
+
   /** Alle Ablageflaechen des Dokuments — jede kennt jede. */
-  protected readonly listIds = computed<string[]>(
+  readonly listIds = computed<string[]>(
     () => {
       const ids = [this.ROOT_LIST];
       const walk = (blocks: PlanBlock[]) => {
@@ -226,23 +233,23 @@ export class PlansView {
       equal: (a, b) => a.length === b.length && a.every((id, i) => id === b[i]),
     },
   );
-  protected readonly TextIcon = Type;
-  protected readonly TableIcon = TableIcon;
-  protected readonly DiagramIcon = Workflow;
-  protected readonly SectionIcon = Layers;
-  protected readonly H1Icon = Heading1;
-  protected readonly H2Icon = Heading2;
-  protected readonly H3Icon = Heading3;
-  protected readonly BulletIcon = List;
-  protected readonly NumberIcon = ListOrdered;
-  protected readonly TodoIcon = ListChecks;
-  protected readonly CodeIcon = Code;
-  protected readonly QuoteIcon = Quote;
-  protected readonly DividerIcon = Minus;
-  protected readonly LinkIcon = Link2;
-  protected readonly CopyIcon = Copy;
-  protected readonly UpIcon = ChevronUp;
-  protected readonly DownIcon = ChevronDown;
+  readonly TextIcon = Type;
+  readonly TableIcon = TableIcon;
+  readonly DiagramIcon = Workflow;
+  readonly SectionIcon = Layers;
+  readonly H1Icon = Heading1;
+  readonly H2Icon = Heading2;
+  readonly H3Icon = Heading3;
+  readonly BulletIcon = List;
+  readonly NumberIcon = ListOrdered;
+  readonly TodoIcon = ListChecks;
+  readonly CodeIcon = Code;
+  readonly QuoteIcon = Quote;
+  readonly DividerIcon = Minus;
+  readonly LinkIcon = Link2;
+  readonly CopyIcon = Copy;
+  readonly UpIcon = ChevronUp;
+  readonly DownIcon = ChevronDown;
 
   // ---- Blöcke anlegen (einmal pro Dokument, oben rechts) ----
   //
@@ -305,13 +312,13 @@ export class PlansView {
   // ablenkt — und die gesamte rechte Reserve faellt weg.
 
   /** Block, dessen Aktionsmenue offen ist. */
-  protected readonly openBlockMenu = signal<string | null>(null);
+  readonly openBlockMenu = signal<string | null>(null);
 
   /**
    * Das Menue klappt unter dem Griff nach rechts auf; ist unten kein Platz,
    * nach oben. CDK waehlt die erste Position, die ins Fenster passt.
    */
-  protected readonly menuPositions: ConnectedPosition[] = [
+  readonly menuPositions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
   ];
@@ -331,7 +338,7 @@ export class PlansView {
    * Dokument kommt, ist fuer diesen Zug nicht mehr da. Der Streifen im
    * zugeklappten Toggle muss also schon stehen, bevor die Hand sich bewegt.
    */
-  protected readonly grabbing = signal(false);
+  readonly grabbing = signal(false);
 
   /** Laeuft gerade ein echter Zug? Dann raeumt erst sein Ende wieder auf. */
   private dragActive = false;
@@ -377,7 +384,7 @@ export class PlansView {
    * Zeilen eine Liste. Tabelle und Diagramm stehen nicht dabei — dorthin gibt
    * es keinen sinnvollen Weg aus reinem Text.
    */
-  protected readonly turnOptions: { kind: SlashKind; label: string; icon: LucideIconData }[] = [
+  readonly turnOptions: { kind: SlashKind; label: string; icon: LucideIconData }[] = [
     { kind: 'text', label: 'Text', icon: this.TextIcon },
     { kind: 'heading1', label: 'Heading 1', icon: this.H1Icon },
     { kind: 'heading2', label: 'Heading 2', icon: this.H2Icon },
@@ -704,7 +711,7 @@ export class PlansView {
   ];
 
   /** Offenes Menü: Block, markierter Eintrag, Position des „/" + Query dahinter. */
-  protected readonly slash = signal<{
+  readonly slash = signal<{
     blockId: string;
     index: number;
     start: number;
@@ -712,7 +719,7 @@ export class PlansView {
   } | null>(null);
 
   /** Gefilterte Menü-Einträge zum aktuellen Query hinter dem „/". */
-  protected readonly slashResults = computed(() => {
+  readonly slashResults = computed(() => {
     const s = this.slash();
     if (!s) return [];
     const q = s.query.toLowerCase();
@@ -732,14 +739,14 @@ export class PlansView {
   // ---- Wikilink-Vervollstaendigung ----
 
   /** Offener „[[…"-Vorschlag: Block, Markierung, Position und Query. */
-  protected readonly wikiPick = signal<{
+  readonly wikiPick = signal<{
     blockId: string;
     index: number;
     start: number;
     query: string;
   } | null>(null);
 
-  protected readonly wikiResults = computed<Plan[]>(() => {
+  readonly wikiResults = computed<Plan[]>(() => {
     const pick = this.wikiPick();
     if (!pick) return [];
     const query = pick.query.trim().toLowerCase();
@@ -1784,7 +1791,7 @@ export class PlansView {
   // ---- Diagramme ----
 
   /** Block, dessen Quelltext gerade offen liegt. null = nur die Zeichnung. */
-  protected readonly openDiagramSource = signal<string | null>(null);
+  readonly openDiagramSource = signal<string | null>(null);
 
   toggleDiagramSource(blockId: string) {
     this.openDiagramSource.update((cur) => (cur === blockId ? null : blockId));
