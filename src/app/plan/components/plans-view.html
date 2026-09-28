@@ -57,6 +57,19 @@
         }
       </select>
 
+      <!-- Speicherzustand. Im Normalfall steht hier nichts: „gespeichert" ist
+           die Erwartung, und eine Bestaetigung fuer das Erwartete ist Rauschen.
+           Zu sehen ist nur, was davon abweicht — und „retrying" faellt auf,
+           weil es das Einzige ist, worauf man reagieren koennte. -->
+      @if (saveState() !== 'saved') {
+        <span class="flex-none text-2xs"
+              [class.text-subtle]="saveState() === 'saving'"
+              [class.text-amber-300]="saveState() === 'retrying'"
+              role="status">
+          {{ saveState() === 'saving' ? 'Saving…' : 'Not saved — retrying' }}
+        </span>
+      }
+
       <!-- Die Gliederung als Knopf, solange die Seitenleiste keinen Platz hat.
            In einem halben Bildschirm — geteiltes Fenster, schmaler Monitor —
            verschwand sie bisher ersatzlos, und mit ihr der einzige Weg, in
@@ -465,35 +478,35 @@
                  Liste EIN Textfeld mit einer Zeile je Eintrag — man musste
                  wissen, dass Zeilen hier Punkte sind. -->
             @let list = asList(block);
-            @let markers = markersFor(list);
+            @let todoList = list.variant === 'todo';
             <div class="plan-list text-prose text-text">
-              @for (item of list.items; track $index; let i = $index) {
+              @for (row of rowsOf(block.id); track $index; let i = $index) {
                 <div class="list-item-row group/item flex items-start gap-2"
-                     [style.padding-left.rem]="itemIndent(item)">
-                  @if (list.variant === 'todo') {
+                     [style.padding-left.rem]="row.indent">
+                  @if (todoList) {
                     <!-- Ist der Eintrag mit einem Todo verknuepft, zeigt und
                          setzt die Box dessen Zustand. Es gibt dann genau einen
                          Haken, nicht zwei. -->
                     <button type="button"
                       class="todo-box mt-[5px] grid h-4 w-4 flex-none place-items-center rounded-lg border text-2xs leading-none"
-                      [class]="itemChecked(item)
+                      [class]="row.checked
                         ? 'border-brand-2 bg-brand-2 text-white'
                         : 'border-line-strong text-transparent hover:border-line-strong'"
                       (click)="toggleListItem(block.id, i)"
-                      [attr.aria-pressed]="itemChecked(item)"
+                      [attr.aria-pressed]="row.checked"
                       aria-label="Toggle item">✓</button>
                   } @else {
                     <span class="list-marker mt-[1px] flex-none select-none text-muted"
-                          aria-hidden="true">{{ markers[i] }}</span>
+                          aria-hidden="true">{{ row.marker }}</span>
                   }
 
                   <div
-                    [id]="itemFieldId(block.id, i)"
+                    [id]="row.fieldId"
                     class="min-w-0 flex-1"
-                    [appRichText]="item.text"
+                    [appRichText]="row.text"
                     data-placeholder="List item"
-                    [class.line-through]="list.variant === 'todo' && itemChecked(item)"
-                    [class.text-subtle]="list.variant === 'todo' && itemChecked(item)"
+                    [class.line-through]="todoList && row.checked"
+                    [class.text-subtle]="todoList && row.checked"
                     (textChange)="setItemText(block.id, i, $event.value)"
                     (split)="splitItem(block.id, i, $event.before, $event.after)"
                     (mergeBack)="mergeItemBack(block.id, i)"
@@ -501,8 +514,8 @@
                     (navigate)="stepFromItem(block.id, i, $event)"
                     (click)="onFieldClick($event)"></div>
 
-                  @if (list.variant === 'todo') {
-                    @if (itemTodo(item); as linked) {
+                  @if (todoList) {
+                    @if (row.todo; as linked) {
                       <!-- Schon eine echte Aufgabe. Das Zeichen sagt, dass
                            dieser Haken anderswo mitzaehlt. -->
                       <span class="mt-[3px] flex-none text-2xs text-brand-2"

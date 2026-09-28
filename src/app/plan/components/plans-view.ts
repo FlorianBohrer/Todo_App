@@ -87,6 +87,21 @@ import {
 import { MermaidDiagram } from './mermaid-diagram';
 import { PlanGraph } from './plan-graph';
 
+/**
+ * Eine Listenzeile, fertig gerechnet — siehe listRows.
+ */
+interface ListRow {
+  text: string;
+  fieldId: string;
+  /** Punkt, Zahl oder Buchstabe, je nach Ebene. */
+  marker: string;
+  /** Einzug in rem. */
+  indent: number;
+  checked: boolean;
+  /** Das verknuepfte Todo, falls der Eintrag eins geworden ist. */
+  todo: Todo | null;
+}
+
 /** Was das Slash-Menü einfügen kann. */
 type SlashKind =
   | 'text'
@@ -191,18 +206,26 @@ export class PlansView {
   }
 
   /** Alle Ablageflaechen des Dokuments — jede kennt jede. */
-  protected readonly listIds = computed<string[]>(() => {
-    const ids = [this.ROOT_LIST];
-    const walk = (blocks: PlanBlock[]) => {
-      for (const block of blocks) {
-        if (block.type !== 'group') continue;
-        ids.push(this.listId(block.id));
-        walk(block.blocks);
-      }
-    };
-    walk(this.selected()?.content ?? []);
-    return ids;
-  });
+  protected readonly listIds = computed<string[]>(
+    () => {
+      const ids = [this.ROOT_LIST];
+      const walk = (blocks: PlanBlock[]) => {
+        for (const block of blocks) {
+          if (block.type !== 'group') continue;
+          ids.push(this.listId(block.id));
+          walk(block.blocks);
+        }
+      };
+      walk(this.selected()?.content ?? []);
+      return ids;
+    },
+    {
+      // Jeder Anschlag baut einen neuen Inhaltsbaum, also auch ein neues
+      // Array — und jede Ablageflaeche bekaeme ihre Nachbarn neu gesetzt,
+      // obwohl sich nichts geaendert hat. Gleiche Kennungen, gleiches Array.
+      equal: (a, b) => a.length === b.length && a.every((id, i) => id === b[i]),
+    },
+  );
   protected readonly TextIcon = Type;
   protected readonly TableIcon = TableIcon;
   protected readonly DiagramIcon = Workflow;
@@ -514,6 +537,9 @@ export class PlansView {
   }
 
   protected readonly plans = this.planService.plans;
+
+  /** „saving" oder „retrying" — siehe PlanService. */
+  protected readonly saveState = this.planService.saveState;
 
   // ---- Reihenfolge der Plaene ----
   //
@@ -1430,14 +1456,82 @@ export class PlansView {
   asList(block: PlanBlock): PlanListBlock {
     return block as PlanListBlock;
   }
-  /** Die Zeichen links vom Eintrag — Punkt, Zahl oder Buchstabe, je nach Ebene. */
-  markersFor(block: PlanListBlock): string[] {
-    return listMarkers(block.items, block.variant);
-  }
+  // ---- Listenzeilen, fertig gerechnet ----
+  //
+  // Die Vorlage rechnete pro Eintrag und pro Durchlauf der Aenderungserkennung:
+  // Zeichen der Ebene, Einzug, Kennung des Feldes — und viermal „ist das
+  // abgehakt", was jedes Mal das verknuepfte Todo nachschlug. Ein Dokument mit
+  // zehn Listen zu zehn Punkten kam so auf einige hundert Aufrufe je
+  // Tastendruck, fuer ein Ergebnis, das sich nur aendert, wenn sich die Liste
+  // aendert.
+  //
+  // Hier steht es einmal je Datenstand. Dieselbe Kur wie in der Todo-Liste.
 
-  /** Einrueckung eines Eintrags in rem. */
-  itemIndent(item: PlanListItem): number {
-    return levelOf(item) * 1.5;
+  /**
+   * Gedaechtnis fuer unveraenderte Listen.
+   *
+   * Beim Tippen entsteht ein neuer Inhaltsbaum, aber die Bloecke, die niemand
+   * angefasst hat, sind DIESELBEN Objekte — alle Aenderungen ersetzen
+   * unveraenderlich. Daran laesst sich erkennen, was neu gerechnet werden muss:
+   * bei einem Anschlag genau eine Liste statt aller.
+   */
+  private readonly rowCache = new Map<
+    string,
+    { block: PlanListBlock; todos: readonly Todo[]; rows: ListRow[] }
+  >();
+
+  protected readonly listRows = computed<Map<string, ListRow[]>>(() => {
+    const out = new Map<string, ListRow[]>();
+    // Der Haken eines verknuepften Eintrags haengt an den Todos.
+    const todos = this.todoService.snapshot();
+
+    const walk = (blocks: PlanBlock[]) => {
+      for (const block of blocks) {
+        if (block.type === 'group') {
+          walk(block.blocks);
+          continue;
+        }
+        if (block.type !== 'list') continue;
+
+        const cached = this.rowCache.get(block.id);
+        if (cached && cached.block === block && cached.todos === todos) {
+          out.set(block.id, cached.rows);
+          continue;
+        }
+
+        const markers = listMarkers(block.items, block.variant);
+        const rows = block.items.map((item, index) => {
+            const todo = this.todoService.todoById(item.todoId);
+            return {
+              text: item.text,
+              fieldId: this.itemFieldId(block.id, index),
+              marker: markers[index],
+              indent: levelOf(item) * 1.5,
+              // Haengt der Eintrag an einem Todo, zaehlt dessen Zustand — es
+              // gibt genau einen Haken, nicht zwei.
+              checked: todo?.completed ?? item.checked,
+              todo,
+            };
+        });
+
+        this.rowCache.set(block.id, { block, todos, rows });
+        out.set(block.id, rows);
+      }
+    };
+
+    walk(this.selected()?.content ?? []);
+
+    // Geloeschte Listen nicht ewig mitschleppen.
+    for (const id of [...this.rowCache.keys()]) {
+      if (!out.has(id)) this.rowCache.delete(id);
+    }
+
+    return out;
+  });
+
+  /** Die Zeilen einer Liste; leer, solange es sie nicht gibt. */
+  rowsOf(blockId: string): ListRow[] {
+    return this.listRows().get(blockId) ?? [];
   }
 
   private mapItems(
@@ -1606,20 +1700,10 @@ export class PlansView {
   // den des Todos und hakt es ab. Zwei Haken, die dasselbe behaupten und
   // auseinanderlaufen können, wären schlimmer als gar keine Verbindung.
 
-  /** Das verknüpfte Todo, oder null wenn es keins (mehr) gibt. */
-  itemTodo(item: PlanListItem): Todo | null {
-    return this.todoService.todoById(item.todoId);
-  }
-
-  /**
-   * Ist der Eintrag abgehakt? Beim verknüpften der Zustand des Todos.
-   *
-   * Fällt das Todo weg (gelöscht, archiviert und gerade nicht geladen), zählt
-   * wieder das, was im Plan steht. Der Eintrag verschwindet dadurch nicht.
-   */
-  itemChecked(item: PlanListItem): boolean {
-    return this.itemTodo(item)?.completed ?? item.checked;
-  }
+  // Welches Todo an einem Eintrag haengt und ob er abgehakt ist, steht in
+  // listRows — einmal je Datenstand statt viermal je Eintrag und Durchlauf.
+  // Faellt das Todo weg (geloescht, archiviert und gerade nicht geladen),
+  // zaehlt dort wieder, was im Plan steht: der Eintrag verschwindet nicht.
 
   /**
    * Aus einem Eintrag eine echte Aufgabe machen.
@@ -1906,7 +1990,8 @@ export class PlansView {
    * zaehlen mit, weil sie strukturell dasselbe leisten; verschachtelte
    * Ueberschriften ruecken pro Ebene eine Stufe ein (maximal drei).
    */
-  protected readonly outline = computed<{ id: string; level: number; text: string }[]>(() => {
+  protected readonly outline = computed<{ id: string; level: number; text: string }[]>(
+    () => {
     const plan = this.selected();
     if (!plan) return [];
 
@@ -1925,7 +2010,16 @@ export class PlansView {
     };
     walk(plan.content, 0);
     return items;
-  });
+    },
+    {
+      // Sonst zeichnet jeder Anschlag irgendwo im Dokument die ganze
+      // Gliederung neu — sie aendert sich aber nur, wenn sich eine
+      // Ueberschrift aendert.
+      equal: (a, b) =>
+        a.length === b.length &&
+        a.every((x, i) => x.id === b[i].id && x.level === b[i].level && x.text === b[i].text),
+    },
+  );
 
   // ---- Vorschlaege fuer Abschnitte ohne Ueberschrift ----
   //
