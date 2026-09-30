@@ -13,7 +13,11 @@
     <div class="mx-auto flex w-full max-w-[72rem] gap-8">
       <div class="outline-spacer"></div>
 
-      <div class="min-w-0 flex-1">
+      <!-- Wie breit dieser Bereich ist, steht als --doc-w daran (siehe
+           PlansView). Eine Tabelle im „Wide"-Zustand liest es und waechst
+           genau bis hierher — nicht bis zum Fensterrand, sonst laege sie
+           unter der Outline. -->
+      <div class="min-w-0 flex-1" #docColumn>
         <div class="mx-auto w-full max-w-3xl">
     <!-- ===== Editor ===== -->
     <!-- Der Kopf bleibt oben stehen. In einem langen Dokument sind Titel,

@@ -1,11 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   HostListener,
   computed,
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
@@ -131,6 +133,20 @@ type SlashKind =
  * zu und niemand nutzt es sinnvoll.
  */
 const MAX_LIST_LEVEL = 2;
+
+/**
+ * Schmalste Spalte, die man noch ziehen kann.
+ *
+ * Weniger waere kein Nutzen, sondern eine Falle: eine Spalte, die man auf
+ * null gezogen hat, ist verschwunden und nicht wiederzufinden.
+ */
+const MIN_COL_WIDTH = 56;
+
+/** Breite einer Spalte, die zu einer bereits festgehaltenen dazukommt. */
+const DEFAULT_COL_WIDTH = 160;
+
+/** Die schmale Spalte rechts mit den Loeschknoepfen (1.75rem). */
+const GUTTER_WIDTH = 28;
 
 /**
  * Text in Listeneintraege zerlegen — eine Zeile, ein Punkt.
@@ -2365,11 +2381,31 @@ export class PlansView {
   /** Wie viele Absaetze noch ohne Ueberschrift darueber stehen. */
   protected readonly pendingSuggestions = computed(() => this.untitled().length);
 
+  /** Der Dokumentbereich zwischen Blindspalte und Outline. */
+  private readonly docColumn = viewChild<ElementRef<HTMLElement>>('docColumn');
+
   constructor() {
     // Erst fragen, wenn es etwas zu betiteln gibt. Ein Plan ohne unbetitelte
     // Absätze braucht die Funktion nicht, und die Anfrage bliebe umsonst.
     effect(() => {
       if (this.untitled().length > 0) this.titles.checkAvailability();
+    });
+
+    // Wie breit der Dokumentbereich ist, steht ab jetzt als --doc-w an ihm.
+    // Eine breite Tabelle liest das und waechst genau bis dorthin. Ueber eine
+    // Container-Abfrage ginge es ohne Javascript — die richtet aber
+    // Containment ein, und daran haengt in diesem Baum die feststehende
+    // Kopfzeile. Ein Beobachter ist hier der kleinere Eingriff.
+    effect((onCleanup) => {
+      const el = this.docColumn()?.nativeElement;
+      if (!el) return;
+
+      const publish = () => el.style.setProperty('--doc-w', `${el.clientWidth}px`);
+      publish();
+
+      const watch = new ResizeObserver(publish);
+      watch.observe(el);
+      onCleanup(() => watch.disconnect());
     });
   }
 
@@ -2814,6 +2850,9 @@ export class PlansView {
       ...t,
       columns: [...t.columns, `Column ${t.columns.length + 1}`],
       rows: t.rows.map((row) => [...row, '']),
+      // Stehen Breiten fest, braucht die neue Spalte auch eine — sonst
+      // faellt sie bei festem Layout auf null zusammen.
+      widths: t.widths ? [...t.widths, DEFAULT_COL_WIDTH] : undefined,
     }));
   }
   deleteRow(blockId: string, r: number) {
@@ -2824,7 +2863,125 @@ export class PlansView {
       ...t,
       columns: t.columns.filter((_, i) => i !== c),
       rows: t.rows.map((row) => row.filter((_, i) => i !== c)),
+      widths: t.widths?.filter((_, i) => i !== c),
     }));
+  }
+
+  // ---- Tabelle: Breite ----
+  //
+  // Zwei Regler, weil es zwei verschiedene Fragen sind: wie breit die Tabelle
+  // insgesamt sein darf, und wie sich diese Breite auf die Spalten verteilt.
+
+  /** Breite dieser Spalte, oder null fuer „richtet sich nach dem Inhalt". */
+  colWidth(block: PlanBlock, c: number): number | null {
+    return this.asTable(block).widths?.[c] ?? null;
+  }
+
+  hasWidths(block: PlanBlock): boolean {
+    return !!this.asTable(block).widths?.length;
+  }
+
+  /**
+   * Die Gesamtbreite der Tabelle, sobald Spalten festgehalten sind.
+   *
+   * Ohne sie bleibt jede gesetzte Spaltenbreite ein Vorschlag: eine Tabelle
+   * auf `width: 100%` verteilt den Platz neu, sobald eine Spalte mehr will —
+   * gemessen wuchs die gezogene Spalte um 83 statt um 120 Pixel, und die
+   * Nachbarn schrumpften ungefragt. Steht die Summe fest, gilt jede Spalte
+   * genau so, wie sie gezogen wurde, und die Tabelle laeuft notfalls aus dem
+   * Rand (der Rahmen darum scrollt waagerecht).
+   */
+  tableWidth(block: PlanBlock): number | null {
+    const widths = this.asTable(block).widths;
+    if (!widths?.length) return null;
+    return widths.reduce((sum, w) => sum + w, 0) + GUTTER_WIDTH;
+  }
+
+  toggleTableWide(blockId: string) {
+    this.mapTable(blockId, (t) => ({ ...t, wide: !t.wide }));
+  }
+
+  /** Zurueck zu Spalten, die sich nach ihrem Inhalt richten. */
+  resetColumnWidths(blockId: string) {
+    this.mapTable(blockId, (t) => ({ ...t, widths: undefined }));
+  }
+
+  /**
+   * Eine Spalte ziehen.
+   *
+   * Waehrend des Ziehens schreibt das hier direkt in die <col>-Elemente und
+   * nicht ins Modell: jede Modelländerung liefe durch Verlauf, Speicherung
+   * und Neuaufbau der Bloecke — sechzigmal in der Sekunde. Ins Modell geht
+   * erst, was am Ende dasteht; damit ist auch nur ein Schritt zurueckzunehmen
+   * und nicht sechzig.
+   */
+  startColResize(event: PointerEvent, blockId: string, c: number) {
+    const grip = event.currentTarget as HTMLElement;
+    const table = grip.closest('table');
+    const head = table?.tHead?.rows[0];
+    const cols = table?.querySelectorAll('col');
+    if (!table || !head || !cols) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    grip.setPointerCapture(event.pointerId);
+
+    // Erst messen, dann festhalten: sonst springt die Tabelle in dem Moment,
+    // in dem sie von „nach Inhalt" auf feste Spalten umschaltet.
+    const measured = Array.from(head.cells)
+      .slice(0, -1)
+      .map((cell) => Math.round(cell.getBoundingClientRect().width));
+    measured.forEach((w, i) => ((cols[i] as HTMLElement).style.width = `${w}px`));
+    table.classList.add('plan-table--fixed');
+
+    // Auch die Summe muss mitwandern — siehe tableWidth.
+    const total = (widths: number[]) =>
+      (table.style.width = `${widths.reduce((sum, w) => sum + w, 0) + GUTTER_WIDTH}px`);
+    total(measured);
+
+    const startX = event.clientX;
+    const startWidth = measured[c];
+    let width = startWidth;
+
+    const move = (moved: PointerEvent) => {
+      width = Math.max(MIN_COL_WIDTH, Math.round(startWidth + moved.clientX - startX));
+      (cols[c] as HTMLElement).style.width = `${width}px`;
+      total(measured.map((w, i) => (i === c ? width : w)));
+    };
+
+    const done = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', done);
+      grip.removeEventListener('pointercancel', done);
+      const next = [...measured];
+      next[c] = width;
+      this.mapTable(blockId, (t) => ({ ...t, widths: next }));
+    };
+
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', done);
+    grip.addEventListener('pointercancel', done);
+  }
+
+  /**
+   * Dieselbe Spalte mit der Tastatur.
+   *
+   * Ohne das waere die Breite nur mit der Maus erreichbar — und der Griff ist
+   * ein Bedienelement wie jedes andere.
+   */
+  nudgeColumn(event: KeyboardEvent, blockId: string, c: number) {
+    const step = event.key === 'ArrowLeft' ? -16 : event.key === 'ArrowRight' ? 16 : 0;
+    if (!step) return;
+
+    const head = (event.currentTarget as HTMLElement).closest('table')?.tHead?.rows[0];
+    if (!head) return;
+
+    event.preventDefault();
+    const measured = Array.from(head.cells)
+      .slice(0, -1)
+      .map((cell) => Math.round(cell.getBoundingClientRect().width));
+    measured[c] = Math.max(MIN_COL_WIDTH, measured[c] + step);
+    this.mapTable(blockId, (t) => ({ ...t, widths: measured }));
   }
 
   asTable(block: PlanBlock): PlanTableBlock {
