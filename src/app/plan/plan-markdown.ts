@@ -117,15 +117,29 @@ function frontMatter(plan: Plan, folder: string | null): string {
   return lines.join('\n');
 }
 
+/**
+ * Eine Auswahl von Bloecken als Markdown — fuer die Zwischenablage.
+ *
+ * Derselbe Weg wie beim Export, nur ohne Dateikopf und Titel: was hier
+ * herauskommt, wird woanders eingefuegt und braucht keine Huelle.
+ */
+export function blocksToMarkdown(blocks: readonly PlanBlock[]): string {
+  return blocks
+    .flatMap((block) => blockToMarkdown(block, 0))
+    .map((part) => part.trimEnd())
+    .filter((part) => part !== '')
+    .join('\n\n');
+}
+
 /** Der ganze Plan als Markdown. */
 export function planToMarkdown(plan: Plan, folder: string | null = null): string {
-  const body = plan.content.flatMap((block) => blockToMarkdown(block, 0));
   // Leere Bloecke fallen weg: eine Datei voller Leerzeilen liest sich schlecht.
-  const parts = [frontMatter(plan, folder), `# ${plan.title || 'Untitled'}`, ...body]
+  const parts = [frontMatter(plan, folder), `# ${plan.title || 'Untitled'}`]
     .map((part) => part.trimEnd())
     .filter((part) => part !== '');
 
-  return parts.join('\n\n') + '\n';
+  const body = blocksToMarkdown(plan.content);
+  return [...parts, ...(body ? [body] : [])].join('\n\n') + '\n';
 }
 
 /**

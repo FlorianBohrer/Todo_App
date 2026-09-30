@@ -867,3 +867,29 @@ tr:focus-within .plan-td-gutter .plan-table-x,
 
 @media (hover: none) {
   .plan-dia-edit { opacity: 0.7; }}
+
+// ---- Mehrere Bloecke markiert ----
+//
+// Eine Flaeche in der Akzentfarbe, mehr nicht. Die blaue Textmarkierung des
+// Browsers ist in diesem Zustand aufgehoben (siehe PlansView), also gibt es
+// keine zweite Markierung, gegen die sich diese behaupten muesste.
+//
+// Der Rand greift bewusst ueber den Text hinaus: markiert ist der Block,
+// nicht die Zeile — und das soll man sehen.
+.block.is-selected,
+.section-block.is-selected {
+  background: color-mix(in srgb, var(--plan-accent) 18%, transparent);
+  // Kein Rahmen je Block: aneinandergrenzende Bloecke sollen als EIN Band
+  // lesen. Mit Ring um jeden entstuenden Fugen, und aus einer Auswahl
+  // wuerden optisch wieder mehrere.
+  border-radius: 0.375rem;
+}
+
+
+// Ein markierter Block zeigt keine Werkzeuge: sie gehoeren zu EINEM Block,
+// und markiert sind mehrere.
+.block.is-selected .block-add,
+.block.is-selected .block-grip {
+  opacity: 0;
+  pointer-events: none;
+}
