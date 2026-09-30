@@ -73,9 +73,10 @@ import {
 } from '../plan.model';
 import { focusRich, replaceRange } from '../rich-text';
 import { formatBlock } from '../inline-format';
+import { neighbourAfterRemoval, rangeBetween, siblingsOf } from '../block-selection';
 import { levelOf, listMarkers } from '../list-markers';
 import { TypingRun, continuesRun } from '../edit-history';
-import { fileNameFor, planToMarkdown, uniqueNames } from '../plan-markdown';
+import { blocksToMarkdown, fileNameFor, planToMarkdown, uniqueNames } from '../plan-markdown';
 import { markdownToPlan, titleFromFileName } from '../markdown-import';
 import { makeZip, readZip, ZipEntry } from '../zip';
 import { detectSlashToken } from '../slash-command';
@@ -332,6 +333,195 @@ export class PlansView {
 
   closeOutline() {
     this.outlineOpen.set(false);
+  }
+
+  // ---- Mehrere Bloecke auf einmal ----
+  //
+  // Jede Markierung endete bisher am Absatz, weil jeder Block sein eigenes
+  // contenteditable ist. Zieht man darueber hinaus, zeigt der Browser zwar
+  // eine Auswahl an, aber sie taugt zu nichts: Loeschen zerreisst den Text,
+  // Kopieren nimmt rohes HTML mit.
+  //
+  // Also wird daraus etwas anderes — eine Auswahl von BLOECKEN. Siehe
+  // block-selection.ts fuer die Regeln; hier steht, wie man sie bekommt und
+  // was man mit ihr tun kann.
+
+  /** Die markierten Bloecke, in Dokumentreihenfolge. */
+  readonly blockSel = signal<readonly string[]>([]);
+
+  /** Der Block, an dem die Auswahl haengt — von hier aus wird erweitert. */
+  private selAnchor: string | null = null;
+
+  /** Waehrend wir die Textauswahl selbst aufheben, nicht erneut reagieren. */
+  private convertingSelection = false;
+
+  /** Der Block, in dem der Zeiger gedrueckt wurde. */
+  private dragFrom: string | null = null;
+
+  /** Laeuft gerade ein Ausstrich ueber mehrere Bloecke? */
+  private selecting = false;
+
+  isBlockSelected(id: string): boolean {
+    return this.blockSel().includes(id);
+  }
+
+  clearBlockSel() {
+    if (this.blockSel().length) this.blockSel.set([]);
+    this.selAnchor = null;
+  }
+
+  /** Die blaue Markierung des Browsers weg — sichtbar bleibt die der Bloecke. */
+  private dropTextSelection() {
+    this.convertingSelection = true;
+    document.getSelection()?.removeAllRanges();
+    (document.activeElement as HTMLElement | null)?.blur();
+    setTimeout(() => (this.convertingSelection = false));
+  }
+
+  /**
+   * Der Ausstrich ueber mehrere Bloecke, selbst verfolgt.
+   *
+   * Der naheliegende Weg waere, auf die Textauswahl des Browsers zu hoeren
+   * und zu pruefen, ob ihre beiden Enden in verschiedenen Bloecken liegen.
+   * Der geht nicht, und zwar grundsaetzlich: jeder Block ist ein eigenes
+   * contenteditable, und eine Auswahl verlaesst so eines nicht. Gemessen —
+   * zieht man von Block a nach Block c, meldet der Browser Anfang UND Ende
+   * in a; ausserhalb passiert schlicht nichts mehr.
+   *
+   * Also wird der Zeiger selbst verfolgt: wo er gedrueckt wurde, wo er jetzt
+   * ist, und sobald das zwei verschiedene Bloecke sind, ist eine Auswahl von
+   * Bloecken gemeint und keine von Buchstaben.
+   */
+  @HostListener('document:pointerdown', ['$event'])
+  onDocumentPointerDown(event: PointerEvent) {
+    this.dragFrom = this.blockIdOf(event.target as Node);
+  }
+
+  @HostListener('document:pointermove', ['$event'])
+  onDocumentPointerMove(event: PointerEvent) {
+    // buttons === 0 heisst: der Zeiger faehrt nur herum.
+    if (!this.dragFrom || event.buttons === 0) return;
+
+    const over = this.blockIdOf(event.target as Node);
+    if (!over || over === this.dragFrom) return;
+
+    this.selAnchor = this.dragFrom;
+    if (!this.selectTo(over)) return;
+
+    if (!this.selecting) {
+      this.selecting = true;
+      // Ab jetzt markiert der Zug Bloecke. Ohne das Verbot legte der Browser
+      // waehrenddessen weiter eine Textauswahl im Startblock an — zwei
+      // Markierungen fuer eine Geste.
+      document.body.classList.add('is-block-selecting');
+      this.dropTextSelection();
+    }
+  }
+
+  @HostListener('document:pointerup')
+  onDocumentPointerUp() {
+    this.dragFrom = null;
+    if (!this.selecting) return;
+
+    this.selecting = false;
+    document.body.classList.remove('is-block-selecting');
+    this.dropTextSelection();
+  }
+
+  /** Auswahl bis zu diesem Block ausdehnen. Gibt zurueck, ob es ging. */
+  private selectTo(id: string): boolean {
+    const plan = this.selected();
+    const anchor = this.selAnchor;
+    if (!plan || !anchor) return false;
+
+    const family = siblingsOf(plan.content, anchor);
+    const range = family ? rangeBetween(family.ids, anchor, id) : [];
+    if (!range.length) return false;
+
+    this.blockSel.set(range);
+    return true;
+  }
+
+  /**
+   * Klick auf einen Block.
+   *
+   * Mit Umschalt erweitert er die Auswahl — das ist der Weg fuer alle, die
+   * nicht ziehen wollen oder es auf dem Weg verloren haben. Ohne Umschalt
+   * hebt er sie auf: der naechste Klick ins Dokument soll wieder ein
+   * gewoehnlicher Klick sein.
+   */
+  onBlockPointerDown(event: MouseEvent, id: string) {
+    if (!event.shiftKey) {
+      this.clearBlockSel();
+      return;
+    }
+
+    const start = this.selAnchor ?? this.blockSel()[0] ?? id;
+    this.selAnchor = start;
+    if (this.selectTo(id)) {
+      event.preventDefault();
+      this.dropTextSelection();
+    }
+  }
+
+  /** Alle Geschwister der Auswahl. */
+  private selectAllSiblings(): boolean {
+    const plan = this.selected();
+    const first = this.blockSel()[0];
+    if (!plan || !first) return false;
+
+    const family = siblingsOf(plan.content, first);
+    if (!family) return false;
+
+    this.selAnchor = family.ids[0];
+    this.blockSel.set(family.ids);
+    return true;
+  }
+
+  /** Die markierten Bloecke als Markdown in die Zwischenablage. */
+  private async copyBlockSel(): Promise<void> {
+    const plan = this.selected();
+    if (!plan) return;
+
+    const chosen = this.blockSel()
+      .map((id) => this.findById(plan.content, id))
+      .filter((b): b is PlanBlock => !!b);
+    if (!chosen.length) return;
+
+    try {
+      await navigator.clipboard.writeText(blocksToMarkdown(chosen));
+      this.toast.success(
+        chosen.length === 1 ? 'Copied 1 block' : `Copied ${chosen.length} blocks`,
+      );
+    } catch {
+      this.toast.error('Could not copy');
+    }
+  }
+
+  /**
+   * Die markierten Bloecke loeschen — ein Zug, nicht einer pro Block.
+   *
+   * Der Cursor geht danach in den Nachbarn darueber; sonst stuende man nach
+   * dem Loeschen nirgends und muesste erst wieder hinklicken.
+   */
+  private deleteBlockSel() {
+    const plan = this.selected();
+    const chosen = this.blockSel();
+    if (!plan || !chosen.length) return;
+
+    const family = siblingsOf(plan.content, chosen[0]);
+    const next = family ? neighbourAfterRemoval(family.ids, chosen) : null;
+
+    this.updateContent((blocks) => chosen.reduce((rest, id) => this.removeById(rest, id), blocks));
+    this.clearBlockSel();
+
+    if (next) this.beginEdit(next, 'end');
+  }
+
+  /** Der Block, in dem dieser Knoten steht. */
+  private blockIdOf(node: Node | null): string | null {
+    const el = node instanceof Element ? node : (node?.parentElement ?? null);
+    return el?.closest<HTMLElement>('[data-block]')?.dataset['block'] ?? null;
   }
 
   // ---- Export ----
@@ -1110,6 +1300,13 @@ export class PlansView {
       return;
     }
 
+    // Bei einer Blockauswahl hat die Formatleiste nichts zu suchen: fett und
+    // kursiv wirken auf Text, nicht auf halbe Dokumente.
+    if (this.blockSel().length) {
+      this.toolbar.set(null);
+      return;
+    }
+
     const range = selection.getRangeAt(0);
     const node = range.commonAncestorContainer;
     const el = node instanceof Element ? node : node.parentElement;
@@ -1735,6 +1932,32 @@ export class PlansView {
     }
     if (event.key === 'Escape' && this.switcherOpen()) this.switcherOpen.set(false);
     if (event.key === 'Escape' && this.tableFull()) this.tableFull.set(null);
+
+    // Was auf eine Blockauswahl wirkt. Es geht vor dem Rest, denn dieselben
+    // Tasten bedeuten in einem Textfeld etwas anderes — und ein Feld hat in
+    // diesem Zustand keinen Fokus, weil das Umwandeln ihn abgegeben hat.
+    if (this.blockSel().length) {
+      if (event.key === 'Escape') {
+        this.clearBlockSel();
+        return;
+      }
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+        this.deleteBlockSel();
+        return;
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        void this.copyBlockSel();
+        return;
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
+        if (this.selectAllSiblings()) {
+          event.preventDefault();
+          return;
+        }
+      }
+    }
 
     // ⌘Z fuer das Dokument, nicht fuer ein einzelnes Feld.
     //

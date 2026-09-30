@@ -21,7 +21,13 @@
              Container mit Titel und beliebigen Blöcken; der eingerückte Körper
              trägt links eine Führungslinie, damit die Zugehörigkeit sofort
              lesbar ist. -->
-        <div class="section-block py-1" [id]="'block-' + block.id">
+        <!-- data-block sagt, zu welchem Block ein Knoten gehoert. Daran
+             erkennt die Ansicht, dass eine Textauswahl zwei Bloecke
+             beruehrt — und macht daraus eine Auswahl von Bloecken. -->
+        <div class="section-block py-1" [id]="'block-' + block.id"
+          [attr.data-block]="block.id"
+          [class.is-selected]="view.isBlockSelected(block.id)"
+          (pointerdown)="view.onBlockPointerDown($event, block.id)">
           <div class="section-header flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-fill">
             <div class="relative flex-none">
               <button type="button" cdkDragHandle
@@ -108,8 +114,11 @@
              treten am Zeigergerät zurück; auf Touch bleiben sie stehen. -->
         <div class="block block-row group/block relative rounded-lg py-2"
           [id]="'block-' + block.id"
+          [attr.data-block]="block.id"
           [class.block-heading]="block.type === 'heading'"
-          [class.block-menus]="view.menuOpenFor(block.id)">
+          [class.is-selected]="view.isBlockSelected(block.id)"
+          [class.block-menus]="view.menuOpenFor(block.id)"
+          (pointerdown)="view.onBlockPointerDown($event, block.id)">
           <!-- Ziehgriff in der linken Randspalte (wie in Notion): am Text selbst
                zu ziehen wuerde das Markieren und Bearbeiten unmoeglich machen. -->
           <!-- Randspalte wie in Notion: „+" legt einen Block darunter an, der

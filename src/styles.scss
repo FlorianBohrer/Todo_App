@@ -1116,3 +1116,12 @@ select {
 .folder-pill:hover {
   background: var(--color-fill);
 }
+
+/* Waehrend ein Zug ueber mehrere Bloecke laeuft, legt der Browser keine
+   Textauswahl mehr an. Sonst entstuenden zwei Markierungen fuer eine Geste:
+   die blaue im Startblock und die der Bloecke. */
+body.is-block-selecting,
+body.is-block-selecting * {
+  user-select: none;
+  -webkit-user-select: none;
+}
