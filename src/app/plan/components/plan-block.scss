@@ -541,6 +541,62 @@
 }
 
 
+// ---- „Hier geht es weiter" ----
+//
+// Eine zu breite Tabelle sah einfach abgeschnitten aus. Rollen KANN man,
+// aber macOS blendet den Rollbalken aus, bis jemand es tut — man muss also
+// erst raten, dass da noch etwas ist.
+//
+// Ein dauerhafter Balken waere die naheliegende Antwort und ist keine: in
+// heutigen Chrome schalten `scrollbar-width`/`scrollbar-color` die
+// ::-webkit-scrollbar-Regeln ab, und keine der Varianten hat im Test den
+// Overlay-Balken zu einem stehenden gemacht (gemessen: 0 Pixel belegt).
+//
+// Also ein eigener Verlauf am Rand, der genau dann steht, wenn dort noch
+// etwas liegt. Der Rollbalken bleibt zusaetzlich gestaltet — fuer Browser,
+// die ihn ohnehin stehen lassen.
+.plan-table-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+
+.plan-table-frame {
+  position: relative;
+}
+
+
+.plan-table-frame::before,
+.plan-table-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2.5rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+
+.plan-table-frame::before {
+  left: 0;
+  background: linear-gradient(to right, var(--color-bg), transparent);
+}
+
+
+.plan-table-frame::after {
+  right: 0;
+  background: linear-gradient(to left, var(--color-bg), transparent);
+}
+
+
+.plan-table-frame.has-more-left::before,
+.plan-table-frame.has-more-right::after {
+  opacity: 1;
+}
+
+
 // Stehen Breiten fest, muessen sie auch gelten: bei `auto` bleibt eine
 // gesetzte Breite ein Vorschlag, den der Browser ueberstimmt, sobald der
 // Inhalt mehr verlangt.
@@ -626,6 +682,57 @@
   outline: 2px solid var(--plan-accent);
   outline-offset: 1px;
   opacity: 1;
+}
+
+
+// ---- Vollbild ----
+//
+// Manche Tabelle passt auch in die volle Dokumentbreite nicht. Dann tritt sie
+// aus der Seite heraus: fest ueber allem, mit eigenem Rollbalken. Escape und
+// das Kreuz oben rechts fuehren zurueck.
+//
+// `position: fixed` traegt das, weil ueber der Tabelle kein Vorfahr steht, der
+// einen eigenen Bezugsrahmen aufspannt — die Transformationen in diesem
+// Stylesheet sitzen alle auf :active-Zustaenden von Knoepfen.
+.plan-table-block--full {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow: auto;
+  // Ohne das rollt am Ende der Tabelle die Seite dahinter weiter.
+  overscroll-behavior: contain;
+  background: var(--color-bg);
+  padding: 3.25rem 1.5rem 2rem;
+
+  // Im Vollbild ist der Bezug der Bildschirm, nicht der Dokumentbereich.
+  --doc-w: 100%;
+}
+
+
+.plan-table-block--full .plan-table-wrap--wide {
+  width: 100%;
+  margin-left: 0;
+}
+
+
+.plan-table-close {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  color: var(--color-muted);
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+
+.plan-table-close:hover {
+  background: var(--color-fill);
+  color: var(--color-text);
 }
 
 
