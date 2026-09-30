@@ -302,22 +302,22 @@
     /* Akzente — siehe „Drei Ansichten, drei Farben" weiter unten.
        Was hier steht, ist nur der Ausgangswert; die Ansicht überschreibt
        ihn am <html>-Element. */
-    --color-highlight1:  #C78F38;
-    --color-highlight2:  #E0A94F;
-    --color-highlight11: #E0A94F;   /* Hover / Fokus */
-    --color-highlight22: #F0CE94;   /* hellster Akzent */
+    --color-highlight1:  #35A79B;
+    --color-highlight2:  #5CC7BC;
+    --color-highlight11: #5CC7BC;   /* Hover / Fokus */
+    --color-highlight22: #9FE3DB;   /* hellster Akzent */
 
-    --color-button:   #96682A;
-    --color-button1:  #96682A;      /* primärer Button */
-    --color-button2:  #7A5422;      /* gedrückt */
+    --color-button:   #1A736B;
+    --color-button1:  #1A736B;      /* primärer Button */
+    --color-button2:  #135C55;      /* gedrückt */
 
     /* Semantic */
-    --color-brand:    #96682A;
-    --color-brand-2:  #E0A94F;
+    --color-brand:    #1A736B;
+    --color-brand-2:  #5CC7BC;
     --color-danger:   #F4495D;
     --color-ok:       #36D399;
 
-    --gradient-brand: linear-gradient(180deg, #96682A, #7A5422);
+    --gradient-brand: linear-gradient(180deg, #1A736B, #135C55);
 
     /* Zwei Schriftgrade, die als Einzelwerte im Markup standen (text-[11px],
        text-[15px]). Als Stufe benannt sind sie eine Entscheidung statt zehn. */
@@ -389,8 +389,8 @@
    Ansichten sagt nichts; und ausgerechnet dieser Farbraum ist der, den
    jede zweite neue Oberfläche trägt.
 
-   Jetzt hat jede Ansicht ihre eigene: Liste warm (Bronze), Woche kühl
-   (Petrol), Pläne (Bordeaux). Weit genug auseinander, um beim Umschalten
+   Jetzt hat jede Ansicht ihre eigene: Liste kühl (Türkis), Woche warm
+   (Orange), Pläne (Bordeaux). Weit genug auseinander, um beim Umschalten
    sofort zu sagen, wo man ist, und gedämpft genug, um den ganzen Tag
    daneben zu arbeiten.
 
@@ -404,24 +404,24 @@
    var(--color-indigo-300), und das steht hier.
 
    Kontraste nachgerechnet, nicht geschätzt (Weiß auf der Fläche / Stufe
-   300 als Schrift auf Panel): Bronze 4.87 / 6.75, Petrol 6.19 / 6.16,
+   300 als Schrift auf Panel): Türkis 5.66 / 7.02, Orange 5.48 / 6.23,
    Bordeaux 6.42 / 5.56. Das alte Indigo lag bei 4.41 / 4.77.
    ================================================================ */
 :root,
 [data-view='list'] {
-  --accent-200: #F0CE94;
-  --accent-300: #E0A94F;
-  --accent-400: #C78F38;
-  --accent-500: #96682A;
-  --accent-600: #7A5422;
+  --accent-200: #9FE3DB;
+  --accent-300: #5CC7BC;
+  --accent-400: #35A79B;
+  --accent-500: #1A736B;
+  --accent-600: #135C55;
 }
 
 [data-view='week'] {
-  --accent-200: #9BD9DC;
-  --accent-300: #5FB8BD;
-  --accent-400: #3E979D;
-  --accent-500: #1F6B70;
-  --accent-600: #17565A;
+  --accent-200: #F5C79A;
+  --accent-300: #E89A57;
+  --accent-400: #D07F35;
+  --accent-500: #9C5820;
+  --accent-600: #7F461A;
 }
 
 [data-view='plans'] {
