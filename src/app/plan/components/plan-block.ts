@@ -10,6 +10,7 @@ import {
 import { LucideAngularModule } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { RichText } from '../rich-text.directive';
+import { ScrollEdges } from '../scroll-edges.directive';
 import { MermaidDiagram } from './mermaid-diagram';
 import type { PlanBlock } from '../plan.model';
 // Nur als Typ: der Import verschwindet beim Uebersetzen, und damit auch der
@@ -48,6 +49,7 @@ import type { ListRow, PlansView } from './plans-view';
     Autosize,
     RichText,
     MermaidDiagram,
+    ScrollEdges,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plan-block.html',

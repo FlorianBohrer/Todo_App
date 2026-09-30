@@ -345,11 +345,28 @@
                  Jetzt steht Text da. Klick oder Enter macht genau die eine
                  Zelle zum Feld, Escape verwirft, Enter uebernimmt. Die
                  Zellen sind fokussierbar, also kommt man mit Tab hindurch. -->
-            <!-- „Wide" loest die Tabelle aus der Textspalte und gibt ihr die
-                 volle Breite des Dokumentbereichs. Prosa liest sich schmal
-                 besser, eine Tabelle mit sechs Spalten nicht. -->
-            <div class="plan-table-wrap overflow-x-auto"
+            <!-- Drei Stufen Platz, und das ist Absicht: „Wide" loest die
+                 Tabelle aus der Textspalte, das Vollbild aus der Seite. Prosa
+                 liest sich schmal besser, eine Tabelle mit sechs Spalten
+                 nicht — und manche passt auch dann nirgends hin.
+
+                 Beides liegt in EINEM Rahmen, damit im Vollbild die Knoepfe
+                 mitkommen: eine Tabelle, die man ansehen, aber nicht
+                 bearbeiten kann, waere eine halbe Sache. -->
+            <div class="plan-table-block"
+              [class.plan-table-block--full]="view.tableFull() === block.id">
+
+            @if (view.tableFull() === block.id) {
+              <button type="button" class="plan-table-close"
+                (click)="view.toggleTableFull(block.id)"
+                aria-label="Leave fullscreen (Escape)">✕</button>
+            }
+
+            <!-- Der Rahmen traegt die Randverlaeufe: die muessen stehen
+                 bleiben, waehrend der Inhalt darunter durchlaeuft. -->
+            <div class="plan-table-frame"
               [class.plan-table-wrap--wide]="view.asTable(block).wide">
+            <div class="plan-table-wrap overflow-x-auto" appScrollEdges>
               <table class="plan-table w-full border-collapse text-sm"
                 [class.plan-table--fixed]="view.hasWidths(block)"
                 [style.width.px]="view.tableWidth(block)">
@@ -440,6 +457,7 @@
                 </tbody>
               </table>
             </div>
+            </div>
             <div class="mt-2 flex flex-wrap items-center gap-1">
               <button type="button" class="plan-table-tool" (click)="view.addRow(block.id)">+ Row</button>
               <button type="button" class="plan-table-tool" (click)="view.addColumn(block.id)">+ Column</button>
@@ -455,6 +473,14 @@
                   (click)="view.resetColumnWidths(block.id)"
                   title="Let the columns follow their content again">Auto widths</button>
               }
+
+              <button type="button" class="plan-table-tool"
+                [class.plan-table-tool--on]="view.tableFull() === block.id"
+                [attr.aria-pressed]="view.tableFull() === block.id"
+                (click)="view.toggleTableFull(block.id)">
+                {{ view.tableFull() === block.id ? 'Leave fullscreen' : 'Fullscreen' }}
+              </button>
+            </div>
             </div>
           } @else {
             <!-- Ablaufdiagramm nach Obsidian-Art: gezeigt wird die Zeichnung,

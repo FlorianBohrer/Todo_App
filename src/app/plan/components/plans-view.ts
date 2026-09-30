@@ -7,6 +7,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -1732,6 +1733,7 @@ export class PlansView {
       return;
     }
     if (event.key === 'Escape' && this.switcherOpen()) this.switcherOpen.set(false);
+    if (event.key === 'Escape' && this.tableFull()) this.tableFull.set(null);
 
     // ⌘Z fuer das Dokument, nicht fuer ein einzelnes Feld.
     //
@@ -2391,6 +2393,14 @@ export class PlansView {
       if (this.untitled().length > 0) this.titles.checkAvailability();
     });
 
+    // Ein Vollbild ueberlebt den Planwechsel nicht: sonst oeffnet der
+    // naechste Plan mit einer Tabelle vor dem Gesicht, die gar nicht zu ihm
+    // gehoert.
+    effect(() => {
+      this.planService.selectedId();
+      untracked(() => this.tableFull.set(null));
+    });
+
     // Wie breit der Dokumentbereich ist, steht ab jetzt als --doc-w an ihm.
     // Eine breite Tabelle liest das und waechst genau bis dorthin. Ueber eine
     // Container-Abfrage ginge es ohne Javascript — die richtet aber
@@ -2899,6 +2909,19 @@ export class PlansView {
 
   toggleTableWide(blockId: string) {
     this.mapTable(blockId, (t) => ({ ...t, wide: !t.wide }));
+  }
+
+  /**
+   * Die Tabelle, die gerade den Bildschirm fuellt.
+   *
+   * Absichtlich kein Feld am Block: das Vollbild ist nichts, was ein Dokument
+   * speichern sollte. Wer es morgen wieder oeffnet, will seinen Text sehen
+   * und nicht eine Tabelle, die alles verdeckt.
+   */
+  readonly tableFull = signal<string | null>(null);
+
+  toggleTableFull(blockId: string) {
+    this.tableFull.update((open) => (open === blockId ? null : blockId));
   }
 
   /** Zurueck zu Spalten, die sich nach ihrem Inhalt richten. */
