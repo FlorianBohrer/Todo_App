@@ -395,11 +395,12 @@
                             (keydown.escape)="view.stopCellEdit()"
                             aria-label="Column name" />
                         } @else {
+                          <!-- Formatiert, nicht roh: „**State**" soll in der
+                               Zelle dasselbe heissen wie im Absatz. -->
                           <div class="plan-cell" tabindex="0" role="button"
                             (click)="view.startCellEdit(block.id, -1, ci)"
-                            (keydown.enter)="$event.preventDefault(); view.startCellEdit(block.id, -1, ci)">
-                            {{ col || 'Column' }}
-                          </div>
+                            (keydown.enter)="$event.preventDefault(); view.startCellEdit(block.id, -1, ci)"
+                            [innerHTML]="view.renderCell(col || 'Column')"></div>
                         }
 
                         <!-- Erscheint beim Zeigen. Dauerhaft sichtbar war es
@@ -441,9 +442,8 @@
                           } @else {
                             <div class="plan-cell" tabindex="0" role="button"
                               (click)="view.startCellEdit(block.id, ri, ci)"
-                              (keydown.enter)="$event.preventDefault(); view.startCellEdit(block.id, ri, ci)">
-                              {{ cell }}
-                            </div>
+                              (keydown.enter)="$event.preventDefault(); view.startCellEdit(block.id, ri, ci)"
+                              [innerHTML]="view.renderCell(cell)"></div>
                           }
                         </td>
                       }

@@ -72,6 +72,7 @@ import {
   PlanQuoteBlock,
 } from '../plan.model';
 import { focusRich, replaceRange } from '../rich-text';
+import { formatBlock } from '../inline-format';
 import { levelOf, listMarkers } from '../list-markers';
 import { TypingRun, continuesRun } from '../edit-history';
 import { fileNameFor, planToMarkdown, uniqueNames } from '../plan-markdown';
@@ -3009,5 +3010,21 @@ export class PlansView {
 
   asTable(block: PlanBlock): PlanTableBlock {
     return block as PlanTableBlock;
+  }
+
+  /**
+   * Der Inhalt einer Zelle, formatiert.
+   *
+   * Bis hierher stand in Zellen roher Text: „**State**" blieb „**State**",
+   * waehrend derselbe Text in jedem Absatz fett wurde. Dieselbe Schreibweise
+   * muss ueberall dasselbe bedeuten, sonst ist sie keine.
+   *
+   * Es ist dieselbe Uebersetzung wie im Fliesstext (escapen, dann die
+   * erlaubte Auszeichnung einsetzen) — nur ohne Wikilinks, siehe dort.
+   * Bearbeitet wird weiter der Quelltext: der Klick macht die Zelle zum
+   * Feld, und dort stehen die Sternchen wieder da.
+   */
+  renderCell(text: string): string {
+    return formatBlock(text, { wikiLinks: false });
   }
 }

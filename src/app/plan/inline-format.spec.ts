@@ -45,6 +45,33 @@ describe('inline-format', () => {
     });
   });
 
+  describe('ohne Wikilinks (Tabellenzellen)', () => {
+    it('formats the same as everywhere else', () => {
+      // Genau der Fall aus der Tabelle: „**State**" war roher Text.
+      expect(formatInline('**State**', { wikiLinks: false })).toBe('<strong>State</strong>');
+      expect(formatInline('*leise* und ~~weg~~', { wikiLinks: false })).toBe(
+        '<em>leise</em> und <s>weg</s>',
+      );
+    });
+
+    it('leaves a wikilink as the text it was typed as', () => {
+      // In der Zelle faengt der Klick das Bearbeiten ab — ein Verweis waere
+      // ein Versprechen, das niemand einloest.
+      expect(formatInline('siehe [[Plan]]', { wikiLinks: false })).toBe('siehe [[Plan]]');
+      expect(formatInline('siehe [[Plan]]')).toContain('data-plan="Plan"');
+    });
+
+    it('escapes before it formats, here too', () => {
+      expect(formatInline('<img src=x onerror=alert(1)> **fett**', { wikiLinks: false })).toBe(
+        '&lt;img src=x onerror=alert(1)&gt; <strong>fett</strong>',
+      );
+    });
+
+    it('carries the option through a multi-line cell', () => {
+      expect(formatBlock('**a**\n[[b]]', { wikiLinks: false })).toBe('<strong>a</strong><br>[[b]]');
+    });
+  });
+
   describe('wikiLinkTargets', () => {
     it('collects and trims every target', () => {
       expect(wikiLinkTargets('[[ One ]] and [[Two]]')).toEqual(['One', 'Two']);

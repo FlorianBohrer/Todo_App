@@ -24,14 +24,27 @@ export function wikiLinkTargets(raw: string): string[] {
   return [...raw.matchAll(/\[\[([^\[\]]+)\]\]/g)].map((m) => m[1].trim()).filter(Boolean);
 }
 
+export interface InlineOptions {
+  /**
+   * Wikilinks als Verweis darstellen.
+   *
+   * In Tabellenzellen nicht: dort faengt der Klick die Zelle zum Bearbeiten
+   * ab. Ein Wort, das aussieht wie ein Verweis und beim Klick ein Textfeld
+   * oeffnet, ist ein Versprechen, das nicht eingeloest wird — dann lieber
+   * „[[Name]]" so stehen lassen, wie es getippt wurde.
+   */
+  wikiLinks?: boolean;
+}
+
 /**
  * Formatiert eine Zeile zu sicherem HTML.
  *
  * Code-Spans werden zuerst herausgetrennt, damit ihr Inhalt wörtlich bleibt —
  * sonst würde `**` innerhalb von Code als Fettschrift gelesen.
  */
-export function formatInline(raw: string): string {
+export function formatInline(raw: string, options: InlineOptions = {}): string {
   if (!raw) return '';
+  const { wikiLinks = true } = options;
 
   return raw
     .split(/(`[^`]+`)/g)
@@ -43,11 +56,13 @@ export function formatInline(raw: string): string {
       let out = escapeHtml(part);
 
       // Wikilinks vor den Betonungen: der Titel darf Sternchen enthalten.
-      out = out.replace(
-        /\[\[([^\[\]]+)\]\]/g,
-        (_m, name: string) =>
-          `<span class="plan-link" data-plan="${name.trim()}" role="link" tabindex="0">${name.trim()}</span>`,
-      );
+      if (wikiLinks) {
+        out = out.replace(
+          /\[\[([^\[\]]+)\]\]/g,
+          (_m, name: string) =>
+            `<span class="plan-link" data-plan="${name.trim()}" role="link" tabindex="0">${name.trim()}</span>`,
+        );
+      }
 
       // Fett UND kursiv zuerst: sonst nimmt die Fett-Regel die beiden ersten
       // Sternchen und laesst ein einzelnes stehen, aus dem nichts mehr wird.
@@ -68,9 +83,9 @@ export function formatInline(raw: string): string {
 }
 
 /** Mehrzeiliger Text: jede Zeile formatiert, Umbrüche bleiben erhalten. */
-export function formatBlock(raw: string): string {
+export function formatBlock(raw: string, options: InlineOptions = {}): string {
   return raw
     .split('\n')
-    .map((line) => formatInline(line))
+    .map((line) => formatInline(line, options))
     .join('<br>');
 }
