@@ -9,6 +9,23 @@ export interface PlanTableBlock {
   type: 'table';
   columns: string[];
   rows: string[][];
+  /**
+   * Spaltenbreiten in Pixeln, eine je Spalte.
+   *
+   * Fehlt das Feld, richten sich die Spalten nach ihrem Inhalt — das ist der
+   * Normalfall und bleibt es, bis jemand eine Spalte zieht. Ab dann stehen
+   * alle fest, denn eine einzeln gesetzte Spalte neben lauter automatischen
+   * verschiebt beim Tippen wieder alles.
+   */
+  widths?: number[];
+  /**
+   * Breiter als die Textspalte darstellen.
+   *
+   * Eine Tabelle ist kein Fliesstext: sechs Spalten in einer Spaltenbreite,
+   * die fuer Prosa gesetzt ist, ergeben sechs Wortstapel. Ist das gesetzt,
+   * nimmt sie die volle Breite des Dokumentbereichs ein.
+   */
+  wide?: boolean;
 }
 
 /** Ablaufdiagramm als Mermaid-Quelltext — gerendert wird erst im Browser. */

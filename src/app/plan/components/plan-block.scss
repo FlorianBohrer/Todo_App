@@ -541,6 +541,28 @@
 }
 
 
+// Stehen Breiten fest, muessen sie auch gelten: bei `auto` bleibt eine
+// gesetzte Breite ein Vorschlag, den der Browser ueberstimmt, sobald der
+// Inhalt mehr verlangt.
+.plan-table--fixed {
+  table-layout: fixed;
+  // Die Breite kommt als Summe der Spalten aus dem Markup. `min-width: 100%`
+  // stand hier zuerst und war der Fehler: damit verteilte der Browser die
+  // Breiten wieder selbst, und eine gezogene Spalte bekam nur einen Teil
+  // dessen, was man ihr gegeben hatte.
+  width: auto;
+}
+
+
+// Breiter als die Textspalte. --doc-w ist die Breite des Dokumentbereichs
+// (siehe PlansView), also genau der Platz zwischen Blindspalte und Outline —
+// die Tabelle waechst symmetrisch hinein und nie darueber hinaus.
+.plan-table-wrap--wide {
+  width: var(--doc-w, 100%);
+  margin-left: calc((100% - var(--doc-w, 100%)) / 2);
+}
+
+
 .plan-th,
 .plan-td {
   border: 1px solid var(--color-line-strong);
@@ -560,11 +582,72 @@
 // Die schmale Spalte ganz rechts traegt den Loeschknopf der Zeile. Sie hat
 // keinen Rahmen, damit die Tabelle rechts sauber abschliesst.
 .plan-th-gutter,
-.plan-td-gutter {
+.plan-td-gutter,
+.plan-col-gutter {
   width: 1.75rem;
   border: 0;
   text-align: center;
   vertical-align: middle;
+}
+
+
+// ---- Spaltenbreite ziehen ----
+//
+// Der Griff liegt auf der Trennlinie und ist unsichtbar, bis man in die Naehe
+// kommt. Eine Tabelle, in der zwischen allen Spalten dauerhaft Griffe stehen,
+// sieht aus wie ein Werkzeug; gebraucht wird er selten, gefunden werden muss
+// er sofort.
+.plan-col-grip {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  z-index: 2;
+  width: 7px;
+  cursor: col-resize;
+  // Der sichtbare Strich steht mittig im Griff, der Griff selbst ist breiter
+  // als er aussieht — 7px sind zu treffen, 1px nicht.
+  background:
+    linear-gradient(var(--plan-accent), var(--plan-accent)) center / 2px 100% no-repeat;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+  touch-action: none;
+}
+
+
+.plan-th:hover .plan-col-grip,
+.plan-col-grip:hover,
+.plan-col-grip:focus-visible {
+  opacity: 0.85;
+}
+
+
+.plan-col-grip:focus-visible {
+  outline: 2px solid var(--plan-accent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+
+// Die Knoepfe unter der Tabelle. Leise, weil sie immer dastehen.
+.plan-table-tool {
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+
+.plan-table-tool:hover {
+  background: var(--color-fill);
+  color: var(--color-muted);
+}
+
+
+.plan-table-tool--on {
+  background: var(--plan-accent-soft);
+  color: var(--plan-accent);
 }
 
 
@@ -586,7 +669,13 @@
   min-height: 1.75rem;
   padding: 0.35rem 0.55rem;
   cursor: text;
-  overflow-wrap: anywhere;
+  // `anywhere` statt `break-word` war der Grund, warum die Spalten so eng
+  // standen: es zaehlt fuer die Mindestbreite mit, also hielt der Browser
+  // eine Spalte fuer ein Zeichen breit ausreichend und verteilte danach.
+  // So wurde aus „Beispiel" ein „Beis / piel". `break-word` bricht nur,
+  // wenn ein Wort wirklich nicht passt, und die Mindestbreite ist wieder
+  // das laengste Wort.
+  overflow-wrap: break-word;
   white-space: pre-wrap;
 }
 

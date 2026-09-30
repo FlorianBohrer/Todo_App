@@ -345,8 +345,23 @@
                  Jetzt steht Text da. Klick oder Enter macht genau die eine
                  Zelle zum Feld, Escape verwirft, Enter uebernimmt. Die
                  Zellen sind fokussierbar, also kommt man mit Tab hindurch. -->
-            <div class="plan-table-wrap overflow-x-auto">
-              <table class="plan-table w-full border-collapse text-sm">
+            <!-- „Wide" loest die Tabelle aus der Textspalte und gibt ihr die
+                 volle Breite des Dokumentbereichs. Prosa liest sich schmal
+                 besser, eine Tabelle mit sechs Spalten nicht. -->
+            <div class="plan-table-wrap overflow-x-auto"
+              [class.plan-table-wrap--wide]="view.asTable(block).wide">
+              <table class="plan-table w-full border-collapse text-sm"
+                [class.plan-table--fixed]="view.hasWidths(block)"
+                [style.width.px]="view.tableWidth(block)">
+                <!-- Die Breite haengt an <col>, nicht an den Zellen: so gilt
+                     sie fuer die ganze Spalte, und das Ziehen muss nur ein
+                     einziges Element anfassen statt jeder Zeile. -->
+                <colgroup>
+                  @for (col of view.asTable(block).columns; track $index; let ci = $index) {
+                    <col [style.width.px]="view.colWidth(block, ci)" />
+                  }
+                  <col class="plan-col-gutter" />
+                </colgroup>
                 <thead>
                   <tr>
                     @for (col of view.asTable(block).columns; track $index; let ci = $index) {
@@ -376,6 +391,15 @@
                         <button type="button"
                           class="plan-table-x"
                           (click)="view.deleteColumn(block.id, ci)" aria-label="Delete column">✕</button>
+
+                        <!-- Der Griff auf der Trennlinie. Er liegt ueber der
+                             Kante, nicht daneben: gezogen wird da, wo die
+                             Grenze zu sehen ist. -->
+                        <span class="plan-col-grip" role="separator" tabindex="0"
+                          aria-orientation="vertical"
+                          [attr.aria-label]="'Resize column ' + (ci + 1) + ' — arrow keys'"
+                          (pointerdown)="view.startColResize($event, block.id, ci)"
+                          (keydown)="view.nudgeColumn($event, block.id, ci)"></span>
                       </th>
                     }
                     <th class="plan-th-gutter"></th>
@@ -416,9 +440,21 @@
                 </tbody>
               </table>
             </div>
-            <div class="mt-2 flex gap-1">
-              <button type="button" class="rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted" (click)="view.addRow(block.id)">+ Row</button>
-              <button type="button" class="rounded-lg px-2 py-1 text-xs text-subtle transition hover:bg-fill hover:text-muted" (click)="view.addColumn(block.id)">+ Column</button>
+            <div class="mt-2 flex flex-wrap items-center gap-1">
+              <button type="button" class="plan-table-tool" (click)="view.addRow(block.id)">+ Row</button>
+              <button type="button" class="plan-table-tool" (click)="view.addColumn(block.id)">+ Column</button>
+
+              <span class="mx-1 h-3.5 w-px bg-line" aria-hidden="true"></span>
+
+              <button type="button" class="plan-table-tool"
+                [class.plan-table-tool--on]="view.asTable(block).wide"
+                [attr.aria-pressed]="!!view.asTable(block).wide"
+                (click)="view.toggleTableWide(block.id)">Wide</button>
+              @if (view.hasWidths(block)) {
+                <button type="button" class="plan-table-tool"
+                  (click)="view.resetColumnWidths(block.id)"
+                  title="Let the columns follow their content again">Auto widths</button>
+              }
             </div>
           } @else {
             <!-- Ablaufdiagramm nach Obsidian-Art: gezeigt wird die Zeichnung,
