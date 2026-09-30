@@ -31,6 +31,9 @@ import { TodoStats } from './app/todo/components/todo-stats/todo-stats';
 import { FocusPanel } from './app/todo/components/focus-panel/focus-panel';
 import { CategoriesOverlay } from './app/todo/components/categories/categories-overlay';
 import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite-folders';
+import { folderColorClass } from './app/todo/shared/folder-color';
+import { folderIcon } from './app/todo/shared/folder-icon';
+import { splitFolderName } from './app/todo/shared/folder-name';
 import { WeekView } from './app/todo/components/week-view/week-view';
 import { PlansView } from './app/plan/components/plans-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
@@ -200,37 +203,60 @@ export class App {
     await clerk.signOut();
   }
 
-  protected readonly title = computed(() => {
+  /** Der offene Folder, oder null fuer „alle Aufgaben". */
+  private readonly activeLabel = computed(() => {
     const id = this.labelService.activeLabelId();
-    if (id === null) return 'All Tasks';
-    const label = this.labelService.labelById(id);
-    return label?.name ?? 'Tasks';
+    return id === null ? null : this.labelService.labelById(id) ?? null;
   });
 
+  /**
+   * Titel wie auf der Kachel: Sammlung als Chip, Name als Ueberschrift.
+   *
+   * Vorher stand der rohe Name da — „privat: privat" in einem Zug. Dieselbe
+   * Zerlegung macht die Favoritenkachel schon, nur oben passierte sie nicht.
+   */
+  private readonly titleParts = computed(() => {
+    const label = this.activeLabel();
+    return label ? splitFolderName(label.name) : { prefix: null, name: 'All Tasks' };
+  });
+
+  protected readonly title = computed(() => this.titleParts().name);
+  protected readonly titlePrefix = computed(() => this.titleParts().prefix);
+  protected readonly titleIcon = computed(() => {
+    const label = this.activeLabel();
+    return label ? folderIcon(label.icon) : null;
+  });
+
+  /**
+   * Die Farben kommen aus folder-color.ts und nicht mehr aus einer eigenen
+   * Liste: die kannte vier der acht Folder-Farben, alles andere wurde weiss.
+   * Ein Folder in Teal sah oben aus wie gar keiner.
+   */
   protected readonly accentClass = computed(() => {
-    const id = this.labelService.activeLabelId();
-    if (id === null) return 'text-white';
-    const label = this.labelService.labelById(id);
-    const map: Record<string, string> = {
-      violet: 'text-violet-400',
-      emerald: 'text-emerald-400',
-      rose: 'text-rose-400',
-      orange: 'text-orange-400',
-    };
-    return map[label?.color ?? ''] ?? 'text-white';
+    const label = this.activeLabel();
+    return label ? folderColorClass(label.color, 'text') : 'text-text';
   });
 
-  protected readonly bgClass = computed(() => {
-    const id = this.labelService.activeLabelId();
-    if (id === null) return 'bg-panel1';
-    const label = this.labelService.labelById(id);
-    const map: Record<string, string> = {
-      violet: 'bg-violet-950',
-      emerald: 'bg-emerald-950',
-      rose: 'bg-rose-950',
-      orange: 'bg-orange-950',
-    };
-    return map[label?.color ?? ''] ?? 'bg-highlight11';
+  protected readonly chipClass = computed(() => {
+    const label = this.activeLabel();
+    if (!label) return '';
+    return `${folderColorClass(label.color, 'iconBox')} ${folderColorClass(label.color, 'text')}`;
+  });
+
+  protected readonly tileClass = computed(() => {
+    const label = this.activeLabel();
+    return label ? folderColorClass(label.color, 'tile') : '';
+  });
+
+  /**
+   * Der Strich unter dem Titel.
+   *
+   * Er trug bisher `accentClass` — eine Textfarbe auf einem leeren Kasten,
+   * also gar nichts. Sichtbar wird er mit einer Flaeche.
+   */
+  protected readonly barClass = computed(() => {
+    const label = this.activeLabel();
+    return label ? folderColorClass(label.color, 'bar') : 'bg-line-strong';
   });
 
   // Icons fürs Template

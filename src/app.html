@@ -35,11 +35,17 @@
      </div>
 
      <div class="mx-auto w-full max-w-3xl px-5 pt-8 pb-6 sm:pt-12">
-       <app-header [title]="title()" [accentClass]="accentClass()"></app-header>
+       <app-header
+         [title]="title()"
+         [prefix]="titlePrefix()"
+         [icon]="titleIcon()"
+         [accentClass]="accentClass()"
+         [chipClass]="chipClass()"
+         [tileClass]="tileClass()"></app-header>
 
        <div
          class="mt-3 h-1.5 w-16 rounded-full transition-colors duration-300 sm:h-2 sm:w-24"
-         [class]="accentClass()">
+         [class]="barClass()">
        </div>
      </div>
    </div>

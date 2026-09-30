@@ -1,8 +1,28 @@
-<header>
-  <!-- tracking-tight, weil Buchstaben mit wachsendem Grad optisch
-       auseinanderdriften: bei 48px liest sich der Normalabstand locker und
-       der Titel zerfaellt. Kleiner Text braucht umgekehrt eher mehr Abstand,
-       deshalb steht der Wert hier und nicht global. -->
-  <h1 class="text-4xl sm:text-5xl mt-0 font-semibold tracking-tight transition-colors duration-300" [class]="accentClass">
-    {{ title }}</h1>
+<header class="flex items-center gap-3.5">
+  <!-- Dieselbe Kachel wie auf der Favoritenkarte, nur groesser. Ohne Folder
+       („All Tasks") faellt sie weg — es gibt dann kein Symbol, das fuer
+       etwas stuende, und ein graues Ersatzquadrat waere nur Fuellung. -->
+  @if (icon) {
+    <span
+      class="flex h-11 w-11 flex-none items-center justify-center rounded-xl ring-1 ring-inset sm:h-14 sm:w-14"
+      [class]="tileClass"
+      aria-hidden="true">
+      <lucide-icon [img]="icon" class="h-5 w-5 sm:h-6 sm:w-6" [class]="accentClass"></lucide-icon>
+    </span>
+  }
+
+  <div class="min-w-0">
+    @if (prefix) {
+      <span class="folder-chip" [class]="chipClass">{{ prefix }}</span>
+    }
+
+    <!-- tracking-tight, weil Buchstaben mit wachsendem Grad optisch
+         auseinanderdriften: bei 48px liest sich der Normalabstand locker und
+         der Titel zerfaellt. Kleiner Text braucht umgekehrt eher mehr Abstand,
+         deshalb steht der Wert hier und nicht global. -->
+    <h1
+      class="mt-0 text-4xl font-semibold tracking-tight transition-colors duration-300 sm:text-5xl"
+      [class]="accentClass">
+      {{ title }}</h1>
+  </div>
 </header>
