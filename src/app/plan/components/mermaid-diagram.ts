@@ -31,7 +31,7 @@ function loadMermaid(): Promise<typeof import('mermaid').default> {
     const ink = token('--color-text', '#EAEEF9');
     const line = token('--color-muted', '#8C97B4');
     const border = token('--color-border', '#283150');
-    const accent = token('--color-highlight2', '#818CF8');
+    const accent = token('--color-highlight2', '#E0A94F');
 
     mermaid.initialize({
       startOnLoad: false,

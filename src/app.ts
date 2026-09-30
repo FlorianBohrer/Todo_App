@@ -154,6 +154,14 @@ export class App {
   protected readonly clerkFailed = signal(false);
 
   constructor() {
+    // Welche Ansicht offen ist, steht am <html>-Element — und nicht am
+    // Anwendungsrumpf. Overlays (Menüs, Dialoge) hängt das CDK direkt unter
+    // <body>, also ausserhalb davon; sie bekämen die Akzentfarbe der
+    // Ansicht sonst nicht mit und blieben einzeln in der Grundfarbe stehen.
+    effect(() => {
+      document.documentElement.dataset['view'] = this.view();
+    });
+
     // Die Hoehe der Leiste steht ab jetzt in --chrome-h.
     effect((onCleanup) => {
       const el = this.chrome()?.nativeElement;

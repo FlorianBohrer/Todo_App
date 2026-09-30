@@ -299,23 +299,25 @@
     --color-muted:   #A8B4C8;   /* sekundär, Labels — 6.80:1 auf panel */
     --color-subtle:  #8C9AB0;   /* Placeholder, Hinweise — 4.99:1 auf panel */
 
-    /* Akzente */
-    --color-highlight1:  #6366F1;
-    --color-highlight2:  #818CF8;
-    --color-highlight11: #818CF8;   /* Hover / Fokus */
-    --color-highlight22: #A78BFA;   /* Violett-Akzent */
+    /* Akzente — siehe „Drei Ansichten, drei Farben" weiter unten.
+       Was hier steht, ist nur der Ausgangswert; die Ansicht überschreibt
+       ihn am <html>-Element. */
+    --color-highlight1:  #C78F38;
+    --color-highlight2:  #E0A94F;
+    --color-highlight11: #E0A94F;   /* Hover / Fokus */
+    --color-highlight22: #F0CE94;   /* hellster Akzent */
 
-    --color-button:   #4F6BF6;
-    --color-button1:  #4F6BF6;      /* primärer Button */
-    --color-button2:  #3B55D9;      /* gedrückt */
+    --color-button:   #96682A;
+    --color-button1:  #96682A;      /* primärer Button */
+    --color-button2:  #7A5422;      /* gedrückt */
 
     /* Semantic */
-    --color-brand:    #6366F1;
-    --color-brand-2:  #A78BFA;
+    --color-brand:    #96682A;
+    --color-brand-2:  #E0A94F;
     --color-danger:   #F4495D;
     --color-ok:       #36D399;
 
-    --gradient-brand: linear-gradient(180deg, #6366F1, #4F46E5);
+    --gradient-brand: linear-gradient(180deg, #96682A, #7A5422);
 
     /* Zwei Schriftgrade, die als Einzelwerte im Markup standen (text-[11px],
        text-[15px]). Als Stufe benannt sind sie eine Entscheidung statt zehn. */
@@ -379,6 +381,86 @@
 }
 
 
+/* ================================================================
+   Drei Ansichten, drei Farben
+
+   Vorher trug alles denselben Indigo-Violett-Akzent — die Pille, jeder
+   primäre Knopf, jeder Fokusring, der Planmodus. Eine Farbe für drei
+   Ansichten sagt nichts; und ausgerechnet dieser Farbraum ist der, den
+   jede zweite neue Oberfläche trägt.
+
+   Jetzt hat jede Ansicht ihre eigene: Liste warm (Bronze), Woche kühl
+   (Petrol), Pläne (Bordeaux). Weit genug auseinander, um beim Umschalten
+   sofort zu sagen, wo man ist, und gedämpft genug, um den ganzen Tag
+   daneben zu arbeiten.
+
+   Gesetzt wird die Ansicht als data-view am <html>-Element (siehe App).
+   Diese Regeln stehen bewusst AUSSERHALB von @layer: Tailwinds Theme legt
+   dieselben Namen in :root ab, und ungeschichtetes CSS schlägt jede
+   Schicht — sonst entschiede die Reihenfolge im Bundle.
+
+   Die indigo-Stufen werden mitgedreht, statt sie in zwanzig Vorlagen
+   einzeln zu ersetzen: `text-indigo-300` liest in Tailwind v4
+   var(--color-indigo-300), und das steht hier.
+
+   Kontraste nachgerechnet, nicht geschätzt (Weiß auf der Fläche / Stufe
+   300 als Schrift auf Panel): Bronze 4.87 / 6.75, Petrol 6.19 / 6.16,
+   Bordeaux 6.42 / 5.56. Das alte Indigo lag bei 4.41 / 4.77.
+   ================================================================ */
+:root,
+[data-view='list'] {
+  --accent-200: #F0CE94;
+  --accent-300: #E0A94F;
+  --accent-400: #C78F38;
+  --accent-500: #96682A;
+  --accent-600: #7A5422;
+}
+
+[data-view='week'] {
+  --accent-200: #9BD9DC;
+  --accent-300: #5FB8BD;
+  --accent-400: #3E979D;
+  --accent-500: #1F6B70;
+  --accent-600: #17565A;
+}
+
+[data-view='plans'] {
+  --accent-200: #EFB2BB;
+  --accent-300: #DE8A98;
+  --accent-400: #C06375;
+  --accent-500: #8E4A58;
+  --accent-600: #743C48;
+}
+
+:root,
+[data-view] {
+  --color-indigo-200: var(--accent-200);
+  --color-indigo-300: var(--accent-300);
+  --color-indigo-400: var(--accent-400);
+  --color-indigo-500: var(--accent-500);
+  --color-indigo-600: var(--accent-600);
+
+  --color-highlight1:  var(--accent-400);
+  --color-highlight2:  var(--accent-300);
+  --color-highlight11: var(--accent-300);
+  --color-highlight22: var(--accent-200);
+
+  /* Zwei Rollen, zwei Namen — die lagen vorher beide auf „brand-2" und
+     widersprachen sich: weisse Schrift auf der hellen Stufe ist nicht zu
+     lesen, die dunkle Stufe als Schrift auf dunklem Grund auch nicht.
+       button*  = Fläche, weisse Schrift darauf
+       brand-2  = Farbe AUF dunklem Grund: Text, Symbol, dünne Linie */
+  --color-button:  var(--accent-500);
+  --color-button1: var(--accent-500);
+  --color-button2: var(--accent-600);
+
+  --color-brand:   var(--accent-500);
+  --color-brand-2: var(--accent-300);
+
+  --gradient-brand: linear-gradient(180deg, var(--accent-500), var(--accent-600));
+}
+
+
  @layer components {
  
  lucide-icon svg {
@@ -417,21 +499,21 @@
     background: var(--color-button1);
     color: var(--color-text);
     box-shadow:
-      0 0 0 1px rgb(99 102 241 / 0.30),
-      0 8px 24px -8px rgb(99 102 241 / 0.55);
+      0 0 0 1px color-mix(in srgb, var(--color-button1) 30%, transparent),
+      0 8px 24px -8px color-mix(in srgb, var(--color-button1) 55%, transparent);
   }
   .btn-primary:hover {
     transform: translateY(-1px);
     box-shadow:
-      0 0 0 1px rgb(99 102 241 / 0.40),
-      0 12px 28px -8px rgb(99 102 241 / 0.65);
+      0 0 0 1px color-mix(in srgb, var(--color-button1) 40%, transparent),
+      0 12px 28px -8px color-mix(in srgb, var(--color-button1) 65%, transparent);
   }
   .btn-primary:active {
     transform: translateY(0);
     background: var(--color-button2);
     box-shadow:
-      0 0 0 1px rgb(99 102 241 / 0.50),
-      0 4px 12px -6px rgb(99 102 241 / 0.60);
+      0 0 0 1px color-mix(in srgb, var(--color-button2) 50%, transparent),
+      0 4px 12px -6px color-mix(in srgb, var(--color-button2) 60%, transparent);
   }
 
   /* ---- Inputs ---- */
@@ -547,7 +629,7 @@ textarea::-webkit-resizer { display: none; }
 }
 
 .todo-checkbox:hover {
-  border-color: rgb(129 140 248);
+  border-color: var(--color-highlight2);
 }
 
 .todo-checkbox:active {
@@ -555,13 +637,13 @@ textarea::-webkit-resizer { display: none; }
 }
 
 .todo-checkbox:focus-visible {
-  outline: 2px solid rgb(129 140 248);
+  outline: 2px solid var(--color-highlight2);
   outline-offset: 3px;
 }
 
 .todo-checkbox--checked {
-  border-color: rgb(99 102 241);
-  background: rgb(99 102 241);
+  border-color: var(--color-button1);
+  background: var(--color-button1);
 }
 
 .todo-checkmark {
@@ -831,8 +913,8 @@ select {
   border-radius: 9999px;
   background: var(--color-button1);
   box-shadow:
-    0 0 0 1px rgb(99 102 241 / 0.30),
-    0 6px 18px -8px rgb(99 102 241 / 0.60);
+    0 0 0 1px color-mix(in srgb, var(--color-button1) 35%, transparent),
+    0 6px 18px -8px color-mix(in srgb, var(--color-button1) 65%, transparent);
   transform: translateX(calc(var(--tab-index, 0) * (100% + 0.5rem)));
   transition: transform 340ms var(--spring);
 }
