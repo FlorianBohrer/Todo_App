@@ -92,7 +92,7 @@ const HEIGHT = 520;
        gehoert zum Folder und soll ihre Bedeutung behalten. */
     .graph-node--active circle {
       opacity: 1;
-      stroke: #a78bfa;
+      stroke: var(--color-brand-2);
       stroke-width: 2.5;
     }
 

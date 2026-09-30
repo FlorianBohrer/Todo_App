@@ -33,10 +33,11 @@
 // CSS keine echten Federn kennt. Die cubic-bezier davor bleibt als Rueckfall
 // fuer Browser ohne linear() stehen.
 :host {
-  // Modul-Akzent. Violett gehoert der Planung, Blau bleibt den App-weiten
-  // Aktionen — dadurch ist jederzeit klar, worauf man gerade klickt.
-  --plan-accent: #a78bfa;
-  --plan-accent-soft: rgb(167 139 250 / 0.16);
+  // Modul-Akzent. Er kommt aus der Ansichtsfarbe (siehe „Drei Ansichten,
+  // drei Farben" in styles.scss) und ist damit im Planmodus derselbe Ton wie
+  // die Lasche oben — statt einer zweiten Farbe, die nur hier gilt.
+  --plan-accent: var(--color-brand-2);
+  --plan-accent-soft: color-mix(in srgb, var(--color-brand-2) 16%, transparent);
 
   --spring-settle: var(--spring);
   --spring-settle: linear(0.0000, 0.0153, 0.0558, 0.1142, 0.1845, 0.2617, 0.3421, 0.4223, 0.5002, 0.5741, 0.6426, 0.7051, 0.7613, 0.8109, 0.8542, 0.8913, 0.9227, 0.9488, 0.9701, 0.9872, 1.0005, 1.0107, 1.0180, 1.0231, 1.0263, 1.0279, 1.0284, 1.0279, 1.0267, 1.0250, 1.0230, 1.0208, 1.0185, 1.0162, 1.0140, 1.0119, 1.0100, 1.0082, 1.0067, 1.0053, 1.0040, 1.0030, 1.0021, 1.0014, 1.0000);

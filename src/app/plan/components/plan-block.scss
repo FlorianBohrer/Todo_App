@@ -176,19 +176,19 @@
     color: #f8a3a3; // wie im Referenzbild: Code hebt sich farblich ab
   }
 
-  // Wikilink: als Verweis erkennbar, ohne die Zeile zu zerreissen. Violett
-  // statt Indigo — das trennt Verweise klar von den blauen Aktionsflaechen der
-  // App und ist der Ton, den Obsidian fuer Links setzt.
+  // Wikilink: als Verweis erkennbar, ohne die Zeile zu zerreissen. Er traegt
+  // die Farbe der Ansicht, eine Stufe heller als Fliesstext — das genuegt, um
+  // ihn als anklickbar zu lesen, ohne dass er aus dem Absatz springt.
   .plan-link {
-    border-bottom: 1px solid rgb(167 139 250 / 0.45);
-    color: #c4b5fd;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-brand-2) 45%, transparent);
+    color: var(--color-brand-2);
     cursor: pointer;
     transition: color 120ms ease-out, border-color 120ms ease-out;
   }
 
   .plan-link:hover {
-    border-bottom-color: rgb(196 181 253 / 0.9);
-    color: #ddd6fe;
+    border-bottom-color: color-mix(in srgb, var(--color-highlight22) 90%, transparent);
+    color: var(--color-highlight22);
   }
 
   strong { font-weight: 650; }

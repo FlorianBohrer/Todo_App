@@ -411,7 +411,7 @@
                   (click)="toggleExportPick(p.id)">
                   <span class="grid h-4 w-4 flex-none place-items-center rounded border text-2xs leading-none"
                         [class]="exportPicks().has(p.id)
-                          ? 'border-brand-2 bg-brand-2 text-white'
+                          ? 'border-button1 bg-button1 text-white'
                           : 'border-line-strong text-transparent'">✓</span>
                   <span class="min-w-0 flex-1 truncate">{{ p.title || 'Untitled' }}</span>
                   <span [class]="dotClass(p.categoryId)">●</span>
@@ -421,7 +421,7 @@
 
             <div class="border-t border-line px-2 pb-1.5 pt-2">
               <button type="button"
-                class="w-full rounded-lg bg-brand-2 px-3 py-1.5 text-sm font-medium text-white transition
+                class="w-full rounded-lg bg-button1 px-3 py-1.5 text-sm font-medium text-white transition
                        hover:opacity-90 disabled:opacity-40"
                 [disabled]="!exportPicks().size"
                 (click)="exportPicked()">
@@ -454,7 +454,7 @@
       <!-- Die Haelften runden sich selbst, statt dass der Rahmen sie
            beschneidet: ein abgeschnittener Fokusring waere der Preis, und
            die Tastatur soll hier genauso zu sehen sein wie ueberall sonst. -->
-      <div class="split-button flex flex-none items-stretch rounded-full bg-brand-2 text-sm font-medium text-white"
+      <div class="split-button flex flex-none items-stretch rounded-full bg-button1 text-sm font-medium text-white"
         [class.ml-auto]="!plans().length">
         <button type="button"
           class="inline-flex items-center gap-2 rounded-l-full py-2 pl-4 pr-3 transition hover:bg-white/15"
@@ -501,9 +501,6 @@
             <lucide-icon [img]="ImportIcon" class="h-4 w-4 flex-none text-muted"></lucide-icon>
             {{ importing() ? 'Importing…' : 'From markdown files…' }}
           </button>
-          <p class="px-3 pb-1.5 pt-1 text-2xs leading-snug text-subtle">
-            .md or a .zip of them — or just drop files on this page.
-          </p>
         </div>
       </ng-template>
     </div>
