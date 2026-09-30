@@ -1108,3 +1108,11 @@ select {
     content: none;
   }
 }
+
+/* Der Folder-Knopf in der Leiste traegt die Farbe seines Folders in Schrift,
+   Symbol und Rahmen. Der Hover darf die nicht ueberschreiben — sonst muesste
+   es ihn in acht Fassungen geben. Also hebt er nur die Flaeche an, und die
+   ist bei jeder Farbe dieselbe. */
+.folder-pill:hover {
+  background: var(--color-fill);
+}

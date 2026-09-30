@@ -23,7 +23,6 @@ import {
   NotebookPen,
   LogOut,
 } from 'lucide-angular';
-import { Header } from './app/todo/components/header/header';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
 import { TodoList } from './app/todo/components/todo-list/todo-list';
@@ -50,7 +49,6 @@ import type { View } from './app/todo/services/todo';
   selector: 'app-root',
   imports: [
     AsyncPipe,
-    Header,
     TodoAdd,
     TodoFilter,
     TodoList,
@@ -221,42 +219,33 @@ export class App {
   });
 
   protected readonly title = computed(() => this.titleParts().name);
-  protected readonly titlePrefix = computed(() => this.titleParts().prefix);
+
+  /** Das Symbol des Folders, sonst das des Knopfes selbst. */
   protected readonly titleIcon = computed(() => {
     const label = this.activeLabel();
-    return label ? folderIcon(label.icon) : null;
+    return label ? folderIcon(label.icon) : FolderDown;
   });
+
+  /** Der volle Name samt Sammlung — fuer den Tooltip, wenn gekuerzt wird. */
+  protected readonly folderTitle = computed(
+    () => `${this.activeLabel()?.name ?? 'All Tasks'} — open folders (f)`,
+  );
 
   /**
-   * Die Farben kommen aus folder-color.ts und nicht mehr aus einer eigenen
-   * Liste: die kannte vier der acht Folder-Farben, alles andere wurde weiss.
-   * Ein Folder in Teal sah oben aus wie gar keiner.
-   */
-  protected readonly accentClass = computed(() => {
-    const label = this.activeLabel();
-    return label ? folderColorClass(label.color, 'text') : 'text-text';
-  });
-
-  protected readonly chipClass = computed(() => {
-    const label = this.activeLabel();
-    if (!label) return '';
-    return `${folderColorClass(label.color, 'iconBox')} ${folderColorClass(label.color, 'text')}`;
-  });
-
-  protected readonly tileClass = computed(() => {
-    const label = this.activeLabel();
-    return label ? folderColorClass(label.color, 'tile') : '';
-  });
-
-  /**
-   * Der Strich unter dem Titel.
+   * Farbe des offenen Folders am Knopf.
    *
-   * Er trug bisher `accentClass` — eine Textfarbe auf einem leeren Kasten,
-   * also gar nichts. Sichtbar wird er mit einer Flaeche.
+   * Aus folder-color.ts und nicht aus einer eigenen Liste: die kannte vier
+   * der acht Folder-Farben, alles andere wurde weiss — ein Folder in Teal
+   * sah aus wie gar keiner.
+   *
+   * Gefaerbt werden nur Symbol und Schrift. Der Rahmen bleibt neutral und
+   * die Flaeche dunkel: mit Rahmen in voller Folder-Farbe schrie der Knopf
+   * lauter als die Ansichtspille daneben, und die ist das wichtigere
+   * Bedienelement. Erkennbar ist der Folder auch so sofort.
    */
-  protected readonly barClass = computed(() => {
+  protected readonly folderPillClass = computed(() => {
     const label = this.activeLabel();
-    return label ? folderColorClass(label.color, 'bar') : 'bg-line-strong';
+    return label ? `border-line ${folderColorClass(label.color, 'text')}` : 'border-line text-muted';
   });
 
   // Icons fürs Template

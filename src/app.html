@@ -33,21 +33,6 @@
          <lucide-icon [img]="LogoutIcon" class="h-4 w-4"></lucide-icon>
        </button>
      </div>
-
-     <div class="mx-auto w-full max-w-3xl px-5 pt-8 pb-6 sm:pt-12">
-       <app-header
-         [title]="title()"
-         [prefix]="titlePrefix()"
-         [icon]="titleIcon()"
-         [accentClass]="accentClass()"
-         [chipClass]="chipClass()"
-         [tileClass]="tileClass()"></app-header>
-
-       <div
-         class="mt-3 h-1.5 w-16 rounded-full transition-colors duration-300 sm:h-2 sm:w-24"
-         [class]="barClass()">
-       </div>
-     </div>
    </div>
 
   <!-- Der Blur spannt über die volle Breite: vorher endete er bei max-w-3xl,
@@ -58,14 +43,21 @@
   <div #chrome class="app-chrome sticky top-0 z-10 mb-6 w-full">
     <div class="mx-auto w-full max-w-3xl px-5 py-2.5">
       <div class="flex flex-wrap items-center gap-2">
+        <!-- Der Knopf sagt, welcher Folder offen ist.
+             Vorher stand hier das Wort „Folders" und darueber, 48 Pixel hoch,
+             der Name: zwei Elemente fuer eine Auskunft, und die Ueberschrift
+             allein nahm gut ein Sechstel der Fensterhoehe — jedes Mal, fuer
+             ein Wort, das man gerade selbst ausgewaehlt hat. Ein Auswahlfeld,
+             das seinen Wert zeigt, braucht keine Ueberschrift daneben. -->
         <button
-          class="inline-flex h-10 items-center gap-2 rounded-full border border-line px-5 text-sm text-muted transition hover:border-line-strong hover:text-text"
+          class="folder-pill inline-flex h-10 min-w-0 items-center gap-2 rounded-full border px-4 text-sm font-medium transition"
+          [class]="folderPillClass()"
           (click)="openCategories()"
-          title="Folders (f)"
-          aria-label="Open categories">
-          <lucide-icon [img]="FolderDownIcon" class="h-4 w-4"></lucide-icon>
-          <span>Folders</span>
-          <lucide-icon [img]="ArrowDown" class="h-3.5 w-3.5 opacity-60"></lucide-icon>
+          [title]="folderTitle()"
+          aria-label="Open folders">
+          <lucide-icon [img]="titleIcon()" class="h-4 w-4 flex-none"></lucide-icon>
+          <span class="max-w-[8rem] truncate sm:max-w-[14rem]">{{ title() }}</span>
+          <lucide-icon [img]="ArrowDown" class="h-3.5 w-3.5 flex-none opacity-60"></lucide-icon>
         </button>
 
         <!-- Ansicht umschalten: Liste ↔ Woche ↔ Pläne. Dieselbe gleitende Pille
