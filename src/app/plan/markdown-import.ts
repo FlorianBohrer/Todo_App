@@ -17,11 +17,11 @@
  * lieber nichts anlegt als das Falsche, waere hier der schlechtere: der Text
  * ist da, und er soll ankommen.
  *
- * Nicht zu verwechseln mit markdown-paste.ts: das liest einen AUSSCHNITT beim
- * Einfuegen in einen offenen Plan und kennt weder Dateikopf noch Tabellen.
- * Die beiden liessen sich zusammenlegen — dann verstuende auch das Einfuegen
- * Tabellen und Einrueckung —, aber das ist ein eigener Umbau am Einfuegeweg
- * und nicht Teil des Imports.
+ * Derselbe Leser bedient auch das Einfuegen aus der Zwischenablage, ueber
+ * markdownToBlocks weiter unten: ein Ausschnitt statt einer Datei, also ohne
+ * Dateikopf und ohne Titel. Dafuer gab es frueher einen zweiten, schwaecheren
+ * Leser — und darum wurde eine eingefuegte Tabelle eine Reihe von Absaetzen
+ * voller Striche.
  */
 import type { PlanBlock, PlanListItem } from './plan.model';
 
@@ -322,6 +322,22 @@ function parseBlocks(lines: string[], from: number, newId: () => string): PlanBl
 
   flush();
   return blocks;
+}
+
+/**
+ * Ein Stueck Markdown als Bloecke — ohne Dateikopf, ohne Titel.
+ *
+ * Das ist der Weg fuer das Einfuegen aus der Zwischenablage: dort kommt ein
+ * Ausschnitt an und keine Datei. Vorher hatte das Einfuegen einen eigenen,
+ * zweiten Leser (markdown-paste.ts), der weniger konnte — er kannte weder
+ * Tabellen noch Diagramme noch Einrueckung. Eine Tabelle, die man
+ * hineinkopierte, wurde eine Reihe von Absaetzen voller Striche.
+ */
+export function markdownToBlocks(
+  source: string,
+  newId: () => string = () => crypto.randomUUID(),
+): PlanBlock[] {
+  return parseBlocks(source.replace(/\r\n?/g, '\n').split('\n'), 0, newId);
 }
 
 /**

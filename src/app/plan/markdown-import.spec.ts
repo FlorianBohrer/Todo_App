@@ -1,4 +1,4 @@
-import { markdownToPlan, titleFromFileName } from './markdown-import';
+import { markdownToBlocks, markdownToPlan, titleFromFileName } from './markdown-import';
 import { planToMarkdown } from './plan-markdown';
 import type { Plan, PlanBlock } from './plan.model';
 
@@ -227,6 +227,91 @@ describe('markdownToPlan', () => {
       expect(result.title).toBe('Datei');
       expect(result.content[0].type).toBe('divider');
     });
+  });
+});
+
+/**
+ * Beim Einfuegen aus der Zwischenablage liest derselbe Parser — ohne
+ * Dateikopf und ohne Titel. Diese Faelle standen vorher in
+ * markdown-paste.spec.ts und gehoeren weiter geprueft; der zweite Leser ist
+ * weg, die Kanten sind dieselben geblieben.
+ */
+describe('markdownToBlocks (Einfuegen)', () => {
+  const blocks = (md: string) => markdownToBlocks(md, ids());
+
+  it('keeps a single line as one text block, so a normal paste stays normal', () => {
+    expect(blocks('just some text')).toEqual([{ id: 'b1', type: 'text', text: 'just some text' }]);
+  });
+
+  it('does not eat a front matter — a snippet is not a file', () => {
+    // markdownToPlan liest den Kopf weg; hier waere das falsch, denn was man
+    // einfuegt, soll stehenbleiben. Was danach dasteht, ist gewoehnliches
+    // Markdown: Trennlinie, und „title: x" mit „---" darunter ist eine
+    // unterstrichene Ueberschrift. Nicht huebsch, aber nichts verschluckt.
+    expect(blocks('---\ntitle: x\n---').map((b) => b.type)).toEqual(['divider', 'heading']);
+  });
+
+  it('turns a pasted table into a table', () => {
+    const out = blocks(
+      ['| Bereich | Status |', '| --- | --- |', '| ACL isolation | **tested locally** |'].join(
+        '\n',
+      ),
+    );
+
+    expect(out).toEqual([
+      {
+        id: 'b1',
+        type: 'table',
+        columns: ['Bereich', 'Status'],
+        rows: [['ACL isolation', '**tested locally**']],
+      },
+    ]);
+  });
+
+  it('accepts both "1." and "1)"', () => {
+    const out = blocks('1. one\n2) two');
+    expect(out[0].type === 'list' && out[0].items.map((i) => i.text)).toEqual(['one', 'two']);
+  });
+
+  it('prefers the checklist over the bullet', () => {
+    // „- [ ] " faengt auch mit „- " an.
+    const out = blocks('- [ ] offen');
+    expect(out[0].type === 'list' && out[0].variant).toBe('todo');
+  });
+
+  it('runs an unclosed fence to the end instead of losing the rest', () => {
+    expect(blocks('```ts\nconst a = 1;')).toEqual([
+      { id: 'b1', type: 'code', language: 'ts', code: 'const a = 1;' },
+    ]);
+  });
+
+  it('ends a paragraph when the next block starts without a blank line', () => {
+    expect(blocks('intro\n## Section')).toEqual([
+      { id: 'b1', type: 'text', text: 'intro' },
+      { id: 'b2', type: 'heading', level: 2, text: 'Section' },
+    ]);
+  });
+
+  it('handles CRLF input', () => {
+    expect(blocks('# Title\r\n- item')).toEqual([
+      { id: 'b1', type: 'heading', level: 1, text: 'Title' },
+      { id: 'b2', type: 'list', variant: 'bullet', items: [{ text: 'item', checked: false }] },
+    ]);
+  });
+
+  it('returns nothing for empty or blank input', () => {
+    expect(blocks('')).toEqual([]);
+    expect(blocks('\n\n  \n')).toEqual([]);
+  });
+
+  it('walks a mixed document in order', () => {
+    const types = blocks(
+      ['# Title', 'Intro line', '', '## Keys', '- one', '- two', '', '> note', '', '---'].join(
+        '\n',
+      ),
+    ).map((b) => b.type);
+
+    expect(types).toEqual(['heading', 'text', 'heading', 'list', 'quote', 'divider']);
   });
 });
 
