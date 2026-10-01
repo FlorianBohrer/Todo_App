@@ -451,3 +451,78 @@
   .switcher-panel {
     transform: translateX(-50%);
   }}
+
+// ---- Leiste zur Blockauswahl ----
+//
+// Unten mittig, nicht an der Auswahl: die kann ein halbes Dokument hoch sein,
+// und eine Leiste, die daran klebt, stuende irgendwo. Unten findet man sie
+// immer an derselben Stelle — und sie verdeckt nichts, was man gerade liest.
+.block-bar {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--color-line);
+  border-radius: 9999px;
+  background: var(--color-panel1);
+  padding: 0.3rem 0.5rem;
+  box-shadow: 0 16px 40px -16px rgb(0 0 0 / 0.75);
+  animation: block-bar-in 160ms var(--spring) backwards;
+}
+
+
+@keyframes block-bar-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .block-bar {
+    animation: none;
+  }
+}
+
+
+.block-bar-count {
+  padding-inline: 0.5rem;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}
+
+
+.block-bar-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+
+
+.block-bar-key:hover {
+  background: var(--color-fill);
+}
+
+
+.block-bar-key--danger:hover {
+  color: var(--color-danger);
+}
+
+
+// Das Kuerzel steht daneben, nicht im Weg: eine Stufe kleiner und leiser.
+.block-bar-kbd {
+  font-family: inherit;
+  font-size: 0.6875rem;
+  color: var(--color-subtle);
+}

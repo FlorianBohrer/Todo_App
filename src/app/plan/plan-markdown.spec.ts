@@ -1,4 +1,4 @@
-import { fileNameFor, planToMarkdown, uniqueNames } from './plan-markdown';
+import { blocksToMarkdown, fileNameFor, planToMarkdown, uniqueNames } from './plan-markdown';
 import type { Plan, PlanBlock } from './plan.model';
 
 function plan(content: PlanBlock[], title = 'Mein Plan'): Plan {
@@ -159,6 +159,24 @@ describe('planToMarkdown', () => {
     );
 
     expect(md).not.toContain('\n\n\n');
+  });
+});
+
+describe('blocksToMarkdown', () => {
+  it('writes a selection without any wrapper', () => {
+    // Fuer die Zwischenablage: kein Dateikopf, kein Titel — das hier wird
+    // woanders eingefuegt.
+    const md = blocksToMarkdown([
+      { id: '1', type: 'heading', level: 2, text: 'Aufbau' },
+      { id: '2', type: 'text', text: 'Ein Absatz.' },
+    ]);
+
+    expect(md).toBe('## Aufbau\n\nEin Absatz.');
+    expect(md).not.toContain('---');
+  });
+
+  it('is empty for an empty selection', () => {
+    expect(blocksToMarkdown([])).toBe('');
   });
 });
 

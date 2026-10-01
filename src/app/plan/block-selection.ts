@@ -80,3 +80,20 @@ export function neighbourAfterRemoval(
   const after = ids[first + removed.length];
   return after ?? null;
 }
+
+/**
+ * Mehrere Bloecke auf einmal entfernen.
+ *
+ * Als eigene Funktion, nicht als Schleife ueber das Entfernen eines
+ * einzelnen: so ist der Weg, den das Loeschen einer Auswahl wirklich nimmt,
+ * geprueft — und nicht nur die Regeln davor.
+ */
+export function removeBlocks(blocks: readonly PlanBlock[], ids: readonly string[]): PlanBlock[] {
+  const gone = new Set(ids);
+
+  return blocks
+    .filter((block) => !gone.has(block.id))
+    .map((block) =>
+      block.type === 'group' ? { ...block, blocks: removeBlocks(block.blocks, ids) } : block,
+    );
+}
