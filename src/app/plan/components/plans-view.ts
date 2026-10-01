@@ -77,11 +77,10 @@ import { neighbourAfterRemoval, rangeBetween, siblingsOf } from '../block-select
 import { levelOf, listMarkers } from '../list-markers';
 import { TypingRun, continuesRun } from '../edit-history';
 import { blocksToMarkdown, fileNameFor, planToMarkdown, uniqueNames } from '../plan-markdown';
-import { markdownToPlan, titleFromFileName } from '../markdown-import';
+import { markdownToBlocks, markdownToPlan, titleFromFileName } from '../markdown-import';
 import { makeZip, readZip, ZipEntry } from '../zip';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
-import { parseMarkdownBlocks, ParsedBlock } from '../markdown-paste';
 import { PlanTitleService } from '../plan-title.service';
 import {
   UntitledSection,
@@ -2435,40 +2434,24 @@ export class PlansView {
     const pasted = event.clipboardData?.getData('text/plain') ?? '';
     if (!pasted.trim()) return;
 
-    const parsed = parseMarkdownBlocks(pasted);
+    // Derselbe Leser wie beim Import (markdown-import.ts). Vorher stand hier
+    // ein zweiter, der weniger konnte: eine eingefuegte Tabelle wurde eine
+    // Reihe von Absaetzen voller Striche.
+    const incoming = markdownToBlocks(pasted, () => this.newId());
 
     // Ein einzelner Absatz ist ein ganz normaler Einfuegevorgang — da greifen
     // wir nicht ein, sonst verliert man Cursorposition und Auswahl.
-    if (parsed.length <= 1 && (!parsed[0] || parsed[0].kind === 'text')) return;
+    if (incoming.length <= 1 && (!incoming[0] || incoming[0].type === 'text')) return;
 
     event.preventDefault();
 
     const plan = this.selected();
     const block = plan ? this.findById(plan.content, blockId) : null;
     const isEmpty = !block || block.type !== 'text' || !block.text.trim();
-    const incoming = parsed.map((p) => this.fromParsed(p));
 
     this.slash.set(null);
     this.wikiPick.set(null);
     this.updateContent((bs) => this.spliceById(bs, blockId, incoming, isEmpty));
-  }
-
-  private fromParsed(parsed: ParsedBlock): PlanBlock {
-    const id = this.newId();
-    switch (parsed.kind) {
-      case 'heading':
-        return { id, type: 'heading', level: parsed.level, text: parsed.text };
-      case 'list':
-        return { id, type: 'list', variant: parsed.variant, items: parsed.items };
-      case 'code':
-        return { id, type: 'code', language: parsed.language, code: parsed.code };
-      case 'quote':
-        return { id, type: 'quote', text: parsed.text };
-      case 'divider':
-        return { id, type: 'divider' };
-      default:
-        return { id, type: 'text', text: parsed.text };
-    }
   }
 
   /** Setzt mehrere Bloecke an die Stelle eines vorhandenen — ersetzend oder dahinter. */
