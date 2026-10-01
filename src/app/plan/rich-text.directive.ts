@@ -10,6 +10,7 @@ import {
 import { ShortcutService } from '../shared/shortcut.service';
 import type { ShortcutAction } from '../shared/shortcuts';
 import { ANCHOR, caretIn, justClosed, placeCaret, renderRich, scanRich } from './rich-text';
+import { splitMarkdown } from './split-inline';
 
 /** Tastenkuerzel -> Browserbefehl. Die Tasten selbst sind umbelegbar. */
 const COMMANDS: Partial<Record<ShortcutAction, string>> = {
@@ -221,7 +222,11 @@ export class RichText {
         {
           const { md, caret } = this.read();
           const at = caret < 0 ? md.length : caret;
-          this.split.emit({ before: md.slice(0, at), after: md.slice(at) });
+          // Nicht einfach an der Stelle durchschneiden: am Ende einer
+          // Auszeichnung stuende das schliessende Zeichenpaar sonst im
+          // naechsten Absatz, und beide Haelften waeren kaputt. Siehe
+          // split-inline.ts.
+          this.split.emit(splitMarkdown(md, at));
         }
         return;
 
