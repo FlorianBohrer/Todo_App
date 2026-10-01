@@ -670,6 +670,29 @@
        mousedown wird abgefangen — sonst verlaesst der Klick das Feld, die
        Auswahl faellt weg und es gaebe nichts mehr zu formatieren. -->
   @if (toolbar(); as at) {
+    <!-- Was mit einer Blockauswahl geht, sagt die Leiste unten. Die Kuerzel
+         gibt es weiter, aber niemand lernt sie, ohne sie gesehen zu haben —
+         deshalb stehen sie daneben statt in einer Hilfe.
+
+         Unten mittig und nicht an der Auswahl: die kann ein halbes Dokument
+         hoch sein, und eine Leiste, die daran klebt, stuende irgendwo. -->
+    @if (blockSel().length; as count) {
+      <div class="block-bar" role="toolbar" aria-label="Selected blocks">
+        <span class="block-bar-count">{{ count }} {{ count === 1 ? 'block' : 'blocks' }}</span>
+        <span class="format-split"></span>
+        <button type="button" class="block-bar-key" (click)="copyBlockSel()">
+          Copy <kbd class="block-bar-kbd">⌘C</kbd>
+        </button>
+        <button type="button" class="block-bar-key block-bar-key--danger" (click)="deleteBlockSel()">
+          Delete <kbd class="block-bar-kbd">⌫</kbd>
+        </button>
+        <span class="format-split"></span>
+        <button type="button" class="block-bar-key" (click)="clearBlockSel()">
+          Done <kbd class="block-bar-kbd">esc</kbd>
+        </button>
+      </div>
+    }
+
     <div class="format-bar" [style.left.px]="at.x" [style.top.px]="at.y"
          role="toolbar" aria-label="Format selection"
          (mousedown)="$event.preventDefault()">

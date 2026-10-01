@@ -73,7 +73,12 @@ import {
 } from '../plan.model';
 import { focusRich, replaceRange } from '../rich-text';
 import { formatBlock } from '../inline-format';
-import { neighbourAfterRemoval, rangeBetween, siblingsOf } from '../block-selection';
+import {
+  neighbourAfterRemoval,
+  rangeBetween,
+  removeBlocks,
+  siblingsOf,
+} from '../block-selection';
 import { levelOf, listMarkers } from '../list-markers';
 import { TypingRun, continuesRun } from '../edit-history';
 import { blocksToMarkdown, fileNameFor, planToMarkdown, uniqueNames } from '../plan-markdown';
@@ -394,6 +399,12 @@ export class PlansView {
   @HostListener('document:pointerdown', ['$event'])
   onDocumentPointerDown(event: PointerEvent) {
     this.dragFrom = this.blockIdOf(event.target as Node);
+
+    // Daneben geklickt heisst: die Auswahl war gemeint, aber nicht mehr.
+    // Die Leiste selbst ist ausgenommen — sonst loeschte der Klick auf
+    // „Delete" die Auswahl, bevor der Knopf sie bekaeme.
+    const target = event.target instanceof Element ? event.target : null;
+    if (!this.dragFrom && !target?.closest('.block-bar')) this.clearBlockSel();
   }
 
   @HostListener('document:pointermove', ['$event'])
@@ -478,7 +489,7 @@ export class PlansView {
   }
 
   /** Die markierten Bloecke als Markdown in die Zwischenablage. */
-  private async copyBlockSel(): Promise<void> {
+  async copyBlockSel(): Promise<void> {
     const plan = this.selected();
     if (!plan) return;
 
@@ -503,7 +514,7 @@ export class PlansView {
    * Der Cursor geht danach in den Nachbarn darueber; sonst stuende man nach
    * dem Loeschen nirgends und muesste erst wieder hinklicken.
    */
-  private deleteBlockSel() {
+  deleteBlockSel() {
     const plan = this.selected();
     const chosen = this.blockSel();
     if (!plan || !chosen.length) return;
@@ -511,7 +522,7 @@ export class PlansView {
     const family = siblingsOf(plan.content, chosen[0]);
     const next = family ? neighbourAfterRemoval(family.ids, chosen) : null;
 
-    this.updateContent((blocks) => chosen.reduce((rest, id) => this.removeById(rest, id), blocks));
+    this.updateContent((blocks) => removeBlocks(blocks, chosen));
     this.clearBlockSel();
 
     if (next) this.beginEdit(next, 'end');
@@ -1707,6 +1718,31 @@ export class PlansView {
     this.wikiPick.set(null);
     this.updateContent((bs) =>
       this.insertAfterById(this.setBlockText(bs, blockId, before), blockId, created),
+    );
+    this.beginEdit(created.id, 0);
+  }
+
+  /**
+   * Enter im Titel eines Abschnitts: ein Absatz darin, Cursor hinein.
+   *
+   * Vorher verschluckte das Eingabefeld die Taste — ein Formular, das sie
+   * abschicken koennte, gibt es nicht. Man stand also im Titel eines
+   * Abschnitts und kam von dort nicht weiter, ohne zur Maus zu greifen.
+   *
+   * Der neue Absatz kommt an den ANFANG: von einer Ueberschrift aus schreibt
+   * man weiter, was unter ihr steht, und nicht hinter allem, was schon da
+   * ist. Zugeklappt klappt der Abschnitt dafuer auf — sonst schriebe man in
+   * etwas, das man nicht sieht.
+   */
+  startInGroup(blockId: string): void {
+    const block = this.findBlock(blockId);
+    if (!block || block.type !== 'group') return;
+
+    const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
+    this.updateContent((bs) =>
+      this.mapById(bs, blockId, (x) =>
+        x.type !== 'group' ? x : { ...x, collapsed: false, blocks: [created, ...x.blocks] },
+      ),
     );
     this.beginEdit(created.id, 0);
   }

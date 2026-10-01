@@ -52,11 +52,17 @@
               <lucide-icon [img]="view.DownIcon" class="h-4 w-4 transition-transform duration-200"
                 [class.-rotate-90]="view.asGroup(block).collapsed"></lucide-icon>
             </button>
+            <!-- Enter im Titel legt den ersten Absatz darin an und springt
+                 hinein. Vorher passierte hier gar nichts: ein Eingabefeld
+                 ohne Formular verschluckt die Taste, und man stand im Titel
+                 eines Abschnitts, in den man gerade nichts schreiben
+                 konnte. -->
             <input type="text"
               [id]="view.blockFieldId(block.id)"
               class="min-w-0 flex-1 bg-transparent text-lg font-semibold tracking-tight text-text placeholder:text-subtle focus:outline-none"
               [value]="view.asGroup(block).title"
               (input)="view.setGroupTitle(block.id, $any($event.target).value)"
+              (keydown.enter)="$event.preventDefault(); view.startInGroup(block.id)"
               placeholder="Toggle" aria-label="Toggle title" />
           </div>
 

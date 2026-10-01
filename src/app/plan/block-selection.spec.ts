@@ -1,4 +1,4 @@
-import { neighbourAfterRemoval, rangeBetween, siblingsOf } from './block-selection';
+import { neighbourAfterRemoval, rangeBetween, removeBlocks, siblingsOf } from './block-selection';
 import type { PlanBlock } from './plan.model';
 
 function text(id: string): PlanBlock {
@@ -80,5 +80,25 @@ describe('neighbourAfterRemoval', () => {
 
   it('has nowhere to go when everything is gone', () => {
     expect(neighbourAfterRemoval(ids, ['a', 'b', 'c', 'd'])).toBeNull();
+  });
+});
+
+describe('removeBlocks', () => {
+  it('takes several siblings out at once', () => {
+    expect(removeBlocks(TREE, ['a', 'f']).map((b) => b.id)).toEqual(['g1']);
+  });
+
+  it('reaches into a group', () => {
+    const out = removeBlocks(TREE, ['b', 'c']);
+    const g1 = out.find((b) => b.id === 'g1');
+    expect(g1?.type === 'group' && g1.blocks.map((b) => b.id)).toEqual(['g2']);
+  });
+
+  it('takes a group with everything in it', () => {
+    expect(removeBlocks(TREE, ['g1']).map((b) => b.id)).toEqual(['a', 'f']);
+  });
+
+  it('leaves the tree alone when nothing matches', () => {
+    expect(removeBlocks(TREE, ['gibtsnicht'])).toEqual(TREE);
   });
 });
