@@ -57,6 +57,11 @@ interface TodoDto {
   repeatUnit?: string | null;
   repeatFrom?: string | null;
   planId?: string | null;
+  // Auch diese beiden optional: ein Server ohne die Migration liefert sie
+  // nicht, und dann soll die App weiterlaufen und schweigen, statt auf
+  // undefined zu rechnen.
+  completedAt?: string | null;
+  seriesId?: string | null;
   /**
    * Was beim Abhaken nebenbei entstanden ist. Nur bei PUT gesetzt.
    *
@@ -239,6 +244,9 @@ export class TodoService {
       .subscribe((userId) => {
         if (!userId) {
           this.todos.set([]);
+          // Auch das Archiv: sonst stünde im Rückblick des nächsten Nutzers
+          // die Woche des vorigen.
+          this.archive.set([]);
           return;
         }
         this.loading.set(true);
@@ -247,6 +255,8 @@ export class TodoService {
             this.todos.set(res.todo.map((t) => this.toTodo(t)));
             this.loading.set(false);
             this.importLegacyTodos();
+            // Erst nach der Liste: die braucht man sofort, das Archiv nicht.
+            this.loadArchive();
           },
           error: (err) => {
             console.error('Todos laden fehlgeschlagen', err);
@@ -285,10 +295,14 @@ export class TodoService {
     this.http
       .patch<TodoDto>(`${this.apiUrl}/${id}/archive`, { archived: false })
       .subscribe({
-        next: (dto) =>
+        next: (dto) => {
           this.todos.update((items) =>
             items.map((item) => (item.id === id ? this.toTodo(dto) : item)),
-          ),
+          );
+          // Zurück in der Liste heißt: nicht mehr im Archiv. Bliebe es dort,
+          // tauchte es nach einem späteren Löschen in den Zahlen wieder auf.
+          this.archive.update((list) => list.filter((item) => item.id !== id));
+        },
         error: (err) => {
           console.error('Zurueckholen fehlgeschlagen', err);
           this.toast.error('Could not restore');
@@ -375,10 +389,88 @@ export class TodoService {
     createdAt: new Date(dto.createdAt),
     scheduledDate: dto.scheduledDate ?? null,
     archivedAt: dto.archivedAt ? new Date(dto.archivedAt) : null,
+    completedAt: dto.completedAt ? new Date(dto.completedAt) : null,
+    seriesId: dto.seriesId ?? null,
     repeat: toRepeat(dto),
     planId: dto.planId ?? null,
   };
 }
+
+  /**
+   * Gibt es ueberhaupt Erledigungszeiten?
+   *
+   * Die Frage entscheidet, ob die App zeitlich reden darf. Vor der Migration
+   * (und in jeder Zeile, die davor abgehakt wurde) steht hier null, und eine
+   * Wochenbilanz aus null-Werten waere keine Bilanz, sondern eine Behauptung.
+   */
+  readonly hasCompletionTimes = computed(() =>
+    this.withArchive().some((todo) => !!todo.completedAt),
+  );
+
+  // ---- Das Archiv, nur für Zeitliches ----
+  //
+  // Weggelegte Zeilen fehlen der Liste mit Absicht: dort sollen sie den Blick
+  // nicht verstellen, und die Zähler oben sollen ohne sie rechnen. Für alles,
+  // was über die VERGANGENHEIT spricht, ist genau das aber falsch. Wer
+  // sonntags „Archive 11 completed" drückt, hätte montags einen leeren
+  // Wochenrückblick, und jede wiederkehrende Aufgabe verlöre ihre Historie.
+  //
+  // Deshalb einmal im Hintergrund das Archiv dazu — über denselben Endpunkt,
+  // den „Show archive" schon benutzt — und eine Vereinigung, die nur dort
+  // gelesen wird, wo es um Zeit geht. Die Liste und ihre Zähler bleiben, wie
+  // sie sind.
+
+  /** Weggelegte Zeilen, nur für Rückblick, Rhythmus und Tagesbilanz. */
+  private readonly archive = signal<Todo[]>([]);
+
+  /**
+   * Die aktuelle Liste plus das Archiv. Bei doppelter id gewinnt die Liste:
+   * sie ist der frischere Stand (ein gerade abgehaktes Todo steht dort schon,
+   * im Archiv-Schnappschuss noch nicht).
+   */
+  readonly withArchive = computed(() => {
+    const current = this.todos();
+    const archived = this.archive();
+    if (archived.length === 0) return current;
+
+    const listed = new Set(current.map((todo) => todo.id));
+    return [...current, ...archived.filter((todo) => !listed.has(todo.id))];
+  });
+
+  /** Dasselbe, auf den offenen Ordner beschränkt — wie scopedTodos. */
+  readonly scopedWithArchive = computed(() => {
+    const labelId = this.labelService.activeLabelId();
+    const items = this.withArchive();
+    return labelId === null ? items : items.filter((i) => i.labelIds.includes(labelId));
+  });
+
+  /**
+   * Das Archiv einmal nachladen.
+   *
+   * Still, wenn es scheitert: ohne Archiv rechnen Rückblick und Rhythmus über
+   * die Liste allein, und das ist weniger, aber nicht falsch. Eine Fehlermeldung
+   * für etwas, das man nicht angefordert hat, wäre Lärm.
+   */
+  private loadArchive() {
+    this.http.get<TodoListResponse>(`${this.apiUrl}?archived=true`).subscribe({
+      next: (res) =>
+        this.archive.set(
+          res.todo.filter((dto) => !!dto.archivedAt).map((dto) => this.toTodo(dto)),
+        ),
+      error: (err) => console.error('Archiv laden fehlgeschlagen', err),
+    });
+  }
+
+  /** Was gerade weggelegt wurde, ins Archiv übernehmen — ohne neu zu laden. */
+  private moveToArchive(items: readonly Todo[]) {
+    if (items.length === 0) return;
+    const archivedAt = new Date();
+    const moved = new Set(items.map((todo) => todo.id));
+    this.archive.update((list) => [
+      ...list.filter((todo) => !moved.has(todo.id)),
+      ...items.map((todo) => ({ ...todo, archivedAt })),
+    ]);
+  }
 
   // ---- Wochenansicht ----
   /** Liste vs. Woche vs. Pläne. Startet dort, wo man zuletzt war. */
@@ -710,8 +802,16 @@ toggleFavorite(id: string) {
     const current = this.todos().find(item => item.id === id);
     if (!current) return;
     const completed = !current.completed;
+
+    // Optimistisch auch den Zeitpunkt, damit die Wochenbilanz nicht erst nach
+    // der Serverantwort stimmt. Es bleibt eine Schaetzung der eigenen Uhr —
+    // der echte Wert kommt gleich darunter aus der Antwort.
     this.todos.update(items =>
-      items.map(item => item.id === id ? { ...item, completed } : item),
+      items.map(item =>
+        item.id === id
+          ? { ...item, completed, completedAt: completed ? new Date() : null }
+          : item,
+      ),
     );
 
     // Beim Abhaken einer wiederkehrenden Aufgabe legt der SERVER die naechste
@@ -724,6 +824,24 @@ toggleFavorite(id: string) {
     // Reload unsichtbar, und von aussen sah es aus, als tue die Wiederholung
     // gar nichts.
     this.updateOnServer(id, { completed }, (dto) => {
+      // Den Zeitpunkt vom Server uebernehmen, nicht den geschaetzten behalten.
+      //
+      // Kurz vor Mitternacht entscheidet eine um Minuten falsch gehende
+      // Browseruhr, in welche WOCHE eine Erledigung faellt. Genau dafuer setzt
+      // der Server den Wert, und genau deshalb wird er hier gelesen. Nur
+      // dieses eine Feld: alles andere koennte einen laufenden Tastendruck
+      // ueberschreiben.
+      this.todos.update((items) =>
+        items.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                completedAt: dto.completedAt ? new Date(dto.completedAt) : null,
+              }
+            : item,
+        ),
+      );
+
       const next = dto.nextOccurrence;
       if (!next) return;
 
@@ -755,11 +873,17 @@ toggleFavorite(id: string) {
   /** Ein einzelnes Todo weglegen. */
   archiveTodo(id: string) {
     const snapshot = this.todos();
+    const archived = snapshot.find((item) => item.id === id);
     this.todos.update((items) => items.filter((item) => item.id !== id));
 
     this.http
       .patch<TodoDto>(`${this.apiUrl}/${id}/archive`, { archived: true })
       .subscribe({
+        // Erst nach der Bestätigung ins Archiv, damit ein gescheiterter Request
+        // keine Zeile in zwei Mengen zurücklässt.
+        next: () => {
+          if (archived) this.moveToArchive([archived]);
+        },
         error: (err) => {
           console.error('Archivieren fehlgeschlagen', err);
           this.toast.error('Could not archive');
@@ -776,10 +900,15 @@ toggleFavorite(id: string) {
    * Antwort, dann die neue Liste.
    */
   archiveCompleted() {
+    // Was jetzt weggelegt wird, vorher festhalten: nach dem Neuladen steht es
+    // nicht mehr in der Liste, und der Rückblick soll es trotzdem kennen.
+    const completed = this.todos().filter((t) => t.completed && t.archivedAt === null);
+
     this.http
       .post<{ archived: number }>(`${this.apiUrl}/archive-completed`, {})
       .subscribe({
         next: (res) => {
+          this.moveToArchive(completed);
           this.loadTodos();
           this.toast.show(
             res.archived === 1

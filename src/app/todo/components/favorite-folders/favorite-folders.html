@@ -1,108 +1,106 @@
 @if (tileCount() > 0) {
-  <section class="mx-auto mb-4 w-full max-w-3xl" aria-label="Favorite folders">
-    <!-- Mobil: Kacheln untereinander; ab sm nebeneinander.
-         Bei vier Kacheln eine Reihe mit vier. -->
+  <section class="mx-auto mb-5 w-full max-w-3xl" aria-label="Favorite folders">
+    <!-- Mobil untereinander, ab sm nebeneinander. Bei vier Ordnern eine
+         Reihe mit vier.
+
+         Was hier WEGGEFALLEN ist, und warum: der Verlauf hinter dem Symbol,
+         das Symbol im abgerundeten Kästchen, shadow-lg samt Anheben beim
+         Überfahren, und die Prozentzahl neben dem Balken.
+
+         Zusammen waren das vier Dinge, die alle dasselbe sagten — dass es
+         sich hier um eine anklickbare Kachel handelt — und eins, das der
+         Balken schon sagte. Was bleibt, ist die Farbe des Ordners und sein
+         Fortschritt. Die Farbe bekommt dadurch mehr Bühne, nicht weniger. -->
     <div
-      class="grid grid-cols-1 gap-3"
+      class="grid grid-cols-1 gap-2.5"
       [class]="tileCount() === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'">
 
-      <!-- Virtuelle Favoriten-Kachel: Fortschritt aller favorisierten Todos -->
+      <!-- Virtueller Favoriten-Ordner: Fortschritt aller favorisierten Todos -->
       @if (favoriteProgress().total > 0) {
         <button
           type="button"
-          class="favorite-tile folder-card group flex flex-col gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 text-left shadow-lg
-                 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+          class="favorite-tile folder-card flex items-center gap-3 rounded-3xl border border-amber-500/25 bg-amber-500/10 p-4 text-left text-amber-200 transition duration-200 hover:border-amber-400/45"
           [class.ring-2]="favoritesActive()"
           [class.ring-highlight2]="favoritesActive()"
           [class.celebrate-fav]="isCelebrating(FAVORITE_TODOS_KEY)"
           [attr.aria-pressed]="favoritesActive()"
           (click)="selectFavorites()">
 
-          <div class="flex w-full items-center gap-2.5">
-            <span class="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-amber-500/25">
-              <lucide-icon [img]="StarIcon" class="fav-star h-4 w-4 fill-amber-300 text-amber-300"></lucide-icon>
-            </span>
-            <span class="min-w-0 flex-1 truncate font-semibold text-amber-200">Favorites</span>
-          </div>
+          <!-- Der Stern in der Mitte des Rings, nicht vor dem Namen: dort
+               nahm er „Favorites" so viel Breite, dass das Wort mitten im
+               Wort umbrach. Die Ringmitte ist ohnehin leer. -->
+          <app-progress-ring
+            class="flex-none"
+            arcClass="folder-progress"
+            [size]="40"
+            [thickness]="4"
+            [check]="false"
+            [completed]="favoriteProgress().completed"
+            [total]="favoriteProgress().total">
+            <lucide-icon [img]="StarIcon" class="fav-star h-3.5 w-3.5 fill-amber-300 text-amber-300"></lucide-icon>
+          </app-progress-ring>
 
-          <div class="w-full">
-            <div class="mb-1 flex items-center justify-between text-xs">
-              <span class="text-amber-200 opacity-80">
-                {{ favoriteProgress().completed }} of {{ favoriteProgress().total }} done
-              </span>
-              <span class="font-medium text-amber-200">{{ favoriteProgress().percent }}%</span>
-            </div>
-            <div class="h-1.5 w-full overflow-hidden rounded-full bg-fill-strong">
-              <div
-                class="folder-progress h-full rounded-full bg-amber-400 transition-all duration-300"
-                [style.width.%]="favoriteProgress().percent">
-              </div>
-            </div>
-          </div>
+          <span class="min-w-0 flex-1">
+            <span class="folder-name block font-semibold">Favorites</span>
+            <span class="mt-0.5 block whitespace-nowrap text-xs tabular-nums text-amber-200/75">
+              {{ favoriteProgress().completed }} of {{ favoriteProgress().total }} done
+            </span>
+          </span>
         </button>
       }
 
       @for (label of favorites(); track label.id) {
         <button
           type="button"
-          class="folder-card group flex flex-col gap-3 rounded-xl border border-line p-4 text-left shadow-lg
-                 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl"
-          [class]="bgClass(label.color)"
+          class="folder-card flex items-center gap-3 rounded-3xl border border-line p-4 pr-7 text-left transition duration-200 hover:border-line-strong"
+          [class]="bgClass(label.color) + ' ' + textClass(label.color)"
           [class.ring-2]="activeLabelId() === label.id"
           [class.ring-highlight2]="activeLabelId() === label.id"
           [class.celebrate]="isCelebrating(label.id)"
           [attr.aria-pressed]="activeLabelId() === label.id"
           (click)="select(label.id)">
 
-          <div class="flex w-full items-center gap-2.5">
-            <span
-              class="flex h-8 w-8 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
-              [class]="iconBoxClass(label.color)">
-              <lucide-icon
-                [img]="iconFor(label.icon)"
-                class="h-4 w-4"
-                [class]="textClass(label.color)">
-              </lucide-icon>
-            </span>
-            <!-- Prefix als Chip, Name darunter ueber zwei Zeilen: einzeilig
+          <!-- Der Ring IST die Farb-Identität des Ordners. Deshalb braucht es
+               daneben kein zweites Symbol in einem farbigen Kästchen mehr:
+               `currentColor` holt sich die Farbe von der Zeile. -->
+          <app-progress-ring
+            class="flex-none"
+            arcClass="folder-progress"
+            [size]="40"
+            [thickness]="4"
+            [completed]="progress(label.id).completed"
+            [total]="progress(label.id).total" />
+
+          <span class="min-w-0 flex-1">
+            <!-- Prefix als Chip, Name darunter über zwei Zeilen: einzeilig
                  abgeschnitten liest sich "projekt: Bozen Live Impact Twin"
                  wie ein Fehler statt wie ein langer Name. -->
-            <span class="min-w-0 flex-1">
-              @if (nameParts(label.name).prefix; as prefix) {
-                <span [class]="'folder-chip ' + chipClass(label.color)">{{ prefix }}</span>
-              }
-              <span [class]="'folder-name font-semibold ' + textClass(label.color)">
-                {{ nameParts(label.name).name }}
-              </span>
+            @if (nameParts(label.name).prefix; as prefix) {
+              <span [class]="'folder-chip ' + chipClass(label.color)">{{ prefix }}</span>
+            }
+            <span class="folder-name block font-semibold">
+              {{ nameParts(label.name).name }}
             </span>
-            <span
-              class="flex-none rounded-full p-1 text-amber-400 transition hover:scale-110"
-              role="button"
-              tabindex="0"
-              aria-label="Remove folder from favorites"
-              (click)="toggleFavorite(label.id, $event)"
-              (keydown.enter)="toggleFavorite(label.id, $event)">
-              <lucide-icon [img]="StarIcon" class="h-4 w-4 fill-amber-400"></lucide-icon>
+            <span class="mt-0.5 block whitespace-nowrap text-xs tabular-nums opacity-70">
+              {{ progress(label.id).completed }} of {{ progress(label.id).total }} done
             </span>
-          </div>
+          </span>
 
-          <div class="w-full">
-            <div class="mb-1 flex items-center justify-between text-xs">
-              <span [class]="'opacity-80 ' + textClass(label.color)">
-                {{ progress(label.id).completed }} of {{ progress(label.id).total }} done
-              </span>
-              <span [class]="'font-medium ' + textClass(label.color)">
-                {{ progress(label.id).percent }}%
-              </span>
-            </div>
-            <div class="h-1.5 w-full overflow-hidden rounded-full bg-fill-strong">
-              <div
-                class="folder-progress h-full rounded-full transition-all duration-300"
-                [class]="barClass(label.color)"
-                [style.width.%]="progress(label.id).percent">
-              </div>
-            </div>
-          </div>
+          <!-- Der Stern kommt erst beim Überfahren.
+               Jede Karte in dieser Reihe IST ein Favorit — das ist der Grund,
+               warum sie hier steht. Ein Stern auf jeder sagt also nichts, und
+               er nahm dem Namen die Breite: „2 of 3 done" brach um, und
+               „Favorites" wurde abgeschnitten. Als Handlung bleibt er
+               erreichbar, wie die Knöpfe an den Listenzeilen auch. -->
+          <span
+            class="fav-toggle absolute right-2 top-2 rounded-full p-1 text-amber-400/80 transition hover:text-amber-300"
+            role="button"
+            tabindex="0"
+            aria-label="Remove folder from favorites"
+            (click)="toggleFavorite(label.id, $event)"
+            (keydown.enter)="toggleFavorite(label.id, $event)">
+            <lucide-icon [img]="StarIcon" class="h-4 w-4 fill-amber-400/80"></lucide-icon>
+          </span>
         </button>
       }
     </div>

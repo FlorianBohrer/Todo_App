@@ -128,13 +128,31 @@
         <p class="mx-auto max-w-6xl px-5 text-sm text-subtle">Opening the week…</p>
       }
     } @else {
-      <div class="view-swap">
+      <!-- Seitenrand auf dem Telefon. Vorher lagen Ordnerkarten und Panel
+           bündig an der Bildschirmkante, und ihre runden Ecken wurden vom
+           Rand angeschnitten — das sah nach Versehen aus. Auf breiten
+           Bildschirmen wirkt der Rand nicht: dort ist max-w-3xl schmaler als
+           das Fenster. -->
+      <div class="view-swap px-4">
         <app-favorite-folders></app-favorite-folders>
 
-        <section class="mx-auto max-w-3xl rounded-xl border border-line bg-panel1 p-3 sm:p-6">
+        <!-- EINE Flaeche, und darauf Inhalt.
+             Vorher lagen hier drei Ebenen uebereinander: diese Panel-Flaeche,
+             darin die Karte von "Next up", darin die Karte jeder einzelnen
+             Zeile. Jede Ebene zog eine weitere Kante, und am Ende sah alles
+             gleich wichtig aus, weil alles gleich gerahmt war.
+
+             Die Flaeche bleibt — sie ist die Form, die diese App hat. Was
+             darauf liegt, trennt sich jetzt mit Linien und mit Luft. -->
+        <section class="mx-auto max-w-3xl rounded-3xl border border-line bg-panel1 p-4 sm:p-6">
           <app-todo-stats></app-todo-stats>
 
           <app-focus-panel></app-focus-panel>
+
+          <!-- Was letzte Woche fertig wurde. Steht unter "Next up", weil ein
+               Rueckblick nach dem Ausblick kommt: zuerst wird gearbeitet,
+               dann nachgesehen. -->
+          <app-weekly-review></app-weekly-review>
 
           <app-todo-filter></app-todo-filter>
           <app-todo-add></app-todo-add>

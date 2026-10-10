@@ -1,6 +1,30 @@
+/* Der Stern zum Entfernen aus den Favoriten: eine Handlung, kein Inhalt.
+   Er erscheint beim Überfahren und beim Fokus — dasselbe Muster wie die
+   Knöpfe an den Listenzeilen. */
+.fav-toggle {
+  opacity: 0;
+  transition: opacity 140ms ease-out;
+}
+
+.folder-card:hover .fav-toggle,
+.folder-card:focus-within .fav-toggle,
+.fav-toggle:focus-visible {
+  opacity: 1;
+}
+
+/* Ohne Zeigegerät gibt es kein Überfahren: dort steht er leise da, sonst
+   wäre er auf dem Telefon unerreichbar. */
+@media (hover: none) {
+  .fav-toggle { opacity: 0.6; }
+}
+
+@media (prefers-contrast: more) {
+  .fav-toggle { opacity: 1; }
+}
+
 /* Feier-Animation, wenn ein Folder 100% erreicht: sanftes Anheben mit
    goldenem Schimmer, ein Lichtstreifen zieht einmal über die Kachel,
-   der volle Balken glimmt kurz auf. Bewusst ruhig gehalten. */
+   der volle Ring glimmt kurz auf. Bewusst ruhig gehalten. */
 
 .folder-card {
   position: relative;

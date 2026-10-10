@@ -31,6 +31,8 @@ import {
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
+import { tap } from '../../shared/haptics';
+import { Rhythm, rhythmByTodo } from '../../shared/rhythm';
 
 import {
   CalendarPlus,
@@ -118,10 +120,15 @@ interface TodoRow {
   /** Letzte Unteraufgabe ihrer Gruppe — dort endet die Fuehrungslinie. */
   lastOfGroup: boolean;
   badgeClass: string;
-  tileClass: string;
-  tileTextClass: string;
-  tileIcon: LucideIconData;
+  /** Farbe des primären Ordners, als Punkt vor dem Titel. */
+  folderDotClass: string;
+  folderDotTitle: string;
   primaryLabelId: string | null;
+  /**
+   * Trefferquote der Wiederholungsreihe, zu der diese Zeile gehört.
+   * null = keine Wiederholung, oder noch zu wenige fällige Termine.
+   */
+  rhythm: Rhythm | null;
   /** Ein Punkt je Label, in Labelfarbe. */
   dotClasses: string[];
   labelTitle: string;
@@ -162,8 +169,19 @@ export class TodoList {
    * Klick auf einen Pfeil alle zweihundert Zeilen neu rechnen. Der bleibt in
    * eigenen Signalen und wird in der Vorlage abgefragt, wo er billig ist.
    */
+  /**
+   * Trefferquote je Zeile.
+   *
+   * Über ALLE Todos, nicht über die gefilterten: die vergangenen Ausgaben
+   * einer wiederkehrenden Aufgabe sind erledigt, und unter „Active" stünden
+   * sie nicht in der Liste. Eine Quote, die sich mit dem Filter ändert, wäre
+   * keine.
+   */
+  private readonly rhythms = computed(() => rhythmByTodo(this.todoService.withArchive()));
+
   protected readonly rows = computed<TodoRow[]>(() => {
     const items = this.todos();
+    const rhythms = this.rhythms();
 
     // Wer gehoert zu wem: ein Durchgang, dieselbe Regel wie beim Sortieren.
     const parentOf = new Map<string, string>();
@@ -200,10 +218,10 @@ export class TodoList {
         lastOfGroup: lastSubs.has(todo.id),
         badgeLabel: badge ? MOSCOW_LABEL[badge] : '',
         badgeClass: badge ? this.badgeClass(badge) : '',
-        tileClass: this.tileClass(todo.labelIds),
-        tileTextClass: this.tileTextClass(todo.labelIds),
-        tileIcon: this.tileIcon(todo.labelIds),
+        folderDotClass: this.folderDotClass(todo.labelIds),
+        folderDotTitle: this.folderDotTitle(todo.labelIds),
         primaryLabelId: todo.labelIds[0] ?? null,
+        rhythm: rhythms.get(todo.id) ?? null,
         dotClasses: todo.labelIds.map((id) => this.dotClass(id)),
         labelTitle: this.labelTitle(todo.labelIds),
         scheduleText:
@@ -321,6 +339,14 @@ toggleFolderList(): void {
       this.todoService.toggleTodo(todo.id);
       return;
     }
+
+    // Der Impuls im selben Frame wie das Bild, nicht danach.
+    //
+    // Haptik, die hinter dem Bild herläuft, fühlt sich nicht wie eine
+    // Bestätigung an, sondern wie ein zweites Ereignis. Deshalb steht der
+    // Aufruf vor dem Zustandswechsel und nicht in einem Timeout: der Haken
+    // füllt sich im nächsten Frame, und bis dahin hat das Gerät gezuckt.
+    tap();
 
     this.updateIdSet(
       this.completingTodoIds,
@@ -745,15 +771,25 @@ closeOptionsMenu(): void {
     return folderColorClass(label.color, 'text');
   }
 
-  /** Gradient-Icon-Kachel in der Farbe des primären Labels. */
-  tileClass(labelIds: string[]): string {
-    return folderColorClass(this.primaryLabel(labelIds)?.color, 'tile');
+  /**
+   * Die Farb-Identität der Zeile — als Punkt, nicht mehr als Glaskachel.
+   *
+   * Hier stand ein 28 Pixel grosses Quadrat mit Farbverlauf, Innenrand und
+   * dem Symbol des Ordners darin. In jeder Zeile. Bei zwanzig Aufgaben waren
+   * das zwanzig Verläufe, und das Symbol wiederholte in jeder Zeile, was
+   * der Ordnername oben schon sagt.
+   *
+   * Was die Kachel wirklich leistete, war eine Farbe. Die trägt ein Punkt
+   * genauso — und er fällt nicht mehr ins Auge als der Titel daneben.
+   */
+  folderDotClass(labelIds: string[]): string {
+    return folderColorClass(this.primaryLabel(labelIds)?.color, 'dot');
   }
-  tileTextClass(labelIds: string[]): string {
-    return folderColorClass(this.primaryLabel(labelIds)?.color, 'text');
-  }
-  tileIcon(labelIds: string[]) {
-    return folderIcon(this.primaryLabel(labelIds)?.icon);
+
+  /** Der Name des primären Ordners, für den Tooltip am Punkt. */
+  folderDotTitle(labelIds: string[]): string {
+    const label = this.primaryLabel(labelIds);
+    return label ? label.name : 'No folder';
   }
 
   isLabelActive(labelIds: string[], labelId: string): boolean {
