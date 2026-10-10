@@ -28,6 +28,8 @@ function todo(partial: Partial<Todo> = {}): Todo {
     // Die Felder stehen hier nur, damit die Attrappe ein vollstaendiges Todo
     // ist — waeren sie optional, verdeckte der Test kuenftige Luecken.
     archivedAt: null,
+    completedAt: null,
+    seriesId: null,
     repeat: null,
     planId: null,
     ...partial,
@@ -191,6 +193,66 @@ describe('pastThroughput', () => {
       todo({ scheduledDate: '2026-09-17', completed: true }),
     ];
     expect(pastThroughput(items, TODAY)).toBe(1);
+  });
+
+  // Mit Erledigungszeiten wird gemessen statt geschaetzt. Der Unterschied
+  // zeigt sich genau dort, wo etwas verschoben wurde — und das ist der
+  // Normalfall, nicht die Ausnahme.
+  const at = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d, 12);
+  };
+
+  it('counts on the day of completion once that is known', () => {
+    const items = [
+      // 14. geplant, am 14. fertig
+      todo({ scheduledDate: '2026-09-14', completed: true, completedAt: at('2026-09-14') }),
+      // 15. geplant, schon am 14. erledigt
+      todo({ scheduledDate: '2026-09-15', completed: true, completedAt: at('2026-09-14') }),
+      // 15. geplant, erst am 16. erledigt
+      todo({ scheduledDate: '2026-09-15', completed: true, completedAt: at('2026-09-16') }),
+      // 16. geplant, am 16. fertig
+      todo({ scheduledDate: '2026-09-16', completed: true, completedAt: at('2026-09-16') }),
+      // 16. geplant, offen geblieben
+      todo({ scheduledDate: '2026-09-16' }),
+    ];
+
+    // Gemessen, je Plantag, was an DIESEM Tag fertig wurde: 14. → 2,
+    // 15. → 0, 16. → 2. Median 2.
+    //
+    // Geschaetzt, also ueber den geplanten Tag: 14. → 1, 15. → 2, 16. → 1.
+    // Median 1. Genau diese Differenz ist der Grund fuer die Spalte: am 15.
+    // wurde nichts fertig, und die Schaetzung behauptet dort das Gegenteil.
+    expect(pastThroughput(items, TODAY)).toBe(2);
+  });
+
+  it('falls back to the estimate rather than reporting a false zero', () => {
+    // Die Erledigungszeiten setzen erst am 17. ein. Wuerde ueber die ganze
+    // Historie gemessen, kaemen fuer den 15. und 16. Nullen heraus, die nur
+    // bedeuten "damals haben wir nicht mitgeschrieben" — und der Median
+    // kippte auf "du schaffst sonst 0".
+    const items = [
+      todo({ scheduledDate: '2026-09-15', completed: true }),
+      todo({ scheduledDate: '2026-09-16', completed: true }),
+      todo({ scheduledDate: '2026-09-17', completed: true, completedAt: at('2026-09-17') }),
+    ];
+
+    expect(pastThroughput(items, TODAY)).toBe(1);
+  });
+
+  it('measures as soon as the recorded stretch is long enough on its own', () => {
+    const items = [
+      // Vor der Aufzeichnung — bleibt beim Messen draussen.
+      todo({ scheduledDate: '2026-09-10', completed: true }),
+      // Ab hier liegen Zeiten vor: drei Plantage, je zwei fertig.
+      ...['2026-09-15', '2026-09-16', '2026-09-17'].flatMap((day) => [
+        todo({ scheduledDate: day, completed: true, completedAt: at(day) }),
+        todo({ scheduledDate: day, completed: true, completedAt: at(day) }),
+        todo({ scheduledDate: day }),
+      ]),
+    ];
+
+    expect(pastThroughput(items, TODAY)).toBe(2);
   });
 });
 

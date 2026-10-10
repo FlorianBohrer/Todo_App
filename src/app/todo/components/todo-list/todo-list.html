@@ -1,14 +1,21 @@
 
-<section class="mt-4 rounded-xl p-3">
+<!-- Auf dem Telefon kein eigenes Polster: die Liste liegt im Panel, und das
+     hat schon eines. Panel, Listenrahmen und Zeile rückten den Titel sonst
+     dreimal ein, und schon „Antrag fertig schreiben" brach um. -->
+<section class="mt-4 py-3 sm:p-3">
   @if (loading()) {
     <!-- „No todos yet" waehrend des Ladens ist schlicht falsch — und die
          Aussage, die am meisten weh tut, wenn sie sich gleich widerruft. -->
-    <ul role="list" class="space-y-2" aria-busy="true" aria-label="Loading todos">
+    <!-- Die Platzhalter tragen die Form der echten Zeile, nicht die der
+         alten Karte: Haken, Punkt, Titel. Ein Ladezustand, der anders
+         aussieht als das Ergebnis, ist ein Sprung, der nicht sein muss. -->
+    <ul role="list" class="divide-y divide-line" aria-busy="true" aria-label="Loading todos">
       @for (row of skeletonRows; track row) {
-        <li class="skeleton-row flex items-center gap-3 rounded-xl border border-line bg-fill p-3">
-          <span class="h-8 w-8 flex-none rounded-lg bg-fill-strong"></span>
-          <span class="h-4 flex-1 rounded-lg bg-fill-strong"></span>
-          <span class="h-4 w-10 flex-none rounded-lg bg-fill-strong"></span>
+        <li class="skeleton-row flex items-center gap-2.5 px-2 py-3 sm:px-2.5">
+          <span class="h-5 w-5 flex-none rounded-full bg-fill-strong"></span>
+          <span class="h-3 w-3 flex-none rounded-full bg-fill-strong"></span>
+          <span class="h-4 flex-1 rounded-full bg-fill-strong"></span>
+          <span class="h-4 w-12 flex-none rounded-full bg-fill-strong"></span>
         </li>
       }
     </ul>
@@ -35,9 +42,19 @@
     <!-- Die Höhe hing an festen 20rem: auf jedem Bildschirm dieselben vier
          Zeilen, der Rest im Kasten versteckt. Jetzt richtet sie sich nach dem
          Fenster und bleibt trotzdem begrenzt, damit Kopf und Statistik stehen. -->
+    <!-- Eine Liste, keine Kachelsammlung.
+         Jede Zeile trug einen eigenen Rahmen und eine eigene Fläche — in
+         einem Kasten, der selbst in der Panel-Fläche lag. Zwanzig Aufgaben
+         waren zwanzig Karten untereinander, und weil jede Karte gleich laut
+         war, trat keine hervor.
+
+         Getrennt wird jetzt mit einer Linie und mit Luft. Das ist dieselbe
+         Entscheidung, die die Unteraufgaben vor einer Weile schon getroffen
+         haben: dort fiel die Karte weg, weil Karte neben Karte wie zwei
+         gleichrangige Dinge liest. -->
     <ul
       role="list"
-      class="space-y-1.5 max-h-[min(70vh,44rem)] overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
+      class="max-h-[min(70vh,44rem)] divide-y divide-line overflow-auto text-muted pr-1 sm:pr-2 pb-20 sm:pb-2"
       cdkDropList
       (cdkDropListDropped)="drop($event)">
       @for (row of visibleRows(); track row.id) {
@@ -50,7 +67,7 @@
       [cdkDragStartDelay]="dragStartDelay"
       (cdkDragStarted)="onDragStarted()"
       (cdkDragEnded)="onDragEnded()"
-      class="todo-card group flex items-center justify-between gap-2.5 rounded-xl border border-line bg-panel2 px-3 py-2.5 transition hover:border-line-strong"
+      class="todo-card group flex items-center justify-between gap-2.5 px-2 py-3 transition hover:bg-fill sm:px-2.5"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
         todo.completed || completingTodoIds().has(todo.id)
@@ -110,15 +127,16 @@
               <!-- SVG -->
             </button>
 
-            <!-- Gradient-Icon-Kachel in Label-Farbe (Farb-Identität der Zeile) -->
+            <!-- Die Farb-Identität der Zeile: ein Punkt, keine Glaskachel.
+                 Hier stand ein Quadrat mit Verlauf und dem Ordnersymbol
+                 darin — in jeder Zeile dasselbe Symbol, denn der Ordner
+                 steht oben in der Leiste. Geleistet hat die Kachel genau
+                 eine Sache, und das war die Farbe. -->
             <span
-              class="todo-tile flex h-7 w-7 flex-none items-center justify-center rounded-lg ring-1 ring-inset"
-              [class]="row.tileClass">
-              <lucide-icon
-                [img]="row.tileIcon"
-                class="h-4 w-4"
-                [class]="row.tileTextClass"></lucide-icon>
-            </span>
+              class="todo-dot flex-none"
+              [class]="row.folderDotClass"
+              [title]="row.folderDotTitle"
+              aria-hidden="true">●</span>
 
             <!-- Prioritäts-Badge (Präfix /must-have bzw. /could-have) -->
             <!-- Aus einem Plan entstanden. Nur das Zeichen, nicht der
@@ -238,6 +256,27 @@
             }
           </button>
 
+          <!-- Der Rhythmus: die letzten fälligen Termine dieser Reihe, einer
+               je Punkt. KEINE app-weite Serie — die belohnt das Öffnen der
+               App, nicht die Arbeit, und bestraft Krankheit und Urlaub. Eine
+               Trefferquote gehört dorthin, wo es wirklich eine Kette gibt.
+
+               Eine Lücke ist deshalb kein Verlust von etwas Aufgebautem,
+               sondern ein Punkt, der grau bleibt. Morgen zählt wieder. -->
+          @if (row.rhythm; as rhythm) {
+            <span
+              class="rhythm hidden flex-none items-center gap-1 sm:flex"
+              [class]="row.folderDotClass"
+              [title]="rhythm.hit + ' of the last ' + rhythm.of + ' due dates hit'
+                + (todo.repeat ? ' · repeats ' + repeatLabel(todo.repeat) : '')"
+              role="img"
+              [attr.aria-label]="rhythm.hit + ' of the last ' + rhythm.of + ' due dates hit'">
+              @for (mark of rhythm.marks; track $index) {
+                <span class="rhythm-dot" [class.is-hit]="mark"></span>
+              }
+            </span>
+          }
+
           <ng-template
             cdkConnectedOverlay
             [cdkConnectedOverlayOrigin]="scheduleTrigger"
@@ -311,7 +350,12 @@
             </div>
           </ng-template>
 
-          <!-- Gestylter Trigger -->
+          <!-- Der Labels-Knopf blieb stehen, sobald ein Ordner gesetzt war
+               (row-action--kept). Das war richtig, solange die Zeile die
+               Ordnerfarbe nirgends sonst trug — jetzt sagt der Punkt vor dem
+               Titel dasselbe, und zwar an der Stelle, an der er in eine
+               Spalte fällt. Zwei Anzeigen für eine Auskunft sind eine zu
+               viel, also ist dies hier wieder nur eine Handlung. -->
           <button
             type="button"
             cdkOverlayOrigin #trigger="cdkOverlayOrigin"
@@ -319,7 +363,6 @@
           
             class="row-action hidden sm:flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-2.5 py-1
                    text-sm text-text transition hover:bg-panel/10"
-            [class.row-action--kept]="todo.labelIds.length > 0"
             [class]="labelService.borderClassFor(row.primaryLabelId)"
             (click)="toggleMenu(todo.id)"
             aria-haspopup="listbox"

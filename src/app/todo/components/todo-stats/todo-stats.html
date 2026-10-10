@@ -1,44 +1,32 @@
-    <!-- <div class="mb-3 flex float-right justify-between">
-          <span
-          class = "inline-flex items-center gap-3">
-          {{stats().active}}  :active   {{ stats().completed}}    :done  {{stats().total}}    :total 
-        </span>
-    </div> -->
+<!-- Kein Kasten um diesen Block: er steht auf derselben Fläche wie die Liste
+     darunter. Eine Begrüßung, die sich eine eigene Fläche nimmt, ist keine
+     ruhige. -->
+<section class="flex items-start justify-between gap-5 px-1 pt-1 pb-4" aria-label="Today">
+  <div class="min-w-0 flex-1">
+    <h2 class="text-2xl/[1.15] font-semibold tracking-[-0.02em] text-text sm:text-3xl/[1.1]">
+      {{ greeting() }}<span [class]="accentClass()">.</span>
+    </h2>
 
-    <!-- <div class="flex float-right gap-3  text-sm text-zinc-400">
-      <span>{{stats().active}} active</span>
-      <span>{{stats().completed}} completed</span>
-      <span>{{stats().total}} total</span>
+    <p class="mt-1.5 text-sm/[1.55] tabular-nums" [class]="todayLineClass()">{{ todayLine() }}</p>
 
-    </div> -->
-
-<!-- <div class="grid grid-cols-3 gap-3 mt-4">
-    <div class=" roundend-xl bg-blue-600/40 p-4">
-        <div class="text-2xl font-semibold text-text">{{ stats().total}}</div>
-        <div class=" text-xs uppercase tracking-wide text-blue-400">total</div>
-    </div>  
-    <div class=" roundend-xl bg-amber-500/10 p-4">
-        <div class="text-2xl font-semibold ">{{ stats().active}}</div>
-        <div class=" text-xs uppercase tracking-wide text-amber-400">active</div>
-    </div>
-    <div class=" roundend-xl bg-emerald-500/40 p-4">
-        <div class="text-2xl font-semibold text-text">{{ stats().completed}}</div>
-        <div class=" text-xs uppercase tracking-wide text-emerald-400">completed</div> -->
-
-
-<div class="space-y-2 p-4">
-  <div class="flex items-center justify-between text-xl">
-    <span class="text-muted font-medium size-xl">
-      {{ stats().completed }} of {{ stats().total }} done
-    </span>
-    <span class="font-medium text-text">
-      {{ stats().total > 0 ? ((stats().completed / stats().total) * 100 | number:'1.0-0') : 0 }}%
-    </span>
+    @if (scopeName(); as scope) {
+      <!-- Welcher Ausschnitt gemeint ist, wenn es nicht alle sind. Der Ring
+           daneben spricht über genau diesen Ordner, und ohne diese Zeile
+           müsste man sich das aus der Leiste darüber zusammensuchen. -->
+      <p class="mt-1 text-xs tabular-nums text-subtle">
+        in <span [class]="accentClass()">{{ scope }}</span> ·
+        {{ stats().completed }} of {{ stats().total }} done
+      </p>
+    }
   </div>
-  <div class="h-2 overflow-hidden rounded-full bg-fill-strong">
-    <div
-      class="progress-fill h-full rounded-full bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400"
-      [style.width.%]="stats().total > 0 ? (stats().completed / stats().total) * 100 : 0">
-    </div>
-  </div>
-</div>
+
+  @if (stats().total > 0) {
+    <app-progress-ring
+      class="mt-0.5 flex-none"
+      [class]="accentClass()"
+      [size]="56"
+      [thickness]="5"
+      [completed]="stats().completed"
+      [total]="stats().total" />
+  }
+</section>

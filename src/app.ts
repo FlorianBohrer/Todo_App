@@ -28,6 +28,7 @@ import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
 import { TodoList } from './app/todo/components/todo-list/todo-list';
 import { TodoStats } from './app/todo/components/todo-stats/todo-stats';
 import { FocusPanel } from './app/todo/components/focus-panel/focus-panel';
+import { WeeklyReview } from './app/todo/components/weekly-review/weekly-review';
 import { CategoriesOverlay } from './app/todo/components/categories/categories-overlay';
 import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite-folders';
 import { folderColorClass } from './app/todo/shared/folder-color';
@@ -54,6 +55,7 @@ import type { View } from './app/todo/services/todo';
     TodoList,
     TodoStats,
     FocusPanel,
+    WeeklyReview,
     CategoriesOverlay,
     FavoriteFolders,
     WeekView,
@@ -66,7 +68,19 @@ import type { View } from './app/todo/services/todo';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',
-  styleUrl: './app.scss',
+  // Bewusst KEIN eigenes Stylesheet.
+  //
+  // Hier stand app.scss mit genau einer Zeile: @use "tailwindcss". Damit lud
+  // die App Tailwind ein zweites Mal — als Komponenten-CSS. Angular schreibt
+  // darin `:host` auf <app-root> um, und Tailwind setzt dort seine
+  // Grundwerte neu: die Standardschrift und die Standardpalette. Alles in der
+  // App erbte von DORT statt von <html>/<body>.
+  //
+  // Die Folgen, nachgemessen an 722 Elementen: keine Schrift aus styles.scss
+  // kam je an (das „Inter" darin wurde nie benutzt, Figtree auch nicht), und
+  // auf 60 Elementen blieb das Standard-Indigo stehen, obwohl styles.scss es
+  // pro Ansicht umfärbt. Sonst unterschieden sich die beiden Fassungen in
+  // nichts. Tailwind kommt einmal, global, aus styles.scss.
   providers: [],
 })
 export class App {

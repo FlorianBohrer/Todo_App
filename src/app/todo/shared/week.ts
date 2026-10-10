@@ -69,6 +69,17 @@ export function isoWeekNumber(d: Date): number {
   return 1 + Math.round((current.getTime() - first.getTime()) / (7 * DAY));
 }
 
+/**
+ * Montag der Woche, in der dieses ISO-Datum liegt (Mo–So).
+ *
+ * Exportiert, damit der Wochenrückblick dieselbe Wochengrenze benutzt wie die
+ * Wochenansicht. Zwei Stellen, die „Woche" verschieden auslegen, sind ein
+ * Fehler, den man erst am Sonntagabend bemerkt.
+ */
+export function startOfWeekISO(iso: string): string {
+  return toISODate(startOfWeek(fromISODate(iso)));
+}
+
 /** Montag der Woche, in der d liegt (Mo–So). */
 function startOfWeek(d: Date): Date {
   const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());

@@ -1,0 +1,73 @@
+<!-- Ohne Erledigungszeiten gibt es diesen Block nicht.
+     Ihn aus scheduledDate zu rechnen waere moeglich und waere falsch: das ist
+     der GEPLANTE Tag, nicht der Tag der Erledigung. Bei allem, was verschoben
+     wurde, kaeme eine andere Zahl heraus — und ihr saehe niemand an, dass sie
+     eine andere ist. -->
+@if (hasCompletionTimes() && review(); as review) {
+  <section class="border-t border-line pt-4" aria-label="Last week in review">
+    <div class="flex items-center gap-2">
+      <h2 class="text-sm font-medium text-text">Last week</h2>
+      <span class="text-xs text-subtle">{{ range() }}</span>
+
+      <button
+        type="button"
+        class="ml-auto grid h-7 w-7 flex-none place-items-center rounded-full text-subtle transition hover:bg-fill hover:text-text"
+        (click)="toggleCollapsed()"
+        [attr.aria-expanded]="!collapsed()"
+        [attr.aria-label]="collapsed() ? 'Show last week' : 'Hide last week'"
+      >
+        <lucide-icon
+          [img]="ChevronIcon"
+          class="h-4 w-4 transition-transform duration-200"
+          [class.rotate-180]="collapsed()"
+        ></lucide-icon>
+      </button>
+    </div>
+
+    @if (!collapsed()) {
+      @if (review.total === 0) {
+        <!-- Eine leere Woche ist eine Aussage, und eine andere als „wir wissen
+             es nicht". Sie bekommt deshalb einen Satz und keine Null. -->
+        <p class="mt-2 text-sm/[1.6] text-muted">Nothing was finished that week.</p>
+      } @else {
+        <p class="mt-2 text-sm/[1.6] text-muted">
+          <span class="text-lg font-semibold text-text">{{ review.total }}</span>
+          {{ review.total === 1 ? 'thing' : 'things' }} finished.
+        </p>
+
+        <!-- Nach Ordnern, als Liste. Kein Diagramm: bei drei bis acht Zeilen
+             sagt eine Liste dasselbe und lässt sich vorlesen. Der Balken ist
+             nur die Lesehilfe daneben, in der Farbe des Ordners. -->
+        <ul role="list" class="mt-3 space-y-2">
+          @for (group of groups(); track group.key) {
+            <li class="flex items-center gap-3">
+              <span class="w-28 flex-none truncate text-sm sm:w-36" [class]="group.colorClass">
+                {{ group.name }}
+              </span>
+              <span class="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-fill-strong">
+                <span
+                  class="review-bar block h-full rounded-full bg-current"
+                  [class]="group.colorClass"
+                  [style.width.%]="group.share"
+                ></span>
+              </span>
+              <span class="w-6 flex-none text-right text-sm tabular-nums text-muted">
+                {{ group.count }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (incompleteSince(); as since) {
+        <!-- Die Woche liegt zum Teil vor der ersten festgehaltenen Erledigung.
+             Die Zahl ist damit zu klein, und das gehoert dazugesagt — sonst
+             liest sich eine unvollstaendige Bilanz wie eine vollstaendige. -->
+        <p class="mt-3 text-xs/[1.5] text-subtle">
+          Counted from {{ since }}, when completion times started being recorded. Anything finished
+          before that carries no time.
+        </p>
+      }
+    }
+  </section>
+}
