@@ -83,13 +83,50 @@ li.todo-expanded-row {
   color: rgb(255 255 255 / 62%);
 }
 
-// Genau unter dem Titel, nicht ungefaehr: Dreieck (1rem) + Haken (1.5rem) +
-// Kachel (1.75rem) und dreimal die Luecke von 0.625rem.
+// Genau unter dem Titel, nicht ungefaehr: Dreieck (1rem) + Haken (1.25rem) +
+// Punkt (0.75rem) und dreimal die Luecke von 0.625rem = 4.875rem.
+//
+// Der Wert stand auf 6.125rem und rechnete mit einer 1.75rem breiten
+// Glaskachel, die es nicht mehr gibt — und mit einem 1.5rem breiten Haken,
+// der schon vorher auf 1.25rem geschrumpft war. Nachgemessen, nicht
+// nachgerechnet: zwei stille Fehler in einer Zeile sind einer zu viel.
 @media (min-width: 640px) {
   .todo-detail {
-    margin-left: 6.125rem;
+    margin-left: 4.875rem;
   }
 }
+
+// Der Farbpunkt der Zeile.
+//
+// Ein ● in einer festen Box, damit die Breite nicht an der Schrift haengt:
+// das Zeichen ist in jeder Schriftart anders breit, und eine Spalte, die
+// mit der Schrift wandert, ist keine.
+.todo-dot {
+  display: grid;
+  place-items: center;
+  width: 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+// Der Rhythmus: ein Punkt je faelligem Termin.
+//
+// Getroffen leuchtet in der Ordnerfarbe (currentColor), verpasst bleibt
+// grau. Bewusst kein Rot: eine verpasste Gewohnheit ist kein Fehler, ueber
+// den man eine Meldung braucht, sondern ein Punkt, der grau bleibt.
+.rhythm-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-fill-strong);
+}
+
+.rhythm-dot.is-hit {
+  background: currentColor;
+}
+
+// Ohne Zeigergeraet ist die Reihe ohnehin ausgeblendet (hidden sm:flex), auf
+// dem Telefon kostet sie zu viel Breite. Der Rhythmus steht dort im Menue.
 
 
 @media (max-width: 639px) {
@@ -147,9 +184,35 @@ li.todo-expanded-row {
   margin-left: 2rem;
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
-  border-color: transparent;
   background: transparent;
   font-size: 0.9375rem;
+}
+
+/* Keine Trennlinie zwischen einer Aufgabe und ihren Schritten: das ist eine
+   Gruppe, nicht zwei Einträge. Die Winkellinie verbindet sie ja gerade — eine
+   Trennlinie quer dadurch würde das Gegenteil behaupten.
+
+   Die Linie gehört der Zeile DARÜBER: Tailwind v4 zeichnet divide-y als
+   border-bottom an jeder Zeile außer der letzten, nicht (wie v3) als
+   border-top an der folgenden. Also wird sie an der Zeile ausgeblendet, auf
+   die ein Schritt folgt. Die letzte Zeile einer Gruppe behält ihre Linie —
+   dort endet die Gruppe wirklich. */
+.todo-card:has(+ .todo-sub) {
+  border-bottom-color: transparent;
+}
+
+/* Das Ende der Gruppe: eine VOLLE Linie.
+   Die Linie des letzten Schritts säße an einer eingerückten Zeile und finge
+   2rem weiter rechts an als alle anderen — eine Kante, die aussieht wie ein
+   Versehen. Deshalb übernimmt die Zeile danach: sie ist nicht eingerückt.
+   (divide-y setzt border-top-width in einem :where() auf 0, also ohne
+   Gewicht — diese Regel kommt ohne !important durch.) */
+.todo-card.todo-sub--last {
+  border-bottom-color: transparent;
+}
+
+.todo-card.todo-sub--last + .todo-card {
+  border-top: 1px solid var(--color-line);
 }
 
 /* Statt eines Rahmens beim Ueberfahren eine Flaeche: ein Rahmen wuerde die
@@ -188,12 +251,10 @@ li.todo-expanded-row {
   pointer-events: none;
 }
 
-/* Die Ausstattung der Zeile faellt mit: kleinere Kachel, kleinerer Haken.
+/* Die Ausstattung der Zeile faellt mit: kleinerer Haken, kleinerer Punkt.
    Gleich grosse Bedienelemente auf zwei Ebenen heben die Ebenen wieder auf. */
-.todo-card.todo-sub .todo-tile {
-  height: 1.5rem;
-  width: 1.5rem;
-  border-radius: 0.5rem;
+.todo-card.todo-sub .todo-dot {
+  font-size: 0.625rem;
 }
 
 .todo-card.todo-sub .todo-checkbox {
@@ -260,16 +321,19 @@ li.todo-expanded-row {
 /* ---- Ziel fuer neue Schritte ----
 
    Angeklickt heisst: was ich jetzt anlege, gehoert hierher. Das muss man
-   sehen, sonst ist es eine unsichtbare Voreinstellung. Ein Rand in der
-   Akzentfarbe statt einer Fuellung: die Zeile ist ausgewaehlt, nicht
-   hervorgehoben. */
+   sehen, sonst ist es eine unsichtbare Voreinstellung.
+
+   Vorher ein Rahmen um die Zeile. Den gibt es nicht mehr — und ein Ring per
+   box-shadow um eine randlose Zeile holte genau die Karte zurueck, die hier
+   gerade weggenommen wurde. Stattdessen ein Balken an der Kante: das Zeichen,
+   das jede Liste fuer "diese Zeile ist gemeint" benutzt. */
 .todo-card.todo-target {
-  border-color: color-mix(in srgb, var(--color-brand-2) 55%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brand-2) 35%, transparent);
+  background: color-mix(in srgb, var(--color-brand-2) 7%, transparent);
+  box-shadow: inset 2px 0 0 0 var(--color-brand-2);
 }
 
 .todo-card.todo-target:hover {
-  border-color: color-mix(in srgb, var(--color-brand-2) 75%, transparent);
+  background: color-mix(in srgb, var(--color-brand-2) 12%, transparent);
 }
 
 /* Bei hohem Kontrast traegt eine halbdurchsichtige Farbe nicht: dort ein
@@ -278,8 +342,8 @@ li.todo-expanded-row {
    diesem Modus vermieden werden soll. */
 @media (prefers-contrast: more) {
   .todo-card.todo-target {
-    border-color: var(--color-brand-2);
-    box-shadow: 0 0 0 1px var(--color-brand-2);
+    background: transparent;
+    box-shadow: inset 4px 0 0 0 var(--color-brand-2);
   }
 
   .row-action { opacity: 1; }

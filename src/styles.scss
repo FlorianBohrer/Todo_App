@@ -364,8 +364,22 @@
     @apply antialiased;
     background: var(--color-bg);
     color: var(--color-text);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial,
-                 "Apple Color Emoji", "Segoe UI Emoji";
+
+    /* Figtree, selbst ausgeliefert (@fontsource-variable/figtree, siehe
+       angular.json).
+
+       Vorher stand hier Inter an erster Stelle — geladen wurde Inter aber
+       nirgends. Kein @font-face, kein Link. Die App lief also seit jeher in
+       der Systemschrift, und die Zeile behauptete etwas anderes. Wer sie las,
+       musste glauben, Inter sei die Schrift dieser App.
+
+       Figtree statt Inter: rundere Formen, offenere Buchstaben, dieselbe
+       Lesbarkeit in kleinen Graden. Es ist der Teil von Headspace, der keine
+       Farbe kostet. Als variable Schrift ist es EINE Datei für alle Schnitte
+       von 300 bis 900, und weil sie mit der App kommt, gibt es keine Anfrage
+       an einen fremden Server und keinen Moment ohne Schrift (swap). */
+    font-family: "Figtree Variable", ui-sans-serif, system-ui, -apple-system,
+                 "Segoe UI", Arial, "Apple Color Emoji", "Segoe UI Emoji";
   }
 
   ::selection {

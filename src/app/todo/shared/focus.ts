@@ -31,6 +31,7 @@
  * steckt als Punkt 1 ohnehin drin.
  */
 import { Todo } from '../model/todo.model';
+import { doneByCompletionDay } from './review';
 import { MoscowLevel, priorityBadge } from './title-priority';
 import { shiftISODate, todayISO } from './week';
 
@@ -131,31 +132,73 @@ export function unplannedImportant(todos: readonly Todo[]): Todo[] {
   );
 }
 
+function median(values: readonly number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[middle]
+    : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
+}
+
+/** Vergangene Tage, an denen überhaupt etwas geplant war. */
+function plannedPastDays(todos: readonly Todo[], today: string): string[] {
+  const days = new Set<string>();
+
+  for (const todo of todos) {
+    if (todo.scheduledDate !== null && todo.scheduledDate < today) {
+      days.add(todo.scheduledDate);
+    }
+  }
+
+  return [...days];
+}
+
 /**
  * Wie viel an einem geplanten Tag üblicherweise fertig wurde — Median über die
  * vergangenen Tage, an denen überhaupt etwas geplant war.
  *
- * Näherung, und das mit Absicht: gespeichert ist nur, DASS ein Todo erledigt
- * ist, nicht wann. Für die Frage „wie viel schaffe ich an einem Tag, den ich
- * verplant habe" trägt das trotzdem, und es ist die eigene Vergangenheit statt
- * einer erfundenen Zahl. Zu wenig Historie → null statt einer Behauptung.
+ * Es gibt zwei Wege zu dieser Zahl, und der Unterschied ist nicht kosmetisch:
+ *
+ * GEMESSEN. Liegen Erledigungszeiten vor, wird je Plantag gezählt, was an
+ * DIESEM Tag fertig wurde. Was am Montag geplant und am Mittwoch erledigt
+ * wurde, zählt für den Mittwoch — so, wie der Tag wirklich verlief.
+ *
+ * GESCHÄTZT. Ohne Erledigungszeiten bleibt nur, DASS etwas erledigt ist, und
+ * gezählt wird über den geplanten Tag. Bei allem, was verschoben wurde, ist
+ * das die falsche Spalte; als Außensicht gegen den Planungsfehlschluss trägt
+ * es trotzdem, und es ist die eigene Vergangenheit statt einer erfundenen Zahl.
+ *
+ * Die Falle dabei, und der Grund für die Grenze unten: completedAt kam
+ * irgendwann dazu. Zählte man nach dem gemessenen Weg über Tage, die VOR der
+ * ersten festgehaltenen Erledigung liegen, käme dort überall null heraus — und
+ * der Median kippte auf „du schaffst sonst 0". Eine falsche Null ist
+ * schlimmer als eine ehrliche Schätzung. Gemessen wird deshalb nur über den
+ * Zeitraum, der auch gemessen ist; reicht der nicht, wird geschätzt.
+ *
+ * Zu wenig Historie → null statt einer Behauptung.
  */
 export function pastThroughput(todos: readonly Todo[], today = todayISO()): number | null {
-  const doneByDay = new Map<string, number>();
+  const days = plannedPastDays(todos, today);
+  if (days.length < MIN_HISTORY_DAYS) return null;
 
-  for (const todo of todos) {
-    const day = todo.scheduledDate;
-    if (day === null || day >= today) continue;
-    doneByDay.set(day, (doneByDay.get(day) ?? 0) + (todo.completed ? 1 : 0));
+  const doneByDay = doneByCompletionDay(todos);
+  const firstRecorded = [...doneByDay.keys()].sort()[0];
+
+  if (firstRecorded !== undefined) {
+    const measurable = days.filter((day) => day >= firstRecorded);
+    if (measurable.length >= MIN_HISTORY_DAYS) {
+      return median(measurable.map((day) => doneByDay.get(day) ?? 0));
+    }
   }
 
-  if (doneByDay.size < MIN_HISTORY_DAYS) return null;
+  const estimated = new Map<string, number>(days.map((day) => [day, 0]));
+  for (const todo of todos) {
+    const day = todo.scheduledDate;
+    if (day === null || !estimated.has(day) || !todo.completed) continue;
+    estimated.set(day, estimated.get(day)! + 1);
+  }
 
-  const counts = [...doneByDay.values()].sort((a, b) => a - b);
-  const middle = Math.floor(counts.length / 2);
-  return counts.length % 2 === 1
-    ? counts[middle]
-    : Math.round((counts[middle - 1] + counts[middle]) / 2);
+  return median([...estimated.values()]);
 }
 
 export interface DailyLoad {

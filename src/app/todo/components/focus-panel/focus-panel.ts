@@ -3,7 +3,6 @@ import { LucideAngularModule, ChevronDown, Target } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { Todo } from '../../model/todo.model';
 import {
-  dailyLoad,
   focusReason,
   moscowBalance,
   rankForFocus,
@@ -44,8 +43,9 @@ export class FocusPanel {
     rankForFocus(this.scoped()).slice(0, SUGGESTIONS),
   );
 
-  /** Tagesbilanz gegen den eigenen Schnitt — Außensicht statt Bauchgefühl. */
-  protected readonly load = computed(() => dailyLoad(this.scoped()));
+  // Die Tagesbilanz stand hier und noch einmal oben im Auftakt. Sie gehört
+  // dorthin: dort hat sie Platz für den ganzen Satz, statt als Kleingedrucktes
+  // neben einer Überschrift zu stehen.
 
   /** Wichtiges ohne Tag: die Lücke zwischen Vorsatz und Umsetzungsabsicht. */
   protected readonly unplanned = computed(() => unplannedImportant(this.scoped()));

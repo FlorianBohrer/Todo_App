@@ -1,4 +1,4 @@
-<section class="mt-4 p-4 sm:p-0">
+<section class="mt-4 py-2 sm:p-0">
   <!-- Angeklickte Hauptaufgabe: das Feld sagt, wohin das Getippte geht.
        Ohne diese Zeile waere die Auswahl eine unsichtbare Voreinstellung —
        man legt ein Todo an und findet es woanders wieder. -->
@@ -16,12 +16,18 @@
   }
 
  <div class="flex items-end gap-3">
+  <!-- Rund wie der Knopf daneben: beides ist ein Bedienelement, und zwei
+       verschiedene Ecken in einer Zeile lesen sich wie zwei Bausätze.
+
+       „What's next?" statt „Add a todo…": das Feld fragt, statt eine
+       Bedienanleitung zu sein. Dass man hier etwas eintippt, sagt das Feld
+       schon dadurch, dass es eins ist. -->
   <textarea
     #newTodoField
     appAutosize
     rows="1"
-    class="min-h-11 flex-1 resize-none overflow-hidden rounded-xl bg-bg2 px-4 py-3 text-text"
-    [placeholder]="parent() ? 'Add a step…' : 'Add a todo...'"
+    class="min-h-11 flex-1 resize-none overflow-hidden rounded-3xl bg-bg2 px-5 py-3 text-text placeholder:text-subtle"
+    [placeholder]="parent() ? 'Add a step…' : 'What’s next?'"
     [(ngModel)]="newTitle"
     (keydown.enter)="$event.preventDefault(); addTodo()"
     (keydown.escape)="onEscape()"

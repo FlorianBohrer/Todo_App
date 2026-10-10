@@ -1,23 +1,15 @@
 import {ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import {
-  LucideAngularModule,
-  LucideIconData,
-  Briefcase,
-  Mountain,
-  Sun,
-  Star,
-  CircleQuestionMark,
-  Tag,
-} from 'lucide-angular';
+import { LucideAngularModule, Star } from 'lucide-angular';
 import { LabelService } from '../../services/label.service';
 import { TodoService } from '../../services/todo';
 import { splitFolderName } from '../../shared/folder-name';
 import { folderColorClass } from '../../shared/folder-color';
+import { ProgressRing } from '../progress-ring/progress-ring';
 
 
 @Component({
   selector: 'app-favorite-folders',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, ProgressRing],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './favorite-folders.html',
   styleUrl: './favorite-folders.scss',
@@ -110,17 +102,9 @@ toggleFavorite(id: string, event: Event) {
     return this.todoService.progressFor(labelId);
   }
 
-  private readonly iconMap: Record<string, LucideIconData> = {
-    'briefcase': Briefcase,
-    'mountain': Mountain,
-    'sun': Sun,
-    'question-mark-circle': CircleQuestionMark,
-    'tag': Tag,
-  };
-
-  iconFor(icon: string): LucideIconData {
-    return this.iconMap[icon] ?? Tag;
-  }
+  // Kein Symbol mehr und keine Balkenfarbe: der Ring trägt die Farbe des
+  // Ordners über `currentColor`, und ein Symbol daneben hätte nur wiederholt,
+  // was Name und Farbe schon sagen.
 
   textClass(color: string): string {
     return folderColorClass(color, 'text');
@@ -128,14 +112,6 @@ toggleFavorite(id: string, event: Event) {
 
   bgClass(color: string): string {
     return folderColorClass(color, 'bg');
-  }
-
-  iconBoxClass(color: string): string {
-    return folderColorClass(color, 'tile');
-  }
-
-  barClass(color: string): string {
-    return folderColorClass(color, 'bar');
   }
 
   /** Gedämpfter Hintergrund für den Typ-Chip, in der Folder-Farbe. */
