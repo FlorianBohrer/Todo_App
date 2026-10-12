@@ -38,6 +38,8 @@ import { WeekView } from './app/todo/components/week-view/week-view';
 import { PlansView } from './app/plan/components/plans-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
 import { DevicePairing } from './app/todo/components/device-pairing/device-pairing';
+import { LevelBadge } from './app/reward/level-badge/level-badge';
+import { LevelUpOverlay } from './app/reward/level-up/level-up';
 import { LabelService } from './app/todo/services/label.service';
 import { TodoService } from './app/todo/services/todo';
 import { ToastContainer } from './app/shared/toast-container';
@@ -62,6 +64,8 @@ import type { View } from './app/todo/services/todo';
     PlansView,
     UserAccount,
     DevicePairing,
+    LevelBadge,
+    LevelUpOverlay,
     LucideAngularModule,
     ToastContainer,
     ShortcutsOverlay,

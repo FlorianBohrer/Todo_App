@@ -1,7 +1,7 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
-import { distinctUntilChanged, map } from 'rxjs';
+import { Subject, distinctUntilChanged, map } from 'rxjs';
 import { environment } from '../../../environments/enviroment';
 import { RepeatRule, Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
@@ -798,6 +798,17 @@ toggleFavorite(id: string) {
     });
   }
 
+  /**
+   * Jedes Abhaken, als Ereignis.
+   *
+   * Für die Belohnung (reward/reward.service.ts). Sie hängt sich hier an,
+   * statt dass jede Stelle, die abhakt — Liste, Woche, Next up, Pläne —
+   * selbst an sie denken muss. Zurücknehmen meldet nichts: die XP gehen dann
+   * von allein zurück, weil sie aus den erledigten Todos gerechnet werden.
+   */
+  private readonly completedSubject = new Subject<Todo>();
+  readonly completions = this.completedSubject.asObservable();
+
   toggleTodo(id: string) {
     const current = this.todos().find(item => item.id === id);
     if (!current) return;
@@ -813,6 +824,11 @@ toggleFavorite(id: string) {
           : item,
       ),
     );
+
+    if (completed) {
+      const done = this.todoById(id);
+      if (done) this.completedSubject.next(done);
+    }
 
     // Beim Abhaken einer wiederkehrenden Aufgabe legt der SERVER die naechste
     // Ausgabe an, und nur seine Antwort weiss sicher, ob das passiert ist.
