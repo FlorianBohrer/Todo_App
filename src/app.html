@@ -97,9 +97,13 @@
           </button>
         </div>
 
+        <!-- Level und XP. Rechts aussen, weil es in jeder Ansicht gilt und
+             man es nach dem Abhaken sucht, nicht davor. -->
+        <app-level-badge class="ml-auto" />
+
         <!-- Der Weg zu den Kürzeln, für alle, die „?" nicht raten. -->
         <button type="button"
-          class="ml-auto hidden h-10 w-10 place-items-center rounded-full border border-line text-sm text-muted transition hover:border-line-strong hover:text-text sm:grid"
+          class="hidden h-10 w-10 place-items-center rounded-full border border-line text-sm text-muted transition hover:border-line-strong hover:text-text sm:grid"
           (click)="shortcuts.toggle()"
           title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
       </div>
@@ -163,6 +167,7 @@
 
     <app-categories-overlay></app-categories-overlay>
     <app-shortcuts-overlay #shortcuts></app-shortcuts-overlay>
+    <app-level-up />
   </main>
 } @else {
   <div class="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg2">

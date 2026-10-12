@@ -32,6 +32,7 @@ import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
 import { tap } from '../../shared/haptics';
+import { RewardService } from '../../../reward/reward.service';
 import { Rhythm, rhythmByTodo } from '../../shared/rhythm';
 
 import {
@@ -155,6 +156,7 @@ interface TodoRow {
 })
 export class TodoList {
   private readonly todoService = inject(TodoService);
+  private readonly rewards = inject(RewardService);
 
   protected readonly labelService = inject(LabelService);
 
@@ -347,6 +349,10 @@ toggleFolderList(): void {
     // Aufruf vor dem Zustandswechsel und nicht in einem Timeout: der Haken
     // füllt sich im nächsten Frame, und bis dahin hat das Gerät gezuckt.
     tap();
+
+    // Die Belohnung ebenso: Konfetti und Klang im Moment des Klicks, nicht
+    // erst nach der Ausblende-Animation. Der Haken selbst folgt unten.
+    this.rewards.reward(todo);
 
     this.updateIdSet(
       this.completingTodoIds,

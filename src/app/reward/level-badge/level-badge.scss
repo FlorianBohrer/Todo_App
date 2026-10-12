@@ -1,0 +1,33 @@
+/* Nach einem Gewinn: das Abzeichen hüpft und glüht kurz golden auf. Der Blick
+   springt vom Konfetti hierher und sieht, wohin die Punkte gegangen sind. */
+.level-badge.is-pulsing {
+  animation: badge-pulse 900ms var(--pop);
+}
+
+@keyframes badge-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(252 211 77 / 0);
+  }
+  25% {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 6px rgb(252 211 77 / 0.25), 0 0 28px 4px rgb(252 211 77 / 0.45);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 12px rgb(252 211 77 / 0), 0 0 0 0 rgb(252 211 77 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Ohne Hüpfen, nur das Glühen. */
+  .level-badge.is-pulsing {
+    animation: badge-glow 900ms ease;
+  }
+
+  @keyframes badge-glow {
+    25% {
+      border-color: rgb(252 211 77 / 0.8);
+    }
+  }
+}
