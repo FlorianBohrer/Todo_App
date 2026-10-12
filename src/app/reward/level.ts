@@ -48,7 +48,7 @@ const TITLES: ReadonlyArray<readonly [number, string]> = [
 ];
 
 export function titleFor(level: number): string {
-  let title = TITLES[0][1];
+  let title = '';
   for (const [from, name] of TITLES) {
     if (level >= from) title = name;
   }

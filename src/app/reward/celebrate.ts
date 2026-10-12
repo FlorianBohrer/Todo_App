@@ -36,7 +36,7 @@ export function centerOf(element: Element): Point {
 }
 
 /** Jetzt, oder sobald der Tab wieder zu sehen ist. */
-function whenVisible(run: () => void): void {
+export function whenVisible(run: () => void): void {
   if (document.visibilityState === 'visible') {
     run();
     return;
@@ -236,7 +236,7 @@ export function burst(origin: Point, options: BurstOptions): void {
         vx: Math.cos(direction) * speed,
         vy: Math.sin(direction) * speed,
         size: 6 + Math.random() * 6,
-        color: options.colors[Math.floor(Math.random() * options.colors.length)],
+        color: options.colors[Math.floor(Math.random() * options.colors.length)] ?? '#FFFFFF',
         rotation: Math.random() * Math.PI * 2,
         spin: (Math.random() - 0.5) * 0.02,
         flutter: Math.random() * Math.PI * 2,
