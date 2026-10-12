@@ -307,9 +307,13 @@
     --color-highlight11: #5CC7BC;   /* Hover / Fokus */
     --color-highlight22: #9FE3DB;   /* hellster Akzent */
 
-    --color-button:   #1A736B;
-    --color-button1:  #1A736B;      /* primärer Button */
-    --color-button2:  #135C55;      /* gedrückt */
+    /* Dieselben Namen wie im Flow-Timer (--color-button /
+       --color-button-pressed), damit beide Apps gleich lesbar bleiben. Die
+       Werte hier sind nur der Ausgangszustand; die Ansicht überschreibt sie
+       (siehe „Drei Ansichten, drei Farben"). */
+    --color-button:          #1A736B;   /* primärer Knopf, ruhend */
+    --color-button-pressed:  #135C55;   /* primärer Knopf, gedrückt */
+    --color-button1:         #1A736B;   /* derselbe Ton, für bg-button1 in Vorlagen */
 
     /* Semantic */
     --color-brand:    #1A736B;
@@ -417,9 +421,27 @@
    einzeln zu ersetzen: `text-indigo-300` liest in Tailwind v4
    var(--color-indigo-300), und das steht hier.
 
-   Kontraste nachgerechnet, nicht geschätzt (Weiß auf der Fläche / Stufe
-   300 als Schrift auf Panel): Türkis 5.66 / 7.02, Orange 5.48 / 6.23,
-   Bordeaux 6.42 / 5.56. Das alte Indigo lag bei 4.41 / 4.77.
+   Kontraste gemessen, nicht geschätzt — an den gerenderten Farben, in
+   allen drei Ansichten. PRODUCT.md verlangt WCAG 2.1 AA, also 4.5:1 für
+   Schrift in normaler Größe, und die Beschriftungen hier sind text-sm:
+
+                                 Türkis  Orange  Bordeaux
+     #ECF0F6 auf Stufe 500        4.95    4.79    5.61   .btn-primary
+     #ECF0F6 auf Stufe 600        6.83    6.57    7.40   .btn-primary:active
+     Weiß auf Stufe 500           5.66    5.48    6.42   .filter-pill + aktiver Tab
+     Stufe 300 auf Panel          7.02    6.23    5.56   brand-2 als Schrift
+
+   Am knappsten ist Orange unter .btn-primary (4.79). Wer --accent-500 der
+   Woche aufhellt, rechnet zuerst hier nach.
+
+   Gedrückt liegt Stufe 600 um 7 bis 9 L* unter Stufe 500 (Türkis 43.6 →
+   34.9, Orange 44.5 → 35.9, Bordeaux 40.2 → 32.7): sichtbar dunkler, und
+   der Kontrast steigt dabei, statt zu fallen.
+
+   Zum Vergleich das alte Indigo #4F6BF6: #ECF0F6 darauf 3.85, Weiß 4.41 —
+   beides unter 4.5. Der Flow-Timer hat es deshalb auf #3B55D9 abgedunkelt
+   (5.27 / 6.02). Hier war das nicht nötig, weil die Ansichtsfarben es
+   abgelöst haben; die Namen der Tokens sind aber dieselben.
    ================================================================ */
 :root,
 [data-view='list'] {
@@ -464,9 +486,9 @@
      lesen, die dunkle Stufe als Schrift auf dunklem Grund auch nicht.
        button*  = Fläche, weisse Schrift darauf
        brand-2  = Farbe AUF dunklem Grund: Text, Symbol, dünne Linie */
-  --color-button:  var(--accent-500);
-  --color-button1: var(--accent-500);
-  --color-button2: var(--accent-600);
+  --color-button:         var(--accent-500);
+  --color-button-pressed: var(--accent-600);
+  --color-button1:        var(--accent-500);
 
   --color-brand:   var(--accent-500);
   --color-brand-2: var(--accent-300);
@@ -509,25 +531,27 @@
       box-shadow 150ms ease;
   }
 
+  /* #ECF0F6 auf der Ansichtsfarbe: ruhend 4.79 bis 5.61, gedrückt 6.57 bis
+     7.40 — gemessen, Tabelle bei „Drei Ansichten, drei Farben". */
   .btn-primary {
-    background: var(--color-button1);
+    background: var(--color-button);
     color: var(--color-text);
     box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--color-button1) 30%, transparent),
-      0 8px 24px -8px color-mix(in srgb, var(--color-button1) 55%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--color-button) 30%, transparent),
+      0 8px 24px -8px color-mix(in srgb, var(--color-button) 55%, transparent);
   }
   .btn-primary:hover {
     transform: translateY(-1px);
     box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--color-button1) 40%, transparent),
-      0 12px 28px -8px color-mix(in srgb, var(--color-button1) 65%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--color-button) 40%, transparent),
+      0 12px 28px -8px color-mix(in srgb, var(--color-button) 65%, transparent);
   }
   .btn-primary:active {
     transform: translateY(0);
-    background: var(--color-button2);
+    background: var(--color-button-pressed);
     box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--color-button2) 50%, transparent),
-      0 4px 12px -6px color-mix(in srgb, var(--color-button2) 60%, transparent);
+      0 0 0 1px color-mix(in srgb, var(--color-button-pressed) 50%, transparent),
+      0 4px 12px -6px color-mix(in srgb, var(--color-button-pressed) 60%, transparent);
   }
 
   /* ---- Inputs ---- */
@@ -925,10 +949,11 @@ select {
     (100% - (var(--tab-count, 4) - 1) * 0.5rem - 0.5rem) / var(--tab-count, 4)
   );
   border-radius: 9999px;
-  background: var(--color-button1);
+  /* Weiß darauf (.filter-tab.is-active): 5.48 bis 6.42, gemessen. */
+  background: var(--color-button);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-button1) 35%, transparent),
-    0 6px 18px -8px color-mix(in srgb, var(--color-button1) 65%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--color-button) 35%, transparent),
+    0 6px 18px -8px color-mix(in srgb, var(--color-button) 65%, transparent);
   transform: translateX(calc(var(--tab-index, 0) * (100% + 0.5rem)));
   transition: transform 340ms var(--spring);
 }
