@@ -159,6 +159,11 @@
                 <span class="week-card-title min-w-0 flex-1 break-words leading-snug"
                       [class.line-through]="todo.completed"
                       [attr.title]="displayTitle(todo.title)">
+                  @if (badge(todo.title); as level) {
+                    <span class="week-badge mr-1 inline-block rounded px-1 align-[0.08em] text-2xs font-bold uppercase tracking-wide"
+                      [class]="tokenClass(level)"
+                      [attr.title]="tokenDescription[level]">{{ tokenLabel[level] }}</span>
+                  }
                   {{ displayTitle(todo.title) }}
                 </span>
 
@@ -260,6 +265,11 @@
               [class]="borderClass(todo)"
               [class.opacity-60]="todo.completed">
               <span class="break-words leading-snug" [class.line-through]="todo.completed">
+                @if (badge(todo.title); as level) {
+                  <span class="week-badge mr-1 inline-block rounded px-1 align-[0.08em] text-2xs font-bold uppercase tracking-wide"
+                    [class]="tokenClass(level)"
+                    [attr.title]="tokenDescription[level]">{{ tokenLabel[level] }}</span>
+                }
                 {{ displayTitle(todo.title) }}
               </span>
             </div>

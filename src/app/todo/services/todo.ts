@@ -6,7 +6,7 @@ import { environment } from '../../../environments/enviroment';
 import { RepeatRule, Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
-import { appendUnder, orderWithSubtasks } from '../shared/title-priority';
+import { appendUnder, orderWithSubtasks, stripPriorityPrefix } from '../shared/title-priority';
 import { scheduleLabel } from '../shared/schedule';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
@@ -766,8 +766,9 @@ toggleFavorite(id: string) {
 
     this.todos.update(list => list.filter(item => item.id !== id));
 
-    const shortTitle =
-      removed.title.length > 30 ? `${removed.title.slice(0, 30)}…` : removed.title;
+    // Ohne Präfix: „/must Steuer" ist ein Steuerzeichen, kein Name.
+    const plain = stripPriorityPrefix(removed.title).split('\n')[0];
+    const shortTitle = plain.length > 30 ? `${plain.slice(0, 30)}…` : plain;
 
     const deleteTimeout = setTimeout(() => {
       this.toast.dismiss(toastId);
