@@ -149,10 +149,28 @@
                 title="Came from a plan"></lucide-icon>
             }
 
-            @if (row.badge) {
+            <!-- Das Präfix als Zeichen, nie als Text. Beim Bearbeiten wird
+                 daraus ein Chip, den man wegnehmen kann — dann zeigt er auch
+                 Main und Step, die sonst die Einrückung sagt. -->
+            @if (editingId() === todo.id) {
+              @if (editToken(); as token) {
+                <button
+                  type="button"
+                  class="flex flex-none items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
+                  [class]="tokenClass(token)"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="clearEditToken(todoText)"
+                  [attr.aria-label]="tokenDescription[token] + ', remove'"
+                  title="Remove (Backspace at the start)">
+                  {{ tokenLabel[token] }}
+                  <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-70" aria-hidden="true"></lucide-icon>
+                </button>
+              }
+            } @else if (row.badge) {
               <span
                 class="flex-none rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
-                [class]="row.badgeClass">
+                [class]="row.badgeClass"
+                [attr.title]="tokenDescription[row.badge]">
                 {{ row.badgeLabel }}
               </span>
             }
@@ -165,6 +183,8 @@
               [class.pointer-events-none]="editingId() !== todo.id"
               (blur)="finishEditing(todo, todoText)"
               (keydown.escape)="cancelEditing(todo, todoText)"
+              (input)="onEditInput(todoText)"
+              (keydown.backspace)="onEditBackspace($event, todoText)"
               class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-lg bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-text"
               [class.todo-collapsed]="
                 row.canExpand &&
