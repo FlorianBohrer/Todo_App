@@ -1,4 +1,13 @@
-import {ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import type { LucideIconData } from 'lucide-angular';
 import {
   ConnectedPosition,
@@ -19,19 +28,29 @@ import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
 import {
   MoscowLevel,
-  MOSCOW_LABEL,
   moveWithSubtasks,
   stripPriorityPrefix,
   priorityBadge,
   subtaskGroups,
   taskLevel,
   TaskLevel,
-  withTaskLevel,
 } from '../../shared/title-priority';
+import {
+  TOKEN_DESCRIPTION,
+  TOKEN_ICON,
+  TitleToken,
+  joinTitle,
+  splitTitle,
+  tokenClass,
+  tokenOf,
+} from '../../shared/title-token';
+import { TokenChip } from '../../shared/token-chip';
+import { FocusSessionService, formatFocus } from '../../services/focus-session.service';
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
 import { tap } from '../../shared/haptics';
+import { RewardService } from '../../../reward/reward.service';
 import { Rhythm, rhythmByTodo } from '../../shared/rhythm';
 
 import {
@@ -49,6 +68,8 @@ import {
   Archive,
   Undo2,
   FileText,
+  Timer,
+  X,
 } from 'lucide-angular';
 
 /** Ab dieser Laenge (oder bei einem Umbruch) laesst sich eine Zeile aufklappen. */
@@ -109,8 +130,8 @@ interface TodoRow {
   /** Hat der Text ueberhaupt etwas unter der ersten Zeile? */
   hasDetail: boolean;
   canExpand: boolean;
+  /** Die Priorität, gezeigt als Zeichen (TokenChip). */
   badge: MoscowLevel | null;
-  badgeLabel: string;
   /** Haupt- oder Unteraufgabe. Traegt die Einrueckung in der Liste. */
   level: TaskLevel | null;
   /** Die Hauptaufgabe darueber, wenn diese Zeile eine Unteraufgabe ist. */
@@ -119,7 +140,6 @@ interface TodoRow {
   subCount: number;
   /** Letzte Unteraufgabe ihrer Gruppe — dort endet die Fuehrungslinie. */
   lastOfGroup: boolean;
-  badgeClass: string;
   /** Farbe des primären Ordners, als Punkt vor dem Titel. */
   folderDotClass: string;
   folderDotTitle: string;
@@ -148,6 +168,7 @@ interface TodoRow {
     CdkDrag,
     
     CdkDragPlaceholder,
+    TokenChip,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-list.html',
@@ -155,6 +176,59 @@ interface TodoRow {
 })
 export class TodoList {
   private readonly todoService = inject(TodoService);
+  private readonly rewards = inject(RewardService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** Die Zeile, zu der die Suche gerade gesprungen ist — sie leuchtet kurz auf. */
+  protected readonly revealedId = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      const request = this.todoService.revealRequest();
+      if (request) untracked(() => this.reveal(request.id));
+    });
+  }
+
+  /**
+   * Zur Zeile scrollen, sie aufleuchten lassen und ihr den Fokus geben.
+   *
+   * Die Zeile ist nicht immer sofort da: nach dem Wechsel aus der Woche wird
+   * die Liste erst gebaut, und archivierte Todos kommen erst mit der Antwort
+   * des Servers. Deshalb wird ein paar Bilder lang nachgesehen statt einmal.
+   * Der Fokus geht auf den Haken — die Suche hat ihn abgegeben, und er soll
+   * nicht im Nichts landen.
+   */
+  private reveal(id: string): void {
+    let frames = 0;
+
+    const attempt = () => {
+      // Unteraufgabe einer zugeklappten Hauptaufgabe: erst aufklappen.
+      const row = this.rows().find((r) => r.id === id);
+      if (row?.parentId && this.isCollapsed(row.parentId)) this.toggleSubtasks(row.parentId);
+
+      const element = this.host.nativeElement.querySelector<HTMLElement>(
+        `[data-todo-id="${CSS.escape(id)}"]`,
+      );
+      if (!element) {
+        // Rund zwei Sekunden, dann aufgeben — die Ansicht steht trotzdem richtig.
+        if (++frames < 120) requestAnimationFrame(attempt);
+        else this.todoService.revealRequest.set(null);
+        return;
+      }
+
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      element.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+      element.querySelector<HTMLElement>('.todo-checkbox')?.focus({ preventScroll: true });
+
+      this.revealedId.set(id);
+      window.setTimeout(() => {
+        if (this.revealedId() === id) this.revealedId.set(null);
+      }, 1800);
+      this.todoService.revealRequest.set(null);
+    };
+
+    requestAnimationFrame(attempt);
+  }
 
   protected readonly labelService = inject(LabelService);
 
@@ -205,7 +279,8 @@ export class TodoList {
         id: todo.id,
         todo,
         displayTitle: stripped,
-        editTitle: level ? stripped : todo.title,
+        // Auch beim Bearbeiten ohne Präfix: es steht als Chip davor.
+        editTitle: stripped,
         firstLine: first.trim(),
         detailLines: detail,
         hasDetail: detail.length > 0,
@@ -216,8 +291,6 @@ export class TodoList {
         parentId: parentOf.get(todo.id) ?? null,
         subCount: subCounts.get(todo.id) ?? 0,
         lastOfGroup: lastSubs.has(todo.id),
-        badgeLabel: badge ? MOSCOW_LABEL[badge] : '',
-        badgeClass: badge ? this.badgeClass(badge) : '',
         folderDotClass: this.folderDotClass(todo.labelIds),
         folderDotTitle: this.folderDotTitle(todo.labelIds),
         primaryLabelId: todo.labelIds[0] ?? null,
@@ -266,6 +339,25 @@ export class TodoList {
   protected readonly ArchiveIcon = Archive;
   protected readonly RestoreIcon = Undo2;
   protected readonly FromPlanIcon = FileText;
+  protected readonly FocusIcon = Timer;
+
+  /** Fokuszeit aus Flow, je Todo in Sekunden. */
+  protected readonly focusTotals = inject(FocusSessionService).totals;
+  protected readonly formatFocus = formatFocus;
+  protected readonly ClearIcon = X;
+
+  protected readonly tokenIcon = TOKEN_ICON;
+  protected readonly tokenDescription = TOKEN_DESCRIPTION;
+  protected readonly tokenClass = tokenClass;
+
+  /**
+   * Das Präfix der Zeile, die gerade bearbeitet wird — als Chip vor dem Feld.
+   *
+   * Im Feld selbst steht nur der Text. Ein vorn getipptes „/should " wird
+   * sofort zum Chip, Backspace ganz vorn oder ein Klick auf den Chip nimmt es
+   * wieder weg. Gespeichert wird beim Verlassen, wie bisher.
+   */
+  protected readonly editToken = signal<TitleToken | null>(null);
 
 
   /** true, solange die erste Ladung Todos unterwegs ist. */
@@ -348,6 +440,10 @@ toggleFolderList(): void {
     // füllt sich im nächsten Frame, und bis dahin hat das Gerät gezuckt.
     tap();
 
+    // Die Belohnung ebenso: Konfetti und Klang im Moment des Klicks, nicht
+    // erst nach der Ausblende-Animation. Der Haken selbst folgt unten.
+    this.rewards.reward(todo);
+
     this.updateIdSet(
       this.completingTodoIds,
       todo.id,
@@ -399,20 +495,6 @@ toggleFolderList(): void {
    */
   stagger(index: number): number {
     return Math.min(index, 5);
-  }
-
-  /**
-   * Farbe des Badges. Rosé für das Unverhandelbare, Indigo für das Wichtige,
-   * neutral für das Verzichtbare — und Won't tritt zurück: es ist bewusst
-   * draußen, nicht dringend.
-   */
-  badgeClass(level: MoscowLevel): string {
-    switch (level) {
-      case 'must':   return 'bg-rose-500/20 text-rose-300';
-      case 'should': return 'bg-indigo-500/20 text-indigo-300';
-      case 'could':  return 'bg-fill-strong text-muted';
-      case 'wont':   return 'bg-fill text-subtle line-through';
-    }
   }
 
   // ---- Ziel fuer neue Unteraufgaben ----
@@ -488,12 +570,13 @@ toggleFolderList(): void {
     }
   }
 
-  /** Was beim Bearbeiten im Feld steht — ohne „/sub", mit allem anderen. */
+  /** Was beim Bearbeiten im Feld steht — der Text ohne Präfix. */
   private editText(todo: Todo): string {
-    return taskLevel(todo.title) ? stripPriorityPrefix(todo.title) : todo.title;
+    return splitTitle(todo.title).text;
   }
 
   startEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
+    this.editToken.set(tokenOf(todo.title));
     this.editingId.set(todo.id);
     if (this.canExpand(todo.title) && !this.isExpanded(todo.id)) {
       this.toggleExpanded(todo.id, textarea);
@@ -508,15 +591,15 @@ toggleFolderList(): void {
   /**
    * Beim Verlassen des Felds speichern; leerer Text wird verworfen.
    *
-   * Das Feld zeigt bei einer Unteraufgabe den Text ohne „/sub". Gespeichert
-   * wird trotzdem mit — sonst haette jede Bearbeitung die Zeile aus ihrer
-   * Hauptaufgabe herausgeloest, und zwar unsichtbar.
+   * Das Feld zeigt den Text ohne Präfix. Gespeichert wird mit dem Präfix des
+   * Chips — sonst haette jede Bearbeitung die Prioritaet verloren oder eine
+   * Unteraufgabe aus ihrer Hauptaufgabe herausgeloest, und zwar unsichtbar.
    */
   finishEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
     if (this.editingId() !== todo.id) return;
     this.editingId.set(null);
     const typed = textarea.value.trim();
-    const title = withTaskLevel(typed, taskLevel(todo.title));
+    const title = joinTitle(this.editToken(), typed);
     if (typed && title !== todo.title) {
       this.renameTodo(todo.id, title);
     } else {
@@ -527,8 +610,35 @@ toggleFolderList(): void {
   /** Escape: Änderung verwerfen. */
   cancelEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
     textarea.value = this.editText(todo);
+    this.editToken.set(tokenOf(todo.title));
     this.editingId.set(null);
     textarea.blur();
+  }
+
+  /** Beim Tippen: ein fertiges Präfix ganz vorn wird zum Chip. */
+  onEditInput(textarea: HTMLTextAreaElement): void {
+    const { token, text } = splitTitle(textarea.value);
+    if (token === null) return;
+
+    this.editToken.set(token);
+    textarea.value = text;
+    // Der Cursor stand hinter dem getippten Leerzeichen, also ganz vorn im
+    // eigentlichen Text. Dort bleibt er.
+    textarea.setSelectionRange(0, 0);
+  }
+
+  /** Backspace ganz vorn nimmt den Chip weg, wie jedes Zeichen links vom Cursor. */
+  onEditBackspace(event: Event, textarea: HTMLTextAreaElement): void {
+    if (this.editToken() === null) return;
+    if (textarea.selectionStart !== 0 || textarea.selectionEnd !== 0) return;
+
+    event.preventDefault();
+    this.editToken.set(null);
+  }
+
+  clearEditToken(textarea: HTMLTextAreaElement): void {
+    this.editToken.set(null);
+    textarea.focus();
   }
 
   private updateIdSet(

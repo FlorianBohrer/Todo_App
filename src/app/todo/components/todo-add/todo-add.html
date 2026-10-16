@@ -22,17 +22,39 @@
        „What's next?" statt „Add a todo…": das Feld fragt, statt eine
        Bedienanleitung zu sein. Dass man hier etwas eintippt, sagt das Feld
        schon dadurch, dass es eins ist. -->
-  <textarea
-    #newTodoField
-    appAutosize
-    rows="1"
-    class="min-h-11 flex-1 resize-none overflow-hidden rounded-3xl bg-bg2 px-5 py-3 text-text placeholder:text-subtle"
-    [placeholder]="parent() ? 'Add a step…' : 'What’s next?'"
-    [(ngModel)]="newTitle"
-    (keydown.enter)="$event.preventDefault(); addTodo()"
-    (keydown.escape)="onEscape()"
-    aria-label="New todo"
-  ></textarea>
+  <!-- Die Fläche gehört jetzt dem Rahmen um Chip und Textfeld, nicht dem
+       Textfeld allein: der Chip steht IM Feld, vor dem Text, so wie das
+       Präfix vorher davorstand. Der Fokusring folgt mit focus-within. -->
+  <div
+    class="todo-add-field flex min-h-11 flex-1 items-start gap-2 rounded-3xl bg-bg2 px-5 py-3"
+    (click)="newTodoField.focus()">
+    @if (token(); as current) {
+      <button
+        type="button"
+        class="token-chip flex h-6 flex-none items-center gap-0.5 rounded-md pl-1 pr-1"
+        [class]="tokenClass(current)"
+        (click)="$event.stopPropagation(); clearToken()"
+        [attr.aria-label]="tokenDescription[current] + ', remove'"
+        [title]="tokenDescription[current] + ' · remove (Backspace at the start)'">
+        <lucide-icon [img]="tokenIcon[current]" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+        <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
+      </button>
+    }
+
+    <textarea
+      #newTodoField
+      appAutosize
+      rows="1"
+      class="min-w-0 flex-1 resize-none overflow-hidden bg-transparent p-0 text-text placeholder:text-subtle"
+      [placeholder]="parent() ? 'Add a step…' : 'What’s next?'"
+      [ngModel]="newTitle"
+      (ngModelChange)="onInput($event)"
+      (keydown.enter)="$event.preventDefault(); addTodo()"
+      (keydown.escape)="onEscape()"
+      (keydown.backspace)="onBackspace($event)"
+      [attr.aria-label]="token() ? 'New todo, ' + tokenDescription[token()!] : 'New todo'"
+    ></textarea>
+  </div>
 
   <button
     type="button"

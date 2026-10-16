@@ -79,6 +79,8 @@
       [class.todo-main]="row.level === 'main'"
       [class.todo-parent]="row.subCount > 0"
       [class.todo-target]="activeParentId() === row.id"
+      [class.todo-card--revealed]="revealedId() === row.id"
+      [attr.data-todo-id]="row.id"
       [style.--i]="row.stagger"
       (click)="selectParent(row, $event)"
     >
@@ -149,12 +151,25 @@
                 title="Came from a plan"></lucide-icon>
             }
 
-            @if (row.badge) {
-              <span
-                class="flex-none rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
-                [class]="row.badgeClass">
-                {{ row.badgeLabel }}
-              </span>
+            <!-- Das Präfix als Zeichen, nie als Text. Beim Bearbeiten wird
+                 daraus ein Chip, den man wegnehmen kann — dann zeigt er auch
+                 Main und Step, die sonst die Einrückung sagt. -->
+            @if (editingId() === todo.id) {
+              @if (editToken(); as token) {
+                <button
+                  type="button"
+                  class="flex h-5 flex-none items-center gap-0.5 rounded-md pl-[3px] pr-1"
+                  [class]="tokenClass(token)"
+                  (mousedown)="$event.preventDefault()"
+                  (click)="clearEditToken(todoText)"
+                  [attr.aria-label]="tokenDescription[token] + ', remove'"
+                  [title]="tokenDescription[token] + ' · remove (Backspace at the start)'">
+                  <lucide-icon [img]="tokenIcon[token]" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+                  <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
+                </button>
+              }
+            } @else if (row.badge) {
+              <app-token-chip [token]="row.badge" />
             }
 
             <textarea
@@ -165,6 +180,8 @@
               [class.pointer-events-none]="editingId() !== todo.id"
               (blur)="finishEditing(todo, todoText)"
               (keydown.escape)="cancelEditing(todo, todoText)"
+              (input)="onEditInput(todoText)"
+              (keydown.backspace)="onEditBackspace($event, todoText)"
               class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-lg bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-text"
               [class.todo-collapsed]="
                 row.canExpand &&
@@ -223,6 +240,18 @@
                 : 'Expand todo to read the full text'">
               <lucide-icon [img]="ExpandIcon" class="h-4 w-4"></lucide-icon>
             </button>
+          }
+
+          <!-- Wie viel Fokus in Flow schon in diese Aufgabe geflossen ist.
+               Erst ab einer Minute: weniger ist ein Fehlstart, keine Arbeit. -->
+          @let focused = focusTotals().get(todo.id) ?? 0;
+          @if (focused >= 60) {
+            <span class="hidden flex-shrink-0 items-center gap-1 text-2xs tabular-nums text-subtle sm:flex"
+              [title]="'Focused ' + formatFocus(focused) + ' in Flow'"
+              [attr.aria-label]="'Focused ' + formatFocus(focused) + ' in Flow'">
+              <lucide-icon [img]="FocusIcon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+              {{ formatFocus(focused) }}
+            </span>
           }
 
           <!-- Termin: geplant -> Chip mit dem Tag, sonst -> Kalender-Knopf.

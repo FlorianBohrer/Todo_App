@@ -32,7 +32,9 @@ import {
 } from '../../shared/week';
 import { isTypingTarget } from '../../shared/keyboard';
 import { pastThroughput } from '../../shared/focus';
-import { stripPriorityPrefix } from '../../shared/title-priority';
+import { priorityBadge, stripPriorityPrefix } from '../../shared/title-priority';
+import { TitleToken } from '../../shared/title-token';
+import { TokenChip } from '../../shared/token-chip';
 import { folderColorClass } from '../../shared/folder-color';
 
 /** Ein Wochentag mit allem, was seine Spalte zeigt — in einem Rutsch gerechnet. */
@@ -50,7 +52,7 @@ const UNSCHEDULED = '';
 
 @Component({
   selector: 'app-week-view',
-  imports: [LucideAngularModule, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [LucideAngularModule, CdkDropListGroup, CdkDropList, CdkDrag, TokenChip],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './week-view.html',
   styleUrl: './week-view.scss',
@@ -289,6 +291,19 @@ export class WeekView {
   displayTitle(title: string): string {
     return stripPriorityPrefix(title);
   }
+
+  /**
+   * Die Priorität als Chip.
+   *
+   * Vorher schnitt displayTitle das Präfix ab und sonst nichts — in der Woche
+   * war ein Must-have von einem Could-have nicht zu unterscheiden. Nur
+   * MoSCoW: Main und Step sind eine Gliederung der Liste, in einer Tagesspalte
+   * gibt es nichts, worunter ein Schritt hängen könnte.
+   */
+  badge(title: string): TitleToken | null {
+    return priorityBadge(title);
+  }
+
 
   borderClass(todo: Todo): string {
     return this.labelService.borderClassFor(todo.labelIds[0] ?? null);

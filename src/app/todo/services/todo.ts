@@ -1,12 +1,14 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
-import { distinctUntilChanged, map } from 'rxjs';
+import { Subject, distinctUntilChanged, map } from 'rxjs';
 import { environment } from '../../../environments/enviroment';
 import { RepeatRule, Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
-import { appendUnder, orderWithSubtasks } from '../shared/title-priority';
+import { appendUnder, orderWithSubtasks, stripPriorityPrefix } from '../shared/title-priority';
+import { TitleToken, splitTitle } from '../shared/title-token';
+import { normalize, score } from '../../search/search';
 import { scheduleLabel } from '../shared/schedule';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
@@ -116,6 +118,13 @@ export class TodoService {
    readonly searchTerm = signal('');
 
   /**
+   * Ein Präfix als Filter der Listensuche: „/must " im Suchfeld wird zum
+   * Zeichen und zeigt nur noch Must-haves — dasselbe Verhalten wie beim
+   * Anlegen, nur dass hier gefiltert statt gesetzt wird.
+   */
+  readonly searchToken = signal<TitleToken | null>(null);
+
+  /**
    * Alle Todos des aktiven Folders, ohne Status- und Suchfilter. Das ist der
    * Ausschnitt, über den Kopfzeile und Statistik sprechen — und über den die
    * Priorisierung sprechen muss, damit beide dasselbe meinen.
@@ -158,10 +167,20 @@ export class TodoService {
     if (f === 'completed') items = items.filter(i => i.completed);
     if (f === 'favorites') items = items.filter(i => i.isFavorite && !i.completed);
 
-        // Titel-Suche (case-insensitive)
-    const term = this.searchTerm().trim().toLowerCase();
-    if (term) {
-      items = items.filter(i => i.title.toLowerCase().includes(term));
+    // Titel-Suche: im TEXT, nicht im Präfix.
+    //
+    // Vorher lief sie über den rohen Titel. Seit das Präfix nur noch als
+    // Zeichen erscheint, fand „must" jedes Must-have, ohne dass das Wort
+    // irgendwo zu sehen war. Jetzt dieselbe Regel wie in der grossen Suche:
+    // jedes Wort muss vorkommen, Reihenfolge, Akzente und Grossschreibung egal.
+    const terms = normalize(this.searchTerm()).split(/\s+/).filter((t) => t.length > 0);
+    if (terms.length > 0) {
+      items = items.filter((i) => score(splitTitle(i.title).text, terms) !== null);
+    }
+
+    const token = this.searchToken();
+    if (token !== null) {
+      items = items.filter((i) => splitTitle(i.title).token === token);
     }
 
     // Priorität per Titel-Präfix: /must zuerst, /could danach. Unteraufgaben
@@ -476,6 +495,46 @@ export class TodoService {
   /** Liste vs. Woche vs. Pläne. Startet dort, wo man zuletzt war. */
   readonly view = signal<View>(storedView());
 
+  // ---- Hinspringen ----
+
+  /**
+   * Welche Zeile die Liste zeigen soll — gesetzt von der Suche, abgeholt und
+   * zurückgesetzt von der Liste. Die Zahl macht zwei Sprünge zum selben Todo
+   * zu zwei Ereignissen.
+   */
+  readonly revealRequest = signal<{ id: string; seq: number } | null>(null);
+  private revealSeq = 0;
+
+  /**
+   * Ein Todo in der Liste zeigen, egal wo es gerade steht.
+   *
+   * Stellt dafür um, was es verdecken würde: einen anderen Ordner, einen
+   * Status-Filter, eine Suche, das ausgeblendete Archiv. Nur so viel wie
+   * nötig — wer in „Work" sucht und dort fündig wird, bleibt in „Work".
+   */
+  reveal(todo: Todo) {
+    const folder = this.labelService.activeLabelId();
+    if (folder !== null && !todo.labelIds.includes(folder)) {
+      this.labelService.activeLabelId.set(null);
+    }
+
+    this.searchTerm.set('');
+    this.searchToken.set(null);
+
+    const f = this.filter();
+    const visible =
+      f === 'all' ||
+      (f === 'active' && !todo.completed) ||
+      (f === 'completed' && todo.completed) ||
+      (f === 'favorites' && todo.isFavorite && !todo.completed);
+    if (!visible) this.filter.set('all');
+
+    if (todo.archivedAt !== null && !this.showArchived()) this.toggleArchiveView();
+
+    this.view.set('list');
+    this.revealRequest.set({ id: todo.id, seq: ++this.revealSeq });
+  }
+
   /** Mehrere Todos auf denselben Tag umplanen. */
   rescheduleAll(ids: string[], scheduledDate: string | null) {
     for (const id of ids) this.scheduleTodo(id, scheduledDate);
@@ -766,8 +825,9 @@ toggleFavorite(id: string) {
 
     this.todos.update(list => list.filter(item => item.id !== id));
 
-    const shortTitle =
-      removed.title.length > 30 ? `${removed.title.slice(0, 30)}…` : removed.title;
+    // Ohne Präfix: „/must Steuer" ist ein Steuerzeichen, kein Name.
+    const plain = stripPriorityPrefix(removed.title).split('\n')[0];
+    const shortTitle = plain.length > 30 ? `${plain.slice(0, 30)}…` : plain;
 
     const deleteTimeout = setTimeout(() => {
       this.toast.dismiss(toastId);
@@ -798,6 +858,17 @@ toggleFavorite(id: string) {
     });
   }
 
+  /**
+   * Jedes Abhaken, als Ereignis.
+   *
+   * Für die Belohnung (reward/reward.service.ts). Sie hängt sich hier an,
+   * statt dass jede Stelle, die abhakt — Liste, Woche, Next up, Pläne —
+   * selbst an sie denken muss. Zurücknehmen meldet nichts: die XP gehen dann
+   * von allein zurück, weil sie aus den erledigten Todos gerechnet werden.
+   */
+  private readonly completedSubject = new Subject<Todo>();
+  readonly completions = this.completedSubject.asObservable();
+
   toggleTodo(id: string) {
     const current = this.todos().find(item => item.id === id);
     if (!current) return;
@@ -813,6 +884,11 @@ toggleFavorite(id: string) {
           : item,
       ),
     );
+
+    if (completed) {
+      const done = this.todoById(id);
+      if (done) this.completedSubject.next(done);
+    }
 
     // Beim Abhaken einer wiederkehrenden Aufgabe legt der SERVER die naechste
     // Ausgabe an, und nur seine Antwort weiss sicher, ob das passiert ist.
