@@ -1,4 +1,13 @@
-import {ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import type { LucideIconData } from 'lucide-angular';
 import {
   ConnectedPosition,
@@ -28,13 +37,14 @@ import {
 } from '../../shared/title-priority';
 import {
   TOKEN_DESCRIPTION,
-  TOKEN_LABEL,
+  TOKEN_ICON,
   TitleToken,
   joinTitle,
   splitTitle,
   tokenClass,
   tokenOf,
 } from '../../shared/title-token';
+import { TokenChip } from '../../shared/token-chip';
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
@@ -118,8 +128,8 @@ interface TodoRow {
   /** Hat der Text ueberhaupt etwas unter der ersten Zeile? */
   hasDetail: boolean;
   canExpand: boolean;
+  /** Die Priorität, gezeigt als Zeichen (TokenChip). */
   badge: MoscowLevel | null;
-  badgeLabel: string;
   /** Haupt- oder Unteraufgabe. Traegt die Einrueckung in der Liste. */
   level: TaskLevel | null;
   /** Die Hauptaufgabe darueber, wenn diese Zeile eine Unteraufgabe ist. */
@@ -128,7 +138,6 @@ interface TodoRow {
   subCount: number;
   /** Letzte Unteraufgabe ihrer Gruppe — dort endet die Fuehrungslinie. */
   lastOfGroup: boolean;
-  badgeClass: string;
   /** Farbe des primären Ordners, als Punkt vor dem Titel. */
   folderDotClass: string;
   folderDotTitle: string;
@@ -157,6 +166,7 @@ interface TodoRow {
     CdkDrag,
     
     CdkDragPlaceholder,
+    TokenChip,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-list.html',
@@ -165,6 +175,58 @@ interface TodoRow {
 export class TodoList {
   private readonly todoService = inject(TodoService);
   private readonly rewards = inject(RewardService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** Die Zeile, zu der die Suche gerade gesprungen ist — sie leuchtet kurz auf. */
+  protected readonly revealedId = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      const request = this.todoService.revealRequest();
+      if (request) untracked(() => this.reveal(request.id));
+    });
+  }
+
+  /**
+   * Zur Zeile scrollen, sie aufleuchten lassen und ihr den Fokus geben.
+   *
+   * Die Zeile ist nicht immer sofort da: nach dem Wechsel aus der Woche wird
+   * die Liste erst gebaut, und archivierte Todos kommen erst mit der Antwort
+   * des Servers. Deshalb wird ein paar Bilder lang nachgesehen statt einmal.
+   * Der Fokus geht auf den Haken — die Suche hat ihn abgegeben, und er soll
+   * nicht im Nichts landen.
+   */
+  private reveal(id: string): void {
+    let frames = 0;
+
+    const attempt = () => {
+      // Unteraufgabe einer zugeklappten Hauptaufgabe: erst aufklappen.
+      const row = this.rows().find((r) => r.id === id);
+      if (row?.parentId && this.isCollapsed(row.parentId)) this.toggleSubtasks(row.parentId);
+
+      const element = this.host.nativeElement.querySelector<HTMLElement>(
+        `[data-todo-id="${CSS.escape(id)}"]`,
+      );
+      if (!element) {
+        // Rund zwei Sekunden, dann aufgeben — die Ansicht steht trotzdem richtig.
+        if (++frames < 120) requestAnimationFrame(attempt);
+        else this.todoService.revealRequest.set(null);
+        return;
+      }
+
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      element.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+      element.querySelector<HTMLElement>('.todo-checkbox')?.focus({ preventScroll: true });
+
+      this.revealedId.set(id);
+      window.setTimeout(() => {
+        if (this.revealedId() === id) this.revealedId.set(null);
+      }, 1800);
+      this.todoService.revealRequest.set(null);
+    };
+
+    requestAnimationFrame(attempt);
+  }
 
   protected readonly labelService = inject(LabelService);
 
@@ -227,8 +289,6 @@ export class TodoList {
         parentId: parentOf.get(todo.id) ?? null,
         subCount: subCounts.get(todo.id) ?? 0,
         lastOfGroup: lastSubs.has(todo.id),
-        badgeLabel: badge ? TOKEN_LABEL[badge] : '',
-        badgeClass: badge ? tokenClass(badge) : '',
         folderDotClass: this.folderDotClass(todo.labelIds),
         folderDotTitle: this.folderDotTitle(todo.labelIds),
         primaryLabelId: todo.labelIds[0] ?? null,
@@ -279,7 +339,7 @@ export class TodoList {
   protected readonly FromPlanIcon = FileText;
   protected readonly ClearIcon = X;
 
-  protected readonly tokenLabel = TOKEN_LABEL;
+  protected readonly tokenIcon = TOKEN_ICON;
   protected readonly tokenDescription = TOKEN_DESCRIPTION;
   protected readonly tokenClass = tokenClass;
 
