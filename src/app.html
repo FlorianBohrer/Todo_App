@@ -97,9 +97,22 @@
           </button>
         </div>
 
+        <!-- Die Suche über alles. Ein Knopf und kein Feld: ein Feld in der
+             Leiste nähme der Ordner-Pille den Platz, und gesucht wird mit
+             ⌘K ohnehin meist von der Tastatur aus. Auf dem Telefon ist der
+             Knopf der einzige Weg. -->
+        <button type="button"
+          class="ml-auto grid h-10 w-10 flex-none place-items-center rounded-full border border-line text-muted transition hover:border-line-strong hover:text-text"
+          (click)="search()?.open()"
+          [title]="'Search everything (' + searchHint() + ')'"
+          aria-label="Search everything"
+          aria-haspopup="dialog">
+          <lucide-icon [img]="SearchIcon" class="h-4 w-4"></lucide-icon>
+        </button>
+
         <!-- Level und XP. Rechts aussen, weil es in jeder Ansicht gilt und
              man es nach dem Abhaken sucht, nicht davor. -->
-        <app-level-badge class="ml-auto" />
+        <app-level-badge />
 
         <!-- Der Weg zu den Kürzeln, für alle, die „?" nicht raten. -->
         <button type="button"
@@ -168,6 +181,7 @@
     <app-categories-overlay></app-categories-overlay>
     <app-shortcuts-overlay #shortcuts></app-shortcuts-overlay>
     <app-level-up />
+    <app-search-palette />
   </main>
 } @else {
   <div class="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg2">

@@ -33,7 +33,8 @@ import {
 import { isTypingTarget } from '../../shared/keyboard';
 import { pastThroughput } from '../../shared/focus';
 import { priorityBadge, stripPriorityPrefix } from '../../shared/title-priority';
-import { TOKEN_DESCRIPTION, TOKEN_LABEL, TitleToken, tokenClass } from '../../shared/title-token';
+import { TitleToken } from '../../shared/title-token';
+import { TokenChip } from '../../shared/token-chip';
 import { folderColorClass } from '../../shared/folder-color';
 
 /** Ein Wochentag mit allem, was seine Spalte zeigt — in einem Rutsch gerechnet. */
@@ -51,7 +52,7 @@ const UNSCHEDULED = '';
 
 @Component({
   selector: 'app-week-view',
-  imports: [LucideAngularModule, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [LucideAngularModule, CdkDropListGroup, CdkDropList, CdkDrag, TokenChip],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './week-view.html',
   styleUrl: './week-view.scss',
@@ -303,9 +304,6 @@ export class WeekView {
     return priorityBadge(title);
   }
 
-  protected readonly tokenLabel = TOKEN_LABEL;
-  protected readonly tokenDescription = TOKEN_DESCRIPTION;
-  protected readonly tokenClass = tokenClass;
 
   borderClass(todo: Todo): string {
     return this.labelService.borderClassFor(todo.labelIds[0] ?? null);

@@ -10,6 +10,16 @@
  * und Text, Zeichen und Text → Titel, und wie ein Zeichen aussieht.
  */
 import {
+  Ban,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUp,
+  CornerDownRight,
+  ListTree,
+  type LucideIconData,
+} from 'lucide-angular';
+
+import {
   MoscowLevel,
   TaskLevel,
   priorityBadge,
@@ -29,7 +39,29 @@ const PREFIX: Record<TitleToken, string> = {
   sub: '/sub ',
 };
 
-/** Die Aufschrift des Chips. */
+/**
+ * Das Zeichen selbst — ein Symbol, kein Wort.
+ *
+ * Vorher stand „MUST" im Chip. Das war das Präfix in Großbuchstaben: immer
+ * noch geschrieben, nur anders. Jetzt sagt die Form, was gemeint ist, so wie
+ * Prioritäten in Issue-Trackern seit jeher aussehen: zwei Pfeile hinauf für
+ * das Unverhandelbare, einer für das Wichtige, einer hinab für das
+ * Verzichtbare, durchgestrichen für das bewusst Ausgeschlossene. Main und
+ * Step zeigen die Gliederung: ein Baum, ein Haken nach rechts unten.
+ *
+ * Die Form trägt die Bedeutung, nicht die Farbe — auch farbenblind bleibt
+ * ⇈ von ↓ zu unterscheiden. Das Wort steht im Tooltip und für Screenreader.
+ */
+export const TOKEN_ICON: Record<TitleToken, LucideIconData> = {
+  must: ChevronsUp,
+  should: ChevronUp,
+  could: ChevronDown,
+  wont: Ban,
+  main: ListTree,
+  sub: CornerDownRight,
+};
+
+/** Das Wort zum Zeichen — für Tooltip und Ansagen, nicht für die Fläche. */
 export const TOKEN_LABEL: Record<TitleToken, string> = {
   must: 'Must',
   should: 'Should',
@@ -64,7 +96,7 @@ const TOKEN_CLASS: Record<TitleToken, string> = {
   must: 'bg-rose-500/20 text-rose-300',
   should: 'bg-indigo-500/20 text-indigo-300',
   could: 'bg-fill-strong text-muted',
-  wont: 'bg-fill text-subtle line-through',
+  wont: 'bg-fill text-subtle',
   main: 'bg-fill-strong text-text',
   sub: 'bg-fill text-muted',
 };

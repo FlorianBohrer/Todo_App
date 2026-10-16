@@ -79,6 +79,8 @@
       [class.todo-main]="row.level === 'main'"
       [class.todo-parent]="row.subCount > 0"
       [class.todo-target]="activeParentId() === row.id"
+      [class.todo-card--revealed]="revealedId() === row.id"
+      [attr.data-todo-id]="row.id"
       [style.--i]="row.stagger"
       (click)="selectParent(row, $event)"
     >
@@ -156,23 +158,18 @@
               @if (editToken(); as token) {
                 <button
                   type="button"
-                  class="flex flex-none items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
+                  class="flex h-5 flex-none items-center gap-0.5 rounded-md pl-[3px] pr-1"
                   [class]="tokenClass(token)"
                   (mousedown)="$event.preventDefault()"
                   (click)="clearEditToken(todoText)"
                   [attr.aria-label]="tokenDescription[token] + ', remove'"
-                  title="Remove (Backspace at the start)">
-                  {{ tokenLabel[token] }}
-                  <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-70" aria-hidden="true"></lucide-icon>
+                  [title]="tokenDescription[token] + ' · remove (Backspace at the start)'">
+                  <lucide-icon [img]="tokenIcon[token]" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+                  <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
                 </button>
               }
             } @else if (row.badge) {
-              <span
-                class="flex-none rounded-lg px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide"
-                [class]="row.badgeClass"
-                [attr.title]="tokenDescription[row.badge]">
-                {{ row.badgeLabel }}
-              </span>
+              <app-token-chip [token]="row.badge" />
             }
 
             <textarea

@@ -6,9 +6,10 @@ import {ChangeDetectionStrategy,
   inject,
   viewChild,
 } from '@angular/core';
-import { LucideAngularModule, Search } from 'lucide-angular';
+import { LucideAngularModule, Search, X } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { isTypingTarget } from '../../shared/keyboard';
+import { TOKEN_DESCRIPTION, TOKEN_ICON, splitTitle, tokenClass } from '../../shared/title-token';
 
 @Component({
   selector: 'app-todo-filter',
@@ -20,7 +21,12 @@ export class TodoFilter {
   private readonly todoService = inject(TodoService);
   protected readonly filter = this.todoService.filter;
   protected readonly searchTerm = this.todoService.searchTerm;
+  protected readonly searchToken = this.todoService.searchToken;
   protected readonly SearchIcon = Search;
+  protected readonly ClearIcon = X;
+  protected readonly tokenIcon = TOKEN_ICON;
+  protected readonly tokenDescription = TOKEN_DESCRIPTION;
+  protected readonly tokenClass = tokenClass;
 
   private readonly searchField = viewChild<ElementRef<HTMLInputElement>>('todoSearch');
 
@@ -52,5 +58,26 @@ export class TodoFilter {
     this.searchField()?.nativeElement.focus();
   }
 
-  clearSearch(): void { this.searchTerm.set(''); }
+  clearSearch(): void {
+    this.searchTerm.set('');
+    this.searchToken.set(null);
+  }
+
+  /** Ein vorn getipptes Präfix wird zum Filter-Zeichen, wie beim Anlegen. */
+  onInput(field: HTMLInputElement): void {
+    const { token, text } = splitTitle(field.value);
+    if (token !== null) {
+      this.searchToken.set(token);
+      field.value = text;
+    }
+    this.searchTerm.set(field.value);
+  }
+
+  /** Backspace ganz vorn nimmt das Zeichen weg. */
+  onBackspace(event: Event, field: HTMLInputElement): void {
+    if (this.searchToken() === null) return;
+    if (field.selectionStart !== 0 || field.selectionEnd !== 0) return;
+    event.preventDefault();
+    this.searchToken.set(null);
+  }
 }

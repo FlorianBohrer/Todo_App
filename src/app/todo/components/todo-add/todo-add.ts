@@ -12,7 +12,7 @@ import { isTypingTarget } from '../../shared/keyboard';
 import { stripPriorityPrefix, withTaskLevel } from '../../shared/title-priority';
 import {
   TOKEN_DESCRIPTION,
-  TOKEN_LABEL,
+  TOKEN_ICON,
   TitleToken,
   joinTitle,
   splitTitle,
@@ -65,7 +65,7 @@ export class TodoAdd {
    */
   protected readonly token = signal<TitleToken | null>(null);
 
-  protected readonly tokenLabel = TOKEN_LABEL;
+  protected readonly tokenIcon = TOKEN_ICON;
   protected readonly tokenDescription = TOKEN_DESCRIPTION;
   protected readonly tokenClass = tokenClass;
 

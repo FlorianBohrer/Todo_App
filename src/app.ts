@@ -22,6 +22,7 @@ import {
   CalendarDays,
   NotebookPen,
   LogOut,
+  Search,
 } from 'lucide-angular';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
@@ -40,12 +41,14 @@ import { UserAccount } from './app/todo/components/user-account/user-account';
 import { DevicePairing } from './app/todo/components/device-pairing/device-pairing';
 import { LevelBadge } from './app/reward/level-badge/level-badge';
 import { LevelUpOverlay } from './app/reward/level-up/level-up';
+import { SearchPalette } from './app/search/search-palette/search-palette';
 import { LabelService } from './app/todo/services/label.service';
 import { TodoService } from './app/todo/services/todo';
 import { ToastContainer } from './app/shared/toast-container';
 import { ShortcutsOverlay } from './app/shared/shortcuts-overlay';
 import { isTypingTarget } from './app/todo/shared/keyboard';
 import { ShortcutService } from './app/shared/shortcut.service';
+import { formatBinding } from './app/shared/shortcuts';
 import type { View } from './app/todo/services/todo';
 
 @Component({
@@ -66,6 +69,7 @@ import type { View } from './app/todo/services/todo';
     DevicePairing,
     LevelBadge,
     LevelUpOverlay,
+    SearchPalette,
     LucideAngularModule,
     ToastContainer,
     ShortcutsOverlay,
@@ -106,6 +110,14 @@ export class App {
    */
   private readonly chrome = viewChild<ElementRef<HTMLElement>>('chrome');
 
+  /** Die Suche über alles. Gibt es nur angemeldet — daher optional. */
+  protected readonly search = viewChild(SearchPalette);
+
+  /** Wie das Kürzel auf diesem Gerät heißt, für den Tooltip des Knopfs. */
+  protected readonly searchHint = computed(() =>
+    formatBinding(this.shortcuts.binding('search.open')).join(''),
+  );
+
 
   private static readonly VIEWS: View[] = ['list', 'week', 'plans'];
 
@@ -139,9 +151,17 @@ export class App {
    */
   @HostListener('document:keydown', ['$event'])
   onShortcut(event: KeyboardEvent): void {
-    if (isTypingTarget(event.target)) return;
-
     const action = this.shortcuts.match(event);
+
+    // Die Suche auch aus einem Textfeld heraus: ⌘K tippt niemand als Text,
+    // und gesucht wird oft genau dann, wenn man gerade etwas schreibt.
+    if (action === 'search.open') {
+      event.preventDefault();
+      this.search()?.toggle();
+      return;
+    }
+
+    if (isTypingTarget(event.target)) return;
     if (!action) return;
 
     switch (action) {
@@ -274,6 +294,7 @@ export class App {
   protected readonly WeekIcon = CalendarDays;
   protected readonly PlansIcon = NotebookPen;
   protected readonly LogoutIcon = LogOut;
+  protected readonly SearchIcon = Search;
 
   openCategories() {
     this.labelService.openOverlay();
