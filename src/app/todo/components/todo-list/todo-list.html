@@ -242,6 +242,18 @@
             </button>
           }
 
+          <!-- Wie viel Fokus in Flow schon in diese Aufgabe geflossen ist.
+               Erst ab einer Minute: weniger ist ein Fehlstart, keine Arbeit. -->
+          @let focused = focusTotals().get(todo.id) ?? 0;
+          @if (focused >= 60) {
+            <span class="hidden flex-shrink-0 items-center gap-1 text-2xs tabular-nums text-subtle sm:flex"
+              [title]="'Focused ' + formatFocus(focused) + ' in Flow'"
+              [attr.aria-label]="'Focused ' + formatFocus(focused) + ' in Flow'">
+              <lucide-icon [img]="FocusIcon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+              {{ formatFocus(focused) }}
+            </span>
+          }
+
           <!-- Termin: geplant -> Chip mit dem Tag, sonst -> Kalender-Knopf.
                Beide öffnen dasselbe Menü, damit Setzen und Ändern ein Weg sind. -->
           <button
