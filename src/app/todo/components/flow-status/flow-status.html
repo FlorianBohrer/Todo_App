@@ -1,0 +1,12 @@
+@if (active(); as running) {
+  <button
+    type="button"
+    class="sheet-in inline-flex h-8 max-w-full items-center gap-2 rounded-full border border-line px-3 text-xs text-text transition hover:border-line-strong"
+    [title]="label()"
+    [attr.aria-label]="label()"
+    (click)="show()">
+    <span class="flow-dot flex-none" [class.is-paused]="running.paused" aria-hidden="true"></span>
+    <span class="flex-none tabular-nums" aria-hidden="true">{{ running.paused ? 'Paused' : clock() }}</span>
+    <span class="hidden min-w-0 max-w-[14rem] truncate text-muted sm:inline" aria-hidden="true">{{ title() }}</span>
+  </button>
+}

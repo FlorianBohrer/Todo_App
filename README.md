@@ -18,6 +18,10 @@ The backend lives in its own repo: [myTodoApi](https://github.com/FlorianBohrer/
 - Custom categories with color and icon, stored per user
 - Mark todos and folders as favorites; favorite folders show up as quick-access tiles above the list
 - Filter by status and category, plus a small stats bar
+- Search everything with ⌘K (Ctrl+K): todos in every folder, done and archived ones included, plans with their content, and folders
+- Priorities and subtasks (`/must`, `/should`, `/sub` …) are typed as prefixes but shown as symbols, never as text
+- XP, levels and a proper celebration when something gets done
+- Connects to [Flow](https://github.com/FlorianBohrer/timer), the focus timer: pair it once with a code, and Flow works on your todos. The running session shows up here, and so does the focus time each todo got
 - Everything is stored in Postgres (Neon), not in localStorage anymore
 
 ## How it's built

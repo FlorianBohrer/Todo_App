@@ -45,6 +45,7 @@ import {
   tokenOf,
 } from '../../shared/title-token';
 import { TokenChip } from '../../shared/token-chip';
+import { FocusSessionService, formatFocus } from '../../services/focus-session.service';
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
@@ -67,6 +68,7 @@ import {
   Archive,
   Undo2,
   FileText,
+  Timer,
   X,
 } from 'lucide-angular';
 
@@ -337,6 +339,11 @@ export class TodoList {
   protected readonly ArchiveIcon = Archive;
   protected readonly RestoreIcon = Undo2;
   protected readonly FromPlanIcon = FileText;
+  protected readonly FocusIcon = Timer;
+
+  /** Fokuszeit aus Flow, je Todo in Sekunden. */
+  protected readonly focusTotals = inject(FocusSessionService).totals;
+  protected readonly formatFocus = formatFocus;
   protected readonly ClearIcon = X;
 
   protected readonly tokenIcon = TOKEN_ICON;

@@ -42,6 +42,7 @@ import { DevicePairing } from './app/todo/components/device-pairing/device-pairi
 import { LevelBadge } from './app/reward/level-badge/level-badge';
 import { LevelUpOverlay } from './app/reward/level-up/level-up';
 import { SearchPalette } from './app/search/search-palette/search-palette';
+import { FlowStatus } from './app/todo/components/flow-status/flow-status';
 import { LabelService } from './app/todo/services/label.service';
 import { TodoService } from './app/todo/services/todo';
 import { ToastContainer } from './app/shared/toast-container';
@@ -70,6 +71,7 @@ import type { View } from './app/todo/services/todo';
     LevelBadge,
     LevelUpOverlay,
     SearchPalette,
+    FlowStatus,
     LucideAngularModule,
     ToastContainer,
     ShortcutsOverlay,
