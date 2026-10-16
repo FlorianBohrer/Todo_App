@@ -1,4 +1,5 @@
 import {
+  ApplicationRef,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
@@ -70,7 +71,9 @@ import {
   PlanListItem,
   PlanCodeBlock,
   PlanQuoteBlock,
+  PlanTextBlock,
 } from '../plan.model';
+import { breakListAt, joinFollowingList } from '../list-break';
 import { focusRich, replaceRange } from '../rich-text';
 import { formatBlock } from '../inline-format';
 import {
@@ -192,6 +195,8 @@ const DIAGRAM_TEMPLATE = `flowchart TD
 })
 export class PlansView {
   private readonly planService = inject(PlanService);
+  /** Fuer den Sprung in ein neues Feld noch im selben Tastendruck. */
+  private readonly appRef = inject(ApplicationRef);
   protected readonly labelService = inject(LabelService);
   // Beide Dienste stehen ohnehin app-weit bereit; die Planansicht liest hier
   // nur den Zustand, den die Liste schon geladen hat. Kein zweiter Abruf.
@@ -1550,28 +1555,53 @@ export class PlansView {
   }
 
   /**
-   * In ein Feld springen, sobald es gezeichnet ist.
+   * In ein Feld springen — noch im selben Tastendruck.
    *
-   * Ein gerade angelegter Block existiert im DOM erst nach dem naechsten
-   * Durchlauf; ohne das Warten liefe der Fokus ins Leere und der Cursor bliebe
-   * im alten Block stehen.
+   * Vorher wartete der Sprung auf den naechsten Frame, weil ein gerade
+   * angelegter Block erst dann im DOM steht. Das sind rund 16 ms, und wer
+   * schreibt, ist in der Zeit schon beim naechsten Buchstaben: nach Enter
+   * landete der erste Buchstabe noch in der ALTEN Zeile („ZieleN"), der Rest
+   * in der neuen. Nachgemessen in sieben von acht Blockarten.
+   *
+   * Jetzt wird der neue Stand sofort gezeichnet und der Cursor sofort gesetzt.
+   * Der naechste Tastendruck findet die neue Zeile schon fokussiert vor; es
+   * gibt keine Luecke mehr, in die ein Zeichen fallen koennte.
+   *
+   * Erst zeichnen, dann fokussieren — auch wenn das Feld schon existiert: beim
+   * Zusammenfuegen steht im Feld darueber noch der alte Text, und ein Cursor,
+   * der vor dem Neuzeichnen gesetzt wird, wird vom Neuzeichnen weggeworfen.
    */
   private focusField(id: string, at: number | 'end'): void {
-    requestAnimationFrame(() => {
-      const el = this.field(id);
-      if (!el) return;
+    try {
+      this.appRef.tick();
+    } catch {
+      // Nur moeglich, wenn das hier mitten aus einem laufenden Durchlauf
+      // aufgerufen wird. Dann eben wie frueher im naechsten Frame.
+      requestAnimationFrame(() => this.placeCaretIn(id, at));
+      return;
+    }
+    if (!this.placeCaretIn(id, at)) {
+      // Das Feld steht noch nicht da (etwa in einem Teil, der erst nachlaedt).
+      requestAnimationFrame(() => this.placeCaretIn(id, at));
+    }
+  }
 
-      // Code und der Titel eines Toggles sind bewusst schlichte Felder — dort
-      // gibt es nichts zu formatieren, also auch keinen Rich-Text-Cursor.
-      if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
-        el.focus();
-        const pos = at === 'end' ? el.value.length : Math.min(at, el.value.length);
-        el.setSelectionRange(pos, pos);
-        return;
-      }
+  /** Cursor in dieses Feld. false, wenn es das Feld (noch) nicht gibt. */
+  private placeCaretIn(id: string, at: number | 'end'): boolean {
+    const el = this.field(id);
+    if (!el) return false;
 
-      focusRich(el, at);
-    });
+    // Code und der Titel eines Toggles sind bewusst schlichte Felder — dort
+    // gibt es nichts zu formatieren, also auch keinen Rich-Text-Cursor.
+    if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+      el.focus();
+      const pos = at === 'end' ? el.value.length : Math.min(at, el.value.length);
+      el.setSelectionRange(pos, pos);
+      return true;
+    }
+
+    focusRich(el, at);
+    return true;
   }
 
   /** Cursor in diesen Block setzen. */
@@ -1705,6 +1735,21 @@ export class PlansView {
     const block = this.findBlock(blockId);
     if (!block) return;
 
+    // Enter ganz am Anfang: eine leere Zeile DARUEBER, und der Block bleibt,
+    // was er ist — samt Cursor am Anfang seines Textes.
+    //
+    // Vorher wurde auch hier geteilt, und die leere Haelfte oben behielt den
+    // Typ: ueber einer Ueberschrift stand danach eine leere Ueberschrift. Wer
+    // am Anfang Enter drueckt, will Platz darueber, keinen zweiten Titel.
+    if (before === '' && after !== '') {
+      const spacer: PlanBlock = { id: this.newId(), type: 'text', text: '' };
+      this.slash.set(null);
+      this.wikiPick.set(null);
+      this.updateContent((bs) => this.insertBeforeById(bs, blockId, spacer));
+      this.beginEdit(blockId, 0);
+      return;
+    }
+
     const id = this.newId();
     const keep = after.trim() !== '';
     const created: PlanBlock =
@@ -1779,23 +1824,27 @@ export class PlansView {
       return;
     }
 
-    // In den letzten Eintrag der Liste darueber hineinlaufen.
+    // In den letzten Eintrag der Liste darueber hineinlaufen. Stand der
+    // Absatz zwischen zwei Teilen derselben Liste, werden sie wieder eine.
     if (previous.type === 'list') {
       const index = previous.items.length - 1;
       const joined = previous.items[index]?.text ?? '';
       this.updateContent((bs) =>
-        this.removeById(
-          this.mapById(bs, previous.id, (x) =>
-            x.type !== 'list'
-              ? x
-              : {
-                  ...x,
-                  items: x.items.map((it, i) =>
-                    i === index ? { ...it, text: it.text + block.text } : it,
-                  ),
-                },
+        joinFollowingList(
+          this.removeById(
+            this.mapById(bs, previous.id, (x) =>
+              x.type !== 'list'
+                ? x
+                : {
+                    ...x,
+                    items: x.items.map((it, i) =>
+                      i === index ? { ...it, text: it.text + block.text } : it,
+                    ),
+                  },
+            ),
+            blockId,
           ),
-          blockId,
+          previous.id,
         ),
       );
       this.focusItem(previous.id, index, joined.length);
@@ -2154,21 +2203,27 @@ export class PlansView {
         return;
       }
 
-      const created: PlanBlock = { id: this.newId(), type: 'text', text: '' };
-      if (block.items.length === 1) {
-        this.updateContent((bs) => this.replaceById(bs, blockId, () => created));
-      } else {
-        this.updateContent((bs) =>
-          this.insertAfterById(
-            this.mapById(bs, blockId, (x) =>
-              x.type !== 'list' ? x : { ...x, items: x.items.filter((_, i) => i !== index) },
-            ),
-            blockId,
-            created,
-          ),
-        );
-      }
+      // An GENAU dieser Stelle aus der Liste heraus — siehe list-break.ts.
+      const created: PlanTextBlock = { id: this.newId(), type: 'text', text: '' };
+      const newListId = this.newId();
+      this.updateContent((bs) => breakListAt(bs, blockId, index, created, newListId));
       this.beginEdit(created.id, 0);
+      return;
+    }
+
+    // Enter ganz am Anfang eines Punktes: ein leerer Punkt DARUEBER.
+    //
+    // Vorher wurde geteilt: oben blieb der Punkt mit leerem Text, unten
+    // entstand ein neuer mit dem Text — ohne Haken und ohne die Verknuepfung
+    // zur Aufgabe. Ein abgehakter Punkt war danach sichtbar offen, und seine
+    // Aufgabe hing an der leeren Zeile darueber.
+    if (before === '' && after !== '') {
+      this.mapItems(blockId, (items) => {
+        const next = [...items];
+        next.splice(index, 0, { text: '', checked: false, level });
+        return next;
+      });
+      this.focusItem(blockId, index + 1, 0);
       return;
     }
 
@@ -2184,11 +2239,15 @@ export class PlansView {
   }
 
   /**
-   * Rueckschritt am Anfang eines Eintrags: in den vorigen hineinlaufen.
+   * Rueckschritt am Anfang eines Eintrags — in zwei Stufen, wie ueberall.
    *
-   * Beim ersten Punkt faellt stattdessen die Auszeichnung weg — aus ihm wird
-   * ein Absatz, der Rest der Liste bleibt stehen. Dieselbe Zweistufigkeit wie
-   * bei den Ueberschriften.
+   * Erst faellt das Aufzaehlungszeichen weg: der Punkt wird ein Absatz an
+   * seiner Stelle, die Liste teilt sich um ihn herum. Der zweite Rueckschritt
+   * fuegt den Absatz dann an den Punkt darueber an (siehe mergeBack).
+   *
+   * Vorher galt das nur fuer den ERSTEN Punkt; jeder andere klebte sofort am
+   * vorigen („ApfelBirne"). Ein Aufzaehlungszeichen allein loszuwerden ging
+   * so nur ueber das Menue. Eingerueckte Punkte ruecken weiterhin zuerst aus.
    */
   mergeItemBack(blockId: string, index: number): void {
     const block = this.findBlock(blockId);
@@ -2202,31 +2261,11 @@ export class PlansView {
       return;
     }
 
-    if (index > 0) {
-      const target = block.items[index - 1];
-      const at = target.text.length;
-      this.mapItems(blockId, (items) => {
-        const next = [...items];
-        next[index - 1] = { ...target, text: target.text + item.text };
-        next.splice(index, 1);
-        return next;
-      });
-      this.focusItem(blockId, index - 1, at);
-      return;
-    }
-
-    const created: PlanBlock = { id: this.newId(), type: 'text', text: item.text };
-    const rest = block.items.slice(1);
-    this.updateContent((bs) =>
-      rest.length === 0
-        ? this.replaceById(bs, blockId, () => created)
-        : this.insertBeforeById(
-            this.mapById(bs, blockId, (x) => (x.type !== 'list' ? x : { ...x, items: rest })),
-            blockId,
-            created,
-          ),
-    );
-    this.beginEdit(created.id, item.text.length);
+    // Der Cursor bleibt, wo er war: am Anfang des Textes.
+    const created: PlanTextBlock = { id: this.newId(), type: 'text', text: item.text };
+    const newListId = this.newId();
+    this.updateContent((bs) => breakListAt(bs, blockId, index, created, newListId));
+    this.beginEdit(created.id, 0);
   }
 
   /**
