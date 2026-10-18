@@ -1,4 +1,6 @@
-<section class="mx-auto w-full max-w-7xl px-1">
+<!-- Auf dem Telefon derselbe Seitenrand wie Liste und Plaene; mit px-1
+     lagen die Tageskarten 4px an der Bildschirmkante. -->
+<section class="mx-auto w-full max-w-7xl px-3 sm:px-1">
 
   <!-- Wochen-Kopf: wo bin ich, wie steht die Woche, wie komme ich zurück -->
   <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -64,7 +66,7 @@
       </span>
       <button
         type="button"
-        class="ml-auto rounded-full border border-amber-400/50 px-3 py-1 text-xs text-amber-100 transition hover:bg-amber-400/15"
+        class="ml-auto rounded-full border border-amber-400/50 px-3 py-2 text-xs text-amber-100 transition hover:bg-amber-400/15 sm:py-1"
         (click)="catchUp()">
         Move to today
       </button>
@@ -83,6 +85,7 @@
         <div
           class="week-day group/day flex flex-col rounded-xl border p-2 transition"
           [attr.data-today]="day.isToday ? 'true' : null"
+          [class.week-day--past-empty]="day.isPast && !day.isToday && day.total === 0"
           [class]="day.isToday
             ? 'border-indigo-500/70 bg-indigo-500/10'
             : (day.isWeekend ? 'border-line bg-bg3' : 'border-line bg-bg2')"
@@ -106,7 +109,7 @@
             @if (day.total > day.done) {
               <button
                 type="button"
-                class="ml-auto grid h-5 w-5 flex-none place-items-center rounded-lg text-subtle opacity-0 transition hover:bg-fill-strong hover:text-text focus-visible:opacity-100 group-hover/day:opacity-100"
+                class="week-rollover ml-auto grid h-5 w-5 flex-none place-items-center rounded-lg text-subtle opacity-0 transition hover:bg-fill-strong hover:text-text focus-visible:opacity-100 group-hover/day:opacity-100"
                 (click)="rollOver(day)"
                 [title]="'Move ' + (day.total - day.done) + ' unfinished to the next day'"
                 [attr.aria-label]="'Move unfinished tasks from ' + day.weekdayShort + ' to the next day'">
@@ -129,25 +132,25 @@
                 [style.width.%]="day.percent"></div>
             </div>
           } @else {
-            <div class="mb-2 h-1"></div>
+            <div class="week-day-spacer mb-2 h-1"></div>
           }
 
           <!-- Todos des Tages: Drop-Ziel -->
           <div
-            class="flex min-h-16 flex-1 flex-col gap-1.5"
+            class="flex min-h-0 flex-1 flex-col gap-1.5 sm:min-h-16"
             cdkDropList
             [cdkDropListData]="day.iso"
             (cdkDropListDropped)="drop($event)">
 
             @for (todo of day.todos; track todo.id) {
               <div
-                cdkDrag [cdkDragData]="todo"
+                cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
                 class="week-card group relative flex items-start gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
                 [class]="borderClass(todo)"
                 [class.opacity-60]="todo.completed">
                 <button
                   type="button"
-                  class="mt-0.5 h-4 w-4 flex-none rounded-full border-2 transition"
+                  class="week-check mt-0.5 h-4 w-4 flex-none rounded-full border-2 transition"
                   [class]="todo.completed ? 'border-emerald-400 bg-emerald-400' : 'border-subtle hover:border-text'"
                   (click)="toggle(todo.id)"
                   [attr.aria-label]="todo.completed ? 'Mark as active' : 'Mark as done'"></button>
@@ -196,7 +199,7 @@
               #q
               type="text"
               placeholder="+ Add"
-              class="mt-auto w-full rounded-lg bg-transparent px-2 py-1 text-sm text-text placeholder:text-muted/50 focus:bg-fill focus:outline-none"
+              class="week-quick mt-auto w-full rounded-lg bg-transparent px-2 py-1 text-sm text-text pointer-coarse:text-base placeholder:text-muted/50 focus:bg-fill focus:outline-none"
               (keydown.enter)="quickAdd(day.iso, q)"
               (keydown.escape)="q.value = ''; q.blur()"
               [attr.aria-label]="'Add todo for ' + day.weekdayShort + ' ' + day.dayNum" />
@@ -216,12 +219,12 @@
           <!-- Status: All / Active -->
           <div class="inline-flex rounded-full border border-line p-0.5 text-xs">
             <button type="button"
-              class="rounded-full px-2.5 py-1 transition"
+              class="rounded-full px-2.5 py-1.5 transition sm:py-1"
               [class]="backlogStatus() === 'all' ? 'bg-text text-bg' : 'text-muted hover:text-text'"
               [attr.aria-pressed]="backlogStatus() === 'all'"
               (click)="setBacklogStatus('all')">All</button>
             <button type="button"
-              class="rounded-full px-2.5 py-1 transition"
+              class="rounded-full px-2.5 py-1.5 transition sm:py-1"
               [class]="backlogStatus() === 'active' ? 'bg-text text-bg' : 'text-muted hover:text-text'"
               [attr.aria-pressed]="backlogStatus() === 'active'"
               (click)="setBacklogStatus('active')">Active</button>
@@ -232,13 +235,13 @@
         @if (labels().length > 0) {
           <div class="mb-2 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter by category">
             <button type="button"
-              class="flex-none rounded-full border px-3 py-1 text-xs transition"
+              class="flex-none rounded-full border px-3 py-1.5 text-xs transition sm:py-1"
               [class]="backlogCategory() === null ? 'border-line-strong text-text' : 'border-line text-muted hover:text-text'"
               [attr.aria-pressed]="backlogCategory() === null"
               (click)="setBacklogCategory(null)">All categories</button>
             @for (label of labels(); track label.id) {
               <button type="button"
-                class="flex flex-none items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition"
+                class="flex flex-none items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition sm:py-1"
                 [class]="backlogCategory() === label.id ? 'border-line-strong text-text' : 'border-line text-muted hover:text-text'"
                 [attr.aria-pressed]="backlogCategory() === label.id"
                 (click)="setBacklogCategory(label.id)">
@@ -255,11 +258,11 @@
           (cdkDropListDropped)="drop($event)">
           @for (todo of backlog(); track todo.id) {
             <div
-              cdkDrag [cdkDragData]="todo"
-              class="week-card flex items-center gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
+              cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
+              class="week-card flex min-w-0 max-w-full items-center gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
               [class]="borderClass(todo)"
               [class.opacity-60]="todo.completed">
-              <span class="break-words leading-snug" [class.line-through]="todo.completed">
+              <span class="min-w-0 leading-snug [overflow-wrap:anywhere]" [class.line-through]="todo.completed">
                 {{ displayTitle(todo.title) }}
               </span>
             </div>

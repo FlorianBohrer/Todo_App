@@ -6,11 +6,20 @@
        Funktion, die man am seltensten braucht — und die ID musste ohnehin nie
        jemand ablesen. Wer wissen will, als wer er angemeldet ist, faehrt
        darueber; alles andere ist Dauerrauschen. -->
-  <img
-    [src]="account.avatarUrl"
-    [alt]="'Signed in as ' + account.username"
-    [title]="account.username + ' · ' + account.email"
-    referrerpolicy="no-referrer"
-    class="h-7 w-7 shrink-0 rounded-full object-cover opacity-80 transition hover:opacity-100"
-  />
+  @if (account.avatarUrl && !avatarFailed()) {
+    <img
+      [src]="account.avatarUrl"
+      [alt]="'Signed in as ' + account.username"
+      [title]="account.username + ' · ' + account.email"
+      referrerpolicy="no-referrer"
+      (error)="avatarFailed.set(true)"
+      class="h-7 w-7 shrink-0 rounded-full object-cover opacity-80 transition hover:opacity-100"
+    />
+  } @else {
+    <span
+      class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-fill-strong text-xs font-semibold text-muted"
+      role="img"
+      [attr.aria-label]="'Signed in as ' + account.username"
+      [title]="account.username + ' · ' + account.email">{{ account.initial }}</span>
+  }
 }

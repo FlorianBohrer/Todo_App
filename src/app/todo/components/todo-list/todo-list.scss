@@ -94,6 +94,12 @@ li.todo-expanded-row {
   .todo-detail {
     margin-left: 4.875rem;
   }
+
+  // Ohne Dreiecksspalte (keine Unteraufgaben in der Liste) beginnt der Titel
+  // um Dreieck und eine Luecke frueher: 4.875 - 1 - 0.625.
+  .no-outline .todo-detail {
+    margin-left: 3.25rem;
+  }
 }
 
 // Der Farbpunkt der Zeile.
@@ -261,6 +267,16 @@ li.todo-expanded-row {
   height: 1.0625rem;
   width: 1.0625rem;
   border-width: 1.25px;
+}
+
+/* Auf Touch-Geraeten 16px wie die Hauptaufgabe: das Textfeld eines Schritts
+   ist ein echtes Eingabefeld, und unter 16px zoomt iOS beim Bearbeiten in die
+   Seite hinein. Die Ebene bleibt am Einzug, am Winkel und am kleineren Haken
+   erkennbar. */
+@media (pointer: coarse) {
+  .todo-card.todo-sub {
+    font-size: 1rem;
+  }
 }
 
 /* Auf schmalen Bildschirmen kostet der volle Einzug zu viel Textbreite. */

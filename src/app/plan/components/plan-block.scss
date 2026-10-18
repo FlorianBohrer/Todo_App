@@ -843,7 +843,17 @@ tr:focus-within .plan-td-gutter .plan-table-x,
 
 @media (hover: none) {
   // Ohne Hover gaebe es keinen Weg zu den Knoepfen.
-  .plan-table-x { opacity: 0.6; }}
+  .plan-table-x {
+    opacity: 0.6;
+    padding: 0.2rem 0.35rem;
+  }
+
+  // Das Kreuz steht dann dauerhaft in der Kopfzelle — und stand dort auf dem
+  // Text („Preis×"). Die Zelle macht ihm rechts Platz.
+  .plan-th .plan-cell,
+  .plan-th .plan-cell-input {
+    padding-right: 1.5rem;
+  }}
 
 
 // ---- Diagramme ----

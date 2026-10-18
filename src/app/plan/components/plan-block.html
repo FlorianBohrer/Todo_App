@@ -314,7 +314,7 @@
               <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
                 <lucide-icon [img]="view.CodeIcon" class="h-3.5 w-3.5 flex-none text-subtle"></lucide-icon>
                 <input type="text"
-                  class="w-32 bg-transparent font-mono text-xs text-muted placeholder:text-subtle focus:outline-none"
+                  class="w-32 bg-transparent font-mono text-xs text-muted pointer-coarse:text-base placeholder:text-subtle focus:outline-none"
                   placeholder="language"
                   [value]="view.asCode(block).language"
                   (input)="view.setCodeLanguage(block.id, $any($event.target).value)"
@@ -327,7 +327,7 @@
                 spellcheck="false"
                 autocapitalize="off"
                 autocorrect="off"
-                class="w-full resize-none bg-transparent px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:outline-none"
+                class="w-full resize-none bg-transparent px-3 py-2 font-mono text-sm/[1.6] pointer-coarse:text-base/[1.6] text-text placeholder:text-subtle focus:outline-none"
                 placeholder="Code…"
                 [value]="view.asCode(block).code"
                 (input)="view.updateCodeText(block.id, $any($event.target).value)"></textarea>
@@ -382,7 +382,7 @@
             <div class="plan-table-frame"
               [class.plan-table-wrap--wide]="view.asTable(block).wide">
             <div class="plan-table-wrap overflow-x-auto" appScrollEdges>
-              <table class="plan-table w-full border-collapse text-sm"
+              <table class="plan-table w-full border-collapse text-sm pointer-coarse:text-base"
                 [class.plan-table--fixed]="view.hasWidths(block)"
                 [style.width.px]="view.tableWidth(block)">
                 <!-- Die Breite haengt an <col>, nicht an den Zellen: so gilt
@@ -531,7 +531,7 @@
                     autocapitalize="off"
                     autocorrect="off"
                     [id]="'diagram-code-' + block.id"
-                    class="w-full resize-none rounded-lg border border-line bg-bg3 px-3 py-2 font-mono text-sm/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
+                    class="w-full resize-none rounded-lg border border-line bg-bg3 px-3 py-2 font-mono text-sm/[1.6] pointer-coarse:text-base/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
                     placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
                     [value]="view.asDiagram(block).code"
                     (input)="view.updateCode(block.id, $any($event.target).value)"></textarea>
