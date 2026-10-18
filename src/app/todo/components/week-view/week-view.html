@@ -144,7 +144,7 @@
 
             @for (todo of day.todos; track todo.id) {
               <div
-                cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
+                cdkDrag [cdkDragData]="todo"
                 class="week-card group relative flex items-start gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
                 [class]="borderClass(todo)"
                 [class.opacity-60]="todo.completed">
@@ -261,7 +261,7 @@
           (cdkDropListDropped)="drop($event)">
           @for (todo of backlog(); track todo.id) {
             <div
-              cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
+              cdkDrag [cdkDragData]="todo"
               class="week-card flex min-w-0 max-w-full items-center gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
               [class]="borderClass(todo)"
               [class.opacity-60]="todo.completed">

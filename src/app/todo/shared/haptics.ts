@@ -2,7 +2,7 @@
  * Ein kurzer Impuls zur Bestätigung.
  *
  * Nur für den einen Handgriff, um den es in einer Aufgabenliste geht: den
- * Haken. Alles andere zu vibrieren wäre dasselbe wie überall einen Ton
+ * Haken (und das erreichte Halten zum Verschieben, siehe holdArmed). Alles andere zu vibrieren wäre dasselbe wie überall einen Ton
  * abzuspielen — nach dem dritten Mal ist es Lärm, und man schaltet es ab.
  *
  * 12 Millisekunden. Das ist kurz genug, dass es wie ein Klick wirkt und nicht
@@ -26,6 +26,25 @@ export function tap(): void {
     navigator.vibrate?.(TAP_MS);
   } catch {
     /* Kein Grund, einen Haken daran scheitern zu lassen. */
+  }
+}
+
+/**
+ * Der zweite Fall, in dem es sich lohnt: das Halten zum Verschieben ist
+ * erreicht (siehe hold-to-drag.ts). Dort gibt es keinen Moment, in dem man
+ * hinsieht — der Daumen liegt genau auf dem Objekt, dessen Rand sich gerade
+ * fuellt. Der Impuls sagt „jetzt bewegen", ohne dass man den Finger hebt.
+ * Etwas laenger als der Haken, damit er sich davon unterscheidet.
+ */
+const HOLD_MS = 20;
+
+export function holdArmed(): void {
+  if (prefersReducedMotion()) return;
+
+  try {
+    navigator.vibrate?.(HOLD_MS);
+  } catch {
+    /* Ohne Impuls bleibt der Rand als Zeichen. */
   }
 }
 
