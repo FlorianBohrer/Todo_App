@@ -7,6 +7,7 @@ import {
   CdkDragPlaceholder,
   CdkDropList,
 } from '@angular/cdk/drag-drop';
+import { HoldToDrag } from '../../shared/hold-to-drag';
 import { LucideAngularModule } from 'lucide-angular';
 import { Autosize } from '../../directives/autosize.directive';
 import { RichText } from '../rich-text.directive';
@@ -44,6 +45,7 @@ import type { ListRow, PlansView } from './plans-view';
     OverlayModule,
     CdkDropList,
     CdkDrag,
+    HoldToDrag,
     CdkDragHandle,
     CdkDragPlaceholder,
     Autosize,

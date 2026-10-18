@@ -20,6 +20,7 @@ import {
   CdkDropList,
   CdkDragDrop,
 } from '@angular/cdk/drag-drop';
+import { HoldToDrag } from '../../shared/hold-to-drag';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -183,6 +184,7 @@ const DIAGRAM_TEMPLATE = `flowchart TD
     NgTemplateOutlet,
     CdkDropList,
     CdkDrag,
+    HoldToDrag,
     CdkDragHandle,
     CdkDragPlaceholder,
     OverlayModule,

@@ -1183,3 +1183,58 @@ body.is-block-selecting * {
     --text-prose: 1rem;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Halten zum Verschieben (Touch) — siehe shared/hold-to-drag.ts
+   ---------------------------------------------------------------------------
+
+   Verschoben wird auf dem Telefon erst nach zwei Sekunden Halten. Damit man
+   in der Zeit nicht raten muss, ob etwas passiert, fuellt sich ein Rand um
+   das Objekt: die ersten 0,4 s gar nicht (ein normales Wischen soll nichts
+   aufblitzen lassen), dann gleichmaessig bis zum Ende der Haltezeit. Ist er
+   voll, kann man ziehen — Android gibt dazu einen kurzen Impuls.
+
+   outline statt box-shadow oder Pseudoelement: Karten und Zeilen benutzen
+   beides schon (Ring des aktiven Folders, Feier-Schimmer, Winkellinien der
+   Unteraufgaben). Nach innen versetzt, damit Scrollbereiche ihn nicht
+   abschneiden. !important, weil die Zustaende nur Sekunden dauern und gegen
+   die Komponentenstile (die spaeter geladen werden) gewinnen muessen. */
+@media (hover: none) {
+  .cdk-drag {
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+  }
+
+  /* Das CDK setzt an Griffen touch-action: none. Mit Haltezeit muss ein
+     Wischen, das auf einem Griff beginnt, die Seite scrollen — sonst waere
+     die linke Randspalte der Folder und Bloecke eine tote Zone. */
+  .cdk-drag-handle {
+    touch-action: pan-y !important;
+  }
+
+  /* Langes Druecken waehlt sonst Text aus (Lupe auf iOS, Markierung auf
+     Android) und bricht den Zug ab. Eingabefelder bleiben bearbeitbar. */
+  .cdk-drag-handle,
+  .todo-card,
+  .week-card {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .todo-card :is(input, textarea, [contenteditable="true"]) {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+.cdk-drag.hold-arming {
+  outline: 2px solid color-mix(in srgb, var(--color-highlight2) 70%, transparent) !important;
+  outline-offset: -2px !important;
+  transition: outline-color 1.6s linear 0.4s !important;
+}
+
+.cdk-drag.hold-armed {
+  outline-color: var(--color-highlight2) !important;
+  transition: none !important;
+}

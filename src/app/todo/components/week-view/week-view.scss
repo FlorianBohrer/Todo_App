@@ -2,8 +2,8 @@
 //
 // pan-y statt none: mit `none` war jede Karte auf dem Telefon eine Stelle,
 // an der die Seite nicht mehr scrollte — wer auf einer Karte zu wischen
-// anfing, zog sie stattdessen. Gezogen wird jetzt nach kurzem Halten
-// (dragStartDelay); waehrend des Ziehens setzt das CDK selbst `none`.
+// anfing, zog sie stattdessen. Gezogen wird erst nach Halten (CDK_DRAG_CONFIG,
+// siehe hold-to-drag.ts); waehrend des Ziehens setzt das CDK selbst `none`.
 .week-card {
   cursor: grab;
   touch-action: pan-y;
