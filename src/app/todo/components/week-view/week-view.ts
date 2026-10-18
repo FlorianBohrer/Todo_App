@@ -167,6 +167,14 @@ export class WeekView {
   setBacklogStatus(status: 'all' | 'active') { this.backlogStatus.set(status); }
   setBacklogCategory(id: string | null) { this.backlogCategory.set(id); }
 
+  /**
+   * Auf Touch erst nach kurzem Halten ziehen. Ohne Verzoegerung begann jedes
+   * Wischen, das auf einer Karte anfing, ein Ziehen statt eines Scrollens —
+   * in der gestapelten Woche liegt fast ueberall eine Karte unter dem Finger.
+   * Dieselben 300ms wie in der Liste; mit der Maus bleibt es sofort.
+   */
+  protected readonly dragStartDelay = { touch: 300, mouse: 0 };
+
   // ---- Heute im Blick behalten ----
   // Sieben Spalten passen auf kein Telefon; der Streifen scrollt waagerecht.
   // Ohne Nachhelfen landet man dabei am Montag statt am heutigen Tag.
@@ -190,7 +198,11 @@ export class WeekView {
 
   private scrollTodayIntoView() {
     const host = this.strip()?.nativeElement;
-    if (!host || host.scrollWidth <= host.clientWidth) return;
+    if (!host) return;
+    if (host.scrollWidth <= host.clientWidth) {
+      this.scrollTodayIntoPage(host);
+      return;
+    }
 
     const column = host.querySelector<HTMLElement>('[data-today="true"]');
     if (!column) {
@@ -199,6 +211,28 @@ export class WeekView {
     }
     const left = column.offsetLeft - (host.clientWidth - column.clientWidth) / 2;
     host.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+  }
+
+  /**
+   * Auf dem Telefon stehen die Tage untereinander, und der Streifen scrollt
+   * nicht seitlich — dann scrollt die Seite. Liegt der heutige Tag unterhalb
+   * des Bildschirms (Ende der Woche), rueckt er unter die Leiste. Liegt er
+   * schon im Blick, bewegt sich nichts.
+   */
+  private scrollTodayIntoPage(host: HTMLElement) {
+    const card = host.querySelector<HTMLElement>('[data-today="true"]');
+    if (!card) return;
+
+    const box = card.getBoundingClientRect();
+    if (box.top >= 0 && box.top < window.innerHeight * 0.6) return;
+
+    const chrome =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--chrome-h')) || 0;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({
+      top: Math.max(0, window.scrollY + box.top - chrome - 12),
+      behavior: calm ? 'auto' : 'smooth',
+    });
   }
 
   dotClass(color: string): string {

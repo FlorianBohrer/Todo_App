@@ -29,8 +29,12 @@
          sich erst ein, wenn Inhalt darunter durchzieht, und die drei
          prefers-Abfragen schalten beide gemeinsam um. Geklebt wird unter der
          Leiste — deren Hoehe steht in --chrome-h, weil sie auf schmalen
-         Schirmen umbricht. -->
-    <div class="doc-head app-chrome mb-5 flex items-center gap-2">
+         Schirmen umbricht.
+
+         Auf dem Telefon zwei Zeilen: Rueckweg und Titel oben, Folder und
+         Werkzeuge darunter. In einer Zeile blieben dem Titel 90px
+         („Urlaubspla"). Geklebt wird dort nicht — siehe .doc-head. -->
+    <div class="doc-head app-chrome mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
       <button
         type="button"
         class="grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition hover:bg-fill-strong hover:text-text"
@@ -40,7 +44,7 @@
 
       <input
         type="text"
-        class="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-xl font-semibold tracking-[-0.022em] text-text placeholder:text-subtle focus:bg-fill focus:outline-none sm:text-2xl"
+        class="min-w-0 flex-1 basis-[calc(100%-2.75rem)] text-ellipsis rounded-lg bg-transparent px-1 py-1 text-xl font-semibold tracking-[-0.022em] text-text placeholder:text-subtle focus:bg-fill focus:outline-none sm:basis-auto sm:text-2xl"
         [value]="plan.title"
         (input)="setTitle(plan.id, $any($event.target).value)"
         placeholder="Untitled"
@@ -48,16 +52,21 @@
 
       <!-- Folder-Bindung: eigenständig oder an einen Folder -->
       <!-- Auf schmalen Schirmen gedeckelt: der Ordnername darf den Knoepfen
-           daneben nicht den Platz nehmen. -->
+           daneben nicht den Platz nehmen. Auf dem Telefon steht er links in
+           der zweiten Zeile und schiebt die Werkzeuge nach rechts.
+
+           Ausgewaehlt wird an der Option, nicht ueber [value] am select:
+           Angular setzte den Wert, bevor es die Optionen aus @for gab, der
+           Browser fand keine passende und zeigte die erste — ein Plan im
+           Folder „Holiday" stand als „Standalone" da. -->
       <select
-        class="max-w-[6rem] flex-none truncate rounded-lg bg-transparent px-2 py-1.5 text-sm text-muted
-               transition hover:bg-fill focus:outline-none sm:max-w-none"
-        [value]="plan.categoryId ?? ''"
+        class="mr-auto max-w-[11rem] flex-none truncate rounded-lg bg-transparent px-2 py-1.5 text-sm text-muted pointer-coarse:text-base
+               transition hover:bg-fill focus:outline-none sm:mr-0 sm:max-w-[12rem]"
         (change)="setFolder(plan.id, $any($event.target).value)"
         aria-label="Attach to folder">
-        <option value="">Standalone</option>
+        <option value="" [selected]="!plan.categoryId">Standalone</option>
         @for (label of labels(); track label.id) {
-          <option [value]="label.id">{{ label.name }}</option>
+          <option [value]="label.id" [selected]="label.id === plan.categoryId">{{ label.name }}</option>
         }
       </select>
 
@@ -338,7 +347,7 @@
     <!-- Dateien darf man auch einfach fallen lassen. Das Ziehen der Kacheln
          laeuft ueber Zeigerereignisse und kommt sich damit nicht in die
          Quere: hier reagiert nur, was Dateien mitbringt. -->
-    <div class="relative mx-auto w-full max-w-3xl"
+    <div class="relative mx-auto w-full max-w-3xl px-3 sm:px-0"
       (dragenter)="onFileDragEnter($event)"
       (dragover)="onFileDragOver($event)"
       (dragleave)="onFileDragLeave($event)"
@@ -520,7 +529,7 @@
             #planSearch
             type="text"
             autocomplete="off"
-            class="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-subtle"
+            class="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-subtle pointer-coarse:text-base"
             placeholder="Search plans by title and content…"
             [value]="overviewQuery()"
             (input)="overviewQuery.set(planSearch.value)"
@@ -600,7 +609,7 @@
             <div class="drop-preview" *cdkDragPlaceholder></div>
             <div class="flex items-start justify-between gap-2">
               <button type="button" cdkDragHandle
-                class="drag-handle -ml-1 grid h-6 w-6 flex-none cursor-grab touch-none place-items-center
+                class="drag-handle -ml-1 grid h-6 w-6 flex-none cursor-grab touch-none place-items-center pointer-coarse:h-9 pointer-coarse:w-9
                        rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
                 (click)="$event.stopPropagation()"
                 aria-label="Drag plan">
@@ -608,7 +617,7 @@
               </button>
               <span class="min-w-0 flex-1 truncate font-semibold text-text">{{ plan.title }}</span>
               <span
-                class="flex-none rounded-lg p-1 text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100"
+                class="plan-card-delete flex-none rounded-lg p-1 text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100"
                 (click)="deletePlan(plan.id, $event)"
                 role="button" aria-label="Delete plan">
                 <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>

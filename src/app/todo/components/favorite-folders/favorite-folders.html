@@ -1,7 +1,10 @@
 @if (tileCount() > 0) {
   <section class="mx-auto mb-5 w-full max-w-3xl" aria-label="Favorite folders">
-    <!-- Mobil untereinander, ab sm nebeneinander. Bei vier Ordnern eine
-         Reihe mit vier.
+    <!-- Ab sm nebeneinander, bei vier Ordnern eine Reihe mit vier. Auf dem
+         Telefon zwei Spalten: untereinander standen fuenf Kacheln je 80px, und
+         die eigentliche Liste begann erst unter dem Bildschirmrand. Unter
+         360px bleibt es bei einer Spalte, dort passt „2 of 3 done" sonst
+         nicht mehr neben den Ring.
 
          Was hier WEGGEFALLEN ist, und warum: der Verlauf hinter dem Symbol,
          das Symbol im abgerundeten Kästchen, shadow-lg samt Anheben beim
@@ -12,14 +15,15 @@
          Balken schon sagte. Was bleibt, ist die Farbe des Ordners und sein
          Fortschritt. Die Farbe bekommt dadurch mehr Bühne, nicht weniger. -->
     <div
-      class="grid grid-cols-1 gap-2.5"
+      class="grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2"
       [class]="tileCount() === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'">
 
       <!-- Virtueller Favoriten-Ordner: Fortschritt aller favorisierten Todos -->
       @if (favoriteProgress().total > 0) {
         <button
           type="button"
-          class="favorite-tile folder-card flex items-center gap-3 rounded-3xl border border-amber-500/25 bg-amber-500/10 p-4 text-left text-amber-200 transition duration-200 hover:border-amber-400/45"
+          class="favorite-tile folder-card flex items-center gap-2.5 rounded-3xl border border-amber-500/25 bg-amber-500/10 p-3 text-left text-amber-200 transition duration-200 hover:border-amber-400/45 sm:gap-3 sm:p-4"
+          [class.favorite-tile--wide]="tileCount() % 2 === 1"
           [class.ring-2]="favoritesActive()"
           [class.ring-highlight2]="favoritesActive()"
           [class.celebrate-fav]="isCelebrating(FAVORITE_TODOS_KEY)"
@@ -52,7 +56,7 @@
       @for (label of favorites(); track label.id) {
         <button
           type="button"
-          class="folder-card flex items-center gap-3 rounded-3xl border border-line p-4 pr-7 text-left transition duration-200 hover:border-line-strong"
+          class="folder-card flex items-center gap-2.5 rounded-3xl border border-line p-3 pr-6 text-left transition duration-200 hover:border-line-strong sm:gap-3 sm:p-4 sm:pr-7"
           [class]="bgClass(label.color) + ' ' + textClass(label.color)"
           [class.ring-2]="activeLabelId() === label.id"
           [class.ring-highlight2]="activeLabelId() === label.id"
