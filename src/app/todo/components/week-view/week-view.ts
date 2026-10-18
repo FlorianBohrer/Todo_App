@@ -10,6 +10,7 @@ import {ChangeDetectionStrategy,
   viewChild,
 } from '@angular/core';
 import { CdkDropListGroup, CdkDropList, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { HoldToDrag } from '../../../shared/hold-to-drag';
 import {
   LucideAngularModule,
   ChevronLeft,
@@ -52,7 +53,7 @@ const UNSCHEDULED = '';
 
 @Component({
   selector: 'app-week-view',
-  imports: [LucideAngularModule, CdkDropListGroup, CdkDropList, CdkDrag, TokenChip],
+  imports: [LucideAngularModule, CdkDropListGroup, CdkDropList, CdkDrag, HoldToDrag, TokenChip],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './week-view.html',
   styleUrl: './week-view.scss',
@@ -166,14 +167,6 @@ export class WeekView {
 
   setBacklogStatus(status: 'all' | 'active') { this.backlogStatus.set(status); }
   setBacklogCategory(id: string | null) { this.backlogCategory.set(id); }
-
-  /**
-   * Auf Touch erst nach kurzem Halten ziehen. Ohne Verzoegerung begann jedes
-   * Wischen, das auf einer Karte anfing, ein Ziehen statt eines Scrollens —
-   * in der gestapelten Woche liegt fast ueberall eine Karte unter dem Finger.
-   * Dieselben 300ms wie in der Liste; mit der Maus bleibt es sofort.
-   */
-  protected readonly dragStartDelay = { touch: 300, mouse: 0 };
 
   // ---- Heute im Blick behalten ----
   // Sieben Spalten passen auf kein Telefon; der Streifen scrollt waagerecht.

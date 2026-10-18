@@ -7,6 +7,7 @@ import {
   CdkDragPlaceholder,
   CdkDragDrop,
 } from '@angular/cdk/drag-drop';
+import { HoldToDrag } from '../../../shared/hold-to-drag';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
 import { folderColorClass } from '../../shared/folder-color';
 import { splitFolderName } from '../../shared/folder-name';
@@ -48,6 +49,7 @@ function storedGrouping(): FolderGrouping {
     LucideAngularModule,
     CdkDropList,
     CdkDrag,
+    HoldToDrag,
     CdkDragHandle,
     CdkDragPlaceholder,
   ],
