@@ -4,7 +4,7 @@
     class="rounded-lg px-2.5 py-2 text-xs text-subtle transition sm:px-2 sm:py-1 hover:bg-fill hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight1"
     [attr.aria-expanded]="open()"
     (click)="toggle()">
-    Connect Mac
+    Connect Flow
   </button>
 
   @if (open()) {
@@ -12,10 +12,12 @@
       class="absolute right-0 z-20 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-border bg-panel1 p-4 shadow-lg"
       role="dialog"
       aria-label="Connect a device">
-      <p class="text-sm font-semibold text-text">Flow for Mac</p>
-      <p class="mt-1 text-xs text-muted">
-        Generate a code and enter it in Flow on your Mac. Timers live there. This
-        page only hands over the connection.
+      <p class="text-sm font-semibold text-text">Flow, the focus timer</p>
+      <p class="mt-1 text-xs/[1.55] text-muted">
+        Generate a code and enter it in Flow, behind the link symbol at the
+        bottom. Flow then lists your open todos, logs focus time against them
+        and can tick them off. The timers live in Flow; this page shows what is
+        running and how much focus each todo got.
       </p>
 
       @if (pairingCode(); as code) {
@@ -23,7 +25,7 @@
           <p
             class="font-mono text-2xl font-semibold tracking-[0.3em] text-text"
             [class.opacity-40]="expired()">
-            {{ code.code }}
+            {{ formatCode(code.code) }}
           </p>
 
           @if (expired()) {

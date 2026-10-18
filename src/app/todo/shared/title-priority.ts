@@ -25,10 +25,12 @@ export type MoscowLevel = 'must' | 'should' | 'could' | 'wont';
 /**
  * Haupt- oder Unteraufgabe.
  *
- * Bewusst derselbe Präfix-Slot wie MoSCoW und keine zweite Achse: eine
- * Unteraufgabe ist ein Schritt ihrer Hauptaufgabe, und priorisiert wird die
- * Hauptaufgabe. „Wichtiger Teilschritt einer unwichtigen Aufgabe" ist keine
- * Aussage, die man treffen will.
+ * Eine zweite Achse neben MoSCoW: „/must /main Umzug" ist eine wichtige
+ * Hauptaufgabe, „/must /sub Pass verlängern" ein Schritt, der sein muss.
+ * Anfangs teilten sich beide einen Präfix-Slot, und es zählte nur das erste —
+ * wer beides schrieb, sah das zweite als Text und verlor dabei die
+ * Gliederung. Sortiert wird weiter über die Hauptaufgabe (orderWithSubtasks):
+ * die Priorität eines Schritts sagt, wie wichtig er ist, nicht wo er steht.
  */
 export type TaskLevel = 'main' | 'sub';
 
@@ -61,24 +63,75 @@ const PREFIXES: TitlePrefix[] = [
   { match: '/sub ',    priority: NORMAL_PRIORITY, level: 'sub' },
 ];
 
-function findPrefix(title: string): TitlePrefix | undefined {
-  const start = title.trimStart().toLowerCase();
-  return PREFIXES.find((p) => start.startsWith(p.match));
+interface TitlePrefixes {
+  badge: MoscowLevel | null;
+  level: TaskLevel | null;
+  /** Der Titel ab dem ersten Zeichen nach den Präfixen. */
+  rest: string;
+}
+
+/**
+ * Alle Präfixe am Anfang, in beliebiger Reihenfolge: „/must /sub " und
+ * „/sub /must " meinen dasselbe. Pro Achse zählt das erste; ein zweites
+ * derselben Achse wird trotzdem gelesen, damit es nie als Text stehen bleibt.
+ */
+function readPrefixes(title: string): TitlePrefixes {
+  let badge: MoscowLevel | null = null;
+  let level: TaskLevel | null = null;
+  let rest = title.trimStart();
+  let found = false;
+
+  for (;;) {
+    const lower = rest.toLowerCase();
+    // Hinter dem Wort zählt jedes Leerzeichen, auch ein Zeilenumbruch:
+    // „/sub" allein in der ersten Zeile ist genauso ein Präfix.
+    const prefix = PREFIXES.find(
+      (p) => lower.startsWith(p.match.trimEnd()) && /\s/.test(lower.charAt(p.match.length - 1)),
+    );
+    if (!prefix) break;
+    found = true;
+    badge ??= prefix.badge ?? null;
+    level ??= prefix.level ?? null;
+    rest = rest.slice(prefix.match.length).trimStart();
+  }
+
+  return { badge, level, rest: found ? rest : title };
 }
 
 /** Sortier-Priorität: must 0, should 1, could 2, ohne 3, won't 4. */
 export function titlePriority(title: string): number {
-  return findPrefix(title)?.priority ?? NORMAL_PRIORITY;
+  const badge = readPrefixes(title).badge;
+  return PREFIXES.find((p) => p.badge === badge)?.priority ?? NORMAL_PRIORITY;
 }
 
 /** Die MoSCoW-Stufe eines Titels, oder null wenn keine gesetzt ist. */
 export function priorityBadge(title: string): MoscowLevel | null {
-  return findPrefix(title)?.badge ?? null;
+  return readPrefixes(title).badge;
 }
 
 /** Haupt- oder Unteraufgabe, oder null wenn nichts gesetzt ist. */
 export function taskLevel(title: string): TaskLevel | null {
-  return findPrefix(title)?.level ?? null;
+  return readPrefixes(title).level;
+}
+
+/** So steht eine Stufe im Titel. Won't mit Apostroph, wie man es schreibt. */
+const WRITTEN: Record<MoscowLevel | TaskLevel, string> = {
+  must: '/must ',
+  should: '/should ',
+  could: '/could ',
+  wont: "/won't ",
+  main: '/main ',
+  sub: '/sub ',
+};
+
+/**
+ * Stufen und Text → Titel, so wie er gespeichert wird: erst die Priorität,
+ * dann die Gliederung. Ohne Text kein Präfix — ein Titel, der nur aus
+ * „/must " bestünde, wäre leer.
+ */
+export function composeTitle(badge: MoscowLevel | null, level: TaskLevel | null, text: string): string {
+  if (text.trim() === '') return text;
+  return (badge ? WRITTEN[badge] : '') + (level ? WRITTEN[level] : '') + text;
 }
 
 /**
@@ -220,12 +273,9 @@ export function appendUnder<T extends { id: string; title: string }>(
   return [...rest.slice(0, end), moved, ...rest.slice(end)];
 }
 
-/** Anzeigetext ohne Präfix (und ohne die folgenden Leerzeichen). */
+/** Anzeigetext ohne Präfixe (und ohne die folgenden Leerzeichen). */
 export function stripPriorityPrefix(title: string): string {
-  const found = findPrefix(title);
-  if (!found) return title;
-  const trimmed = title.trimStart();
-  return trimmed.slice(found.match.length).trimStart();
+  return readPrefixes(title).rest;
 }
 
 /**
@@ -237,15 +287,18 @@ export function stripPriorityPrefix(title: string): string {
  * Ohne dieses Anfügen würde jede Bearbeitung eine Unteraufgabe stillschweigend
  * aus ihrer Hauptaufgabe herauslösen.
  *
- * Ein selbst getipptes Präfix gewinnt. Das ist zugleich der Weg zurück: wer
- * „/main " davorschreibt, macht aus der Unteraufgabe wieder eine
- * Hauptaufgabe.
+ * Eine selbst getippte Gliederung gewinnt. Das ist zugleich der Weg zurück:
+ * wer „/main " davorschreibt, macht aus der Unteraufgabe wieder eine
+ * Hauptaufgabe. Eine getippte Priorität dagegen bleibt neben der Stufe
+ * stehen: „/must Milch" unter „Einkaufen" ist ein Schritt, der sein muss —
+ * keine neue Aufgabe neben der Liste.
  */
 export function withTaskLevel(title: string, level: TaskLevel | null): string {
   if (level === null) return title;
   const trimmed = title.trimStart();
-  if (trimmed === '' || findPrefix(trimmed)) return title;
-  return `/${level} ${trimmed}`;
+  const typed = readPrefixes(trimmed);
+  if (typed.level !== null || typed.rest.trim() === '') return title;
+  return composeTitle(typed.badge, level, typed.rest);
 }
 
 /** Beschriftung des Badges. */

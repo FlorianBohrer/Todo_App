@@ -50,6 +50,7 @@ Ebenfalls nicht: die graue Dokumentenwüste (Notion-Imitat mit Slash-Menü), das
 3. **Nichts geht verloren, und man sieht das.** Automatisch speichern ist die halbe Miete — die andere Hälfte ist, dass der Nutzer dem Zustand ansieht, dass gespeichert wurde. Optimistisch anzeigen, entprellt senden, Fehler ehrlich melden statt still schlucken.
 4. **Material mit Absicht.** Glas, Gradient und Blur sind vorhanden und dürfen benutzt werden — aber nur dort, wo sie eine Ebene, eine Zugehörigkeit oder einen Fortschritt sichtbar machen. Farbe kommt aus dem Folder-System, nicht aus Laune.
 5. **Vorzeigbar an jeder Stelle.** Das Projekt ist auch Portfolio. Jede Fläche, auch der leere Zustand und der Fehlerfall, muss einem zweiten Blick standhalten.
+6. **Erledigen ist laut.** Die bewusste Ausnahme von „ruhig": Wer eine Aufgabe abhakt, bekommt XP, Konfetti, Klang und irgendwann ein Level-Up, das den ganzen Bildschirm nimmt. Die Ruhe gilt für alles, was man liest und bedient — die Belohnung gilt dem einen Moment, in dem etwas fertig wird. Grenzen, die dabei nicht verhandelbar sind: der XP-Stand wird aus den erledigten Todos gerechnet und nie gespeichert (geräteübergreifend, nicht zu erschummeln); keine Tagesserie (siehe `rhythm.ts`); reduzierte Bewegung heißt kein Konfetti; Ton lässt sich abschalten; nichts blockiert die Arbeit, nichts verlangt einen Klick zum Weitermachen. Dieselbe Mechanik steckt in Flow, dem Timer — `src/app/reward/level.ts` und `celebrate.ts` liegen dort als identische Kopie.
 
 ## Accessibility & Inclusion
 
