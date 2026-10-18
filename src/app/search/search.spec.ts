@@ -94,7 +94,15 @@ describe('searchTodos', () => {
   it('filters by prefix', () => {
     const items = [todo('/must Ship it'), todo('/should Ship docs'), todo('/sub Ship step')];
     expect(searchTodos(items, parseQuery('/must ship')).map((h) => h.title)).toEqual(['Ship it']);
-    expect(searchTodos(items, parseQuery('/sub ')).map((h) => h.token)).toEqual(['sub']);
+    expect(searchTodos(items, parseQuery('/sub ')).map((h) => h.tokens)).toEqual([['sub']]);
+  });
+
+  it('shows both symbols of a must-have step and finds it by either', () => {
+    const items = [todo('/must /sub Renew the passport'), todo('/should Pack')];
+    expect(searchTodos(items, parseQuery('/sub ')).map((h) => [h.tokens, h.title])).toEqual([
+      [['must', 'sub'], 'Renew the passport'],
+    ]);
+    expect(searchTodos(items, parseQuery('/must pass')).map((h) => h.title)).toEqual(['Renew the passport']);
   });
 
   it('finds done and archived todos too, but lists open ones first', () => {

@@ -7,7 +7,8 @@
  * title-priority.ts), auf dem Bildschirm stehen sie nur noch als Chip.
  *
  * Hier liegt die eine Stelle, die zwischen beidem übersetzt: Titel → Zeichen
- * und Text, Zeichen und Text → Titel, und wie ein Zeichen aussieht.
+ * und Text, Zeichen und Text → Titel, und wie ein Zeichen aussieht. Ein Titel
+ * trägt bis zu zwei Zeichen: eine Priorität und eine Gliederung.
  */
 import {
   Ban,
@@ -22,22 +23,13 @@ import {
 import {
   MoscowLevel,
   TaskLevel,
+  composeTitle,
   priorityBadge,
   stripPriorityPrefix,
   taskLevel,
 } from './title-priority';
 
 export type TitleToken = MoscowLevel | TaskLevel;
-
-/** So steht das Zeichen im gespeicherten Titel. Won't mit Apostroph, wie man es schreibt. */
-const PREFIX: Record<TitleToken, string> = {
-  must: '/must ',
-  should: '/should ',
-  could: '/could ',
-  wont: "/won't ",
-  main: '/main ',
-  sub: '/sub ',
-};
 
 /**
  * Das Zeichen selbst — ein Symbol, kein Wort.
@@ -105,9 +97,28 @@ export function tokenClass(token: TitleToken): string {
   return TOKEN_CLASS[token];
 }
 
-/** Das Zeichen eines Titels, oder null, wenn keins davorsteht. */
-export function tokenOf(title: string): TitleToken | null {
-  return priorityBadge(title) ?? taskLevel(title);
+const isLevel = (token: TitleToken): token is TaskLevel => token === 'main' || token === 'sub';
+
+/** Erst die Priorität, dann die Gliederung — so stehen sie im Titel und als Chips. */
+function ordered(tokens: ReadonlyArray<TitleToken | null>): TitleToken[] {
+  const present = tokens.filter((t): t is TitleToken => t !== null);
+  return [...present.filter((t) => !isLevel(t)), ...present.filter(isLevel)];
+}
+
+/**
+ * Die Zeichen eines Titels: höchstens eine Priorität und eine Gliederung, in
+ * dieser Reihenfolge. Leer, wenn keins davorsteht.
+ */
+export function tokensOf(title: string): TitleToken[] {
+  return ordered([priorityBadge(title), taskLevel(title)]);
+}
+
+/**
+ * Ein Zeichen dazu. Es ersetzt das derselben Achse — eine Priorität die
+ * andere, eine Gliederung die andere — und lässt das der anderen stehen.
+ */
+export function withToken(tokens: readonly TitleToken[], token: TitleToken): TitleToken[] {
+  return ordered([...tokens.filter((t) => isLevel(t) !== isLevel(token)), token]);
 }
 
 /**
@@ -115,22 +126,27 @@ export function tokenOf(title: string): TitleToken | null {
  *
  * Zugleich das Erkennen beim Tippen: erst das Leerzeichen hinter dem Wort
  * macht es zum Zeichen. „/mu" ist noch Text, „/must " schon nicht mehr.
+ * „/must /sub " sind zwei Zeichen, in beliebiger Reihenfolge getippt.
  */
-export function splitTitle(title: string): { token: TitleToken | null; text: string } {
-  const token = tokenOf(title);
-  return { token, text: token === null ? title : stripPriorityPrefix(title) };
+export function splitTitle(title: string): { tokens: TitleToken[]; text: string } {
+  const tokens = tokensOf(title);
+  return { tokens, text: tokens.length === 0 ? title : stripPriorityPrefix(title) };
 }
 
 /**
  * Zeichen und Text → Titel, so wie er gespeichert wird.
  *
  * Ohne Text kein Präfix: ein Titel, der nur aus „/must " bestünde, wäre leer.
- * Steht im Text selbst schon ein Präfix, gewinnt das — wer es ausdrücklich
- * davorschreibt, meint es auch (dieselbe Regel wie withTaskLevel).
+ * Steht im Text selbst schon ein Präfix, gewinnt es auf seiner Achse — wer es
+ * ausdrücklich davorschreibt, meint es auch (dieselbe Regel wie withTaskLevel).
  */
-export function joinTitle(token: TitleToken | null, text: string): string {
+export function joinTitle(tokens: readonly TitleToken[], text: string): string {
   const trimmed = text.trimStart();
-  if (token === null || trimmed === '') return text;
-  if (tokenOf(trimmed) !== null) return trimmed;
-  return PREFIX[token] + trimmed;
+  if (trimmed === '') return text;
+  const typed = splitTitle(trimmed);
+  const all = typed.tokens.reduce(withToken, [...tokens]);
+  if (all.length === 0) return text;
+  const badge = all.find((t): t is MoscowLevel => !isLevel(t)) ?? null;
+  const level = all.find(isLevel) ?? null;
+  return composeTitle(badge, level, typed.text);
 }

@@ -164,13 +164,13 @@
                  daraus ein Chip, den man wegnehmen kann — dann zeigt er auch
                  Main und Step, die sonst die Einrückung sagt. -->
             @if (editingId() === todo.id) {
-              @if (editToken(); as token) {
+              @for (token of editTokens(); track token) {
                 <button
                   type="button"
                   class="flex h-5 flex-none items-center gap-0.5 rounded-md pl-[3px] pr-1"
                   [class]="tokenClass(token)"
                   (mousedown)="$event.preventDefault()"
-                  (click)="clearEditToken(todoText)"
+                  (click)="clearEditToken(token, todoText)"
                   [attr.aria-label]="tokenDescription[token] + ', remove'"
                   [title]="tokenDescription[token] + ' · remove (Backspace at the start)'">
                   <lucide-icon [img]="tokenIcon[token]" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
