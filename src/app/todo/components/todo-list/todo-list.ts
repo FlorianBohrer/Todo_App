@@ -42,7 +42,8 @@ import {
   joinTitle,
   splitTitle,
   tokenClass,
-  tokenOf,
+  tokensOf,
+  withToken,
 } from '../../shared/title-token';
 import { TokenChip } from '../../shared/token-chip';
 import { FocusSessionService, formatFocus } from '../../services/focus-session.service';
@@ -354,13 +355,15 @@ export class TodoList {
   protected readonly tokenClass = tokenClass;
 
   /**
-   * Das Präfix der Zeile, die gerade bearbeitet wird — als Chip vor dem Feld.
+   * Die Präfixe der Zeile, die gerade bearbeitet wird — als Chips vor dem Feld,
+   * höchstens eine Priorität und eine Gliederung.
    *
    * Im Feld selbst steht nur der Text. Ein vorn getipptes „/should " wird
-   * sofort zum Chip, Backspace ganz vorn oder ein Klick auf den Chip nimmt es
-   * wieder weg. Gespeichert wird beim Verlassen, wie bisher.
+   * sofort zum Chip und ersetzt nur die Priorität, nicht die Gliederung.
+   * Backspace ganz vorn nimmt den letzten Chip weg, ein Klick genau diesen.
+   * Gespeichert wird beim Verlassen, wie bisher.
    */
-  protected readonly editToken = signal<TitleToken | null>(null);
+  protected readonly editTokens = signal<TitleToken[]>([]);
 
 
   /** true, solange die erste Ladung Todos unterwegs ist. */
@@ -579,7 +582,7 @@ toggleFolderList(): void {
   }
 
   startEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
-    this.editToken.set(tokenOf(todo.title));
+    this.editTokens.set(tokensOf(todo.title));
     this.editingId.set(todo.id);
     if (this.canExpand(todo.title) && !this.isExpanded(todo.id)) {
       this.toggleExpanded(todo.id, textarea);
@@ -602,7 +605,7 @@ toggleFolderList(): void {
     if (this.editingId() !== todo.id) return;
     this.editingId.set(null);
     const typed = textarea.value.trim();
-    const title = joinTitle(this.editToken(), typed);
+    const title = joinTitle(this.editTokens(), typed);
     if (typed && title !== todo.title) {
       this.renameTodo(todo.id, title);
     } else {
@@ -613,34 +616,34 @@ toggleFolderList(): void {
   /** Escape: Änderung verwerfen. */
   cancelEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
     textarea.value = this.editText(todo);
-    this.editToken.set(tokenOf(todo.title));
+    this.editTokens.set(tokensOf(todo.title));
     this.editingId.set(null);
     textarea.blur();
   }
 
   /** Beim Tippen: ein fertiges Präfix ganz vorn wird zum Chip. */
   onEditInput(textarea: HTMLTextAreaElement): void {
-    const { token, text } = splitTitle(textarea.value);
-    if (token === null) return;
+    const { tokens, text } = splitTitle(textarea.value);
+    if (tokens.length === 0) return;
 
-    this.editToken.set(token);
+    this.editTokens.update((current) => tokens.reduce(withToken, current));
     textarea.value = text;
     // Der Cursor stand hinter dem getippten Leerzeichen, also ganz vorn im
     // eigentlichen Text. Dort bleibt er.
     textarea.setSelectionRange(0, 0);
   }
 
-  /** Backspace ganz vorn nimmt den Chip weg, wie jedes Zeichen links vom Cursor. */
+  /** Backspace ganz vorn nimmt den letzten Chip weg, wie jedes Zeichen links vom Cursor. */
   onEditBackspace(event: Event, textarea: HTMLTextAreaElement): void {
-    if (this.editToken() === null) return;
+    if (this.editTokens().length === 0) return;
     if (textarea.selectionStart !== 0 || textarea.selectionEnd !== 0) return;
 
     event.preventDefault();
-    this.editToken.set(null);
+    this.editTokens.update((current) => current.slice(0, -1));
   }
 
-  clearEditToken(textarea: HTMLTextAreaElement): void {
-    this.editToken.set(null);
+  clearEditToken(token: TitleToken, textarea: HTMLTextAreaElement): void {
+    this.editTokens.update((current) => current.filter((t) => t !== token));
     textarea.focus();
   }
 

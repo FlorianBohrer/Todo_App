@@ -73,7 +73,7 @@
                     class="h-4 w-4 flex-none"
                     [class]="hit.todo.completed ? 'text-ok' : 'text-subtle'"
                     aria-hidden="true"></lucide-icon>
-                  @if (hit.token; as level) {
+                  @for (level of hit.tokens; track level) {
                     <app-token-chip [token]="level" size="sm" />
                   }
                   <span class="min-w-0 flex-1 truncate text-sm"

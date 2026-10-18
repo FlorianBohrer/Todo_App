@@ -177,8 +177,8 @@ export class SearchPalette {
       const next = rankForFocus(this.todoService.allTodos())
         .slice(0, 5)
         .map((todo): TodoHit => {
-          const { token, text } = splitTitle(todo.title);
-          return { kind: 'todo', todo, token, title: text.split('\n')[0].trim(), score: 0 };
+          const { tokens, text } = splitTitle(todo.title);
+          return { kind: 'todo', todo, tokens, title: text.split('\n')[0].trim(), score: 0 };
         });
       const recent = [...this.plans()]
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -246,9 +246,9 @@ export class SearchPalette {
   protected onInput(field: HTMLInputElement): void {
     // Wie beim Anlegen: ein vorn getipptes Präfix wird zum Zeichen — hier
     // eines, das filtert.
-    const { token, text } = splitTitle(field.value);
-    if (token !== null) {
-      this.token.set(token);
+    const { tokens, text } = splitTitle(field.value);
+    if (tokens.length > 0) {
+      this.token.set(tokens[0]);
       field.value = text;
     }
     this.text.set(field.value);

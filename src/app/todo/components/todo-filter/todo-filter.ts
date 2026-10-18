@@ -65,9 +65,9 @@ export class TodoFilter {
 
   /** Ein vorn getipptes Präfix wird zum Filter-Zeichen, wie beim Anlegen. */
   onInput(field: HTMLInputElement): void {
-    const { token, text } = splitTitle(field.value);
-    if (token !== null) {
-      this.searchToken.set(token);
+    const { tokens, text } = splitTitle(field.value);
+    if (tokens.length > 0) {
+      this.searchToken.set(tokens[0]);
       field.value = text;
     }
     this.searchTerm.set(field.value);

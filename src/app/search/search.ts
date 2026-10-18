@@ -71,14 +71,18 @@ export function score(text: string, terms: readonly string[]): number | null {
 // ---------------------------------------------------------------------------
 
 export interface Query {
-  /** Ein vorn getipptes Präfix, als Filter: „/must " zeigt nur Must-haves. */
+  /**
+   * Ein vorn getipptes Präfix, als Filter: „/must " zeigt nur Must-haves —
+   * auch die, die zugleich Schritt sind. Ein Filter genügt; bei zweien gilt
+   * die Priorität.
+   */
   token: TitleToken | null;
   terms: string[];
 }
 
 export function parseQuery(raw: string): Query {
-  const { token, text } = splitTitle(raw.trimStart());
-  return { token, terms: normalize(text).split(/\s+/).filter((t) => t.length > 0) };
+  const { tokens, text } = splitTitle(raw.trimStart());
+  return { token: tokens[0] ?? null, terms: normalize(text).split(/\s+/).filter((t) => t.length > 0) };
 }
 
 export function isEmptyQuery(query: Query): boolean {
@@ -158,8 +162,9 @@ export function snippet(text: string, terms: readonly string[], before = 24, aft
 export interface TodoHit {
   kind: 'todo';
   todo: Todo;
-  token: TitleToken | null;
-  /** Erste Zeile, ohne Präfix — so, wie sie in der Liste steht. */
+  /** Priorität und Gliederung, als Zeichen vor dem Titel. */
+  tokens: TitleToken[];
+  /** Erste Zeile, ohne Präfixe — so, wie sie in der Liste steht. */
   title: string;
   score: number;
 }
@@ -174,8 +179,8 @@ export function searchTodos(todos: readonly Todo[], query: Query): TodoHit[] {
   const hits: Array<TodoHit & { index: number }> = [];
 
   todos.forEach((todo, index) => {
-    const { token, text } = splitTitle(todo.title);
-    if (query.token !== null && token !== query.token) return;
+    const { tokens, text } = splitTitle(todo.title);
+    if (query.token !== null && !tokens.includes(query.token)) return;
 
     const title = text.split('\n')[0].trim();
     const inText = score(text, query.terms);
@@ -186,7 +191,7 @@ export function searchTodos(todos: readonly Todo[], query: Query): TodoHit[] {
     hits.push({
       kind: 'todo',
       todo,
-      token,
+      tokens,
       title,
       score: inText + (inTitle !== null && query.terms.length > 0 ? 2 : 0),
       index,

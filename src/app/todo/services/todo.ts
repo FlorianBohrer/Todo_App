@@ -180,7 +180,7 @@ export class TodoService {
 
     const token = this.searchToken();
     if (token !== null) {
-      items = items.filter((i) => splitTitle(i.title).token === token);
+      items = items.filter((i) => splitTitle(i.title).tokens.includes(token));
     }
 
     // Priorität per Titel-Präfix: /must zuerst, /could danach. Unteraufgaben
