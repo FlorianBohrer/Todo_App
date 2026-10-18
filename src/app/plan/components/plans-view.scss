@@ -247,6 +247,19 @@
   padding-inline: 0.5rem;
 }
 
+// Auf dem Telefon klebt der Kopf nicht. Unter der Leiste (60px) waeren es
+// zwei weitere Zeilen, und mit offener Tastatur bliebe fuer den Text, den man
+// gerade schreibt, ein Streifen in der Mitte. Ausserdem ragte der Kopf mit
+// seinem negativen Rand 4px ueber den Bildschirm, und die ganze Seite liess
+// sich seitlich verschieben.
+@media (max-width: 639px) {
+  .doc-head {
+    position: static;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+}
+
 
 // Ein leeres, aufgeklapptes Toggle ist nur so hoch wie seine Hinweiszeile —
 // als Ziel ein Strich. Waehrend des Zugs bekommt es Hoehe.
@@ -525,4 +538,29 @@
   font-family: inherit;
   font-size: 0.6875rem;
   color: var(--color-subtle);
+}
+
+
+// ---- Touch ----
+// Umschalter und Filter sind 28px hoch — mit dem Daumen ein Ratespiel. Auf
+// Touch bekommen sie Hoehe, die Schrift bleibt.
+@media (pointer: coarse) {
+  .mode-tab {
+    padding-block: 0.5rem;
+  }
+
+  .folder-filter {
+    padding-block: 0.45rem;
+  }
+}
+
+// Der Papierkorb der Kachel erscheint sonst beim Ueberfahren. Ohne Zeiger
+// gab es ihn nicht — einen Plan zu loeschen ging auf dem Telefon gar nicht.
+// Seit es „Undo" gibt, darf er leise dastehen.
+@media (hover: none) {
+  .plan-card-delete {
+    opacity: 0.6;
+    margin: -0.375rem -0.375rem -0.375rem 0;
+    padding: 0.625rem;
+  }
 }

@@ -1164,3 +1164,22 @@ body.is-block-selecting * {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* ---------------------------------------------------------------------------
+   Touch: kein Hineinzoomen beim Antippen eines Feldes
+   ---------------------------------------------------------------------------
+
+   iOS Safari zoomt in jedes Eingabefeld hinein, dessen Schrift kleiner als
+   16px ist — auch in ein contenteditable. Der Editor schrieb mit 15px: jedes
+   Antippen eines Absatzes riss die Seite seitlich auf, und man musste von Hand
+   wieder herauszoomen. Das Verbot des Zoomens im viewport-Tag waere die
+   bequeme Loesung, nimmt aber allen das Vergroessern, die es brauchen.
+
+   Also bekommt der Fliesstext auf Touch-Geraeten 16px. Die kleinen Felder
+   (Suche, Woche, Code) tragen dafuer pointer-coarse:text-base im Markup.
+   Steht ausserhalb von @layer, damit es gegen das Theme gewinnt. */
+@media (pointer: coarse) {
+  :root {
+    --text-prose: 1rem;
+  }
+}

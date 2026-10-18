@@ -27,7 +27,7 @@
             sie am Symbol und am Tooltip. -->
        <button
          type="button"
-         class="grid h-7 w-7 place-items-center rounded-lg text-subtle transition hover:bg-fill hover:text-danger"
+         class="grid h-9 w-9 place-items-center rounded-lg text-subtle transition hover:bg-fill hover:text-danger sm:h-7 sm:w-7"
          (click)="signOut()"
          title="Log out" aria-label="Log out">
          <lucide-icon [img]="LogoutIcon" class="h-4 w-4"></lucide-icon>
@@ -42,7 +42,11 @@
        prefers-Abfragen muessen sie gemeinsam umschalten koennen. -->
   <div #chrome class="app-chrome sticky top-0 z-10 mb-6 w-full">
     <div class="mx-auto w-full max-w-3xl px-5 py-2.5">
-      <div class="flex flex-wrap items-center gap-2">
+      <!-- Auf dem Telefon EINE Zeile: Folder-Knopf und Laschen nebeneinander,
+           die Laschen nur mit Symbol. Umgebrochen klebten zwei Zeilen oben,
+           gut 100px von 667 — dauerhaft, auf jeder Ansicht. Der Folder-Knopf
+           nimmt den Rest der Breite und kuerzt seinen Namen. -->
+      <div class="flex items-center gap-2 sm:flex-wrap">
         <!-- Der Knopf sagt, welcher Folder offen ist.
              Vorher stand hier das Wort „Folders" und darueber, 48 Pixel hoch,
              der Name: zwei Elemente fuer eine Auskunft, und die Ueberschrift
@@ -50,50 +54,51 @@
              ein Wort, das man gerade selbst ausgewaehlt hat. Ein Auswahlfeld,
              das seinen Wert zeigt, braucht keine Ueberschrift daneben. -->
         <button
-          class="folder-pill inline-flex h-10 min-w-0 items-center gap-2 rounded-full border px-4 text-sm font-medium transition"
+          class="folder-pill inline-flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition sm:flex-none sm:px-4"
           [class]="folderPillClass()"
           (click)="openCategories()"
           [title]="folderTitle()"
           aria-label="Open folders">
           <lucide-icon [img]="titleIcon()" class="h-4 w-4 flex-none"></lucide-icon>
-          <span class="max-w-[8rem] truncate sm:max-w-[14rem]">{{ title() }}</span>
-          <lucide-icon [img]="ArrowDown" class="h-3.5 w-3.5 flex-none opacity-60"></lucide-icon>
+          <span class="min-w-0 flex-1 truncate text-left sm:max-w-[14rem] sm:flex-none">{{ title() }}</span>
+          <!-- Unter 360px fehlt der Platz: dort sagt der Name mehr als der Pfeil. -->
+          <lucide-icon [img]="ArrowDown" class="h-3.5 w-3.5 flex-none opacity-60 max-[359px]:hidden"></lucide-icon>
         </button>
 
         <!-- Ansicht umschalten: Liste ↔ Woche ↔ Pläne. Dieselbe gleitende Pille
              wie bei den Filtern — drei gleich breite Laschen, --tab-count sagt es.
              Gleiche Höhe wie der Folders-Knopf, damit die Leiste eine Linie hat;
              Symbole, weil man drei Ansichten am Bild schneller trifft als am Wort. -->
-        <div class="filter-tabs flex h-10 gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm"
+        <div class="filter-tabs flex h-10 flex-none gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm"
           role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="3">
           <span class="filter-pill" aria-hidden="true"></span>
 
           <button type="button" role="tab"
-            class="filter-tab flex w-[5.5rem] items-center justify-center gap-1.5 rounded-full sm:w-24"
+            class="filter-tab flex w-11 items-center justify-center gap-1.5 rounded-full sm:w-24"
             [class.is-active]="view() === 'list'"
             [attr.aria-selected]="view() === 'list'"
-            title="List view (1)"
+            title="List view (1)" aria-label="List view"
             (click)="setView('list')">
             <lucide-icon [img]="ListIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span>List</span>
+            <span class="hidden sm:inline">List</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-[5.5rem] items-center justify-center gap-1.5 rounded-full sm:w-24"
+            class="filter-tab flex w-11 items-center justify-center gap-1.5 rounded-full sm:w-24"
             [class.is-active]="view() === 'week'"
             [attr.aria-selected]="view() === 'week'"
-            title="Week view (2)"
+            title="Week view (2)" aria-label="Week view"
             (click)="setView('week')">
             <lucide-icon [img]="WeekIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span>Week</span>
+            <span class="hidden sm:inline">Week</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-[5.5rem] items-center justify-center gap-1.5 rounded-full sm:w-24"
+            class="filter-tab flex w-11 items-center justify-center gap-1.5 rounded-full sm:w-24"
             [class.is-active]="view() === 'plans'"
             [attr.aria-selected]="view() === 'plans'"
-            title="Plans view (3)"
+            title="Plans view (3)" aria-label="Plans view"
             (click)="setView('plans')">
             <lucide-icon [img]="PlansIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span>Plans</span>
+            <span class="hidden sm:inline">Plans</span>
           </button>
         </div>
 
@@ -133,7 +138,7 @@
            Rand angeschnitten — das sah nach Versehen aus. Auf breiten
            Bildschirmen wirkt der Rand nicht: dort ist max-w-3xl schmaler als
            das Fenster. -->
-      <div class="view-swap px-4">
+      <div class="view-swap px-3 min-[360px]:px-4">
         <app-favorite-folders></app-favorite-folders>
 
         <!-- EINE Flaeche, und darauf Inhalt.
@@ -144,7 +149,7 @@
 
              Die Flaeche bleibt — sie ist die Form, die diese App hat. Was
              darauf liegt, trennt sich jetzt mit Linien und mit Luft. -->
-        <section class="mx-auto max-w-3xl rounded-3xl border border-line bg-panel1 p-4 sm:p-6">
+        <section class="mx-auto max-w-3xl rounded-3xl border border-line bg-panel1 p-3 min-[360px]:p-4 sm:p-6">
           <app-todo-stats></app-todo-stats>
 
           <app-focus-panel></app-focus-panel>

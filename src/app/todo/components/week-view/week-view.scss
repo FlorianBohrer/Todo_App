@@ -1,7 +1,12 @@
 // Karten sind ziehbar → Greif-Cursor.
+//
+// pan-y statt none: mit `none` war jede Karte auf dem Telefon eine Stelle,
+// an der die Seite nicht mehr scrollte — wer auf einer Karte zu wischen
+// anfing, zog sie stattdessen. Gezogen wird jetzt nach kurzem Halten
+// (dragStartDelay); waehrend des Ziehens setzt das CDK selbst `none`.
 .week-card {
   cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
 }
 .week-card:active {
   cursor: grabbing;
@@ -78,5 +83,63 @@
   .week-strip {
     -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
     mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  }
+}
+
+/* Der Haken der Karte ist 16px gross, getroffen wird er auf 36px. */
+.week-check {
+  position: relative;
+}
+
+.week-check::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 999px;
+}
+
+/* ---- Telefon und Tablet ohne Zeigergeraet ----
+   Ueberfahren gibt es dort nicht. Was sich sonst beim Zeigen zeigt, muss
+   ohne Zeigen erreichbar sein. */
+@media (hover: none) {
+  .week-rollover {
+    opacity: 0.7;
+  }
+}
+
+/* Auf dem Telefon stehen die Tage untereinander, jede Karte hat die volle
+   Breite. Dort stehen die Pfeile fuer „einen Tag frueher / spaeter" fest
+   rechts in der Karte statt schwebend darueber: auf die Karte zu tippen, um
+   sie erst einzublenden, und dann einen 20px-Pfeil zu treffen, war der
+   einzige Weg, ohne Ziehen umzuplanen. */
+@media (hover: none) and (max-width: 639px) {
+  .week-shift {
+    position: static;
+    align-self: center;
+    margin: -0.25rem -0.25rem -0.25rem 0;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .week-shift button,
+  .week-rollover {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+/* Vergangene leere Tage der laufenden Woche: auf dem Telefon nur die Kopf-
+   zeile. Heute ist Sonntag, und der Weg dorthin fuehrte an sechs leeren
+   Kaesten mit „+ Add" vorbei, in die niemand mehr etwas eintraegt. */
+@media (max-width: 639px) {
+  .week-day--past-empty .week-quick {
+    display: none;
+  }
+
+  .week-day--past-empty .week-day-spacer {
+    display: none;
   }
 }
