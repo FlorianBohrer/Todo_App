@@ -8,6 +8,7 @@ import {
   CdkDragDrop,
 } from '@angular/cdk/drag-drop';
 import { HoldToDrag } from '../../../shared/hold-to-drag';
+import { touchOnly } from '../../../shared/touch';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
 import { folderColorClass } from '../../shared/folder-color';
 import { splitFolderName } from '../../shared/folder-name';
@@ -72,6 +73,15 @@ export class CategoriesOverlay {
   protected readonly activeLabelId = this.labelService.activeLabelId;
   protected readonly palette = ['rose', 'orange', 'amber', 'emerald', 'teal', 'sky', 'violet', 'fuchsia'];
   protected readonly draftColor = signal('rose');
+
+  /**
+   * Auf Touch-Geraeten gibt es kein Sortieren der Folder — weder einzeln noch
+   * als Sammlung. Wer durch die Liste scrollen wollte, hat dabei immer wieder
+   * einen Folder verschoben; auch das Halten zum Verschieben hat das nicht
+   * aufgewogen. Die Griffe verschwinden, das Ziehen ist gesperrt. In eine
+   * Sammlung einordnen geht weiter ueber „Bearbeiten → Collection".
+   */
+  protected readonly touchOnly = touchOnly();
 
   // ---- Suche ----
   protected readonly searchTerm = signal('');

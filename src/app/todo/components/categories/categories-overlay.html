@@ -109,7 +109,7 @@
            (cdkDropListDropped)="dropSection($event)">
       @for (section of sections(); track section.key; let first = $first; let i = $index) {
 
-        <div cdkDrag [cdkDragDisabled]="sectionDragOff(section) !== null">
+        <div cdkDrag [cdkDragDisabled]="touchOnly() || sectionDragOff(section) !== null">
           <!-- Platzhalter mit eigenen Klassen statt einer SCSS-Regel: dieser
                Dialog hat keine eigene Stildatei. -->
           <div *cdkDragPlaceholder
@@ -121,15 +121,19 @@
             <!-- Der Griff ist der EINZIGE Weg, einen Abschnitt zu ziehen.
                  Sonst würde jeder Zug an einer Karte auch den Abschnitt
                  anfassen, in dem sie liegt. -->
-            @if (sectionDragOff(section); as why) {
-              <span class="h-4 w-4 flex-none" [attr.title]="why" aria-hidden="true"></span>
-            } @else {
-              <button type="button" cdkDragHandle
-                class="grid h-5 w-5 flex-none cursor-grab touch-none place-items-center rounded
-                       text-subtle opacity-50 transition hover:opacity-100 active:cursor-grabbing"
-                [attr.aria-label]="'Move section ' + section.title">
-                <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
-              </button>
+            <!-- Auf Touch-Geraeten weder Griff noch Platzhalter: dort wird
+                 nicht sortiert (siehe touchOnly). -->
+            @if (!touchOnly()) {
+              @if (sectionDragOff(section); as why) {
+                <span class="h-4 w-4 flex-none" [attr.title]="why" aria-hidden="true"></span>
+              } @else {
+                <button type="button" cdkDragHandle
+                  class="grid h-5 w-5 flex-none cursor-grab touch-none place-items-center rounded
+                         text-subtle opacity-50 transition hover:opacity-100 active:cursor-grabbing"
+                  [attr.aria-label]="'Move section ' + section.title">
+                  <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+                </button>
+              }
             }
 
             <button type="button"
@@ -162,7 +166,7 @@
         @for (label of section.labels; track label.id) {
           <div
             cdkDrag
-            [cdkDragDisabled]="isSearching() || editingId() === label.id"
+            [cdkDragDisabled]="touchOnly() || isSearching() || editingId() === label.id"
             class="group relative flex flex-wrap items-center gap-2 rounded-xl p-4 text-left
                    cursor-pointer transition hover:scale-[1.02]"
             [class]="bgClass(label.color)"
@@ -170,8 +174,8 @@
             [class.ring-emerald-500]="activeLabelId() === label.id"
             (click)="onCardClick(label.id)">
 
-            <!-- Drag-Griff: beim Suchen ausgeblendet -->
-            @if (!isSearching()) {
+            <!-- Drag-Griff: beim Suchen und auf Touch-Geraeten ausgeblendet -->
+            @if (!isSearching() && !touchOnly()) {
               <button
                 type="button"
                 cdkDragHandle
