@@ -1,0 +1,164 @@
+@if (isOpen()) {
+  <!-- Der Grund dahinter tritt zurück, statt zu verschwinden: man soll sehen,
+       wo man ist, während man sucht, wo man hin will. -->
+  <div class="fixed inset-0 z-50 bg-bg/70 backdrop-blur-sm" (click)="close()" aria-hidden="true"></div>
+
+  <div
+    class="sheet-in fixed left-1/2 top-[8vh] z-50 flex max-h-[80vh] w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-panel1 shadow-[0_24px_64px_-16px_rgb(0_0_0/0.7)]"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Search">
+
+    <div class="flex items-center gap-3 border-b border-line px-4 py-3">
+      <lucide-icon [img]="SearchIcon" class="h-5 w-5 flex-none text-muted" aria-hidden="true"></lucide-icon>
+
+      @if (token(); as current) {
+        <button
+          type="button"
+          class="flex h-6 flex-none items-center gap-0.5 rounded-md pl-1 pr-1"
+          [class]="tokenClass(current)"
+          (click)="setToken(null)"
+          [attr.aria-label]="'Only ' + tokenDescription[current] + ', remove filter'"
+          [title]="'Only ' + tokenDescription[current] + ' · remove (Backspace at the start)'">
+          <lucide-icon [img]="tokenIcon[current]" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+          <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
+        </button>
+      }
+
+      <!-- Kombinationsfeld: der Fokus bleibt hier, die Pfeiltasten bewegen
+           die Auswahl in der Liste darunter, und die Vorlesesoftware hört
+           über aria-activedescendant, welcher Treffer gerade gewählt ist. -->
+      <input
+        #field
+        type="text"
+        class="search-field min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-muted"
+        placeholder="Search todos, plans and folders"
+        autocomplete="off"
+        spellcheck="false"
+        role="combobox"
+        aria-expanded="true"
+        aria-controls="search-results"
+        aria-autocomplete="list"
+        aria-label="Search todos, plans and folders"
+        [attr.aria-activedescendant]="activeId()"
+        (input)="onInput(field)"
+        (keydown)="onKeydown($event, field)" />
+
+      <kbd class="hidden flex-none rounded-md border border-line-strong px-1.5 py-0.5 font-mono text-2xs text-subtle sm:block"
+        aria-hidden="true">Esc</kbd>
+    </div>
+
+    <div #results id="search-results" role="listbox" aria-label="Results" class="min-h-0 flex-1 overflow-y-auto py-2">
+      @for (group of groups(); track group.id) {
+        <div role="group" [attr.aria-labelledby]="'search-group-' + group.id">
+          <p [id]="'search-group-' + group.id" class="px-4 pb-1 pt-2 text-xs font-medium text-subtle">
+            {{ group.title }}
+          </p>
+
+          @for (item of group.items; track item.key) {
+            @let hit = item.hit;
+            <div
+              role="option"
+              [id]="'search-option-' + item.index"
+              [attr.aria-selected]="item.index === active()"
+              class="mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors"
+              [class.bg-fill-strong]="item.index === active()"
+              (mousemove)="active.set(item.index)"
+              (click)="choose(hit)">
+
+              @switch (hit.kind) {
+                @case ('todo') {
+                  <lucide-icon
+                    [img]="hit.todo.archivedAt ? ArchivedIcon : hit.todo.completed ? DoneIcon : OpenIcon"
+                    class="h-4 w-4 flex-none"
+                    [class]="hit.todo.completed ? 'text-ok' : 'text-subtle'"
+                    aria-hidden="true"></lucide-icon>
+                  @for (level of hit.tokens; track level) {
+                    <app-token-chip [token]="level" size="sm" />
+                  }
+                  <span class="min-w-0 flex-1 truncate text-sm"
+                    [class]="hit.todo.completed ? 'text-muted line-through decoration-1' : 'text-text'">
+                    @for (part of segments(hit.title); track $index) {
+                      @if (part.match) { <mark class="search-mark">{{ part.text }}</mark> } @else { {{ part.text }} }
+                    }
+                  </span>
+                  <span class="max-w-[40%] flex-none truncate text-xs text-subtle">{{ todoMeta(hit.todo) }}</span>
+                }
+
+                @case ('plan') {
+                  <lucide-icon [img]="PlanIcon" class="h-4 w-4 flex-none text-highlight2" aria-hidden="true"></lucide-icon>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-sm text-text">
+                      @for (part of segments(hit.plan.title || 'Untitled'); track $index) {
+                        @if (part.match) { <mark class="search-mark">{{ part.text }}</mark> } @else { {{ part.text }} }
+                      }
+                    </span>
+                    @if (hit.snippet; as found) {
+                      <span class="block truncate text-xs text-muted">
+                        @for (part of segments(found); track $index) {
+                          @if (part.match) { <mark class="search-mark">{{ part.text }}</mark> } @else { {{ part.text }} }
+                        }
+                      </span>
+                    }
+                  </span>
+                  <span class="max-w-[30%] flex-none truncate text-xs text-subtle">{{ planFolder(hit.plan) }}</span>
+                }
+
+                @case ('folder') {
+                  <lucide-icon [img]="folderIconOf(hit)" class="h-4 w-4 flex-none" [class]="folderClass(hit)" aria-hidden="true"></lucide-icon>
+                  <span class="min-w-0 flex-1 truncate text-sm text-text">
+                    @for (part of segments(hit.label.name); track $index) {
+                      @if (part.match) { <mark class="search-mark">{{ part.text }}</mark> } @else { {{ part.text }} }
+                    }
+                  </span>
+                  <span class="flex-none text-xs text-subtle">Folder</span>
+                }
+              }
+            </div>
+          }
+
+          @if (group.more > 0) {
+            <p class="px-4 pb-1 pt-0.5 text-xs text-subtle">{{ group.more }} more. Keep typing to narrow it down.</p>
+          }
+        </div>
+      } @empty {
+        <!-- Leer, weil nichts passt — oder weil noch nichts da ist. Beides sagt,
+             was jetzt hilft, statt sich zu entschuldigen. -->
+        <p class="px-4 py-8 text-center text-sm text-muted">
+          @if (searching()) {
+            Nothing matches. Try fewer words, or remove the filter.
+          } @else {
+            Type to search todos, plans and folders.
+          }
+        </p>
+      }
+    </div>
+
+    <!-- Filtern nach Zeichen: dieselben Symbole wie in der Liste. Ein Klick
+         setzt den Filter — oder man tippt es, dann wird es ebenso zum Zeichen. -->
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line px-4 py-2.5 text-2xs text-subtle">
+      <div class="flex items-center gap-1" role="group" aria-label="Filter by priority or level">
+        <span class="mr-1" aria-hidden="true">Filter</span>
+        @for (filter of filterTokens; track filter) {
+          <button
+            type="button"
+            class="grid h-6 w-6 place-items-center rounded-md transition"
+            [class]="token() === filter ? tokenClass(filter) + ' ring-1 ring-current' : 'text-subtle hover:bg-fill hover:text-text'"
+            [attr.aria-pressed]="token() === filter"
+            [attr.aria-label]="'Only ' + tokenDescription[filter]"
+            [title]="'Only ' + tokenDescription[filter]"
+            (click)="setToken(filter)">
+            <lucide-icon [img]="tokenIcon[filter]" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+          </button>
+        }
+      </div>
+      <span class="ml-auto hidden items-center gap-1 sm:flex" aria-hidden="true">
+        <kbd class="rounded border border-line-strong px-1 font-mono">↑</kbd>
+        <kbd class="rounded border border-line-strong px-1 font-mono">↓</kbd> to move
+      </span>
+      <span class="hidden items-center gap-1 sm:flex" aria-hidden="true">
+        <kbd class="rounded border border-line-strong px-1 font-mono">↵</kbd> to open
+      </span>
+    </div>
+  </div>
+}

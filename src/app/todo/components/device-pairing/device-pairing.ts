@@ -11,10 +11,10 @@ import {
 import { DeviceService, PairedDevice } from '../../services/device.service';
 
 /**
- * Kopplung der Flow-App auf dem Mac. Steckt hinter einem Button, weil man das
+ * Kopplung von Flow, dem Fokus-Timer. Steckt hinter einem Button, weil man das
  * genau einmal pro Gerät braucht — der Normalfall ist, dass hier nichts zu
- * sehen ist. Mit dem (entfernten) Zeitblock pro Todo hatte das nie zu tun:
- * Flow redet direkt mit dem Backend, die Web-App reicht nur den Code weiter.
+ * sehen ist. Flow redet danach direkt mit dem Backend; die Web-App reicht nur
+ * den Code weiter und zeigt, was dort läuft (flow-status, Fokuszeit je Todo).
  */
 @Component({
   selector: 'app-device-pairing',
@@ -99,6 +99,14 @@ export class DevicePairing {
       month: 'short',
       year: 'numeric',
     });
+  }
+
+  /**
+   * ABCD-EFGH statt ABCDEFGH: so tippt Flow ihn auch, und zwei Vierer liest
+   * man fehlerfrei ab. Der Server nimmt beides.
+   */
+  protected formatCode(code: string): string {
+    return code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
   }
 
   protected formatCountdown(seconds: number): string {

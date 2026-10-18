@@ -77,8 +77,10 @@ describe('stripPriorityPrefix', () => {
     expect(stripPriorityPrefix('renew the passport')).toBe('renew the passport');
   });
 
-  it('removes only the first prefix', () => {
-    expect(stripPriorityPrefix('/must /could both')).toBe('/could both');
+  it('removes every leading prefix, so none is left as text', () => {
+    // Früher blieb das zweite stehen — „/must /sub Pass" zeigte „/sub Pass".
+    expect(stripPriorityPrefix('/must /could both')).toBe('both');
+    expect(stripPriorityPrefix('/must /sub Pass erneuern')).toBe('Pass erneuern');
   });
 });
 
@@ -292,6 +294,37 @@ describe('appendUnder', () => {
   });
 });
 
+describe('stacked prefixes', () => {
+  it('reads a priority and a level together, in either order', () => {
+    for (const title of ['/must /sub Pass erneuern', '/sub /must Pass erneuern', '  /SUB  /Must Pass erneuern']) {
+      expect(priorityBadge(title)).toBe('must');
+      expect(taskLevel(title)).toBe('sub');
+      expect(stripPriorityPrefix(title)).toBe('Pass erneuern');
+    }
+  });
+
+  it('takes a line break after the word like a space', () => {
+    expect(taskLevel('/sub\nOnly a step')).toBe('sub');
+    expect(stripPriorityPrefix('/sub\nOnly a step')).toBe('Only a step');
+    expect(taskLevel('/subway map')).toBeNull();
+  });
+
+  it('sorts a main task by its priority', () => {
+    expect(titlePriority('/must /main Umzug')).toBe(0);
+    expect(titlePriority('/main Umzug')).toBe(3);
+  });
+
+  it('keeps a must-have step with its main task', () => {
+    const items = [
+      { id: 'A', title: '/main Umzug' },
+      { id: 'B', title: '/sub Kartons' },
+      { id: 'C', title: '/must /sub Pass erneuern' },
+      { id: 'D', title: '/should Steuer' },
+    ];
+    expect(subtaskGroups(items).map((g) => g.map((i) => i.id))).toEqual([['A', 'B', 'C'], ['D']]);
+  });
+});
+
 describe('withTaskLevel', () => {
   it('puts the prefix back after an edit', () => {
     // Die Runde, die eine Unteraufgabe ueberleben muss: Praefix weg fuers
@@ -307,9 +340,15 @@ describe('withTaskLevel', () => {
     expect(withTaskLevel('/must Milch', null)).toBe('/must Milch');
   });
 
-  it('lets a typed prefix win — that is the way back out', () => {
+  it('lets a typed level win — that is the way back out', () => {
     expect(withTaskLevel('/main Einkaufen', 'sub')).toBe('/main Einkaufen');
-    expect(withTaskLevel('/must Milch', 'sub')).toBe('/must Milch');
+    expect(withTaskLevel('/sub /must Milch', 'main')).toBe('/sub /must Milch');
+  });
+
+  it('keeps a typed priority next to the level instead of dropping the step out', () => {
+    // Früher wurde „/must Milch" unter „Einkaufen" zu einer eigenen Aufgabe.
+    expect(withTaskLevel('/must Milch', 'sub')).toBe('/must /sub Milch');
+    expect(taskLevel(withTaskLevel('/must Milch', 'sub'))).toBe('sub');
   });
 
   it('keeps empty text empty, so an emptied field stays discardable', () => {

@@ -2,13 +2,25 @@
   <div class="flex h-11 w-full items-center gap-3 rounded-full bg-bg3 px-4
               ring-1 ring-line transition focus-within:ring-2 focus-within:ring-indigo-500">
     <lucide-icon [img]="SearchIcon" class="h-4 w-4 flex-none text-muted" aria-hidden="true"></lucide-icon>
-    <input #todoSearch type="text" placeholder="Search todos…"
+    @if (searchToken(); as token) {
+      <button type="button"
+        class="flex h-6 flex-none items-center gap-0.5 rounded-md pl-1 pr-1"
+        [class]="tokenClass(token)"
+        (click)="searchToken.set(null); todoSearch.focus()"
+        [attr.aria-label]="'Only ' + tokenDescription[token] + ', remove filter'"
+        [title]="'Only ' + tokenDescription[token] + ' · remove (Backspace at the start)'">
+        <lucide-icon [img]="tokenIcon[token]" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+        <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
+      </button>
+    }
+    <input #todoSearch type="text" placeholder="Filter this list…"
       class="min-w-0 flex-1 bg-transparent text-text outline-none placeholder:text-muted"
       [value]="searchTerm()"
-      (input)="searchTerm.set(todoSearch.value)"
+      (input)="onInput(todoSearch)"
+      (keydown.backspace)="onBackspace($event, todoSearch)"
       (keydown.escape)="clearSearch(); todoSearch.value = ''"
-      aria-label="Search todos" />
-    @if (searchTerm()) {
+      aria-label="Filter this list" />
+    @if (searchTerm() || searchToken()) {
       <button type="button"
         class="grid h-7 w-7 flex-none place-items-center rounded-lg text-muted transition hover:bg-fill hover:text-text"
         (click)="clearSearch(); todoSearch.value = ''" aria-label="Clear search">✕</button>
