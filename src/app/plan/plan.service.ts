@@ -278,7 +278,48 @@ export class PlanService {
     });
   }
 
+  /**
+   * Loeschen mit Rueckgaengig, wie bei den Todos: sofort aus der Liste, das
+   * DELETE erst nach 5 s. Vorher war ein Plan mit einem Klick endgueltig weg
+   * — ein ganzes Dokument, ohne Rueckfrage und ohne Weg zurueck. Auf dem
+   * Telefon, wo der Papierkorb ohne Ueberfahren dauerhaft dasteht, waere das
+   * ein Fehlgriff mit dem Daumen.
+   *
+   * Offene Speichervorgaenge laufen im Fenster weiter: sie schreiben auf einen
+   * Plan, den es auf dem Server noch gibt, und nach „Undo" ist nichts verloren.
+   */
   deletePlan(id: string) {
+    const list = this.plans();
+    const index = list.findIndex((p) => p.id === id);
+    if (index === -1) return;
+    const removed = list[index];
+
+    this.plans.update((plans) => plans.filter((p) => p.id !== id));
+    if (this.selectedId() === id) this.selectedId.set(null);
+
+    const deleteTimeout = setTimeout(() => {
+      this.toast.dismiss(toastId);
+      this.deleteOnServer(id);
+    }, 5000);
+
+    const title = removed.title.trim() || 'Untitled';
+    const short = title.length > 30 ? `${title.slice(0, 30)}…` : title;
+    const toastId = this.toast.show(`“${short}” deleted`, {
+      actionLabel: 'Undo',
+      action: () => {
+        clearTimeout(deleteTimeout);
+        this.plans.update((plans) => {
+          if (plans.some((p) => p.id === id)) return plans;
+          const next = [...plans];
+          next.splice(Math.min(index, next.length), 0, removed);
+          return next;
+        });
+      },
+      durationMs: 5000,
+    });
+  }
+
+  private deleteOnServer(id: string) {
     const timer = this.saveTimers.get(id);
     if (timer) clearTimeout(timer);
     this.saveTimers.delete(id);
@@ -288,8 +329,6 @@ export class PlanService {
     this.markDirty(id, false);
     this.markFailed(id, false);
 
-    this.plans.update((list) => list.filter((p) => p.id !== id));
-    if (this.selectedId() === id) this.selectedId.set(null);
     this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
       error: (err) => {
         console.error('Plan löschen fehlgeschlagen', err);

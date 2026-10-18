@@ -248,6 +248,9 @@ export class TodoList {
       (row) => row.parentId === null || !collapsed.has(row.parentId),
     );
   });
+  /** Ob irgendeine Zeile Unteraufgaben hat — nur dann braucht die Liste die
+   *  Spalte fuer das Gliederungs-Dreieck. */
+  protected readonly hasOutline = computed(() => this.rows().some((row) => row.subCount > 0));
   protected readonly stats = this.todoService.stats;
   protected readonly filter = this.todoService.filter;
   protected readonly favoritesAllDone = this.todoService.favoritesAllDone;

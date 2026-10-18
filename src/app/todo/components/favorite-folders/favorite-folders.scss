@@ -13,9 +13,26 @@
 }
 
 /* Ohne Zeigegerät gibt es kein Überfahren: dort steht er leise da, sonst
-   wäre er auf dem Telefon unerreichbar. */
+   wäre er auf dem Telefon unerreichbar. Sichtbar 24px, getroffen 36px — die
+   Kachel darunter wählt den Folder, ein knapp verfehlter Stern soll das
+   nicht stattdessen tun. */
 @media (hover: none) {
   .fav-toggle { opacity: 0.6; }
+
+  .fav-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 999px;
+  }
+}
+
+/* Zwei Spalten auf dem Telefon: bei ungerader Zahl nimmt die Favoriten-
+   Kachel die ganze erste Reihe, statt dass unten eine Kachel allein steht. */
+@media (min-width: 360px) and (max-width: 639px) {
+  .favorite-tile--wide {
+    grid-column: span 2;
+  }
 }
 
 @media (prefers-contrast: more) {
