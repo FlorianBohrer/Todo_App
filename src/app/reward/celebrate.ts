@@ -1,19 +1,23 @@
 /**
- * Die Feier: Konfetti, fliegende Zahlen, Klang, ein Zucken in der Hand.
+ * Die Feier: ein Funke am Haken, eine kleine Zahl, Klang, ein Zucken in der Hand.
  *
- * Ohne Framework und ohne Abhängigkeit — dieselbe Datei liegt in der
- * Todo-App (src/app/reward/celebrate.ts) und in Flow (src/reward/celebrate.ts).
+ * Ohne Framework und ohne Abhängigkeit. Ursprünglich wortgleich mit
+ * src/reward/celebrate.ts in Flow; die Feier hier ist seitdem leiser: ein
+ * Funke statt Konfetti, kein Feuerwerk, eine schlichte Zahl. Klang und
+ * Haptik sind unverändert.
  *
- * Laut, und das mit Absicht: Erledigen soll sich nach etwas anfühlen. Drei
- * Regeln gelten trotzdem ohne Ausnahme:
+ * Warum leiser: Konfetti über den halben Bildschirm und ein Feuerwerk beim
+ * Level-Up waren beim ersten Mal schön und ab dem zehnten Haken am Tag Lärm.
+ * Die Belohnung soll man spüren, nicht abwarten — sie dauert jetzt so lange
+ * wie der Haken selbst. Drei Regeln gelten weiter ohne Ausnahme:
  *
- * - Wer reduzierte Bewegung eingestellt hat, bekommt kein Konfetti und nichts,
- *   was fliegt. Die Belohnung kommt dann als Klang, als ruhig eingeblendete
- *   Zahl und über die Ansage für Screenreader.
- * - Nichts davon fängt einen Klick ab. Die Leinwand liegt über allem und lässt
- *   jeden Zeiger durch; sie existiert nur, solange etwas fliegt.
+ * - Wer reduzierte Bewegung eingestellt hat, bekommt nichts, was sich bewegt.
+ *   Die Belohnung kommt dann als Klang, als ruhig eingeblendete Zahl und über
+ *   die Ansage für Screenreader.
+ * - Nichts davon fängt einen Klick ab; alles liegt ohne Zeigerereignisse über
+ *   der Seite und existiert nur, solange es zu sehen ist.
  * - Was niemand sieht, wird nicht abgespielt. Endet etwas im Hintergrund-Tab,
- *   wartet die Feier, bis man zurück ist — dann ist sie die Begrüßung.
+ *   wartet die Feier, bis man zurück ist.
  */
 
 export interface Point {
@@ -50,253 +54,123 @@ export function whenVisible(run: () => void): void {
 }
 
 // ---------------------------------------------------------------------------
-// Konfetti
+// Funke
 // ---------------------------------------------------------------------------
 
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
+export interface SparkOptions {
+  /** Farbe von Ring und Punkten. */
   color: string;
-  rotation: number;
-  spin: number;
-  /** Flattern: Konfetti dreht sich auch um die eigene Längsachse. */
-  flutter: number;
-  age: number;
-  life: number;
-  shape: 'strip' | 'dot' | 'star';
+  /** Golden: ein paar Punkte mehr und etwas weiter, sonst gleich. */
+  golden?: boolean;
 }
 
-/** px/ms² — schwer genug, dass es fällt, leicht genug, dass es schwebt. */
-const GRAVITY = 0.0011;
-/** Luftwiderstand pro Millisekunde. */
-const DRAG = 0.0022;
-/** Mehr zeichnet kein Telefon flüssig; darüber werden die ältesten ersetzt. */
-const MAX_PARTICLES = 700;
-
-let canvas: HTMLCanvasElement | null = null;
-let ctx: CanvasRenderingContext2D | null = null;
-let particles: Particle[] = [];
-let frame = 0;
-let lastTime = 0;
-
-function ensureCanvas(): CanvasRenderingContext2D | null {
-  if (ctx) return ctx;
-
-  const element = document.createElement('canvas');
+/** Ein absolut gesetztes Element ohne Zeigerereignisse, mittig auf `origin`. */
+function overlayElement(origin: Point): HTMLSpanElement {
+  const element = document.createElement('span');
   element.setAttribute('aria-hidden', 'true');
   Object.assign(element.style, {
     position: 'fixed',
-    inset: '0',
-    width: '100vw',
-    height: '100vh',
-    pointerEvents: 'none',
+    left: `${origin.x}px`,
+    top: `${origin.y}px`,
+    width: '0',
+    height: '0',
     zIndex: '2147483000',
+    pointerEvents: 'none',
   });
-  document.body.appendChild(element);
-
-  canvas = element;
-  ctx = element.getContext('2d');
-  resize();
-  window.addEventListener('resize', resize);
-  return ctx;
-}
-
-function resize(): void {
-  if (!canvas || !ctx) return;
-  // Höchstens doppelte Auflösung: dreifache kostet auf großen Telefonen mehr
-  // Bilder pro Sekunde, als sie an Schärfe bringt.
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.round(window.innerWidth * ratio);
-  canvas.height = Math.round(window.innerHeight * ratio);
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-}
-
-function teardown(): void {
-  window.removeEventListener('resize', resize);
-  canvas?.remove();
-  canvas = null;
-  ctx = null;
-}
-
-function drawStar(context: CanvasRenderingContext2D, radius: number): void {
-  context.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 === 0 ? radius : radius * 0.45;
-    const angle = (Math.PI / 5) * i - Math.PI / 2;
-    context.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
-  }
-  context.closePath();
-  context.fill();
-}
-
-function step(time: number): void {
-  const context = ctx;
-  if (!context) {
-    frame = 0;
-    return;
-  }
-
-  // Gedeckelt: nach einem verdeckten Tab läge sonst eine Minute zwischen zwei
-  // Bildern, und alles wäre in einem Schritt durch den Boden gefallen.
-  const dt = Math.min(32, lastTime === 0 ? 16 : time - lastTime);
-  lastTime = time;
-
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  context.clearRect(0, 0, width, height);
-
-  const damping = Math.pow(1 - DRAG, dt);
-  const alive: Particle[] = [];
-
-  for (const p of particles) {
-    p.age += dt;
-    if (p.age >= p.life || p.y > height + 60) continue;
-
-    p.vx *= damping;
-    p.vy = p.vy * damping + GRAVITY * dt;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    p.rotation += p.spin * dt;
-    p.flutter += dt * 0.012;
-
-    // Das letzte Drittel des Lebens blendet aus, statt abrupt zu verschwinden.
-    const fadeStart = p.life * 0.65;
-    const alpha = p.age < fadeStart ? 1 : 1 - (p.age - fadeStart) / (p.life - fadeStart);
-
-    context.save();
-    context.globalAlpha = Math.max(0, alpha);
-    context.fillStyle = p.color;
-    context.translate(p.x, p.y);
-    context.rotate(p.rotation);
-
-    if (p.shape === 'strip') {
-      context.scale(1, Math.cos(p.flutter));
-      context.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
-    } else if (p.shape === 'dot') {
-      context.beginPath();
-      context.arc(0, 0, p.size / 3, 0, Math.PI * 2);
-      context.fill();
-    } else {
-      drawStar(context, p.size / 2);
-    }
-
-    context.restore();
-    alive.push(p);
-  }
-
-  particles = alive;
-
-  if (particles.length > 0) {
-    frame = requestAnimationFrame(step);
-  } else {
-    frame = 0;
-    lastTime = 0;
-    teardown();
-  }
-}
-
-export interface BurstOptions {
-  colors: readonly string[];
-  /** Wie viele Teile. */
-  count?: number;
-  /** Anfangsgeschwindigkeit in px/ms. */
-  power?: number;
-  /** Richtung in Bogenmaß; −π/2 ist senkrecht nach oben. */
-  angle?: number;
-  /** Streuung um die Richtung, in Bogenmaß. 2π ist ein Kreis. */
-  spread?: number;
-  /** Anteil Sterne, 0 … 1. */
-  stars?: number;
-}
-
-/** Ein Ausbruch von einem Punkt aus. */
-export function burst(origin: Point, options: BurstOptions): void {
-  if (prefersReducedMotion() || options.colors.length === 0) return;
-
-  whenVisible(() => {
-    if (!ensureCanvas()) return;
-
-    const count = options.count ?? 40;
-    const power = options.power ?? 0.55;
-    const angle = options.angle ?? -Math.PI / 2;
-    const spread = options.spread ?? Math.PI * 0.9;
-    const stars = options.stars ?? 0.12;
-
-    for (let i = 0; i < count; i++) {
-      const direction = angle + (Math.random() - 0.5) * spread;
-      const speed = power * (0.35 + Math.random() * 0.85);
-      const roll = Math.random();
-
-      particles.push({
-        x: origin.x,
-        y: origin.y,
-        vx: Math.cos(direction) * speed,
-        vy: Math.sin(direction) * speed,
-        size: 6 + Math.random() * 6,
-        color: options.colors[Math.floor(Math.random() * options.colors.length)] ?? '#FFFFFF',
-        rotation: Math.random() * Math.PI * 2,
-        spin: (Math.random() - 0.5) * 0.02,
-        flutter: Math.random() * Math.PI * 2,
-        age: 0,
-        life: 1300 + Math.random() * 1100,
-        shape: roll < stars ? 'star' : roll < 0.45 ? 'dot' : 'strip',
-      });
-    }
-
-    if (particles.length > MAX_PARTICLES) {
-      particles = particles.slice(particles.length - MAX_PARTICLES);
-    }
-
-    if (frame === 0) frame = requestAnimationFrame(step);
-  });
+  return element;
 }
 
 /**
- * Das große Feuerwerk — für ein Level-Up.
+ * Der Haken bekommt einen Funken: ein feiner Ring, der sich öffnet, und ein
+ * paar Punkte, die nach außen gehen und verlöschen. 0,45 Sekunden, dann ist
+ * nichts mehr da.
  *
- * Zwei Kanonen aus den unteren Ecken, dann Ausbrüche über dem Bildschirm,
- * gestaffelt, damit es sich wie ein Ereignis anfühlt und nicht wie ein Bild.
+ * Bewusst an der Stelle des Hakens und klein: der Blick ist ohnehin dort,
+ * und eine Belohnung, die den Bildschirm verlässt, nimmt ihn mit.
  */
-export function fireworks(colors: readonly string[]): void {
+export function spark(origin: Point, options: SparkOptions): void {
   if (prefersReducedMotion()) return;
 
   whenVisible(() => {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const power = Math.min(1.5, 0.9 + height / 1800);
+    const root = overlayElement(origin);
+    // Ohne Web Animations API (Testumgebung, sehr alte Browser) bliebe alles
+    // stehen. Dann lieber gar nichts — Klang und Ansage kommen trotzdem.
+    if (typeof root.animate !== 'function') return;
+    document.body.appendChild(root);
 
-    burst({ x: 0, y: height }, { colors, count: 110, power, angle: -Math.PI / 3, spread: 0.7, stars: 0.2 });
-    burst({ x: width, y: height }, { colors, count: 110, power, angle: (-2 * Math.PI) / 3, spread: 0.7, stars: 0.2 });
+    const easing = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    const duration = options.golden ? 560 : 450;
 
-    [260, 520, 820, 1100].forEach((delay, index) => {
-      window.setTimeout(() => {
-        burst(
-          { x: width * (0.2 + Math.random() * 0.6), y: height * (0.18 + Math.random() * 0.25) },
-          { colors, count: 70, power: 0.45, spread: Math.PI * 2, stars: 0.3 },
-        );
-      }, delay + index * 30);
+    const ring = document.createElement('span');
+    Object.assign(ring.style, {
+      position: 'absolute',
+      left: '-14px',
+      top: '-14px',
+      width: '28px',
+      height: '28px',
+      borderRadius: '999px',
+      border: `1.5px solid ${options.color}`,
     });
+    root.appendChild(ring);
+    const animations = [
+      ring.animate(
+        [
+          { opacity: 0.7, transform: 'scale(0.6)' },
+          { opacity: 0, transform: `scale(${options.golden ? 2.1 : 1.7})` },
+        ],
+        { duration, easing, fill: 'forwards' },
+      ),
+    ];
+
+    const count = options.golden ? 10 : 6;
+    const reach = options.golden ? 30 : 22;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count - Math.PI / 2;
+      const dot = document.createElement('span');
+      Object.assign(dot.style, {
+        position: 'absolute',
+        left: '-2px',
+        top: '-2px',
+        width: '4px',
+        height: '4px',
+        borderRadius: '999px',
+        background: options.color,
+      });
+      root.appendChild(dot);
+      const x = Math.cos(angle) * reach;
+      const y = Math.sin(angle) * reach;
+      animations.push(
+        dot.animate(
+          [
+            { opacity: 0, transform: `translate(${x * 0.45}px, ${y * 0.45}px) scale(1)` },
+            { opacity: 1, offset: 0.25 },
+            { opacity: 0, transform: `translate(${x}px, ${y}px) scale(0.4)` },
+          ],
+          { duration, easing, fill: 'forwards' },
+        ),
+      );
+    }
+
+    void Promise.allSettled(animations.map((animation) => animation.finished)).then(() => root.remove());
   });
 }
 
-export type FloatVariant = 'xp' | 'gold' | 'combo';
+export type FloatVariant = 'xp' | 'gold';
 
 const FLOAT_COLORS: Record<FloatVariant, string> = {
-  xp: '#FDE68A',
+  xp: '#E7ECF3',
   gold: '#FCD34D',
-  combo: '#ECF0F6',
 };
 
 /**
- * Eine Zahl, die vom Haken aufsteigt: „+30 XP".
+ * Die Zahl über dem Haken: „+30 XP", bei einer Combo „+30 XP · ×3".
  *
- * Über die Web Animations API statt über eine Klasse — so braucht die Datei
- * kein Stylesheet und funktioniert in beiden Apps gleich.
+ * Eine Zeile, kein Leuchten, keine zweite Zahl darunter. Sie steigt ein
+ * kleines Stück und blendet aus — lesbar, aber nicht zum Hinsehen gemacht.
+ * Über die Web Animations API statt über eine Klasse, damit die Datei kein
+ * Stylesheet braucht.
  */
-export function floatText(origin: Point, text: string, variant: FloatVariant = 'xp', offsetY = 0): void {
+export function floatText(origin: Point, text: string, variant: FloatVariant = 'xp'): void {
   whenVisible(() => {
     const reduced = prefersReducedMotion();
     const label = document.createElement('span');
@@ -305,43 +179,41 @@ export function floatText(origin: Point, text: string, variant: FloatVariant = '
     Object.assign(label.style, {
       position: 'fixed',
       left: `${origin.x}px`,
-      top: `${origin.y + offsetY}px`,
+      top: `${origin.y}px`,
       zIndex: '2147483001',
       pointerEvents: 'none',
       whiteSpace: 'nowrap',
-      font: `800 ${variant === 'combo' ? 13 : 17}px/1 ui-rounded, "Figtree Variable", system-ui, sans-serif`,
-      letterSpacing: '-0.01em',
+      font: '600 12px/1 "Figtree Variable", system-ui, sans-serif',
+      letterSpacing: '0.01em',
+      fontVariantNumeric: 'tabular-nums',
       color: FLOAT_COLORS[variant],
-      textShadow: '0 0 14px rgb(253 230 138 / 0.5)',
-      // Eine dunkle Pille darunter: die Zahl fliegt über Text hinweg und muss
-      // dort trotzdem lesbar bleiben.
-      padding: '0.3em 0.6em',
+      // Eine ruhige Fläche darunter: die Zahl steht über Text und muss dort
+      // lesbar bleiben. Keine Schatten, kein Schein.
+      padding: '0.4em 0.65em',
       borderRadius: '999px',
-      background: 'rgb(11 15 22 / 0.72)',
-      boxShadow: '0 0 0 1px rgb(253 230 138 / 0.18), 0 6px 18px -6px rgb(0 0 0 / 0.6)',
-      transform: 'translate(-50%, -50%)',
+      background: 'rgb(17 22 31 / 0.86)',
+      border: `1px solid ${variant === 'gold' ? 'rgb(252 211 77 / 0.35)' : 'rgb(255 255 255 / 0.10)'}`,
+      transform: 'translate(-50%, -150%)',
     });
-    // Ohne Web Animations API (ältere Browser, Testumgebung) bliebe die Zahl
-    // stehen. Dann lieber gar nicht — die Ansage kommt trotzdem.
     if (typeof label.animate !== 'function') return;
     document.body.appendChild(label);
 
     const keyframes: Keyframe[] = reduced
       ? [
-          { opacity: 0, transform: 'translate(-50%, -120%)' },
-          { opacity: 1, transform: 'translate(-50%, -120%)', offset: 0.15 },
-          { opacity: 1, transform: 'translate(-50%, -120%)', offset: 0.75 },
-          { opacity: 0, transform: 'translate(-50%, -120%)' },
+          { opacity: 0 },
+          { opacity: 1, offset: 0.15 },
+          { opacity: 1, offset: 0.75 },
+          { opacity: 0 },
         ]
       : [
-          { opacity: 0, transform: 'translate(-50%, -40%) scale(0.6)' },
-          { opacity: 1, transform: 'translate(-50%, -140%) scale(1.25)', offset: 0.18 },
-          { opacity: 1, transform: 'translate(-50%, -230%) scale(1)', offset: 0.6 },
-          { opacity: 0, transform: 'translate(-50%, -330%) scale(0.95)' },
+          { opacity: 0, transform: 'translate(-50%, -110%)' },
+          { opacity: 1, transform: 'translate(-50%, -170%)', offset: 0.25 },
+          { opacity: 1, transform: 'translate(-50%, -190%)', offset: 0.7 },
+          { opacity: 0, transform: 'translate(-50%, -210%)' },
         ];
 
     const animation = label.animate(keyframes, {
-      duration: reduced ? 1400 : 1150,
+      duration: reduced ? 1200 : 1000,
       easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
       fill: 'forwards',
     });
@@ -473,5 +345,5 @@ export function buzz(pattern: number | number[]): void {
 // Farben
 // ---------------------------------------------------------------------------
 
-/** Gold für Goldenes — in beiden Apps gleich, unabhängig von der Ansicht. */
-export const GOLD_COLORS: readonly string[] = ['#FDE68A', '#FCD34D', '#FBBF24', '#F59E0B', '#FFF7D6'];
+/** Gold für Goldenes — unabhängig von der Ansicht. */
+export const GOLD_COLOR = '#FCD34D';

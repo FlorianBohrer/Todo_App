@@ -450,7 +450,7 @@ toggleFolderList(): void {
     // füllt sich im nächsten Frame, und bis dahin hat das Gerät gezuckt.
     tap();
 
-    // Die Belohnung ebenso: Konfetti und Klang im Moment des Klicks, nicht
+    // Die Belohnung ebenso: Funke und Klang im Moment des Klicks, nicht
     // erst nach der Ausblende-Animation. Der Haken selbst folgt unten.
     this.rewards.reward(todo);
 

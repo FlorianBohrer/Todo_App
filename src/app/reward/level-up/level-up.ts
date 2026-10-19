@@ -2,16 +2,16 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 
 import { RewardService } from '../reward.service';
 
-/** So lange steht der große Moment, bevor er sich selbst wegräumt. */
-const SHOW_MS = 3600;
+/** So lange steht die Karte, bevor sie sich selbst wegräumt. */
+const SHOW_MS = 3200;
 
 /**
- * Level-Up: der eine Moment, der den ganzen Bildschirm bekommt.
+ * Level-Up: eine kleine Karte oben in der Mitte, ein Ring schließt sich.
  *
- * Kein Dialog: es gibt nichts zu entscheiden, und wer gerade weiterarbeiten
- * will, soll das können. Ein Klick irgendwohin oder Escape räumt ihn sofort
- * weg, sonst geht er nach knapp vier Sekunden von selbst. Der Fokus bleibt,
- * wo er war.
+ * Kein Dialog und keine Fläche über der Seite: es gibt nichts zu entscheiden,
+ * und wer gerade weiterarbeiten will, kann das, während die Karte steht. Ein
+ * Klick auf sie oder Escape räumt sie sofort weg, sonst geht sie nach gut drei
+ * Sekunden von selbst. Der Fokus bleibt, wo er war.
  */
 @Component({
   selector: 'app-level-up',

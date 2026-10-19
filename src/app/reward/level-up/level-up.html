@@ -1,19 +1,23 @@
 @if (shown(); as up) {
   <!-- role="status": angesagt wird es, aber es nimmt niemandem den Fokus. -->
   <div class="level-up" role="status" (click)="dismiss()">
-    <div class="level-up__rays" aria-hidden="true"></div>
-    <div class="level-up__wave" aria-hidden="true"></div>
+    <span class="level-up__badge" aria-hidden="true">
+      <svg class="level-up__ring" viewBox="0 0 44 44">
+        <circle class="level-up__track" cx="22" cy="22" r="19" />
+        <circle class="level-up__arc" cx="22" cy="22" r="19" pathLength="1" />
+      </svg>
+      <span class="level-up__number">{{ up.to.level }}</span>
+    </span>
 
-    <div class="level-up__card">
-      <p class="level-up__kicker">{{ kicker() }}</p>
-      <p class="level-up__number"><span class="sr-only">Level </span>{{ up.to.level }}</p>
-      <p class="level-up__title">
+    <span class="level-up__text">
+      <span class="level-up__kicker">{{ kicker() }}</span>
+      <span class="level-up__title">
+        <span class="sr-only">Level {{ up.to.level }}, </span>{{ up.to.title }}
         @if (up.newTitle) {
-          <span class="level-up__new">New title</span>
+          <span class="level-up__new">· new title</span>
         }
-        {{ up.to.title }}
-      </p>
-      <p class="level-up__hint">{{ up.to.stepSize }} XP to level {{ up.to.level + 1 }}</p>
-    </div>
+      </span>
+      <span class="level-up__hint">{{ up.to.stepSize }} XP to level {{ up.to.level + 1 }}</span>
+    </span>
   </div>
 }

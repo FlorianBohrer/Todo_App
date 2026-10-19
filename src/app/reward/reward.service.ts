@@ -3,16 +3,15 @@ import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angul
 import { Todo } from '../todo/model/todo.model';
 import { TodoService } from '../todo/services/todo';
 import {
-  GOLD_COLORS,
+  GOLD_COLOR,
   Point,
   buzz,
-  burst,
   centerOf,
-  fireworks,
   floatText,
   goldSound,
   levelUpSound,
   popSound,
+  spark,
   unlockAudio,
 } from './celebrate';
 import { Combo, LevelUp, levelFor, levelUpBetween, nextCombo } from './level';
@@ -29,7 +28,7 @@ const SOUND_KEY = 'reward.sound';
  */
 const SAME_TICK_MS = 3000;
 
-/** Wann das Level-Up kommt: erst landet das Konfetti am Haken, dann der große Moment. */
+/** Wann das Level-Up kommt: erst der Funke am Haken, dann die Karte oben. */
 const LEVEL_UP_DELAY_MS = 450;
 
 export interface Gain {
@@ -78,7 +77,7 @@ export class RewardService {
   /** Wann welches Todo zuletzt gefeiert wurde. */
   private readonly celebratedAt = new Map<string, number>();
 
-  /** Wo zuletzt gedrückt wurde — dort startet das Konfetti. */
+  /** Wo zuletzt gedrückt wurde — dort sitzt der Funke. */
   private pointer: { point: Point; at: number } | null = null;
 
   constructor() {
@@ -96,7 +95,7 @@ export class RewardService {
     const onPointer = (event: PointerEvent) => {
       this.pointer = { point: { x: event.clientX, y: event.clientY }, at: Date.now() };
     };
-    // capture: das Konfetti soll dort starten, wo der Finger war — auch wenn
+    // capture: der Funke soll dort sitzen, wo der Finger war — auch wenn
     // ein Element darunter das Ereignis anhält.
     document.addEventListener('pointerdown', onPointer, { capture: true, passive: true });
 
@@ -153,42 +152,32 @@ export class RewardService {
     });
 
     const origin = this.originFor(anchor);
-    const colors = reward.golden ? GOLD_COLORS : this.viewColors();
 
     if (this.sound()) {
       if (reward.golden) goldSound();
       else popSound(repeat ? 1 : combo);
     }
 
-    if (!repeat) {
-      // Jede Stufe der Combo legt nach: mehr Teile, mehr Wucht. Gedeckelt,
-      // sonst wäre die zwanzigste Aufgabe ein Bildschirm voller Papier.
-      const level = Math.min(combo, 8);
-      burst(origin, {
-        colors,
-        count: reward.golden ? 110 : 34 + level * 10,
-        power: reward.golden ? 0.85 : 0.5 + level * 0.04,
-        stars: reward.golden ? 0.45 : 0.12,
-      });
-    }
+    // Ein Funke am Haken, in der Farbe der Ansicht — golden in Gold. Die
+    // Combo wird nicht lauter, sie steht in der Zahl: früher legte jede
+    // Stufe Konfetti nach, und die zehnte Aufgabe war ein Bildschirm voll.
+    if (!repeat) spark(origin, { color: reward.golden ? GOLD_COLOR : this.viewColor(), golden: reward.golden });
 
-    floatText(origin, `+${reward.total} XP`, reward.golden ? 'gold' : 'xp');
-    if (reward.golden) floatText(origin, 'Golden · double XP', 'combo', 26);
-    else if (combo >= 2 && !repeat) floatText(origin, `Combo ×${combo}`, 'combo', 26);
+    const extra = reward.golden ? ' · golden' : combo >= 2 && !repeat ? ` · ×${combo}` : '';
+    floatText(origin, `+${reward.total} XP${extra}`, reward.golden ? 'gold' : 'xp');
 
-    if (reward.golden) buzz([18, 50, 18, 50, 28]);
+    if (reward.golden) buzz([18, 50, 18]);
 
     if (levelUp) {
       window.setTimeout(() => {
         this.levelUp.set(levelUp);
-        fireworks([...GOLD_COLORS, ...colors]);
         if (this.sound()) levelUpSound();
-        buzz([30, 60, 30, 60, 120]);
+        buzz([24, 60, 24]);
       }, LEVEL_UP_DELAY_MS);
     }
   }
 
-  /** Woher das Konfetti kommt: vom Element, vom letzten Druck, vom Fokus — oder aus der Mitte. */
+  /** Wo der Funke sitzt: am Element, am letzten Druck, am Fokus — oder in der Mitte. */
   private originFor(anchor?: Element | null): Point {
     if (anchor) return centerOf(anchor);
     if (this.pointer && Date.now() - this.pointer.at < 1500) return this.pointer.point;
@@ -200,18 +189,12 @@ export class RewardService {
   }
 
   /**
-   * Die Farben der offenen Ansicht, frisch aus dem CSS gelesen.
-   *
-   * Konfetti in Türkis in der Liste, in Orange in der Woche, in Bordeaux in
-   * den Plänen — dieselbe Farbentscheidung wie überall sonst, plus Weiß und
-   * ein wenig Gold, damit es nach Belohnung aussieht und nicht nach Tapete.
+   * Die Farbe der offenen Ansicht, frisch aus dem CSS gelesen: Türkis in der
+   * Liste, Orange in der Woche, Bordeaux in den Plänen — dieselbe
+   * Farbentscheidung wie überall sonst.
    */
-  private viewColors(): string[] {
-    const style = getComputedStyle(document.documentElement);
-    const accents = ['--accent-200', '--accent-300', '--accent-400']
-      .map((name) => style.getPropertyValue(name).trim())
-      .filter((value) => value.length > 0);
-
-    return [...accents, ...accents, '#FFFFFF', '#FDE68A'];
+  private viewColor(): string {
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent-300').trim();
+    return accent || '#5CC7BC';
   }
 }
