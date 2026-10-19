@@ -1238,3 +1238,117 @@ body.is-block-selecting * {
   outline-color: var(--color-highlight2) !important;
   transition: none !important;
 }
+
+/* ---------------------------------------------------------------------------
+   Ansichten-Leiste unten (Telefon)
+   ---------------------------------------------------------------------------
+
+   Liste, Woche, Plaene stehen auf dem Telefon unten, wo der Daumen ist. Oben
+   bleiben Folder, Suche und Level — und der Folder-Knopf hat wieder Platz
+   fuer seinen Namen.
+
+   Dieselbe Flaeche wie die Leiste oben (Seitengrund, durchscheinend,
+   weichgezeichnet), oben eine Haarlinie. Die aktive Ansicht traegt eine
+   Pille in ihrer Akzentfarbe hinter dem Symbol — dieselbe Farbe wie die
+   gleitende Pille der Laschen am Rechner.
+
+   --bottom-nav-h sagt allem, was unten am Rand sitzt (Meldungen, die
+   Auswahlleiste im Plan), wie viel Platz die Leiste braucht. */
+@media (max-width: 639px) {
+  :root {
+    --bottom-nav-h: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-main {
+    padding-bottom: var(--bottom-nav-h);
+  }
+}
+
+.bottom-nav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 30;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-bg2) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.bottom-nav__inner {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 4rem;
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+.bottom-nav__tab {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.25rem;
+  color: var(--color-muted);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav__icon {
+  display: grid;
+  width: 3.5rem;
+  height: 1.875rem;
+  place-items: center;
+  border-radius: 9999px;
+  transition:
+    background-color 200ms var(--ease-out),
+    color 200ms var(--ease-out);
+}
+
+.bottom-nav__label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.bottom-nav__tab.is-active {
+  color: var(--color-text);
+}
+
+/* Weiß auf --color-button: dieselbe gemessene Paarung wie die Laschen. */
+.bottom-nav__tab.is-active .bottom-nav__icon {
+  background: var(--color-button);
+  color: #fff;
+}
+
+.bottom-nav__tab:focus-visible {
+  outline: none;
+}
+
+.bottom-nav__tab:focus-visible .bottom-nav__icon {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 2px;
+}
+
+/* Beim Tippen ist die Tastatur unten — die Leiste saesse darauf und naehme
+   dem Feld, in dem man schreibt, eine Zeile. Also geht sie, solange ein Feld
+   den Fokus hat. */
+body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), textarea:not([readonly]), select, [contenteditable="true"]):focus) .bottom-nav {
+  display: none;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .bottom-nav {
+    background: var(--color-bg2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .bottom-nav {
+    background: var(--color-bg2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-top-color: var(--color-line-strong);
+  }
+}

@@ -25,8 +25,11 @@
   <!-- Die Fläche gehört jetzt dem Rahmen um Chip und Textfeld, nicht dem
        Textfeld allein: der Chip steht IM Feld, vor dem Text, so wie das
        Präfix vorher davorstand. Der Fokusring folgt mit focus-within. -->
+  <!-- min-w-0: sonst zaehlt die Eigenbreite des Textfelds (~20 Zeichen) als
+       Mindestbreite, und mit einem Chip davor schob das Feld den Add-Knopf
+       auf dem Telefon ueber den Rand. -->
   <div
-    class="todo-add-field flex min-h-11 flex-1 items-start gap-2 rounded-3xl bg-bg2 px-5 py-3"
+    class="todo-add-field flex min-h-11 min-w-0 flex-1 items-start gap-2 rounded-3xl bg-bg2 px-5 py-3"
     (click)="newTodoField.focus()">
     @for (current of tokens(); track current) {
       <button
