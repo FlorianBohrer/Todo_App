@@ -472,7 +472,8 @@
 // immer an derselben Stelle — und sie verdeckt nichts, was man gerade liest.
 .block-bar {
   position: fixed;
-  bottom: 1.5rem;
+  // Ueber der Ansichten-Leiste des Telefons, nicht darauf (styles.scss).
+  bottom: calc(1.5rem + var(--bottom-nav-h, 0px));
   left: 50%;
   z-index: 60;
   display: flex;
