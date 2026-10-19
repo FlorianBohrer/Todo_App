@@ -1,5 +1,5 @@
 @if (clerk.user$ | async; as user) {
-  <main class="min-h-screen w-full transition-colors duration-500 bg-bg2">
+  <main class="app-main min-h-screen w-full transition-colors duration-500 bg-bg2">
    <!-- Kopfbereich OHNE eigene Flaeche: Kontozeile, Titel und die Leiste
         darunter liegen alle auf dem Seitengrund, damit oben keine waagerechte
         Kante steht, bevor der Inhalt anfaengt. Die Leiste faerbt sich erst
@@ -46,10 +46,10 @@
        prefers-Abfragen muessen sie gemeinsam umschalten koennen. -->
   <div #chrome class="app-chrome sticky top-0 z-10 mb-6 w-full">
     <div class="mx-auto w-full max-w-3xl px-5 py-2.5">
-      <!-- Auf dem Telefon EINE Zeile: Folder-Knopf und Laschen nebeneinander,
-           die Laschen nur mit Symbol. Umgebrochen klebten zwei Zeilen oben,
-           gut 100px von 667 — dauerhaft, auf jeder Ansicht. Der Folder-Knopf
-           nimmt den Rest der Breite und kuerzt seinen Namen. -->
+      <!-- Auf dem Telefon EINE Zeile: Folder-Knopf, Suche, Level. Die drei
+           Ansichten stehen dort unten in der Leiste (.bottom-nav) — oben
+           blieben dem Folder-Knopf neben Laschen, Suche und Level noch 50px,
+           also nur sein Symbol, und bei 320px ragte das Level ueber den Rand. -->
       <div class="flex items-center gap-2 sm:flex-wrap">
         <!-- Der Knopf sagt, welcher Folder offen ist.
              Vorher stand hier das Wort „Folders" und darueber, 48 Pixel hoch,
@@ -73,36 +73,36 @@
              wie bei den Filtern — drei gleich breite Laschen, --tab-count sagt es.
              Gleiche Höhe wie der Folders-Knopf, damit die Leiste eine Linie hat;
              Symbole, weil man drei Ansichten am Bild schneller trifft als am Wort. -->
-        <div class="filter-tabs flex h-10 flex-none gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm"
+        <div class="filter-tabs hidden h-10 flex-none gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm sm:flex"
           role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="3">
           <span class="filter-pill" aria-hidden="true"></span>
 
           <button type="button" role="tab"
-            class="filter-tab flex w-11 items-center justify-center gap-1.5 rounded-full sm:w-24"
+            class="filter-tab flex w-24 items-center justify-center gap-1.5 rounded-full"
             [class.is-active]="view() === 'list'"
             [attr.aria-selected]="view() === 'list'"
-            title="List view (1)" aria-label="List view"
+            title="List view (1)"
             (click)="setView('list')">
             <lucide-icon [img]="ListIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span class="hidden sm:inline">List</span>
+            <span>List</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-11 items-center justify-center gap-1.5 rounded-full sm:w-24"
+            class="filter-tab flex w-24 items-center justify-center gap-1.5 rounded-full"
             [class.is-active]="view() === 'week'"
             [attr.aria-selected]="view() === 'week'"
-            title="Week view (2)" aria-label="Week view"
+            title="Week view (2)"
             (click)="setView('week')">
             <lucide-icon [img]="WeekIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span class="hidden sm:inline">Week</span>
+            <span>Week</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-11 items-center justify-center gap-1.5 rounded-full sm:w-24"
+            class="filter-tab flex w-24 items-center justify-center gap-1.5 rounded-full"
             [class.is-active]="view() === 'plans'"
             [attr.aria-selected]="view() === 'plans'"
-            title="Plans view (3)" aria-label="Plans view"
+            title="Plans view (3)"
             (click)="setView('plans')">
             <lucide-icon [img]="PlansIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span class="hidden sm:inline">Plans</span>
+            <span>Plans</span>
           </button>
         </div>
 
@@ -186,6 +186,36 @@
         </section>
       </div>
     }
+
+    <!-- Telefon: die Ansichten unten, wo der Daumen ist — wie in jeder
+         App auf dem Telefon. Oben bleibt damit Platz fuer den Namen des
+         Folders. Beim Tippen verschwindet die Leiste (styles.scss), sonst
+         saesse sie ueber der Tastatur. Ab sm stehen die Laschen oben. -->
+    <nav class="bottom-nav sm:hidden" aria-label="Views">
+      <div class="bottom-nav__inner" role="tablist">
+        <button type="button" role="tab" class="bottom-nav__tab"
+          [class.is-active]="view() === 'list'"
+          [attr.aria-selected]="view() === 'list'"
+          (click)="setView('list')">
+          <span class="bottom-nav__icon"><lucide-icon [img]="ListIcon" class="h-5 w-5"></lucide-icon></span>
+          <span class="bottom-nav__label">List</span>
+        </button>
+        <button type="button" role="tab" class="bottom-nav__tab"
+          [class.is-active]="view() === 'week'"
+          [attr.aria-selected]="view() === 'week'"
+          (click)="setView('week')">
+          <span class="bottom-nav__icon"><lucide-icon [img]="WeekIcon" class="h-5 w-5"></lucide-icon></span>
+          <span class="bottom-nav__label">Week</span>
+        </button>
+        <button type="button" role="tab" class="bottom-nav__tab"
+          [class.is-active]="view() === 'plans'"
+          [attr.aria-selected]="view() === 'plans'"
+          (click)="setView('plans')">
+          <span class="bottom-nav__icon"><lucide-icon [img]="PlansIcon" class="h-5 w-5"></lucide-icon></span>
+          <span class="bottom-nav__label">Plans</span>
+        </button>
+      </div>
+    </nav>
 
     <app-categories-overlay></app-categories-overlay>
     <app-shortcuts-overlay #shortcuts></app-shortcuts-overlay>
