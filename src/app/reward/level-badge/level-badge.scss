@@ -1,21 +1,17 @@
-/* Nach einem Gewinn: das Abzeichen hüpft und glüht kurz golden auf. Der Blick
-   springt vom Konfetti hierher und sieht, wohin die Punkte gegangen sind. */
+/* Nach einem Gewinn: ein feiner goldener Ring um das Abzeichen, der sich
+   öffnet und verlischt. Der Ring darin füllt sich ohnehin — das hier sagt nur,
+   wohin der Blick gehen kann. Vorher hüpfte das Abzeichen um 12 % und glühte;
+   bei jedem Haken, den ganzen Tag. */
 .level-badge.is-pulsing {
-  animation: badge-pulse 900ms var(--pop);
+  animation: badge-pulse 650ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes badge-pulse {
   0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgb(252 211 77 / 0);
-  }
-  25% {
-    transform: scale(1.12);
-    box-shadow: 0 0 0 6px rgb(252 211 77 / 0.25), 0 0 28px 4px rgb(252 211 77 / 0.45);
+    box-shadow: 0 0 0 0 rgb(252 211 77 / 0.45);
   }
   100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 12px rgb(252 211 77 / 0), 0 0 0 0 rgb(252 211 77 / 0);
+    box-shadow: 0 0 0 7px rgb(252 211 77 / 0);
   }
 }
 
