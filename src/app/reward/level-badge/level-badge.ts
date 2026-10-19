@@ -14,7 +14,7 @@ import { RewardService } from '../reward.service';
 import { BASE_XP, ON_TIME_BONUS, SUBTASK_XP } from '../todo-xp';
 
 /** Wie lange das Abzeichen nach einem Gewinn aufleuchtet. */
-const PULSE_MS = 900;
+const PULSE_MS = 650;
 
 /**
  * Das Level in der Leiste.
@@ -53,7 +53,7 @@ export class LevelBadge {
   protected readonly onTimeBonus = ON_TIME_BONUS;
 
   /**
-   * Was eine Vorlesesoftware nach einem Gewinn hört. Das Konfetti sieht sie
+   * Was eine Vorlesesoftware nach einem Gewinn hört. Den Funken sieht sie
    * nicht — also bekommt sie die Zahl.
    */
   protected readonly announcement = computed(() => {
