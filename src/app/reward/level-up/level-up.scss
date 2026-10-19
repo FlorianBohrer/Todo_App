@@ -48,19 +48,22 @@
   transform: rotate(-90deg);
 }
 
+/* Derselbe Ring wie am Abzeichen in der Leiste: Spur in der Linienfarbe,
+   Bogen in Gold, die Zahl in Textfarbe. */
 .level-up__track,
 .level-up__arc {
   fill: none;
-  stroke-width: 3;
 }
 
 .level-up__track {
-  stroke: var(--color-fill-strong);
+  stroke: var(--color-line);
+  stroke-width: 1.5;
 }
 
 /* Der Ring schliesst sich — das ist die ganze Bewegung. */
 .level-up__arc {
   stroke: #fcd34d;
+  stroke-width: 2;
   stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
@@ -69,9 +72,9 @@
 
 .level-up__number {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #fde68a;
+  color: var(--color-text);
   animation: level-up-fade 300ms ease-out 360ms both;
 }
 

@@ -6,10 +6,10 @@ import {
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 
-import { ProgressRing } from '../../todo/components/progress-ring/progress-ring';
-import { nextTitle } from '../level';
+import { GOLDEN_ODDS, nextTitle } from '../level';
 import { RewardService } from '../reward.service';
 import { BASE_XP, ON_TIME_BONUS, SUBTASK_XP } from '../todo-xp';
 
@@ -25,7 +25,6 @@ const PULSE_MS = 650;
  */
 @Component({
   selector: 'app-level-badge',
-  imports: [ProgressRing],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './level-badge.html',
   styleUrl: './level-badge.scss',
@@ -42,6 +41,8 @@ export class LevelBadge {
   protected readonly level = this.rewards.level;
   protected readonly sound = this.rewards.sound;
   protected readonly open = signal(false);
+  /** „How XP works“ ist zugeklappt, bis jemand nachsehen will. */
+  protected readonly rulesOpen = signal(false);
   protected readonly pulsing = signal(false);
 
   protected readonly next = computed(() => nextTitle(this.level().level));
@@ -51,6 +52,7 @@ export class LevelBadge {
   protected readonly rules = BASE_XP;
   protected readonly subtaskXp = SUBTASK_XP;
   protected readonly onTimeBonus = ON_TIME_BONUS;
+  protected readonly goldenOdds = GOLDEN_ODDS;
 
   /**
    * Was eine Vorlesesoftware nach einem Gewinn hört. Den Funken sieht sie
@@ -67,7 +69,23 @@ export class LevelBadge {
 
   private pulseTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private readonly sheet = viewChild<ElementRef<HTMLElement>>('sheet');
+
   constructor() {
+    // Das Fenster darf nicht unter die Ansichten-Leiste des Telefons reichen.
+    // Wie viel Platz bis dorthin bleibt, haengt davon ab, wie weit die Seite
+    // gescrollt ist (die Kontozeile darueber laeuft mit hinaus) — also wird
+    // es beim Oeffnen und Aufklappen gemessen, nicht geschaetzt.
+    effect(() => {
+      const element = this.sheet()?.nativeElement;
+      this.rulesOpen();
+      if (!element) return;
+      const nav = document.querySelector('.bottom-nav');
+      const navTop = nav && getComputedStyle(nav).display !== 'none' ? nav.getBoundingClientRect().top : window.innerHeight;
+      const room = navTop - element.getBoundingClientRect().top - 8;
+      element.style.maxHeight = `${Math.max(160, Math.floor(room))}px`;
+    });
+
     effect((onCleanup) => {
       if (!this.rewards.lastGain()) return;
 
@@ -83,11 +101,13 @@ export class LevelBadge {
   }
 
   protected toggle(): void {
-    this.open.update((value) => !value);
+    if (this.open()) this.close();
+    else this.open.set(true);
   }
 
   protected close(): void {
     this.open.set(false);
+    this.rulesOpen.set(false);
   }
 
   protected toggleSound(): void {

@@ -1,29 +1,303 @@
-/* Nach einem Gewinn: ein feiner goldener Ring um das Abzeichen, der sich
-   öffnet und verlischt. Der Ring darin füllt sich ohnehin — das hier sagt nur,
-   wohin der Blick gehen kann. Vorher hüpfte das Abzeichen um 12 % und glühte;
-   bei jedem Haken, den ganzen Tag. */
-.level-badge.is-pulsing {
+/* ---- Das Abzeichen ----
+   Ein Ring als Kontur des Knopfs, die Zahl darin. Gold gehoert dem
+   Fortschritt allein: Spur in der Linienfarbe, Bogen in Gold, Zahl in
+   Textfarbe. */
+
+.level-badge {
+  display: inline-flex;
+  height: 2.5rem;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 9999px;
+  color: var(--color-text);
+}
+
+.level-badge__title {
+  display: none;
+  padding-right: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  transition: color 140ms ease-out;
+}
+
+@media (min-width: 640px) {
+  .level-badge__title {
+    display: inline;
+  }
+}
+
+.level-badge:hover .level-badge__title {
+  color: var(--color-text);
+}
+
+.level-ring {
+  position: relative;
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  place-items: center;
+  border-radius: 9999px;
+}
+
+.level-ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.level-ring__track,
+.level-ring__arc {
+  fill: none;
+}
+
+.level-ring__track {
+  stroke: var(--color-line);
+  stroke-width: 1.5;
+  transition: stroke 140ms ease-out;
+}
+
+.level-badge:hover .level-ring__track {
+  stroke: var(--color-line-strong);
+}
+
+/* Der Bogen fuellt sich sichtbar, wenn XP dazukommen — das ist die
+   Rueckmeldung, nicht ein Hopser des ganzen Knopfs. */
+.level-ring__arc {
+  stroke: #fcd34d;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.level-ring__number {
+  position: relative;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.level-badge:focus-visible {
+  outline: none;
+}
+
+.level-badge:focus-visible .level-ring {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 2px;
+}
+
+/* Nach einem Gewinn: ein feiner goldener Ring, der sich vom Abzeichen
+   loest und verlischt. */
+.level-badge.is-pulsing .level-ring {
   animation: badge-pulse 650ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes badge-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgb(252 211 77 / 0.45);
+    box-shadow: 0 0 0 0 rgb(252 211 77 / 0.4);
   }
   100% {
     box-shadow: 0 0 0 7px rgb(252 211 77 / 0);
   }
 }
 
+/* ---- Das Fenster ----
+   Oben, was man wissen will: Level, Titel, wie weit es noch ist. Darunter,
+   was man nachschlagen kann. Keine Verlaeufe, keine Schatten auf Schrift,
+   Gold nur im Balken. */
+
+.level-sheet {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  margin-top: 0.5rem;
+  width: min(19rem, calc(100vw - 2rem));
+  /* Mit aufgeklappten Regeln ist das Fenster gut 500px hoch — auf kleinen
+     Telefonen mehr, als bis zur unteren Leiste Platz ist. Dann scrollt es in
+     sich. Die genaue Hoehe setzt LevelBadge beim Oeffnen; das hier ist die
+     Obergrenze, falls die Messung ausbleibt. */
+  max-height: calc(100dvh - var(--chrome-h, 4rem) - var(--bottom-nav-h, 0px) - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.125rem 1.125rem 0.5rem;
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: var(--color-panel1);
+  box-shadow: 0 18px 44px -20px rgb(0 0 0 / 0.7);
+}
+
+.level-sheet__kicker {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-subtle);
+}
+
+.level-sheet__title {
+  margin: 0.125rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+.level-sheet__bar {
+  margin-top: 0.875rem;
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--color-fill-strong);
+}
+
+.level-sheet__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #fcd34d;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.level-sheet__numbers {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}
+
+.level-sheet__next {
+  margin: 0.875rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+}
+
+.level-sheet__next-title {
+  color: var(--color-text);
+}
+
+/* Zeilen am Fuss: Regeln aufklappen, Ton an/aus. Volle Breite, eine
+   Haarlinie darueber, Beschriftung links, Zustand rechts. */
+.level-sheet__row {
+  display: flex;
+  width: calc(100% + 2.25rem);
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-inline: -1.125rem;
+  padding-inline: 1.125rem;
+  border-top: 1px solid var(--color-line);
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  transition: color 140ms ease-out;
+}
+
+.level-sheet__row:hover {
+  color: var(--color-text);
+}
+
+.level-sheet__disclosure {
+  margin-top: 1rem;
+}
+
+.level-sheet__chevron {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.level-sheet__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.level-rules {
+  padding: 0.25rem 0 0.875rem;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--color-subtle);
+}
+
+.level-rules dl {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0 0 0.75rem;
+}
+
+.level-rules dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.level-rules dt {
+  color: var(--color-muted);
+}
+
+.level-rules dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.level-rules p {
+  margin: 0.375rem 0 0;
+}
+
+/* Der Schalter: Spur und Knopf, Gold wenn an. */
+.level-switch {
+  position: relative;
+  width: 2rem;
+  height: 1.125rem;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--color-fill-strong);
+  transition: background-color 180ms ease-out;
+}
+
+.level-switch > span {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 9999px;
+  background: #fff;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.level-switch.is-on {
+  background: #e0b33a;
+}
+
+.level-switch.is-on > span {
+  transform: translateX(0.875rem);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  /* Ohne Hüpfen, nur das Glühen. */
-  .level-badge.is-pulsing {
-    animation: badge-glow 900ms ease;
+  .level-ring__arc,
+  .level-sheet__bar > span,
+  .level-sheet__chevron,
+  .level-switch,
+  .level-switch > span {
+    transition: none;
   }
 
-  @keyframes badge-glow {
-    25% {
-      border-color: rgb(252 211 77 / 0.8);
-    }
+  /* Ohne Ausdehnen, nur ein kurzes Aufleuchten der Spur. */
+  .level-badge.is-pulsing .level-ring {
+    animation: none;
+  }
+
+  .level-badge.is-pulsing .level-ring__track {
+    stroke: rgb(252 211 77 / 0.6);
   }
 }
