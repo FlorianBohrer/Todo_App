@@ -5,6 +5,7 @@
  * Kennung: eine Adresse, die man lesen, tippen und weitersagen kann. Dafür
  * muss sie aus jedem Namen etwas Eindeutiges und URL-Taugliches machen.
  */
+import { splitFolderName } from './folder-name';
 
 /** Umlaute so, wie man sie ohne Tastatur schreibt — „Küche" → „kueche". */
 const TRANSLIT: Record<string, string> = { ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss' };
@@ -51,23 +52,66 @@ export function folderSlugs(labels: readonly { id: string; name: string }[]): Ma
   return slugs;
 }
 
+/** „free-time" und „freetime" sind für einen Menschen dasselbe Wort. */
+const compact = (slug: string) => slug.replace(/-/g, '');
+
 /**
- * Welcher Folder ist mit dieser Adresse gemeint? null, wenn keiner.
+ * Welche Folder kommen für diese Adresse in Frage?
  *
- * Großzügig beim Lesen: „/Work", „/work", „/Holiday%20planning…" und die
- * Kennung selbst führen alle zum selben Folder.
+ * Großzügig beim Lesen, in dieser Reihenfolge — die erste Stufe mit einem
+ * Treffer entscheidet:
+ *
+ * 1. genau die Adresse des Folders, oder seine Kennung
+ * 2. dieselbe ohne Bindestriche: /freetime findet „Free time"
+ * 3. der Name ohne Präfix: /bozen-live findet „projekt: Bozen Live"
+ * 4. der Anfang: /holiday findet „Holiday planning for the summer"
+ * 5. alle Wörter kommen vor: /summer-holiday findet denselben
+ *
+ * Mehr als ein Treffer heißt: die Adresse ist mehrdeutig — dann entscheidet
+ * nicht die App, sondern der Mensch (siehe FolderRoute).
  */
+export function folderMatches(
+  segment: string,
+  labels: readonly { id: string; name: string }[],
+): string[] {
+  const wanted = folderSlug(segment);
+  const byId = labels.filter((label) => label.id === segment).map((label) => label.id);
+  if (!wanted) return byId;
+
+  const slugs = folderSlugs(labels);
+  const entries = labels.map((label) => ({
+    id: label.id,
+    slug: slugs.get(label.id) ?? '',
+    bare: folderSlug(splitFolderName(label.name).name),
+  }));
+  const words = wanted.split('-');
+
+  const stages: ((entry: (typeof entries)[number]) => boolean)[] = [
+    (e) => e.slug === wanted,
+    (e) => compact(e.slug) === compact(wanted),
+    (e) => e.bare === wanted || compact(e.bare) === compact(wanted),
+    (e) => e.slug.startsWith(wanted) || compact(e.slug).startsWith(compact(wanted)),
+    (e) => words.every((word) => e.slug.split('-').includes(word)),
+  ];
+
+  const exact = entries.filter(stages[0]).map((e) => e.id);
+  if (exact.length > 0) return exact;
+  if (byId.length > 0) return byId;
+
+  for (const stage of stages.slice(1)) {
+    const hits = entries.filter(stage).map((e) => e.id);
+    if (hits.length > 0) return hits;
+  }
+  return [];
+}
+
+/** Der eine Folder zu dieser Adresse — null, wenn keiner oder mehrere passen. */
 export function folderForSlug(
   segment: string,
   labels: readonly { id: string; name: string }[],
 ): string | null {
-  const wanted = folderSlug(segment);
-  if (!wanted) return labels.find((label) => label.id === segment)?.id ?? null;
-
-  for (const [id, slug] of folderSlugs(labels)) {
-    if (slug === wanted) return id;
-  }
-  return labels.find((label) => label.id === segment)?.id ?? null;
+  const matches = folderMatches(segment, labels);
+  return matches.length === 1 ? matches[0] : null;
 }
 
 /**
