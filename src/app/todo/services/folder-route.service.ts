@@ -3,7 +3,7 @@ import { Location } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 
 import { ToastService } from '../../shared/toast.service';
-import { folderForSlug, folderSlugs, slugFromPath } from '../shared/folder-slug';
+import { folderMatches, folderSlugs, slugFromPath } from '../shared/folder-slug';
 import { Label, LabelService } from './label.service';
 import { TodoService } from './todo';
 
@@ -93,17 +93,32 @@ export class FolderRoute {
     });
   }
 
-  /** Den Folder zur Adresse öffnen — oder sagen, dass es ihn nicht gibt. */
+  /**
+   * Den Folder zur Adresse öffnen — oder sagen, warum nicht.
+   *
+   * Passt eine Kurzform auf mehrere Folder (/h für „Holiday" und
+   * „Haushalt"), wählt die App nicht selbst: sie nennt die Kandidaten und
+   * zeigt alle.
+   */
   private open(slug: string, labels: readonly Label[]): void {
-    const id = folderForSlug(slug, labels);
+    const matches = folderMatches(slug, labels);
 
-    if (id === null) {
-      this.toast.show(`There is no folder called “${slug}”`);
+    if (matches.length !== 1) {
+      const names = matches
+        .map((match) => labels.find((label) => label.id === match)?.name)
+        .filter((name): name is string => !!name);
+      this.toast.show(
+        names.length > 1
+          ? `“${slug}” fits ${names.length} folders: ${names.join(', ')}`
+          : `There is no folder called “${slug}”`,
+      );
       this.shownId = null;
       this.labelService.activeLabelId.set(null);
       this.location.replaceState('/');
       return;
     }
+
+    const id = matches[0];
 
     // Vorher setzen: die Adresse zeigt diesen Folder schon. Weicht sie nur in
     // der Schreibweise ab („/Work"), wird sie ersetzt statt neu angelegt.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { folderForSlug, folderSlug, folderSlugs, slugFromPath } from './folder-slug';
+import { folderForSlug, folderMatches, folderSlug, folderSlugs, slugFromPath } from './folder-slug';
 
 const labels = [
   { id: 'c1', name: 'Work' },
@@ -60,6 +60,44 @@ describe('folderForSlug', () => {
 
   it('reaches the second of two folders with the same name', () => {
     expect(folderForSlug('work-2', labels)).toBe('c5');
+  });
+
+  it('finds folders by the short forms people actually type', () => {
+    const real = [
+      { id: 'w', name: 'Work' },
+      { id: 'f', name: 'Free time' },
+      { id: 'h', name: 'Holiday planning for the summer' },
+      { id: 'p', name: 'projekt: Bozen Live' },
+      { id: 'k', name: 'Haushalt' },
+    ];
+
+    expect(folderForSlug('freetime', real)).toBe('f'); // ohne Bindestrich
+    expect(folderForSlug('Free Time', real)).toBe('f');
+    expect(folderForSlug('bozen-live', real)).toBe('p'); // ohne Präfix
+    expect(folderForSlug('holiday', real)).toBe('h'); // Anfang
+    expect(folderForSlug('summer-holiday', real)).toBe('h'); // alle Wörter
+    expect(folderForSlug('haus', real)).toBe('k');
+  });
+
+  it('does not guess between several folders', () => {
+    // Kennungen wie echte (lang), damit /h nicht zufällig eine Kennung trifft.
+    const real = [
+      { id: 'id-holiday', name: 'Holiday' },
+      { id: 'id-haushalt', name: 'Haushalt' },
+    ];
+
+    expect(folderMatches('h', real)).toEqual(['id-holiday', 'id-haushalt']);
+    expect(folderForSlug('h', real)).toBeNull();
+    expect(folderForSlug('ho', real)).toBe('id-holiday');
+  });
+
+  it('prefers the exact address over a longer folder it is the start of', () => {
+    const real = [
+      { id: 'a', name: 'Work stuff' },
+      { id: 'b', name: 'Work' },
+    ];
+
+    expect(folderForSlug('work', real)).toBe('b');
   });
 
   it('returns null for an address that matches no folder', () => {
