@@ -22,7 +22,13 @@ const label = (id: string, name: string): Label => ({
   collection: null,
 });
 
-const FOLDERS = [label('c1', 'Work'), label('c2', 'Freetime'), label('c3', 'Küche')];
+const FOLDERS = [
+  label('c1', 'Work'),
+  label('c2', 'Freetime'),
+  label('c3', 'Küche'),
+  label('c4', 'Holiday planning for the summer'),
+  label('c5', 'Haushalt'),
+];
 
 describe('FolderRoute', () => {
   let location: SpyLocation;
@@ -112,6 +118,30 @@ describe('FolderRoute', () => {
     expect(location.path()).toBe('/office');
     expect(location.urlChanges.length).toBe(steps + 1);
     expect(location.urlChanges.at(-1)).toContain('replace');
+  });
+
+  it('opens every folder, also by a short form, and writes its full address', () => {
+    start('/holiday');
+    load();
+
+    expect(labels.activeLabelId()).toBe('c4');
+    expect(location.path()).toBe('/holiday-planning-for-the-summer');
+
+    for (const [path, id] of [['/freetime', 'c2'], ['/haushalt', 'c5'], ['/kueche', 'c3'], ['/work', 'c1']] as const) {
+      location.simulateUrlPop(path);
+      TestBed.tick();
+      expect(labels.activeLabelId()).toBe(id);
+    }
+  });
+
+  it('names the candidates when a short form fits several folders', () => {
+    start('/h');
+    load();
+
+    expect(labels.activeLabelId()).toBeNull();
+    expect(toast.toasts().map((t) => t.message)).toEqual([
+      '“h” fits 2 folders: Holiday planning for the summer, Haushalt',
+    ]);
   });
 
   it('says so when there is no such folder, and shows all', () => {
