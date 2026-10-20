@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ClerkService } from 'ngx-clerk';
 import { Subject, distinctUntilChanged, map } from 'rxjs';
@@ -83,20 +83,14 @@ interface TodoListResponse {
 // Schlüssel der alten, rein lokalen Speicherung (vor der Server-Anbindung).
 const LEGACY_TODO_KEY = 'todos';
 
-/** Zuletzt gewählte Ansicht — überlebt den Reload. */
-const VIEW_KEY = 'todo.view';
-
 export type View = 'list' | 'week' | 'plans';
 
-function storedView(): View {
-  try {
-    const value = localStorage.getItem(VIEW_KEY);
-    return value === 'week' || value === 'plans' ? value : 'list';
-  } catch {
-    // Privater Modus / blockierte Site-Daten: dann eben die Standardansicht.
-    return 'list';
-  }
-}
+/**
+ * Früher merkte sich die App hier die zuletzt gewählte Ansicht. Ein Neuladen
+ * beginnt jetzt immer in der Liste (siehe `view`); der alte Eintrag wird beim
+ * Start entfernt, damit er nicht für immer im Browser liegen bleibt.
+ */
+const LEGACY_VIEW_KEY = 'todo.view';
 
 @Injectable({
   providedIn: 'root',
@@ -114,7 +108,12 @@ export class TodoService {
    */
   readonly allTodos = this.todos.asReadonly();
 
-  readonly filter = signal<Filter>('all');
+  /**
+   * Startet auf „Active": nach dem Neuladen steht da, was noch zu tun ist —
+   * nicht das Erledigte von gestern dazwischen. Gewählt wird danach wie
+   * gehabt; gemerkt wird die Wahl bewusst nicht.
+   */
+  readonly filter = signal<Filter>('active');
    readonly searchTerm = signal('');
 
   /**
@@ -240,16 +239,11 @@ export class TodoService {
   readonly loading = signal(true);
 
   constructor() {
-    // Die Ansicht merken. Wer in der Woche plant, will nach einem Reload nicht
-    // wieder in der Liste landen.
-    effect(() => {
-      const view = this.view();
-      try {
-        localStorage.setItem(VIEW_KEY, view);
-      } catch {
-        /* Speichern ist ein Komfort, kein Muss. */
-      }
-    });
+    try {
+      localStorage.removeItem(LEGACY_VIEW_KEY);
+    } catch {
+      /* Privater Modus / blockierte Site-Daten: dann liegt dort auch nichts. */
+    }
 
     // Todos erst laden, wenn ein Nutzer eingeloggt ist. Bei logout/userwechsel
     // den lokalen zustand leeren, damit keine fremden todos stehen bleiben.
@@ -492,8 +486,15 @@ export class TodoService {
   }
 
   // ---- Wochenansicht ----
-  /** Liste vs. Woche vs. Pläne. Startet dort, wo man zuletzt war. */
-  readonly view = signal<View>(storedView());
+  /**
+   * Liste vs. Woche vs. Pläne.
+   *
+   * Startet immer in der Liste — mit dem Filter „Active" heißt Neuladen:
+   * zeig mir, was offen ist. Vorher kam man dorthin zurück, wo man zuletzt
+   * war, und landete nach einem Reload in der Woche oder in einem Plan statt
+   * bei den eigenen Aufgaben.
+   */
+  readonly view = signal<View>('list');
 
   // ---- Hinspringen ----
 
