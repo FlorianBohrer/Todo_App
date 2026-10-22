@@ -24,6 +24,10 @@ The backend lives in its own repo: [myTodoApi](https://github.com/FlorianBohrer/
 - Connects to [Flow](https://github.com/FlorianBohrer/timer), the focus timer: pair it once with a code, and Flow works on your todos. The running session shows up here, and so does the focus time each todo got
 - Everything is stored in Postgres (Neon), not in localStorage anymore
 
+## Flow on the iPhone
+
+`public/flow/` is [Flow](https://github.com/FlorianBohrer/timer), the focus timer that belongs to this app, built as a home screen app for the iPhone. It is served as it is at https://my-todo.app/flow/: open it in Safari, Share → Add to Home Screen, and pair it with **Connect Flow** like any other device. It lives here because the API accepts requests only from my-todo.app and localhost. `vercel.json` sends `/flow` and `/flow/` to it before the catch-all rewrite to the Angular app, so a folder can't be called `flow`. The files are built in the timer repo (`npm run flow-app`) and copied over; do not edit them here.
+
 ## How it's built
 
 ```mermaid
