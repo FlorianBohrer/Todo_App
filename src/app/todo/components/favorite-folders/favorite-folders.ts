@@ -69,9 +69,12 @@ export class FavoriteFolders {
     });
   }
 
-  /** Favoriten-Kachel an/aus: filtert die Liste auf favorisierte Todos. */
+  /**
+   * Favoriten-Kachel an/aus: filtert die Liste auf favorisierte Todos.
+   * Aus geht es zurück auf „Active" — derselbe Stand wie nach dem Laden.
+   */
   selectFavorites(): void {
-    this.todoService.filter.set(this.favoritesActive() ? 'all' : 'favorites');
+    this.todoService.filter.set(this.favoritesActive() ? 'active' : 'favorites');
   }
 
   private celebrate(id: string) {
