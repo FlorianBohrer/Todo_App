@@ -1,12 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { Plan } from '../plan.model';
 import { planLinkTargets } from '../plan-links';
 import { layoutGraph, GraphEdge } from '../graph-layout';
 import { LabelService } from '../../todo/services/label.service';
 import { folderColorClass } from '../../todo/shared/folder-color';
 
-const WIDTH = 900;
-const HEIGHT = 520;
+const WIDE = { width: 900, height: 520 };
+// Hochkant fuer das Telefon: quer gezeichnet und auf 340px verkleinert war
+// jede Beschriftung 4px hoch.
+const TALL = { width: 420, height: 560 };
 
 /**
  * Graph der Pläne: Punkte sind Pläne, Linien sind [[Wikilinks]].
@@ -25,9 +27,12 @@ const HEIGHT = 520;
         No plans yet. The graph fills up as you create and link them.
       </p>
     } @else {
-      <div class="overflow-hidden rounded-xl border border-line bg-black/20">
+      <!-- Dieselbe gepunktete Zeichenflaeche wie bei den Diagrammen. Zeigt
+           man auf einen Plan, treten seine Verbindungen hervor und der Rest
+           zurueck — so liest man ein Netz, ohne Linien zu verfolgen. -->
+      <div class="graph-canvas" [class.is-focusing]="hovered() !== null">
         <svg
-          [attr.viewBox]="'0 0 ' + width + ' ' + height"
+          [attr.viewBox]="'0 0 ' + size().width + ' ' + size().height"
           class="h-auto w-full"
           role="img"
           aria-label="Graph of plans and their links">
@@ -36,23 +41,36 @@ const HEIGHT = 520;
             <line
               [attr.x1]="line.x1" [attr.y1]="line.y1"
               [attr.x2]="line.x2" [attr.y2]="line.y2"
-              class="graph-edge" />
+              class="graph-edge"
+              [class.is-lit]="hovered() === line.source || hovered() === line.target" />
           }
 
           @for (node of graph().nodes; track node.id) {
             <g class="graph-node" [class.graph-node--active]="node.id === activeId()"
+              [class.is-lit]="isLit(node.id)"
               (click)="open.emit(node.id)"
+              (pointerenter)="hovered.set(node.id)"
+              (pointerleave)="hovered.set(null)"
+              (focus)="hovered.set(node.id)"
+              (blur)="hovered.set(null)"
               role="button"
               tabindex="0"
               (keydown.enter)="open.emit(node.id)"
               (keydown.space)="open.emit(node.id)">
               <title>{{ node.label }}</title>
+              <!-- Eine unsichtbare, groessere Flaeche: ein 5px-Punkt ist mit
+                   dem Finger nicht zu treffen. -->
+              <circle [attr.cx]="node.x" [attr.cy]="node.y" r="22" class="graph-hit" />
+              <circle
+                [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="radius(node.degree) + 6"
+                [class]="node.tone + ' graph-halo'"
+                fill="currentColor" />
               <circle
                 [attr.cx]="node.x" [attr.cy]="node.y" [attr.r]="radius(node.degree)"
-                [class]="node.tone"
+                [class]="node.tone + ' graph-dot'"
                 fill="currentColor" />
               <text
-                [attr.x]="node.x" [attr.y]="node.y + radius(node.degree) + 13"
+                [attr.x]="node.x" [attr.y]="node.y + radius(node.degree) + 16"
                 text-anchor="middle"
                 class="graph-label">{{ shorten(node.label) }}</text>
             </g>
@@ -69,45 +87,102 @@ const HEIGHT = 520;
     }
   `,
   styles: `
+    .graph-canvas {
+      overflow: hidden;
+      border: 1px solid var(--color-line);
+      border-radius: 1rem;
+      background:
+        radial-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1.25px) 0 0 / 18px 18px,
+        radial-gradient(ellipse at center, rgb(255 255 255 / 0.03), transparent 70%),
+        var(--color-bg3);
+    }
+
     .graph-edge {
       stroke: rgb(255 255 255 / 0.16);
-      stroke-width: 1;
+      stroke-width: 1.25;
+      stroke-linecap: round;
+      transition: stroke 160ms ease-out, opacity 160ms ease-out;
+    }
+
+    .graph-edge.is-lit {
+      stroke: var(--color-brand-2);
+      stroke-width: 1.75;
+    }
+
+    .graph-canvas.is-focusing .graph-edge:not(.is-lit) {
+      opacity: 0.35;
     }
 
     .graph-node {
       cursor: pointer;
+      outline: none;
+      transition: opacity 160ms ease-out;
     }
 
-    .graph-node circle {
-      transition: opacity 140ms ease-out;
-      opacity: 0.85;
+    .graph-canvas.is-focusing .graph-node:not(.is-lit) {
+      opacity: 0.35;
     }
 
-    .graph-node:hover circle,
-    .graph-node:focus-visible circle {
-      opacity: 1;
+    .graph-hit {
+      fill: transparent;
+    }
+
+    /* Ein weicher Hof in der Folderfarbe: der Punkt leuchtet, statt flach
+       auf der Flaeche zu liegen. */
+    .graph-halo {
+      opacity: 0.16;
+      transition: opacity 160ms ease-out;
+    }
+
+    .graph-dot {
+      stroke: var(--color-bg3);
+      stroke-width: 2;
+      transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    .graph-node:hover .graph-halo,
+    .graph-node:focus-visible .graph-halo {
+      opacity: 0.3;
+    }
+
+    .graph-node:hover .graph-dot,
+    .graph-node:focus-visible .graph-dot {
+      transform: scale(1.18);
     }
 
     /* Der offene Plan bekommt einen Ring statt einer anderen Farbe — die Farbe
        gehoert zum Folder und soll ihre Bedeutung behalten. */
-    .graph-node--active circle {
-      opacity: 1;
+    .graph-node--active .graph-dot {
       stroke: var(--color-brand-2);
       stroke-width: 2.5;
     }
 
+    /* Ein Rand in der Flaechenfarbe um jede Beschriftung: sie bleibt lesbar,
+       auch wo eine Linie unter ihr durchlaeuft. */
     .graph-label {
       fill: var(--color-muted);
-      font-size: 11px;
+      font-size: 12px;
+      font-weight: 500;
+      paint-order: stroke;
+      stroke: var(--color-bg3);
+      stroke-width: 4px;
+      stroke-linejoin: round;
       pointer-events: none;
+      transition: fill 140ms ease-out;
     }
 
-    .graph-node:hover .graph-label {
+    .graph-node:hover .graph-label,
+    .graph-node:focus-visible .graph-label {
       fill: var(--color-text);
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .graph-node circle {
+      .graph-edge,
+      .graph-node,
+      .graph-halo,
+      .graph-dot {
         transition: none;
       }
     }
@@ -120,8 +195,13 @@ export class PlanGraph {
   readonly activeId = input<string | null>(null);
   readonly open = output<string>();
 
-  protected readonly width = WIDTH;
-  protected readonly height = HEIGHT;
+  /** Der Plan unter dem Zeiger (oder im Fokus) — seine Nachbarschaft leuchtet. */
+  protected readonly hovered = signal<string | null>(null);
+
+  private readonly narrow = signal(
+    typeof matchMedia === 'function' && matchMedia('(max-width: 639px)').matches,
+  );
+  protected readonly size = computed(() => (this.narrow() ? TALL : WIDE));
 
   protected readonly graph = computed(() => {
     const plans = this.plans();
@@ -151,8 +231,8 @@ export class PlanGraph {
         tone: this.toneFor(plan.categoryId),
       })),
       edges,
-      WIDTH,
-      HEIGHT,
+      this.size().width,
+      this.size().height,
     );
 
     const at = new Map(layout.nodes.map((n) => [n.id, n]));
@@ -161,6 +241,8 @@ export class PlanGraph {
       const b = at.get(edge.target)!;
       return {
         key: `${edge.source}|${edge.target}`,
+        source: edge.source,
+        target: edge.target,
         x1: a.x,
         y1: a.y,
         x2: b.x,
@@ -170,6 +252,23 @@ export class PlanGraph {
 
     return { nodes: layout.nodes, lines };
   });
+
+  /** Wer mit dem gezeigten Plan verbunden ist — er selbst eingeschlossen. */
+  private readonly neighbours = computed(() => {
+    const id = this.hovered();
+    const lit = new Set<string>();
+    if (!id) return lit;
+    lit.add(id);
+    for (const line of this.graph().lines) {
+      if (line.source === id) lit.add(line.target);
+      if (line.target === id) lit.add(line.source);
+    }
+    return lit;
+  });
+
+  protected isLit(id: string): boolean {
+    return this.neighbours().has(id);
+  }
 
   private toneFor(categoryId: string | null): string {
     const color = this.labelService.labelById(categoryId)?.color;

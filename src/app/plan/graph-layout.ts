@@ -49,7 +49,12 @@ export function layoutGraph(
   const count = nodeInput.length;
   if (count === 0) return { nodes: [], edges: [] };
 
-  const margin = 28;
+  // Die Beschriftung steht mittig unter dem Punkt und ist bis zu 22 Zeichen
+  // breit. Mit einem gleichmaessigen Rand von 28px stand ein Punkt am
+  // Seitenrand und sein Name halb ausserhalb („ojekt Website").
+  const marginX = Math.min(80, width / 5);
+  const marginTop = Math.min(28, height / 8);
+  const marginBottom = Math.min(44, height / 6);
   const indexOf = new Map<string, number>();
   nodeInput.forEach((n, i) => indexOf.set(n.id, i));
 
@@ -79,7 +84,14 @@ export function layoutGraph(
     positions[0] = { x: width / 2, y: height / 2 };
   }
 
-  const k = Math.sqrt((width * height) / count);
+  // Der Wunschabstand zweier Punkte. Gedeckelt: bei drei Plaenen waere er
+  // sonst so gross, dass sie sich bis in die Ecken stiessen.
+  const k = Math.min(Math.sqrt((width * height) / count), 150);
+  // Zug zur Mitte. Ohne ihn haelt nur der Rand das Netz zusammen, und
+  // unverbundene Punkte landen genau dort — in den Ecken.
+  const gravity = 0.35;
+  const cx = width / 2;
+  const cy = height / 2;
   let temperature = width / 10;
   const cooling = temperature / (iterations + 1);
 
@@ -118,19 +130,29 @@ export function layoutGraph(
       push[b].y += uy * force;
     }
 
+    for (let i = 0; i < count; i++) {
+      const dx = positions[i].x - cx;
+      const dy = positions[i].y - cy;
+      const distance = Math.hypot(dx, dy);
+      if (distance < 0.01) continue;
+      const force = (gravity * distance * distance) / k;
+      push[i].x -= (dx / distance) * force;
+      push[i].y -= (dy / distance) * force;
+    }
+
     // Schrittweite sinkt mit der Temperatur, sonst schwingt das Netz endlos.
     for (let i = 0; i < count; i++) {
       const length = Math.hypot(push[i].x, push[i].y) || 0.01;
       const limited = Math.min(length, temperature);
       positions[i].x = clamp(
         positions[i].x + (push[i].x / length) * limited,
-        margin,
-        width - margin,
+        marginX,
+        width - marginX,
       );
       positions[i].y = clamp(
         positions[i].y + (push[i].y / length) * limited,
-        margin,
-        height - margin,
+        marginTop,
+        height - marginBottom,
       );
     }
 

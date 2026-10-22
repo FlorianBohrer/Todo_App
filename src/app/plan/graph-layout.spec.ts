@@ -102,3 +102,34 @@ describe('layoutGraph', () => {
     expect(edges).toEqual([{ source: 'a', target: 'b' }]);
   });
 });
+
+describe('layoutGraph without links', () => {
+  const unlinked = [
+    { id: 'a', label: 'Urlaubsplanung Sommer' },
+    { id: 'b', label: 'Projekt Website' },
+    { id: 'c', label: 'Notizen' },
+  ];
+
+  it('keeps unlinked plans together near the middle instead of in the corners', () => {
+    const { nodes } = layoutGraph(unlinked, [], 900, 520);
+
+    for (const node of nodes) {
+      expect(Math.hypot(node.x - 450, node.y - 260)).toBeLessThan(260);
+    }
+  });
+
+  it('leaves room for the label under every node', () => {
+    const { nodes } = layoutGraph(
+      Array.from({ length: 16 }, (_, i) => ({ id: `n${i}`, label: `Plan ${i}` })),
+      [],
+      900,
+      520,
+    );
+
+    for (const node of nodes) {
+      expect(node.x).toBeGreaterThanOrEqual(72);
+      expect(node.x).toBeLessThanOrEqual(900 - 72);
+      expect(node.y).toBeLessThanOrEqual(520 - 44);
+    }
+  });
+});
