@@ -210,6 +210,66 @@
     text-decoration-thickness: 1px;
     text-underline-offset: 0.22em;
   }
+
+  // ---- Marken in Tabellenzellen (table-cells.ts) ----
+  //
+  // Farbe nach Bedeutung, wie in jeder API-Dokumentation: lesen gruen-blau,
+  // anlegen gruen, aendern bernstein, loeschen rot. Getoent statt voll, damit
+  // eine Spalte voller Marken nicht lauter ist als der Rest der Tabelle.
+  .cell-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 0.375rem;
+    padding: 0.05rem 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: var(--chip, var(--color-muted));
+    background: color-mix(in srgb, var(--chip, var(--color-muted)) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chip, var(--color-muted)) 22%, transparent);
+  }
+
+  .cell-method {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+  }
+
+  .cell-method--get { --chip: #7DD3FC; }
+  .cell-method--post { --chip: #6EE7B7; }
+  .cell-method--put,
+  .cell-method--patch { --chip: #FCD34D; }
+  .cell-method--delete { --chip: #FB7185; }
+
+  .cell-status--2xx { --chip: #6EE7B7; }
+  .cell-status--3xx { --chip: #7DD3FC; }
+  .cell-status--4xx { --chip: #FCD34D; }
+  .cell-status--5xx { --chip: #FB7185; }
+
+  // Stufen: ein Punkt vor dem Wort traegt die Farbe, die Flaeche bleibt leiser.
+  .cell-level i {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: var(--chip);
+  }
+
+  .cell-level--high { --chip: #FB7185; }
+  .cell-level--medium { --chip: #FCD34D; }
+  .cell-level--low { --chip: #6EE7B7; }
+
+  .cell-path {
+    border-radius: 0.375rem;
+    background: rgb(255 255 255 / 0.05);
+    padding: 0.1rem 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
+    color: var(--color-text);
+    white-space: nowrap;
+  }
 }
 
 
@@ -561,12 +621,10 @@
   // geschoben, auch wenn zwei kurze Woerter darin standen.
   table-layout: auto;
 
-  // Eine feste Flaeche aus der Rampe. Vorher trug die Tabelle nur Alphawerte
-  // (5% Weiss im Kopf, 1.8% in den Zebrastreifen) und stand damit direkt auf
-  // dem Seitengrund: was darunter lag, schien durch, und die Streifen waren
-  // eher zu ahnen als zu sehen. Auf einer gedeckten Flaeche tun dieselben
-  // Prozente, was sie sollen.
-  background: var(--color-bg3);
+  // Getrennte Raender, damit die Ecken der Karte rund sein koennen — bei
+  // zusammengelegten Raendern ignoriert der Browser border-radius.
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 
@@ -672,19 +730,59 @@
 }
 
 
+// ---- Die Karte ----
+//
+// Vorher ein Gitter wie in einer Tabellenkalkulation: jede Zelle mit hellem
+// Rahmen auf allen vier Seiten, Zebrastreifen, fetter Kopf. Jetzt eine Karte
+// mit runden Ecken, Linien nur zwischen den Zeilen, ein leiser Kopf — die
+// Spalten ordnet die Ausrichtung, nicht ein Strich.
+//
+// Gezeichnet wird an den Zellen, nicht am Rahmen um die Tabelle: rechts sitzt
+// die Spalte mit dem Loeschknopf der Zeile, und die gehoert nicht in die
+// Karte. Die letzte Inhaltsspalte ist darum :nth-last-child(2).
 .plan-th,
 .plan-td {
-  border: 1px solid var(--color-line-strong);
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
   padding: 0;
   vertical-align: top;
   position: relative;
+  background: var(--color-bg3);
+  transition: background-color 120ms ease-out;
 }
 
 
 .plan-th {
+  border-top: 1px solid var(--color-line);
   background: var(--color-bg2);
   text-align: left;
+  font-size: 0.8125rem;
   font-weight: 600;
+  color: var(--color-muted);
+}
+
+
+.plan-th:first-child,
+.plan-td:first-child {
+  border-left: 1px solid var(--color-line);
+}
+
+
+.plan-th:nth-last-child(2),
+.plan-td:nth-last-child(2) {
+  border-right: 1px solid var(--color-line);
+}
+
+
+thead .plan-th:first-child { border-top-left-radius: 0.75rem; }
+thead .plan-th:nth-last-child(2) { border-top-right-radius: 0.75rem; }
+tbody tr:last-child .plan-td:first-child { border-bottom-left-radius: 0.75rem; }
+tbody tr:last-child .plan-td:nth-last-child(2) { border-bottom-right-radius: 0.75rem; }
+
+
+// Die erste Spalte nennt meist, worum es in der Zeile geht.
+.plan-td:first-child {
+  font-weight: 500;
 }
 
 
@@ -811,23 +909,18 @@
 }
 
 
-// Zebrastreifen, sehr leise. Bei vielen Zeilen ist er der Unterschied
-// zwischen „ich finde meine Zeile wieder" und „ich zaehle mit dem Finger".
-.plan-table tbody tr:nth-child(even) .plan-td {
-  background: rgb(255 255 255 / 0.018);
-}
-
-
-.plan-table tbody tr:hover .plan-td {
-  background: rgb(255 255 255 / 0.04);
+// Statt Zebrastreifen: die Zeile unter dem Zeiger hebt sich. Die Linien
+// zwischen den Zeilen fuehren das Auge schon; Streifen dazu waren doppelt.
+.plan-table tbody tr:hover .plan-td:not(.plan-td-gutter) {
+  background: color-mix(in srgb, var(--color-bg3), white 3.5%);
 }
 
 
 // Der Text in der Zelle. Bricht um, anders als ein input, und behaelt eine
 // Mindesthoehe, damit eine leere Zelle trotzdem zu treffen ist.
 .plan-cell {
-  min-height: 1.75rem;
-  padding: 0.35rem 0.55rem;
+  min-height: 2.5rem;
+  padding: 0.6rem 0.85rem;
   cursor: text;
   // `anywhere` statt `break-word` war der Grund, warum die Spalten so eng
   // standen: es zaehlt fuer die Mindestbreite mit, also hielt der Browser
@@ -851,9 +944,19 @@
   // Deckend und dunkler als die Zelle: das Feld liegt IN der Tabelle, es
   // schwebt nicht darueber.
   background: var(--color-bg);
-  padding: 0.35rem 0.55rem;
+  min-height: 2.5rem;
+  padding: 0.6rem 0.85rem;
   color: var(--color-text);
   outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--plan-accent);
+}
+
+
+// Der Kopf ist leiser als der Inhalt, aber nicht kleiner zu treffen.
+.plan-th .plan-cell,
+.plan-th .plan-cell-input {
+  min-height: 2.25rem;
+  padding-block: 0.5rem;
 }
 
 
@@ -911,6 +1014,109 @@ tr:focus-within .plan-td-gutter .plan-table-x,
 
 // ---- Diagramme ----
 //
+// Eine Zeichenflaeche: gepunkteter Grund wie in Figma oder einem Whiteboard,
+// fein gerahmt, die Ecken so rund wie die Tabellenkarte. Die Punkte sind so
+// leise, dass sie erst auffallen, wenn man sie sucht — sie sagen „hier wird
+// gezeichnet", ohne mit der Zeichnung zu konkurrieren.
+.diagram-canvas {
+  border: 1px solid var(--color-line);
+  border-radius: 0.875rem;
+  background:
+    radial-gradient(rgb(255 255 255 / 0.055) 1px, transparent 1.25px) 0 0 / 16px 16px,
+    var(--color-bg3);
+  padding: 0.5rem 1rem 1.25rem;
+}
+
+
+.diagram-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+
+// Was fuer ein Diagramm: leise, klein, in Versalien — eine Ueberschrift fuer
+// die Flaeche, nicht fuer das Dokument.
+.diagram-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-subtle);
+}
+
+
+.diagram-kind lucide-icon {
+  color: var(--plan-accent);
+}
+
+
+@media (max-width: 639px) {
+  // Auf dem Telefon zaehlt jeder Pixel Zeichnung: ein schmaleres Passepartout
+  // laesst ein 460px-Diagramm noch eingepasst stehen statt rollen.
+  .diagram-canvas {
+    padding: 0.375rem 0.5rem 0.75rem;
+  }
+
+  .diagram-bar {
+    padding-left: 0.25rem;
+  }
+}
+
+
+// Vollbild: dieselbe Flaeche, nur ueber allem und bis an die Raender. Fest
+// positioniert wie das Tabellen-Vollbild (siehe dort, warum das traegt).
+.plan-diagram--full {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  animation: diagram-full-in 180ms var(--spring-settle, ease-out) both;
+
+  .diagram-canvas {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    padding: max(0.75rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .diagram-bar {
+    flex: none;
+  }
+
+  app-mermaid-diagram {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .plan-dia-edit {
+    opacity: 1;
+  }
+}
+
+
+@keyframes diagram-full-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-diagram--full { animation: none; }
+}
+
+
 // Der Schalter zum Quelltext tritt zurueck wie die Ziehgriffe. Offen bleibt er
 // stehen: sonst verschwaende der einzige Weg zurueck, sobald die Maus ins
 // Textfeld geht.

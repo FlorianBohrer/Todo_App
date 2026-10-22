@@ -1,13 +1,27 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
+  afterNextRender,
   computed,
   effect,
+  inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
+
+import {
+  DIAGRAM_PALETTE,
+  diagramConfig,
+  fittedWidth,
+  nextZoom,
+  polishDiagram,
+  screenFit,
+} from '../diagram-theme';
+import { scrollEdges } from '../scroll-edges.directive';
 
 /**
  * Mermaid wiegt rund ein halbes Megabyte. Es wird deshalb erst geholt, wenn
@@ -18,66 +32,36 @@ import {
 let mermaidLoader: Promise<typeof import('mermaid').default> | null = null;
 
 function loadMermaid(): Promise<typeof import('mermaid').default> {
-  mermaidLoader ??= import('mermaid').then((module) => {
-    const mermaid = module.default;
-    // Die Farben kommen aus den App-Tokens statt aus Mermaids Standardpalette,
-    // damit das Diagramm nicht wie ein Fremdkoerper im dunklen Layout sitzt.
-    const css = getComputedStyle(document.documentElement);
-    const token = (name: string, fallback: string) =>
-      css.getPropertyValue(name).trim() || fallback;
+  mermaidLoader ??= import('mermaid').then((module) => module.default);
+  return mermaidLoader;
+}
 
-    const surface = token('--color-panel1', '#1B2236');
-    const surfaceAlt = token('--color-panel2', '#232C44');
-    const ink = token('--color-text', '#EAEEF9');
-    const line = token('--color-muted', '#8C97B4');
-    const border = token('--color-border', '#283150');
-    const accent = token('--color-highlight2', '#E0A94F');
+/** Zuletzt an Mermaid gegebene Einstellungen — als Text, zum Vergleichen. */
+let appliedConfig = '';
 
-    mermaid.initialize({
-      startOnLoad: false,
-      // 'strict' laesst Mermaid die erzeugte SVG durch DOMPurify schicken —
-      // der Quelltext kommt schliesslich aus einem Eingabefeld.
-      securityLevel: 'strict',
-      theme: 'base',
-      fontFamily: 'inherit',
-      themeVariables: {
-        background: 'transparent',
-        primaryColor: surface,
-        primaryTextColor: ink,
-        primaryBorderColor: border,
-        secondaryColor: surfaceAlt,
-        secondaryTextColor: ink,
-        secondaryBorderColor: border,
-        tertiaryColor: surfaceAlt,
-        tertiaryTextColor: ink,
-        tertiaryBorderColor: border,
-        lineColor: line,
-        textColor: ink,
-        mainBkg: surface,
-        nodeBorder: border,
-        clusterBkg: 'transparent',
-        clusterBorder: border,
-        titleColor: ink,
-        edgeLabelBackground: token('--color-bg2', '#121829'),
-        activeTaskBkgColor: accent,
-        fontSize: '14px',
-      },
-      flowchart: {
-        // SVG-Text statt foreignObject: vorhersagbar gestylt und kopierbar.
-        htmlLabels: false,
-        curve: 'basis',
-        padding: 12,
-        // Ohne das staucht Mermaid die Zeichnung auf die Containerbreite —
-        // am Handy werden die Beschriftungen dann unleserlich. Lieber die
-        // natuerliche Groesse behalten und waagerecht scrollen lassen.
-        useMaxWidth: false,
-      },
-    });
+/**
+ * Die Farben kommen aus den App-Tokens statt aus Mermaids Standardpalette,
+ * damit das Diagramm nicht wie ein Fremdkoerper im dunklen Layout sitzt.
+ * Gelesen wird am Diagramm selbst und bei jedem Zeichnen: wechselt jemand die
+ * Akzentfarbe, folgt das naechste Diagramm ihr.
+ */
+function applyTheme(mermaid: typeof import('mermaid').default, at: HTMLElement): void {
+  const css = getComputedStyle(at);
+  const token = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
 
-    return mermaid;
+  const config = diagramConfig({
+    ...DIAGRAM_PALETTE,
+    canvas: token('--color-bg3', DIAGRAM_PALETTE.canvas),
+    ink: token('--color-text', DIAGRAM_PALETTE.ink),
+    muted: token('--color-muted', DIAGRAM_PALETTE.muted),
+    subtle: token('--color-subtle', DIAGRAM_PALETTE.subtle),
+    accent: token('--color-brand-2', DIAGRAM_PALETTE.accent),
   });
 
-  return mermaidLoader;
+  const key = JSON.stringify(config);
+  if (key === appliedConfig) return;
+  mermaid.initialize(config);
+  appliedConfig = key;
 }
 
 type DiagramStatus = 'empty' | 'loading' | 'ready' | 'error';
@@ -85,16 +69,34 @@ type DiagramStatus = 'empty' | 'loading' | 'ready' | 'error';
 @Component({
   selector: 'app-mermaid-diagram',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.is-expanded]': 'expanded()' },
   template: `
-    <div class="relative">
-      <!-- Der Riss beim Tippen: solange ein gueltiges Diagramm existiert,
-           bleibt es stehen und der Fehler wird darunter gemeldet. -->
-      <div
-        #host
-        class="diagram-host overflow-x-auto"
-        [class.is-stale]="status() === 'error' && hasDiagram()"
-        role="img"
-        [attr.aria-label]="ariaLabel()"></div>
+    <div class="diagram-body relative">
+      <!-- Der Rahmen traegt die Randverlaeufe (wie bei Tabellen): sie stehen,
+           waehrend die Zeichnung darunter durchrollt. -->
+      <div class="diagram-frame" #frame>
+        <!-- Der Riss beim Tippen: solange ein gueltiges Diagramm existiert,
+             bleibt es stehen und der Fehler wird darunter gemeldet. -->
+        <div
+          #host
+          class="diagram-host overflow-x-auto"
+          [class.is-stale]="status() === 'error' && hasDiagram()"
+          role="img"
+          [attr.aria-label]="ariaLabel()"></div>
+      </div>
+
+      <!-- Im Vollbild: Zoom wie in jedem Zeichenprogramm, schwebend unten
+           rechts, damit er nie auf der Zeichnung selbst liegt. -->
+      @if (expanded() && hasDiagram()) {
+        <div class="diagram-zoom" role="group" aria-label="Zoom">
+          <button type="button" (click)="zoomBy(-1)" aria-label="Zoom out" title="Zoom out">−</button>
+          <span class="diagram-zoom-value" aria-live="polite">{{ percent() }}%</span>
+          <button type="button" (click)="zoomBy(1)" aria-label="Zoom in" title="Zoom in">+</button>
+          <span class="diagram-zoom-rule" aria-hidden="true"></span>
+          <button type="button" class="diagram-zoom-fit" [class.is-on]="zoom() === null"
+            (click)="zoomToFit()" title="Fit to screen">Fit</button>
+        </div>
+      }
 
       @if (status() === 'loading' && !hasDiagram()) {
         <p class="flex items-center gap-2 py-6 text-sm text-muted" role="status">
@@ -126,9 +128,137 @@ type DiagramStatus = 'empty' | 'loading' | 'ready' | 'error';
     .diagram-host ::ng-deep svg {
       display: block;
       /* Bewusst kein max-width: die Zeichnung behaelt ihre lesbare Groesse,
-         der Host scrollt stattdessen waagerecht. */
+         der Host scrollt stattdessen waagerecht. Schmaler als die Flaeche
+         steht sie in deren Mitte. */
       max-width: none;
       height: auto;
+      margin-inline: auto;
+    }
+
+    .diagram-host {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-line-strong) transparent;
+    }
+
+    /* Rollt die Zeichnung, loest sich der Rand weich auf: man sieht, dass
+       dort noch etwas steht. */
+    .diagram-frame {
+      position: relative;
+    }
+
+    .diagram-frame::before,
+    .diagram-frame::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      z-index: 1;
+      width: 2.5rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 160ms ease-out;
+    }
+
+    .diagram-frame::before {
+      left: 0;
+      background: linear-gradient(to right, var(--color-bg3), transparent);
+    }
+
+    .diagram-frame::after {
+      right: 0;
+      background: linear-gradient(to left, var(--color-bg3), transparent);
+    }
+
+    .diagram-frame.has-more-left::before,
+    .diagram-frame.has-more-right::after {
+      opacity: 1;
+    }
+
+    /* ---- Vollbild ----
+       Die Flaeche fuellt, was ihr der Block gibt, und rollt in beide
+       Richtungen. Flex statt Block: mit margin: auto steht eine kleine
+       Zeichnung in der Mitte, eine grosse beginnt oben links — bei
+       place-items: center laege ihr Anfang ausserhalb des Rollbereichs. */
+    :host(.is-expanded) {
+      display: block;
+      height: 100%;
+      min-height: 0;
+    }
+
+    :host(.is-expanded) .diagram-body,
+    :host(.is-expanded) .diagram-frame {
+      height: 100%;
+    }
+
+    :host(.is-expanded) .diagram-host {
+      display: flex;
+      height: 100%;
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+
+    :host(.is-expanded) .diagram-host ::ng-deep svg {
+      flex: none;
+      margin: auto;
+    }
+
+    .diagram-zoom {
+      position: absolute;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 0.125rem;
+      border: 1px solid var(--color-line);
+      border-radius: 9999px;
+      background: color-mix(in srgb, var(--color-bg2) 88%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+      padding: 0.25rem;
+      font-size: 0.8125rem;
+      color: var(--color-muted);
+    }
+
+    .diagram-zoom button {
+      display: grid;
+      place-items: center;
+      min-width: 2rem;
+      height: 2rem;
+      border-radius: 9999px;
+      padding-inline: 0.5rem;
+      font-size: 1rem;
+      line-height: 1;
+      transition: background-color 120ms ease-out, color 120ms ease-out;
+    }
+
+    .diagram-zoom button:hover {
+      background: var(--color-fill-strong);
+      color: var(--color-text);
+    }
+
+    .diagram-zoom .diagram-zoom-fit {
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .diagram-zoom .diagram-zoom-fit.is-on {
+      color: var(--plan-accent, var(--color-brand-2));
+    }
+
+    .diagram-zoom-value {
+      min-width: 3.25rem;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-text);
+    }
+
+    .diagram-zoom-rule {
+      width: 1px;
+      height: 1rem;
+      margin-inline: 0.125rem;
+      background: var(--color-line);
     }
 
     /* Waehrend ein Syntaxfehler offen ist, tritt das letzte gueltige
@@ -150,8 +280,17 @@ type DiagramStatus = 'empty' | 'loading' | 'ready' | 'error';
 })
 export class MermaidDiagram {
   readonly code = input.required<string>();
+  /** Fuellt das Diagramm gerade den Bildschirm? Dann mit Zoom. */
+  readonly expanded = input(false);
+
+  /** Gewaehlter Massstab im Vollbild; null heisst eingepasst. */
+  protected readonly zoom = signal<number | null>(null);
+  /** Der Massstab, in dem die Zeichnung gerade steht. */
+  private readonly scale = signal(1);
+  protected readonly percent = computed(() => Math.round(this.scale() * 100));
 
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
+  private readonly frame = viewChild.required<ElementRef<HTMLElement>>('frame');
 
   protected readonly status = signal<DiagramStatus>('empty');
   protected readonly error = signal<string | null>(null);
@@ -185,8 +324,76 @@ export class MermaidDiagram {
       // Mermaid hat im 'strict'-Modus bereits saniert; Angulars HTML-Sanitizer
       // wuerde die SVG dagegen komplett verwerfen.
       element.innerHTML = svg;
+      // Erst jetzt, im Dokument, lassen sich Formen vermessen.
+      polishDiagram(element.querySelector('svg'));
+      this.fit();
+    });
+
+    // Auf und zu: jedes Mal eingepasst beginnen.
+    effect(() => {
+      this.expanded();
+      untracked(() => {
+        this.zoom.set(null);
+        // Erst nach dem Umbau des Layouts steht fest, wie viel Platz da ist.
+        requestAnimationFrame(() => this.fit());
+      });
+    });
+
+    // Schmaler werdendes Fenster, aufgehende Outline: neu einpassen.
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      const host = this.host().nativeElement;
+      const watch = new ResizeObserver(() => this.fit());
+      watch.observe(host);
+      host.addEventListener('scroll', this.updateEdges, { passive: true });
+      destroyRef.onDestroy(() => {
+        watch.disconnect();
+        host.removeEventListener('scroll', this.updateEdges);
+      });
     });
   }
+
+  /** Die Zeichnung auf die Flaeche bringen — siehe fittedWidth. */
+  private fit(): void {
+    const host = this.host().nativeElement;
+    const svg = host.querySelector('svg');
+    if (svg) {
+      // Die natuerliche Groesse steht nur beim ersten Mal in den Attributen;
+      // danach ist sie die eingepasste. Darum wird sie sich gemerkt.
+      svg.dataset['natural'] ??= svg.getAttribute('width') ?? '';
+      svg.dataset['naturalHeight'] ??= svg.getAttribute('height') ?? '';
+      const natural = Number.parseFloat(svg.dataset['natural']);
+      const naturalHeight = Number.parseFloat(svg.dataset['naturalHeight']);
+
+      if (natural > 0) {
+        const width = this.expanded()
+          ? natural * (this.zoom() ?? screenFit(natural, naturalHeight, host.clientWidth, host.clientHeight))
+          : fittedWidth(natural, host.clientWidth);
+        svg.style.width = `${width}px`;
+        this.scale.set(width / natural);
+      }
+    }
+    this.updateEdges();
+  }
+
+  /** Eine Stufe naeher oder weiter — ausgehend von dem, was zu sehen ist. */
+  protected zoomBy(step: 1 | -1): void {
+    this.zoom.set(nextZoom(this.scale(), step));
+    this.fit();
+  }
+
+  protected zoomToFit(): void {
+    this.zoom.set(null);
+    this.fit();
+  }
+
+  private readonly updateEdges = () => {
+    const host = this.host().nativeElement;
+    const { left, right } = scrollEdges(host.scrollLeft, host.scrollWidth, host.clientWidth);
+    const frame = this.frame().nativeElement;
+    frame.classList.toggle('has-more-left', left);
+    frame.classList.toggle('has-more-right', right);
+  };
 
   private async render(code: string): Promise<void> {
     this.rendered = true;
@@ -204,6 +411,7 @@ export class MermaidDiagram {
 
     try {
       const mermaid = await loadMermaid();
+      applyTheme(mermaid, this.host().nativeElement);
       // parse() wirft bei Syntaxfehlern, ohne etwas in den DOM zu schreiben.
       await mermaid.parse(code);
       const { svg } = await mermaid.render(`plan-diagram-${this.uid}-${seq}`, code);
