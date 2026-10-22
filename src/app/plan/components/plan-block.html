@@ -184,10 +184,19 @@
                 <!-- Mit den Architektur-Bausteinen sind es über zwanzig
                      Einträge: das Menü scrollt in sich, und die Pfeiltasten
                      ziehen den markierten Eintrag mit (scrollSlashIntoView). -->
+                <!-- Ohne Suchwort in Abschnitten (Basic, Lists, Blocks,
+                     Architecture): zweiundzwanzig Eintraege am Stueck liest
+                     niemand, vier benannte Gruppen ueberfliegt man. Mit
+                     Suchwort zaehlt nur die Trefferfolge. -->
+                @let results = view.slashResults();
+                @let grouped = !view.slash()?.query;
                 <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain px-1"
                   [class.slash-menu--above]="view.inlineMenu().above"
                   [style.max-height.px]="view.inlineMenu().room">
-                  @for (item of view.slashResults(); track item.kind; let i = $index) {
+                  @for (item of results; track item.kind; let i = $index) {
+                    @if (grouped && (i === 0 || results[i - 1].group !== item.group)) {
+                      <p class="slash-group" role="presentation">{{ item.group }}</p>
+                    }
                     <button type="button"
                       class="slash-item flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-fill"
                       [class.slash-item--active]="i === view.slashActiveIndex()"
@@ -202,6 +211,14 @@
                       </span>
                     </button>
                   }
+                  <!-- Wie man das Menue ohne Maus bedient — steht unten fest,
+                       auch wenn die Liste darueber rollt. Ohne Tastatur
+                       (Telefon) gibt es nichts zu erklaeren. -->
+                  <p class="slash-keys" aria-hidden="true">
+                    <span><kbd>↑</kbd><kbd>↓</kbd> choose</span>
+                    <span><kbd>↵</kbd> insert</span>
+                    <span><kbd>esc</kbd> close</span>
+                  </p>
                 </div>
               }
 
@@ -317,15 +334,22 @@
                  Durchlass: ein Codeblock ist eine eigene Flaeche, kein Schatten
                  auf der Seite. Durchscheinender Text darunter macht Code
                  ausserdem schlechter lesbar als jede Farbe. -->
-            <div class="overflow-hidden rounded-lg border border-line bg-bg3">
+            <div class="code-card">
               <div class="flex items-center gap-2 border-b border-line px-3 py-1.5">
                 <lucide-icon [img]="view.CodeIcon" class="h-3.5 w-3.5 flex-none text-subtle"></lucide-icon>
                 <input type="text"
-                  class="w-32 bg-transparent font-mono text-xs text-muted pointer-coarse:text-base placeholder:text-subtle focus:outline-none"
+                  class="min-w-0 flex-1 bg-transparent font-mono text-xs text-muted pointer-coarse:text-base placeholder:text-subtle focus:outline-none"
                   placeholder="language"
                   [value]="view.asCode(block).language"
                   (input)="view.setCodeLanguage(block.id, $any($event.target).value)"
                   aria-label="Code language" />
+                <button type="button" class="code-copy"
+                  (click)="view.copyCode(view.asCode(block).code)"
+                  [disabled]="!view.asCode(block).code"
+                  aria-label="Copy code">
+                  <lucide-icon [img]="view.CopyIcon" class="h-3.5 w-3.5"></lucide-icon>
+                  <span>Copy</span>
+                </button>
               </div>
               <textarea
                 [id]="view.blockFieldId(block.id)"
@@ -514,13 +538,15 @@
                  Dokument. Wer ein Diagramm liest, will es sehen; wer es
                  aendert, sagt das mit einem Klick. -->
             @let full = view.diagramFull() === block.id;
-            <div class="plan-diagram group/dia relative" [class.plan-diagram--full]="full">
+            @let source = view.openDiagramSource() === block.id;
+            @let code = view.asDiagram(block).code;
+            <div class="plan-diagram group/dia relative" [class.plan-diagram--full]="full" [class.has-source]="source">
               <!-- Eine Zeichenflaeche statt eines grauen Kastens: gepunkteter
                    Grund wie in einem Whiteboard, darauf die Kaesten mit
                    weichem Schatten (diagram-theme.ts). Oben steht, was fuer
                    ein Diagramm es ist — in einem Architekturdokument stehen
                    fuenf Arten untereinander. -->
-              @let kind = view.diagramKind(view.asDiagram(block).code);
+              @let kind = view.diagramKind(code);
               <div class="diagram-canvas">
                 <div class="diagram-bar">
                   <span class="diagram-kind">
@@ -533,15 +559,14 @@
                          ueberfahren wird. Offen bleibt die Quelle stehen,
                          sonst verschwaende der einzige Weg zurueck, sobald
                          die Maus ins Textfeld geht. -->
-                    @if (!full) {
-                      <button type="button"
-                        class="plan-dia-edit rounded-lg px-2 py-1 text-2xs text-subtle transition hover:bg-fill-strong hover:text-text"
-                        [class.is-open]="view.openDiagramSource() === block.id"
-                        [attr.aria-expanded]="view.openDiagramSource() === block.id"
-                        (click)="view.toggleDiagramSource(block.id)">
-                        {{ view.openDiagramSource() === block.id ? 'Hide source' : 'Edit source' }}
-                      </button>
-                    }
+                    <button type="button"
+                      class="plan-dia-edit inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-2xs text-subtle transition hover:bg-fill-strong hover:text-text"
+                      [class.is-open]="source"
+                      [attr.aria-expanded]="source"
+                      (click)="view.toggleDiagramSource(block.id)">
+                      <lucide-icon [img]="view.CodeIcon" class="h-3.5 w-3.5"></lucide-icon>
+                      {{ source ? 'Hide source' : 'Edit source' }}
+                    </button>
                     <button type="button"
                       class="plan-dia-edit grid h-7 w-7 place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
                       [class.is-open]="full"
@@ -553,27 +578,44 @@
                   </span>
                 </div>
 
-                <app-mermaid-diagram [code]="view.asDiagram(block).code" [expanded]="full"></app-mermaid-diagram>
-              </div>
+                <!-- Zeichnung und Quelltext in EINER Karte: im Dokument
+                     untereinander, im Vollbild nebeneinander — links
+                     schreiben, rechts sehen, wie in jedem Diagramm-Editor. -->
+                <div class="diagram-stage">
+                  <app-mermaid-diagram [code]="code" [expanded]="full"></app-mermaid-diagram>
 
-              @if (view.openDiagramSource() === block.id) {
-                <div class="mt-2">
-                  <textarea
-                    appAutosize
-                    rows="4"
-                    spellcheck="false"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    [id]="'diagram-code-' + block.id"
-                    class="w-full resize-none rounded-lg border border-line bg-bg3 px-3 py-2 font-mono text-sm/[1.6] pointer-coarse:text-base/[1.6] text-text placeholder:text-subtle focus:border-line-strong focus:outline-none"
-                    placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
-                    [value]="view.asDiagram(block).code"
-                    (input)="view.updateCode(block.id, $any($event.target).value)"></textarea>
-                  <p class="mt-1.5 text-xs text-subtle">
-                    Mermaid syntax: <code class="font-mono">A --&gt; B</code> draws an arrow.
-                  </p>
+                  @if (source) {
+                    <div class="diagram-source">
+                      <div class="diagram-source-bar">
+                        <span class="diagram-source-label">Mermaid</span>
+                        @if (kind.snippets.length) {
+                          <span class="diagram-snippets" role="group" aria-label="Insert">
+                            @for (snippet of kind.snippets; track snippet.label) {
+                              <button type="button" class="diagram-snippet"
+                                (mousedown)="$event.preventDefault()"
+                                (click)="view.insertDiagramSnippet(block.id, code, snippet.code)"
+                                [title]="snippet.code">+ {{ snippet.label }}</button>
+                            }
+                          </span>
+                        }
+                        <a class="diagram-docs" [href]="kind.docs" target="_blank" rel="noopener noreferrer">Syntax ↗</a>
+                      </div>
+                      <textarea
+                        appAutosize
+                        rows="4"
+                        spellcheck="false"
+                        autocapitalize="off"
+                        autocorrect="off"
+                        [id]="'diagram-code-' + block.id"
+                        class="diagram-code"
+                        placeholder="flowchart TD&#10;  a[Start] --> b[Done]"
+                        [value]="code"
+                        (keydown)="view.onDiagramKeydown($event, block.id)"
+                        (input)="view.updateCode(block.id, $any($event.target).value)"></textarea>
+                    </div>
+                  }
                 </div>
-              }
+              </div>
             </div>
           }
         </div>
