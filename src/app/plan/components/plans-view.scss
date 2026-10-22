@@ -255,6 +255,14 @@
 @media (max-width: 639px) {
   .doc-head {
     position: static;
+  }
+}
+
+
+// Der negative Rand braucht Luft neben der Textspalte (48rem). Darunter steht
+// sie 4px am Fensterrand — auf dem Telefon wie auf dem Tablet hochkant.
+@media (max-width: 799px) {
+  .doc-head {
     margin-inline: 0;
     padding-inline: 0;
   }
