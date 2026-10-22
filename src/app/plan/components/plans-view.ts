@@ -64,6 +64,8 @@ import {
   TriangleAlert,
   Scale,
   LayoutTemplate,
+  Maximize2,
+  X,
 } from 'lucide-angular';
 import {
   PLAN_TEMPLATES,
@@ -97,6 +99,8 @@ import {
 import { breakListAt, joinFollowingList } from '../list-break';
 import { focusRich, replaceRange } from '../rich-text';
 import { formatBlock } from '../inline-format';
+import { diagramKind } from '../diagram-theme';
+import { cellChip } from '../table-cells';
 import {
   neighbourAfterRemoval,
   rangeBetween,
@@ -322,6 +326,8 @@ export class PlansView {
   readonly TextIcon = Type;
   readonly TableIcon = TableIcon;
   readonly DiagramIcon = Workflow;
+  readonly ExpandIcon = Maximize2;
+  readonly CloseIcon = X;
   readonly SectionIcon = Layers;
   readonly H1Icon = Heading1;
   readonly H2Icon = Heading2;
@@ -2218,6 +2224,7 @@ export class PlansView {
     }
     if (event.key === 'Escape' && this.switcherOpen()) this.switcherOpen.set(false);
     if (event.key === 'Escape' && this.tableFull()) this.tableFull.set(null);
+    if (event.key === 'Escape' && this.diagramFull()) this.diagramFull.set(null);
 
     // Was auf eine Blockauswahl wirkt. Es geht vor dem Rest, denn dieselben
     // Tasten bedeuten in einem Textfeld etwas anderes — und ein Feld hat in
@@ -2882,7 +2889,10 @@ export class PlansView {
     // gehoert.
     effect(() => {
       this.planService.selectedId();
-      untracked(() => this.tableFull.set(null));
+      untracked(() => {
+        this.tableFull.set(null);
+        this.diagramFull.set(null);
+      });
     });
 
     // Wie breit der Dokumentbereich ist, steht ab jetzt als --doc-w an ihm.
@@ -3300,6 +3310,20 @@ export class PlansView {
     return block as PlanDiagramBlock;
   }
 
+  /** Beschriftung über einer Zeichnung: Art und passendes Zeichen. */
+  diagramKind(code: string): { label: string; icon: LucideIconData } {
+    const { kind, label } = diagramKind(code);
+    const icon = {
+      flowchart: this.DiagramIcon,
+      sequence: this.SequenceIcon,
+      data: this.DataIcon,
+      classes: this.ClassesIcon,
+      states: this.StatesIcon,
+      other: this.DiagramIcon,
+    }[kind];
+    return { label, icon };
+  }
+
   // ---- Editor: Tabelle ----
   private mapTable(
     blockId: string,
@@ -3408,6 +3432,17 @@ export class PlansView {
     this.tableFull.update((open) => (open === blockId ? null : blockId));
   }
 
+  /**
+   * Das Diagramm, das gerade den Bildschirm fuellt — mit Zoom. Fuer eine
+   * Architektur mit zwanzig Kaesten ist die Textspalte zu schmal, und auf dem
+   * Telefon sowieso. Wie bei Tabellen nichts, was das Dokument speichert.
+   */
+  readonly diagramFull = signal<string | null>(null);
+
+  toggleDiagramFull(blockId: string) {
+    this.diagramFull.update((open) => (open === blockId ? null : blockId));
+  }
+
   /** Zurueck zu Spalten, die sich nach ihrem Inhalt richten. */
   resetColumnWidths(blockId: string) {
     this.mapTable(blockId, (t) => ({ ...t, widths: undefined }));
@@ -3508,6 +3543,6 @@ export class PlansView {
    * Feld, und dort stehen die Sternchen wieder da.
    */
   renderCell(text: string): string {
-    return formatBlock(text, { wikiLinks: false });
+    return cellChip(text) ?? formatBlock(text, { wikiLinks: false });
   }
 }

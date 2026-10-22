@@ -33,7 +33,10 @@ export type ArchitectureDiagram = 'system' | 'sequence' | 'data' | 'classes' | '
 export const DIAGRAM_TEMPLATES: Record<ArchitectureDiagram, string> = {
   // Wer spricht mit wem, wo liegen die Daten. Subgraphs für Grenzen
   // (Backend, extern), runde Klammern für Datenbanken, doppelte für Queues.
-  system: `flowchart LR
+  // Von oben nach unten, in Schichten: Nutzer oben, Daten unten. Von links
+  // nach rechts war dieselbe Zeichnung 1076px breit — breiter als jede
+  // Textspalte und auf dem Telefon nur in Ausschnitten zu sehen.
+  system: `flowchart TB
   user([User]) --> web[Web app]
   web --> api[API gateway]
   subgraph Backend
@@ -121,6 +124,10 @@ export function diagramBlock(id: string, kind: ArchitectureDiagram): PlanDiagram
 
 // ---------------------------------------------------------------------------
 // Tabellen
+//
+// Nicht „wide": vier Spalten passen in die Textspalte, und bündig mit dem Text
+// liest sich die Seite ruhig. Breiter gezogen hing die Tabelle links aus der
+// Seite heraus. Wer mehr Platz braucht, schaltet „Wide" selbst ein.
 // ---------------------------------------------------------------------------
 
 /** Was gibt es, was tut es, womit, wer kümmert sich. */
@@ -134,7 +141,6 @@ export function componentsTable(id: string): PlanTableBlock {
       ['API gateway', 'Routing, auth, rate limits', '', ''],
       ['', '', '', ''],
     ],
-    wide: true,
   };
 }
 
@@ -149,7 +155,6 @@ export function endpointsTable(id: string): PlanTableBlock {
       ['POST', '/orders', 'Place an order', 'User'],
       ['', '', '', ''],
     ],
-    wide: true,
   };
 }
 
@@ -163,7 +168,6 @@ export function risksTable(id: string): PlanTableBlock {
       ['', 'High', 'Medium', ''],
       ['', 'Low', 'Low', ''],
     ],
-    wide: true,
   };
 }
 

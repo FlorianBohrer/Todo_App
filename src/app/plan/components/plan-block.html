@@ -389,7 +389,7 @@
             <div class="plan-table-frame"
               [class.plan-table-wrap--wide]="view.asTable(block).wide">
             <div class="plan-table-wrap overflow-x-auto" appScrollEdges>
-              <table class="plan-table w-full border-collapse text-sm pointer-coarse:text-base"
+              <table class="plan-table w-full text-sm pointer-coarse:text-base"
                 [class.plan-table--fixed]="view.hasWidths(block)"
                 [style.width.px]="view.tableWidth(block)">
                 <!-- Die Breite haengt an <col>, nicht an den Zellen: so gilt
@@ -513,21 +513,48 @@
                  und es liess jeden Plan wie einen Editor aussehen statt wie ein
                  Dokument. Wer ein Diagramm liest, will es sehen; wer es
                  aendert, sagt das mit einem Klick. -->
-            <div class="plan-diagram group/dia relative">
-              <div class="rounded-lg bg-fill p-3">
-                <app-mermaid-diagram [code]="view.asDiagram(block).code"></app-mermaid-diagram>
-              </div>
+            @let full = view.diagramFull() === block.id;
+            <div class="plan-diagram group/dia relative" [class.plan-diagram--full]="full">
+              <!-- Eine Zeichenflaeche statt eines grauen Kastens: gepunkteter
+                   Grund wie in einem Whiteboard, darauf die Kaesten mit
+                   weichem Schatten (diagram-theme.ts). Oben steht, was fuer
+                   ein Diagramm es ist — in einem Architekturdokument stehen
+                   fuenf Arten untereinander. -->
+              @let kind = view.diagramKind(view.asDiagram(block).code);
+              <div class="diagram-canvas">
+                <div class="diagram-bar">
+                  <span class="diagram-kind">
+                    <lucide-icon [img]="kind.icon" class="h-3.5 w-3.5"></lucide-icon>
+                    {{ kind.label }}
+                  </span>
 
-              <!-- Tritt zurueck wie die Ziehgriffe, bis der Block ueberfahren
-                   wird. Offen bleibt er stehen, sonst verschwaende der einzige
-                   Weg zurueck, sobald die Maus ins Textfeld geht. -->
-              <button type="button"
-                class="plan-dia-edit absolute right-2 top-2 rounded-lg px-2 py-1 text-2xs text-subtle transition hover:bg-fill-strong hover:text-text"
-                [class.is-open]="view.openDiagramSource() === block.id"
-                [attr.aria-expanded]="view.openDiagramSource() === block.id"
-                (click)="view.toggleDiagramSource(block.id)">
-                {{ view.openDiagramSource() === block.id ? 'Hide source' : 'Edit source' }}
-              </button>
+                  <span class="flex items-center gap-0.5">
+                    <!-- Treten zurueck wie die Ziehgriffe, bis der Block
+                         ueberfahren wird. Offen bleibt die Quelle stehen,
+                         sonst verschwaende der einzige Weg zurueck, sobald
+                         die Maus ins Textfeld geht. -->
+                    @if (!full) {
+                      <button type="button"
+                        class="plan-dia-edit rounded-lg px-2 py-1 text-2xs text-subtle transition hover:bg-fill-strong hover:text-text"
+                        [class.is-open]="view.openDiagramSource() === block.id"
+                        [attr.aria-expanded]="view.openDiagramSource() === block.id"
+                        (click)="view.toggleDiagramSource(block.id)">
+                        {{ view.openDiagramSource() === block.id ? 'Hide source' : 'Edit source' }}
+                      </button>
+                    }
+                    <button type="button"
+                      class="plan-dia-edit grid h-7 w-7 place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
+                      [class.is-open]="full"
+                      (click)="view.toggleDiagramFull(block.id)"
+                      [attr.aria-label]="full ? 'Close fullscreen (Escape)' : 'Fullscreen'"
+                      [attr.title]="full ? 'Close (Esc)' : 'Fullscreen'">
+                      <lucide-icon [img]="full ? view.CloseIcon : view.ExpandIcon" class="h-3.5 w-3.5"></lucide-icon>
+                    </button>
+                  </span>
+                </div>
+
+                <app-mermaid-diagram [code]="view.asDiagram(block).code" [expanded]="full"></app-mermaid-diagram>
+              </div>
 
               @if (view.openDiagramSource() === block.id) {
                 <div class="mt-2">
