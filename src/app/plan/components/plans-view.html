@@ -31,10 +31,13 @@
          Leiste — deren Hoehe steht in --chrome-h, weil sie auf schmalen
          Schirmen umbricht.
 
-         Auf dem Telefon zwei Zeilen: Rueckweg und Titel oben, Folder und
-         Werkzeuge darunter. In einer Zeile blieben dem Titel 90px
-         („Urlaubspla"). Geklebt wird dort nicht — siehe .doc-head. -->
-    <div class="doc-head app-chrome mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
+         Der Titel steht NICHT hier, sondern gross darunter im Dokument: in
+         der Leiste war er ein einzeiliges Feld, und „Urlaubsplanung Sommer
+         2027 mit sehr langem Titel" stand als „Urlaubsplanung Sommer …" da —
+         das Wichtigste am Dokument, abgeschnitten. Die Leiste fuehrt jetzt
+         wie ein Brotkrumenpfad: zurueck, Folder, und sobald der grosse Titel
+         aus dem Bild gerollt ist, der Titel klein daneben. -->
+    <div class="doc-head app-chrome flex items-center gap-x-1.5">
       <button
         type="button"
         class="grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition hover:bg-fill-strong hover:text-text"
@@ -42,33 +45,31 @@
         <lucide-icon [img]="BackIcon" class="h-5 w-5"></lucide-icon>
       </button>
 
-      <input
-        type="text"
-        class="min-w-0 flex-1 basis-[calc(100%-2.75rem)] text-ellipsis rounded-lg bg-transparent px-1 py-1 text-xl font-semibold tracking-[-0.022em] text-text placeholder:text-subtle focus:bg-fill focus:outline-none sm:basis-auto sm:text-2xl"
-        [value]="plan.title"
-        (input)="setTitle(plan.id, $any($event.target).value)"
-        placeholder="Untitled"
-        aria-label="Plan title" />
-
-      <!-- Folder-Bindung: eigenständig oder an einen Folder -->
-      <!-- Auf schmalen Schirmen gedeckelt: der Ordnername darf den Knoepfen
-           daneben nicht den Platz nehmen. Auf dem Telefon steht er links in
-           der zweiten Zeile und schiebt die Werkzeuge nach rechts.
+      <!-- Folder-Bindung als Chip: Punkt in der Folderfarbe, Name, Pfeil.
+           Ein natives select darunter — die Auswahl bleibt die des Systems,
+           am Telefon das Rad, am Rechner die Liste.
 
            Ausgewaehlt wird an der Option, nicht ueber [value] am select:
            Angular setzte den Wert, bevor es die Optionen aus @for gab, der
            Browser fand keine passende und zeigte die erste — ein Plan im
            Folder „Holiday" stand als „Standalone" da. -->
-      <select
-        class="mr-auto max-w-[11rem] flex-none truncate rounded-lg bg-transparent px-2 py-1.5 text-sm text-muted pointer-coarse:text-base
-               transition hover:bg-fill focus:outline-none sm:mr-0 sm:max-w-[12rem]"
-        (change)="setFolder(plan.id, $any($event.target).value)"
-        aria-label="Attach to folder">
-        <option value="" [selected]="!plan.categoryId">Standalone</option>
-        @for (label of labels(); track label.id) {
-          <option [value]="label.id" [selected]="label.id === plan.categoryId">{{ label.name }}</option>
-        }
-      </select>
+      <label class="doc-folder">
+        <span [class]="dotClass(plan.categoryId)" aria-hidden="true">●</span>
+        <select
+          class="doc-folder-select"
+          (change)="setFolder(plan.id, $any($event.target).value)"
+          aria-label="Attach to folder">
+          <option value="" [selected]="!plan.categoryId">Standalone</option>
+          @for (label of labels(); track label.id) {
+            <option [value]="label.id" [selected]="label.id === plan.categoryId">{{ label.name }}</option>
+          }
+        </select>
+        <lucide-icon [img]="DownIcon" class="doc-folder-caret h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+      </label>
+
+      <span class="doc-crumb-title" [class.is-shown]="titleScrolledAway()" aria-hidden="true">
+        {{ plan.title || 'Untitled' }}
+      </span>
 
       <!-- Diesen einen Plan herausschreiben. Im Dokument braucht es dafuer
            keine Auswahl — gemeint ist immer das, was man gerade offen hat. -->
@@ -189,6 +190,35 @@
           </p>
         </div>
       </ng-template>
+    </div>
+
+    <!-- Der Titel als Ueberschrift des Dokuments: gross, umbrechend, ganz zu
+         lesen. Enter schreibt im ersten Block weiter statt eine zweite
+         Titelzeile anzufangen. -->
+    <div class="doc-title-block">
+      <textarea #titleField
+        appAutosize
+        rows="1"
+        class="doc-title"
+        [value]="plan.title"
+        (input)="setTitle(plan.id, $any($event.target).value)"
+        (keydown.enter)="$event.preventDefault(); continueFromTitle()"
+        placeholder="Untitled"
+        aria-label="Plan title"></textarea>
+
+      @let summary = docSummary();
+      <p class="doc-meta">
+        <span>{{ editedLabel(plan.updatedAt) }}</span>
+        @if (summary.todos.total) {
+          <span class="doc-meta-progress"
+            [attr.aria-label]="summary.todos.done + ' of ' + summary.todos.total + ' to-dos done'">
+            <span class="doc-meta-bar" aria-hidden="true">
+              <span [style.width.%]="100 * summary.todos.done / summary.todos.total"></span>
+            </span>
+            {{ summary.todos.done }}/{{ summary.todos.total }} done
+          </span>
+        }
+      </p>
     </div>
 
     <!-- Canvas: alle Blöcke fließen auf einer ruhigen Fläche; eine Section
@@ -628,34 +658,73 @@
            cdkDropListOrientation="mixed"
            (cdkDropListDropped)="dropPlan($event)">
         @for (plan of visiblePlans(); track plan.id) {
+          <!-- Die Kachel sagt, worum es geht und wie weit man ist: Titel
+               (zwei Zeilen, nicht eine abgeschnittene), der Anfang des Textes,
+               wann zuletzt bearbeitet, und was darin steht — Aufgaben mit
+               Fortschritt, Diagramme, Tabellen. Vorher stand dort „9 blocks". -->
+          @let s = cardSummaries().get(plan.id);
           <div cdkDrag cdkDragPreviewClass="plan-drag-preview"
-            class="group flex flex-col gap-2 rounded-xl border border-line bg-fill p-4 text-left transition hover:border-line-strong hover:bg-fill"
+            class="plan-card group"
             role="button" tabindex="0"
             (click)="open(plan.id)"
             (keydown.enter)="open(plan.id)"
             (keydown.space)="$event.preventDefault(); open(plan.id)">
             <div class="drop-preview" *cdkDragPlaceholder></div>
-            <div class="flex items-start justify-between gap-2">
-              <button type="button" cdkDragHandle
-                class="drag-handle -ml-1 grid h-6 w-6 flex-none cursor-grab touch-none place-items-center pointer-coarse:h-9 pointer-coarse:w-9
-                       rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
-                (click)="$event.stopPropagation()"
-                aria-label="Drag plan">
-                <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
-              </button>
-              <span class="min-w-0 flex-1 truncate font-semibold text-text">{{ plan.title }}</span>
-              <span
-                class="plan-card-delete flex-none rounded-lg p-1 text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100"
-                (click)="deletePlan(plan.id, $event)"
-                role="button" aria-label="Delete plan">
-                <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
+            <div class="flex items-start gap-2">
+              <span class="plan-card-title">{{ plan.title || 'Untitled' }}</span>
+              <span class="plan-card-actions">
+                <button type="button" cdkDragHandle
+                  class="drag-handle grid h-7 w-7 flex-none cursor-grab touch-none place-items-center pointer-coarse:h-9 pointer-coarse:w-9
+                         rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text active:cursor-grabbing"
+                  (click)="$event.stopPropagation()"
+                  aria-label="Drag plan">
+                  <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
+                </button>
+                <span
+                  class="plan-card-delete grid h-7 w-7 flex-none place-items-center rounded-lg text-subtle opacity-0 transition hover:bg-fill-strong hover:text-danger group-hover:opacity-100"
+                  (click)="deletePlan(plan.id, $event)"
+                  role="button" aria-label="Delete plan">
+                  <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
+                </span>
               </span>
             </div>
-            <div class="flex items-center gap-1.5 text-xs text-muted">
-              <span [class]="dotClass(plan.categoryId)">●</span>
-              {{ folderName(plan.categoryId) }}
-              <span class="text-subtle">·</span>
-              {{ plan.content.length }} {{ plan.content.length === 1 ? 'block' : 'blocks' }}
+
+            @if (s?.snippet) {
+              <p class="plan-card-snippet">{{ s?.snippet }}</p>
+            } @else {
+              <p class="plan-card-snippet text-subtle">Nothing written yet</p>
+            }
+
+            <div class="plan-card-foot">
+              <span class="flex min-w-0 items-center gap-1.5">
+                <span class="flex-none" [class]="dotClass(plan.categoryId)">●</span>
+                <span class="truncate">{{ folderName(plan.categoryId) }}</span>
+              </span>
+              <span class="flex-none text-subtle">{{ editedShort(plan.updatedAt) }}</span>
+
+              <span class="ml-auto flex flex-none items-center gap-2.5">
+                @if (s?.diagrams) {
+                  <span class="plan-card-stat" [title]="s?.diagrams + ' diagram' + (s?.diagrams === 1 ? '' : 's')">
+                    <lucide-icon [img]="DiagramIcon" class="h-3.5 w-3.5"></lucide-icon>{{ s?.diagrams }}
+                  </span>
+                }
+                @if (s?.tables) {
+                  <span class="plan-card-stat" [title]="s?.tables + ' table' + (s?.tables === 1 ? '' : 's')">
+                    <lucide-icon [img]="TableIcon" class="h-3.5 w-3.5"></lucide-icon>{{ s?.tables }}
+                  </span>
+                }
+                @if (s && s.todos.total) {
+                  <span class="plan-card-stat" [class.is-done]="s.todos.done === s.todos.total"
+                    [title]="s.todos.done + ' of ' + s.todos.total + ' to-dos done'">
+                    <svg class="plan-card-ring" viewBox="0 0 16 16" aria-hidden="true">
+                      <circle cx="8" cy="8" r="6" pathLength="100" />
+                      <circle cx="8" cy="8" r="6" pathLength="100"
+                        [attr.stroke-dasharray]="(100 * s.todos.done / s.todos.total) + ' 100'" />
+                    </svg>
+                    {{ s.todos.done }}/{{ s.todos.total }}
+                  </span>
+                }
+              </span>
             </div>
           </div>
         }

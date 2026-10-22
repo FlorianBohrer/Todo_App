@@ -21,6 +21,7 @@ import {
   CdkDragDrop,
 } from '@angular/cdk/drag-drop';
 import { HoldToDrag } from '../../shared/hold-to-drag';
+import { Autosize } from '../../directives/autosize.directive';
 import {
   LucideAngularModule,
   LucideIconData,
@@ -99,8 +100,10 @@ import {
 import { breakListAt, joinFollowingList } from '../list-break';
 import { focusRich, replaceRange } from '../rich-text';
 import { formatBlock } from '../inline-format';
-import { diagramKind } from '../diagram-theme';
+import { DiagramKind, diagramKind } from '../diagram-theme';
+import { DIAGRAM_SNIPPETS, DiagramSnippet, diagramDocs, indentLines, insertSnippet } from '../diagram-snippets';
 import { cellChip } from '../table-cells';
+import { editedLabel, planSummary } from '../plan-summary';
 import {
   neighbourAfterRemoval,
   rangeBetween,
@@ -239,6 +242,7 @@ const DIAGRAM_TEMPLATE = `flowchart TD
     OverlayModule,
     PlanGraph,
     PlanBlockView,
+    Autosize,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plans-view.html',
@@ -782,7 +786,7 @@ export class PlansView {
       );
       this.open(plan.id);
       requestAnimationFrame(() => {
-        const title = document.querySelector<HTMLInputElement>('input[aria-label="Plan title"]');
+        const title = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Plan title"]');
         if (!title) return;
         title.focus();
         title.setSelectionRange(title.value.length, title.value.length);
@@ -1338,29 +1342,31 @@ export class PlansView {
     hint: string;
     icon: LucideIconData;
     keywords: string;
+    /** Abschnitt im Menue, solange nichts getippt ist. */
+    group: 'Basic' | 'Lists' | 'Blocks' | 'Architecture';
   }[] = [
-    { kind: 'text', label: 'Text', hint: 'Plain paragraph', icon: this.TextIcon, keywords: 'text plain paragraph note body' },
-    { kind: 'heading1', label: 'Heading 1', hint: 'Large section title', icon: this.H1Icon, keywords: 'heading1 heading title h1 big large' },
-    { kind: 'heading2', label: 'Heading 2', hint: 'Medium heading', icon: this.H2Icon, keywords: 'heading2 heading h2 medium subtitle' },
-    { kind: 'heading3', label: 'Heading 3', hint: 'Small heading', icon: this.H3Icon, keywords: 'heading3 heading h3 small' },
-    { kind: 'bullet', label: 'Bulleted list', hint: 'One line per item', icon: this.BulletIcon, keywords: 'bullet list ul unordered dash point' },
-    { kind: 'number', label: 'Numbered list', hint: 'Ordered steps', icon: this.NumberIcon, keywords: 'number numbered list ol ordered steps' },
-    { kind: 'todo', label: 'To-do list', hint: 'Checkboxes you can tick', icon: this.TodoIcon, keywords: 'todo task checkbox check list' },
-    { kind: 'code', label: 'Code', hint: 'Monospace block', icon: this.CodeIcon, keywords: 'code snippet monospace pre terminal' },
-    { kind: 'quote', label: 'Quote', hint: 'Callout with a side bar', icon: this.QuoteIcon, keywords: 'quote callout note blockquote aside' },
-    { kind: 'divider', label: 'Divider', hint: 'Horizontal rule', icon: this.DividerIcon, keywords: 'divider rule separator line hr break' },
-    { kind: 'toggle', label: 'Toggle', hint: 'Collapsible section', icon: this.SectionIcon, keywords: 'accordion akkordeon toggle dropdown section group collapsible container fold aufklappen einklappen' },
-    { kind: 'table', label: 'Table', hint: 'Rows and columns', icon: this.TableIcon, keywords: 'table grid rows columns' },
-    { kind: 'diagram', label: 'Diagram', hint: 'Mermaid flowchart', icon: this.DiagramIcon, keywords: 'diagram flow flowchart mermaid chart' },
-    { kind: 'diagram-system', label: 'Architecture diagram', hint: 'Services, data stores, boundaries', icon: this.SystemIcon, keywords: 'architecture system diagram services components infrastructure c4 overview mermaid' },
-    { kind: 'diagram-sequence', label: 'Sequence diagram', hint: 'A request across services', icon: this.SequenceIcon, keywords: 'sequence diagram flow request call interaction api mermaid' },
-    { kind: 'diagram-data', label: 'Data model', hint: 'Entities and relations (ER)', icon: this.DataIcon, keywords: 'data model er entity relation database schema tables erd mermaid' },
-    { kind: 'diagram-classes', label: 'Class diagram', hint: 'Modules, interfaces, dependencies', icon: this.ClassesIcon, keywords: 'class diagram uml module interface domain dependency mermaid' },
-    { kind: 'diagram-states', label: 'State diagram', hint: 'A lifecycle and its transitions', icon: this.StatesIcon, keywords: 'state diagram lifecycle status machine transition workflow mermaid' },
-    { kind: 'components', label: 'Components', hint: 'Responsibility, tech, owner', icon: this.ComponentsIcon, keywords: 'components services modules responsibility owner tech architecture table' },
-    { kind: 'endpoints', label: 'API endpoints', hint: 'Method, path, purpose, auth', icon: this.EndpointsIcon, keywords: 'api endpoints rest routes http method path interface table' },
-    { kind: 'risks', label: 'Risks', hint: 'Impact, likelihood, mitigation', icon: this.RisksIcon, keywords: 'risks risk impact likelihood mitigation threats table' },
-    { kind: 'decision', label: 'Decision record', hint: 'ADR: context, decision, trade-offs', icon: this.DecisionIcon, keywords: 'decision adr architecture record tradeoff trade-off alternatives why' },
+    { kind: 'text', label: 'Text', hint: 'Plain paragraph', icon: this.TextIcon, keywords: 'text plain paragraph note body' , group: 'Basic' },
+    { kind: 'heading1', label: 'Heading 1', hint: 'Large section title', icon: this.H1Icon, keywords: 'heading1 heading title h1 big large' , group: 'Basic' },
+    { kind: 'heading2', label: 'Heading 2', hint: 'Medium heading', icon: this.H2Icon, keywords: 'heading2 heading h2 medium subtitle' , group: 'Basic' },
+    { kind: 'heading3', label: 'Heading 3', hint: 'Small heading', icon: this.H3Icon, keywords: 'heading3 heading h3 small' , group: 'Basic' },
+    { kind: 'bullet', label: 'Bulleted list', hint: 'One line per item', icon: this.BulletIcon, keywords: 'bullet list ul unordered dash point' , group: 'Lists' },
+    { kind: 'number', label: 'Numbered list', hint: 'Ordered steps', icon: this.NumberIcon, keywords: 'number numbered list ol ordered steps' , group: 'Lists' },
+    { kind: 'todo', label: 'To-do list', hint: 'Checkboxes you can tick', icon: this.TodoIcon, keywords: 'todo task checkbox check list' , group: 'Lists' },
+    { kind: 'code', label: 'Code', hint: 'Monospace block', icon: this.CodeIcon, keywords: 'code snippet monospace pre terminal' , group: 'Blocks' },
+    { kind: 'quote', label: 'Quote', hint: 'Callout with a side bar', icon: this.QuoteIcon, keywords: 'quote callout note blockquote aside' , group: 'Blocks' },
+    { kind: 'divider', label: 'Divider', hint: 'Horizontal rule', icon: this.DividerIcon, keywords: 'divider rule separator line hr break' , group: 'Blocks' },
+    { kind: 'toggle', label: 'Toggle', hint: 'Collapsible section', icon: this.SectionIcon, keywords: 'accordion akkordeon toggle dropdown section group collapsible container fold aufklappen einklappen' , group: 'Blocks' },
+    { kind: 'table', label: 'Table', hint: 'Rows and columns', icon: this.TableIcon, keywords: 'table grid rows columns' , group: 'Blocks' },
+    { kind: 'diagram', label: 'Diagram', hint: 'Mermaid flowchart', icon: this.DiagramIcon, keywords: 'diagram flow flowchart mermaid chart' , group: 'Blocks' },
+    { kind: 'diagram-system', label: 'Architecture diagram', hint: 'Services, data stores, boundaries', icon: this.SystemIcon, keywords: 'architecture system diagram services components infrastructure c4 overview mermaid' , group: 'Architecture' },
+    { kind: 'diagram-sequence', label: 'Sequence diagram', hint: 'A request across services', icon: this.SequenceIcon, keywords: 'sequence diagram flow request call interaction api mermaid' , group: 'Architecture' },
+    { kind: 'diagram-data', label: 'Data model', hint: 'Entities and relations (ER)', icon: this.DataIcon, keywords: 'data model er entity relation database schema tables erd mermaid' , group: 'Architecture' },
+    { kind: 'diagram-classes', label: 'Class diagram', hint: 'Modules, interfaces, dependencies', icon: this.ClassesIcon, keywords: 'class diagram uml module interface domain dependency mermaid' , group: 'Architecture' },
+    { kind: 'diagram-states', label: 'State diagram', hint: 'A lifecycle and its transitions', icon: this.StatesIcon, keywords: 'state diagram lifecycle status machine transition workflow mermaid' , group: 'Architecture' },
+    { kind: 'components', label: 'Components', hint: 'Responsibility, tech, owner', icon: this.ComponentsIcon, keywords: 'components services modules responsibility owner tech architecture table' , group: 'Architecture' },
+    { kind: 'endpoints', label: 'API endpoints', hint: 'Method, path, purpose, auth', icon: this.EndpointsIcon, keywords: 'api endpoints rest routes http method path interface table' , group: 'Architecture' },
+    { kind: 'risks', label: 'Risks', hint: 'Impact, likelihood, mitigation', icon: this.RisksIcon, keywords: 'risks risk impact likelihood mitigation threats table' , group: 'Architecture' },
+    { kind: 'decision', label: 'Decision record', hint: 'ADR: context, decision, trade-offs', icon: this.DecisionIcon, keywords: 'decision adr architecture record tradeoff trade-off alternatives why' , group: 'Architecture' },
   ];
 
   /** Offenes Menü: Block, markierter Eintrag, Position des „/" + Query dahinter. */
@@ -2659,6 +2665,16 @@ export class PlansView {
       `code:${blockId}`,
     );
   }
+  /** Code kommt aus dem Plan, um woanders zu laufen — ein Klick statt Markieren. */
+  async copyCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      this.toast.success('Code copied');
+    } catch {
+      this.toast.error('Could not copy');
+    }
+  }
+
   setCodeLanguage(blockId: string, language: string) {
     this.updateContent(
       (bs) => this.mapById(bs, blockId, (x) => (x.type === 'code' ? { ...x, language } : x)),
@@ -2895,6 +2911,23 @@ export class PlansView {
       });
     });
 
+    // Den grossen Titel beobachten: sobald er unter der Leiste verschwindet,
+    // zeigt sie ihn klein. Der obere Rand des Beobachtungsfensters liegt
+    // darum so tief wie Leiste und Dokumentkopf zusammen.
+    effect((onCleanup) => {
+      const title = this.titleField()?.nativeElement;
+      if (!title) {
+        this.titleScrolledAway.set(false);
+        return;
+      }
+      const watch = new IntersectionObserver(
+        ([entry]) => this.titleScrolledAway.set(!entry.isIntersecting && entry.boundingClientRect.top < 200),
+        { rootMargin: '-120px 0px 0px 0px' },
+      );
+      watch.observe(title);
+      onCleanup(() => watch.disconnect());
+    });
+
     // Wie breit der Dokumentbereich ist, steht ab jetzt als --doc-w an ihm.
     // Eine breite Tabelle liest das und waechst genau bis dorthin. Ueber eine
     // Container-Abfrage ginge es ohne Javascript — die richtet aber
@@ -2979,6 +3012,39 @@ export class PlansView {
     const t = value.trim();
     if (t) this.planService.patchPlan(id, { title: t });
   }
+
+  /** Enter im Titel: im ersten Block weiterschreiben — oder ihn anlegen. */
+  continueFromTitle() {
+    const first = this.selected()?.content[0];
+    if (!first) this.startFirstBlock();
+    else if (first.type === 'text' || first.type === 'heading' || first.type === 'quote') this.beginEdit(first.id, 0);
+    else this.titleField()?.nativeElement.blur();
+  }
+
+  /** Was unter dem Titel steht: wann zuletzt bearbeitet, wie weit die Aufgaben sind. */
+  protected readonly docSummary = computed(() => planSummary(this.selected()?.content ?? []));
+
+  protected editedLabel(updatedAt: string): string {
+    return editedLabel(updatedAt, new Date());
+  }
+
+  /** Auf der Kachel ohne „Edited": dort ist klar, was gemeint ist. */
+  protected editedShort(updatedAt: string): string {
+    return this.editedLabel(updatedAt).replace(/^Edited /, '');
+  }
+
+  /** Je Plan einmal zusammengefasst, nicht bei jedem Zeichnen jeder Kachel. */
+  protected readonly cardSummaries = computed(
+    () => new Map(this.plans().map((p) => [p.id, planSummary(p.content)])),
+  );
+
+  private readonly titleField = viewChild<ElementRef<HTMLTextAreaElement>>('titleField');
+
+  /**
+   * Ist der grosse Titel aus dem Bild gerollt? Dann steht er klein in der
+   * Leiste, damit man in einem langen Dokument weiss, wo man ist.
+   */
+  protected readonly titleScrolledAway = signal(false);
   setFolder(id: string, value: string) {
     this.planService.patchPlan(id, { categoryId: value || null });
   }
@@ -3310,8 +3376,17 @@ export class PlansView {
     return block as PlanDiagramBlock;
   }
 
-  /** Beschriftung über einer Zeichnung: Art und passendes Zeichen. */
-  diagramKind(code: string): { label: string; icon: LucideIconData } {
+  /**
+   * Beschriftung über einer Zeichnung: Art und passendes Zeichen — dazu,
+   * was der Quelltext-Editor für diese Art anbietet.
+   */
+  diagramKind(code: string): {
+    kind: DiagramKind;
+    label: string;
+    icon: LucideIconData;
+    snippets: readonly DiagramSnippet[];
+    docs: string;
+  } {
     const { kind, label } = diagramKind(code);
     const icon = {
       flowchart: this.DiagramIcon,
@@ -3321,7 +3396,44 @@ export class PlansView {
       states: this.StatesIcon,
       other: this.DiagramIcon,
     }[kind];
-    return { label, icon };
+    return { kind, label, icon, snippets: DIAGRAM_SNIPPETS[kind], docs: diagramDocs(kind) };
+  }
+
+  private diagramField(blockId: string): HTMLTextAreaElement | null {
+    const el = document.getElementById(`diagram-code-${blockId}`);
+    return el instanceof HTMLTextAreaElement ? el : null;
+  }
+
+  /** Einen Baustein unter die Zeile mit dem Cursor setzen (diagram-snippets.ts). */
+  insertDiagramSnippet(blockId: string, code: string, snippet: string) {
+    const field = this.diagramField(blockId);
+    const result = insertSnippet(code, field?.selectionEnd ?? code.length, snippet);
+    if (!field) {
+      this.updateCode(blockId, result.code);
+      return;
+    }
+    field.focus();
+    this.writeDiagramField(field, result.code, result.caret, result.caret);
+  }
+
+  /**
+   * Text ins Feld schreiben wie beim Tippen: ueber ein input-Ereignis, damit
+   * das Feld mitwaechst (Autosize) und die Aenderung denselben Weg nimmt.
+   * Direkt gesetzt blieb das Feld so hoch wie vorher und rollte.
+   */
+  private writeDiagramField(field: HTMLTextAreaElement, code: string, start: number, end: number) {
+    field.value = code;
+    field.setSelectionRange(start, end);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  /** Tab rückt ein (Umschalt+Tab aus), statt das Feld zu verlassen. */
+  onDiagramKeydown(event: KeyboardEvent, blockId: string) {
+    if (event.key !== 'Tab' || event.altKey || event.metaKey || event.ctrlKey) return;
+    const field = event.target as HTMLTextAreaElement;
+    event.preventDefault();
+    const result = indentLines(field.value, field.selectionStart, field.selectionEnd, event.shiftKey);
+    this.writeDiagramField(field, result.code, result.start, result.end);
   }
 
   // ---- Editor: Tabelle ----
