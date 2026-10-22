@@ -28,6 +28,7 @@ import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
 import { TodoList } from './app/todo/components/todo-list/todo-list';
 import { TodoStats } from './app/todo/components/todo-stats/todo-stats';
+import { FolderRoute } from './app/todo/services/folder-route.service';
 import { FocusPanel } from './app/todo/components/focus-panel/focus-panel';
 import { WeeklyReview } from './app/todo/components/weekly-review/weekly-review';
 import { CategoriesOverlay } from './app/todo/components/categories/categories-overlay';
@@ -96,6 +97,8 @@ import type { View } from './app/todo/services/todo';
 export class App {
   private readonly labelService = inject(LabelService);
   private readonly todoService = inject(TodoService);
+  /** Der offene Folder in der Adresse (my-todo.app/work). Muss nur leben. */
+  private readonly folderRoute = inject(FolderRoute);
   protected readonly clerk = inject(ClerkService);
   private readonly shortcuts = inject(ShortcutService);
 

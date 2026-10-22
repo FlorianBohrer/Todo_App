@@ -12,6 +12,8 @@ import { touchOnly } from '../../../shared/touch';
 import { TodoService } from '../../services/todo';   // Pfad ggf. anpassen
 import { folderColorClass } from '../../shared/folder-color';
 import { splitFolderName } from '../../shared/folder-name';
+import { folderSlugs } from '../../shared/folder-slug';
+import { ToastService } from '../../../shared/toast.service';
 import {
   FolderGroup,
   FolderGrouping,
@@ -60,6 +62,31 @@ function storedGrouping(): FolderGrouping {
 export class CategoriesOverlay {
   private readonly labelService = inject(LabelService);
   private readonly todoService = inject(TodoService);
+  private readonly toast = inject(ToastService);
+
+  /** Die Adresse jedes Folders (my-todo.app/freetime) — siehe folder-slug.ts. */
+  private readonly folderPaths = computed(() => folderSlugs(this.labels()));
+
+  protected folderLink(id: string): string {
+    return `${window.location.origin}/${this.folderPaths().get(id) ?? ''}`;
+  }
+
+  /** Ohne https:// — so, wie man die Adresse liest und tippt. */
+  protected folderLinkLabel(id: string): string {
+    return `${window.location.host}/${this.folderPaths().get(id) ?? ''}`;
+  }
+
+  protected async copyFolderLink(id: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(this.folderLink(id));
+      this.toast.success('Link copied');
+    } catch {
+      // Ohne Erlaubnis oder ohne sichere Verbindung gibt es keine
+      // Zwischenablage. Die Adresse steht trotzdem lesbar daneben.
+      this.toast.show(`Copy this link: ${this.folderLinkLabel(id)}`);
+    }
+  }
 
   protected readonly StarIcon = Star;
   protected readonly GripIcon = GripVertical;
