@@ -78,7 +78,7 @@
                zog sich sonst ueber die ganze Hoehe und legte ein Gitter ueber
                ein Dokument, das ruhig sein soll. -->
           @let shut = view.asGroup(block).collapsed;
-          <div class="section-body ml-[13px] space-y-1 pl-4 pt-1"
+          <div class="section-body ml-[13px] space-y-0.5 pl-4 pt-1"
                [class.section-body--shut]="shut"
                [class.section-body--drop]="shut && view.grabbing()"
                cdkDropList
@@ -118,7 +118,7 @@
         <!-- Normaler Block: flach auf der Fläche, hebt sich erst beim Überfahren
              sanft ab (Notion-Gefühl). Werkzeuge sitzen dezent oben rechts und
              treten am Zeigergerät zurück; auf Touch bleiben sie stehen. -->
-        <div class="block block-row group/block relative rounded-lg py-2"
+        <div class="block block-row group/block relative rounded-lg py-1"
           [id]="'block-' + block.id"
           [attr.data-block]="block.id"
           [class.block-heading]="block.type === 'heading'"
