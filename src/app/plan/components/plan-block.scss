@@ -26,6 +26,9 @@
   padding-right: 0.5rem;
   padding-left: 44px; // Randspalte fuer den Ziehgriff
   min-height: 52px; // haelt den 44px-Griff auf Touch im Block
+  // So weit steht die Mitte des Inhalts rechts von der Mitte der Zeile:
+  // (links - rechts) / 2. Braucht die breite Tabelle (.plan-table-wrap--wide).
+  --row-shift: 18px;
 }
 
 
@@ -52,6 +55,7 @@
     padding-right: 0.5rem;
     padding-left: 56px; // „+" und Griff nebeneinander, wie in Notion
     min-height: 0;
+    --row-shift: 24px;
   }
 
   .block-add {
@@ -408,6 +412,16 @@
 }
 
 
+// Kein Platz unter dem Text: das Menue steht ueber ihm (PlansView.inlineMenu).
+.slash-menu--above {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 0.25rem;
+  transform-origin: bottom left;
+}
+
+
 // Rueckmeldung auf den Druck, nicht erst auf das Loslassen.
 .block-menu-item,
 .mode-tab,
@@ -613,9 +627,33 @@
 // Breiter als die Textspalte. --doc-w ist die Breite des Dokumentbereichs
 // (siehe PlansView), also genau der Platz zwischen Blindspalte und Outline —
 // die Tabelle waechst symmetrisch hinein und nie darueber hinaus.
+//
+// Symmetrisch um den Text, nicht um die Zeile: links sitzt die Griffspalte,
+// in einem Abschnitt dazu dessen Einzug, die Mitte des Textes steht also
+// um --wide-shift rechts von der Mitte des Dokumentbereichs. Um diesen
+// Betrag auf jeder Seite schmaler endet die Tabelle rechts genau am Rand —
+// in voller Breite ragte sie unter 1280px aus dem Fenster.
 .plan-table-wrap--wide {
-  width: var(--doc-w, 100%);
-  margin-left: calc((100% - var(--doc-w, 100%)) / 2);
+  --wide-shift: calc(var(--row-shift, 0px) + var(--section-shift, 0px));
+  width: max(100%, calc(var(--doc-w, 100%) - 2 * var(--wide-shift)));
+  margin-left: min(0px, calc((100% - var(--doc-w, 100%)) / 2 + var(--wide-shift)));
+}
+
+
+// Einzug eines Abschnitts: ml-[13px] + pl-4, halbiert (siehe oben).
+.section-body {
+  --section-shift: 14.5px;
+}
+
+
+// Auf dem Telefon ist die Textspalte schon fast der ganze Dokumentbereich —
+// „breit" gewoenne dort ein paar Pixel und schoebe die Tabelle unter den
+// Ziehgriff. Sie bleibt in der Spalte und rollt in ihrem Rahmen.
+@media (max-width: 639px) {
+  .plan-table-wrap--wide {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 

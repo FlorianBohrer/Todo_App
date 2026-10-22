@@ -112,6 +112,8 @@
           [cdkConnectedOverlayOrigin]="outlineAnchor"
           [cdkConnectedOverlayOpen]="outlineOpen()"
           [cdkConnectedOverlayPositions]="menuPositions"
+          [cdkConnectedOverlayPush]="true"
+          [cdkConnectedOverlayViewportMargin]="menuMargin"
           [cdkConnectedOverlayHasBackdrop]="true"
           cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
           (backdropClick)="closeOutline()"
@@ -161,13 +163,22 @@
         [cdkConnectedOverlayOrigin]="addAnchor"
         [cdkConnectedOverlayOpen]="addMenuOpen()"
         [cdkConnectedOverlayPositions]="menuPositions"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayViewportMargin]="menuMargin"
         [cdkConnectedOverlayHasBackdrop]="true"
         cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
         (backdropClick)="closeAddMenu()"
         (detach)="closeAddMenu()"
         (overlayKeydown)="$event.key === 'Escape' && closeAddMenu()">
-        <div role="menu" class="popover w-52 px-1">
+        <div role="menu" class="popover max-h-[70vh] w-56 overflow-y-auto px-1">
           @for (option of addOptions; track option.kind) {
+            <button role="menuitem" type="button" class="block-menu-item"
+              (click)="addFromMenu(option.kind)">
+              <lucide-icon [img]="option.icon" class="h-4 w-4"></lucide-icon> {{ option.label }}
+            </button>
+          }
+          <p class="menu-section-label" role="presentation">Architecture</p>
+          @for (option of architectureOptions; track option.kind) {
             <button role="menuitem" type="button" class="block-menu-item"
               (click)="addFromMenu(option.kind)">
               <lucide-icon [img]="option.icon" class="h-4 w-4"></lucide-icon> {{ option.label }}
@@ -398,6 +409,8 @@
           [cdkConnectedOverlayOrigin]="exportAnchor"
           [cdkConnectedOverlayOpen]="exportOpen()"
           [cdkConnectedOverlayPositions]="menuPositions"
+          [cdkConnectedOverlayPush]="true"
+          [cdkConnectedOverlayViewportMargin]="menuMargin"
           [cdkConnectedOverlayHasBackdrop]="true"
           cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
           (backdropClick)="closeExport()"
@@ -496,6 +509,8 @@
         [cdkConnectedOverlayOrigin]="addPlanAnchor"
         [cdkConnectedOverlayOpen]="newMenuOpen()"
         [cdkConnectedOverlayPositions]="menuPositions"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayViewportMargin]="menuMargin"
         [cdkConnectedOverlayHasBackdrop]="true"
         cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
         (backdropClick)="closeNewMenu()"
@@ -507,6 +522,19 @@
             <lucide-icon [img]="BlankIcon" class="h-4 w-4 flex-none text-muted"></lucide-icon>
             Blank plan
           </button>
+          <!-- Vorlagen für Architektur: eine Seite, die die richtigen Fragen
+               schon stellt (architecture-blocks.ts). -->
+          <p class="menu-section-label" role="presentation">Templates</p>
+          @for (template of planTemplates; track template.kind) {
+            <button role="menuitem" type="button" class="popover-item text-sm text-text"
+              (click)="newPlanFromTemplate(template.kind)">
+              <lucide-icon [img]="templateIcon(template.kind)" class="h-4 w-4 flex-none text-muted"></lucide-icon>
+              <span class="min-w-0">
+                <span class="block">{{ template.label }}</span>
+                <span class="block text-xs text-muted">{{ template.hint }}</span>
+              </span>
+            </button>
+          }
           <button role="menuitem" type="button"
             class="popover-item text-sm text-text disabled:pointer-events-none disabled:opacity-50"
             [disabled]="importing()"

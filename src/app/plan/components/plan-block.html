@@ -181,7 +181,12 @@
               <!-- Slash-Menü (Notion-Stil): erscheint, sobald ein Textblock mit
                    „/" beginnt; Pfeiltasten wählen, Enter oder Klick fügt ein. -->
               @if (view.slash()?.blockId === block.id && view.slashResults().length) {
-                <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] px-1">
+                <!-- Mit den Architektur-Bausteinen sind es über zwanzig
+                     Einträge: das Menü scrollt in sich, und die Pfeiltasten
+                     ziehen den markierten Eintrag mit (scrollSlashIntoView). -->
+                <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain px-1"
+                  [class.slash-menu--above]="view.inlineMenu().above"
+                  [style.max-height.px]="view.inlineMenu().room">
                   @for (item of view.slashResults(); track item.kind; let i = $index) {
                     <button type="button"
                       class="slash-item flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-fill"
@@ -203,7 +208,9 @@
               <!-- Wikilink-Vorschläge: erscheinen bei einem offenen „[[".
                    Ohne sie müsste man Titel blind und exakt tippen. -->
               @if (view.wikiPick()?.blockId === block.id) {
-                <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] px-1">
+                <div class="popover slash-menu absolute left-0 top-full z-30 mt-1 w-72 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain px-1"
+                  [class.slash-menu--above]="view.inlineMenu().above"
+                  [style.max-height.px]="view.inlineMenu().room">
                   @for (p of view.wikiResults(); track p.id; let i = $index) {
                     <button type="button"
                       class="slash-item flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-fill"
@@ -557,6 +564,8 @@
         [cdkConnectedOverlayOrigin]="origin"
         [cdkConnectedOverlayOpen]="view.openBlockMenu() === id"
         [cdkConnectedOverlayPositions]="view.menuPositions"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayViewportMargin]="view.menuMargin"
         [cdkConnectedOverlayHasBackdrop]="true"
         cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
         (backdropClick)="view.closeBlockMenu()"
