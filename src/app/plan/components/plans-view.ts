@@ -54,7 +54,27 @@ import {
   Download,
   Upload,
   FilePlus,
+  Network,
+  ArrowLeftRight,
+  Database,
+  Boxes,
+  GitBranch,
+  Component as ComponentGlyph,
+  Route,
+  TriangleAlert,
+  Scale,
+  LayoutTemplate,
 } from 'lucide-angular';
+import {
+  PLAN_TEMPLATES,
+  PlanTemplate,
+  componentsTable,
+  decisionRecord,
+  diagramBlock,
+  endpointsTable,
+  risksTable,
+  templateContent,
+} from '../architecture-blocks';
 import { ToastService } from '../../shared/toast.service';
 import { LabelService } from '../../todo/services/label.service';
 import { TodoService } from '../../todo/services/todo';
@@ -134,7 +154,32 @@ type SlashKind =
   | 'divider'
   | 'toggle'
   | 'table'
-  | 'diagram';
+  | 'diagram'
+  // Architektur (architecture-blocks.ts)
+  | 'diagram-system'
+  | 'diagram-sequence'
+  | 'diagram-data'
+  | 'diagram-classes'
+  | 'diagram-states'
+  | 'components'
+  | 'endpoints'
+  | 'risks'
+  | 'decision';
+
+/** Bloecke ohne eigenes Schreibfeld: nach dem Einfuegen gibt es nichts zu fokussieren. */
+const NO_FIELD: ReadonlySet<SlashKind> = new Set<SlashKind>([
+  'divider',
+  'table',
+  'diagram',
+  'diagram-system',
+  'diagram-sequence',
+  'diagram-data',
+  'diagram-classes',
+  'diagram-states',
+  'components',
+  'endpoints',
+  'risks',
+]);
 
 /**
  * Tiefste Einrueckung einer Liste.
@@ -287,6 +332,16 @@ export class PlansView {
   readonly CodeIcon = Code;
   readonly QuoteIcon = Quote;
   readonly DividerIcon = Minus;
+  readonly SystemIcon = Network;
+  readonly SequenceIcon = ArrowLeftRight;
+  readonly DataIcon = Database;
+  readonly ClassesIcon = Boxes;
+  readonly StatesIcon = GitBranch;
+  readonly ComponentsIcon = ComponentGlyph;
+  readonly EndpointsIcon = Route;
+  readonly RisksIcon = TriangleAlert;
+  readonly DecisionIcon = Scale;
+  readonly TemplateIcon = LayoutTemplate;
   readonly LinkIcon = Link2;
   readonly CopyIcon = Copy;
   readonly UpIcon = ChevronUp;
@@ -314,6 +369,21 @@ export class PlansView {
     { kind: 'table', label: 'Table', icon: this.TableIcon },
     { kind: 'diagram', label: 'Diagram', icon: this.DiagramIcon },
     { kind: 'toggle', label: 'Toggle', icon: this.SectionIcon },
+  ];
+
+  /**
+   * Was eine Architektur-Planung braucht und man nicht tippen kann: die
+   * Diagrammarten mit einer Vorlage, die sofort rendert, die Tabellen mit
+   * ihren Spalten und die Entscheidung als Abschnitt. Im Menue als eigene
+   * Gruppe unter den Grundbloecken; über „/" stehen dieselben Eintraege.
+   */
+  protected readonly architectureOptions: { kind: SlashKind; label: string; icon: LucideIconData }[] = [
+    { kind: 'diagram-system', label: 'Architecture diagram', icon: this.SystemIcon },
+    { kind: 'diagram-sequence', label: 'Sequence diagram', icon: this.SequenceIcon },
+    { kind: 'diagram-data', label: 'Data model', icon: this.DataIcon },
+    { kind: 'components', label: 'Components', icon: this.ComponentsIcon },
+    { kind: 'endpoints', label: 'API endpoints', icon: this.EndpointsIcon },
+    { kind: 'decision', label: 'Decision record', icon: this.DecisionIcon },
   ];
 
   toggleAddMenu(): void {
@@ -678,6 +748,44 @@ export class PlansView {
     this.newPlan();
   }
 
+  /** Die Vorlagen im Neu-Menue: System design, Entscheidung, API. */
+  protected readonly planTemplates = PLAN_TEMPLATES;
+  private readonly templateIcons: Record<PlanTemplate, LucideIconData> = {
+    'system-design': Network,
+    decision: Scale,
+    'api-design': Route,
+  };
+
+  templateIcon(kind: PlanTemplate): LucideIconData {
+    return this.templateIcons[kind];
+  }
+
+  /**
+   * Einen Plan aus einer Vorlage anlegen und gleich oeffnen — mit dem Cursor
+   * im Titel, denn „System design: " will zuerst einen Namen.
+   */
+  async newPlanFromTemplate(kind: PlanTemplate): Promise<void> {
+    this.closeNewMenu();
+    const template = PLAN_TEMPLATES.find((t) => t.kind === kind);
+    if (!template) return;
+    try {
+      const plan = await this.planService.importPlan(
+        template.title,
+        null,
+        templateContent(kind, () => this.newId()),
+      );
+      this.open(plan.id);
+      requestAnimationFrame(() => {
+        const title = document.querySelector<HTMLInputElement>('input[aria-label="Plan title"]');
+        if (!title) return;
+        title.focus();
+        title.setSelectionRange(title.value.length, title.value.length);
+      });
+    } catch {
+      this.toast.error('Could not create plan');
+    }
+  }
+
   /**
    * Der Dateidialog aus dem Menü heraus.
    *
@@ -838,13 +946,20 @@ export class PlansView {
   readonly openBlockMenu = signal<string | null>(null);
 
   /**
-   * Das Menue klappt unter dem Griff nach rechts auf; ist unten kein Platz,
-   * nach oben. CDK waehlt die erste Position, die ins Fenster passt.
+   * Das Menue klappt unter dem Griff nach rechts auf; ist rechts kein Platz
+   * (Knopf am rechten Rand, schmales Telefon), nach links; ist unten kein
+   * Platz, nach oben. CDK waehlt die erste Position, die ins Fenster passt —
+   * passt keine, schiebt `menuPush` es hinein.
    */
   readonly menuPositions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 4 },
     { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -4 },
   ];
+
+  /** Abstand zum Fensterrand, wenn ein Menue hineingeschoben wird. */
+  readonly menuMargin = 8;
 
   /**
    * Der Ziehgriff oeffnet das Menue per Klick. Nach einem Drag feuert aber noch
@@ -1231,6 +1346,15 @@ export class PlansView {
     { kind: 'toggle', label: 'Toggle', hint: 'Collapsible section', icon: this.SectionIcon, keywords: 'accordion akkordeon toggle dropdown section group collapsible container fold aufklappen einklappen' },
     { kind: 'table', label: 'Table', hint: 'Rows and columns', icon: this.TableIcon, keywords: 'table grid rows columns' },
     { kind: 'diagram', label: 'Diagram', hint: 'Mermaid flowchart', icon: this.DiagramIcon, keywords: 'diagram flow flowchart mermaid chart' },
+    { kind: 'diagram-system', label: 'Architecture diagram', hint: 'Services, data stores, boundaries', icon: this.SystemIcon, keywords: 'architecture system diagram services components infrastructure c4 overview mermaid' },
+    { kind: 'diagram-sequence', label: 'Sequence diagram', hint: 'A request across services', icon: this.SequenceIcon, keywords: 'sequence diagram flow request call interaction api mermaid' },
+    { kind: 'diagram-data', label: 'Data model', hint: 'Entities and relations (ER)', icon: this.DataIcon, keywords: 'data model er entity relation database schema tables erd mermaid' },
+    { kind: 'diagram-classes', label: 'Class diagram', hint: 'Modules, interfaces, dependencies', icon: this.ClassesIcon, keywords: 'class diagram uml module interface domain dependency mermaid' },
+    { kind: 'diagram-states', label: 'State diagram', hint: 'A lifecycle and its transitions', icon: this.StatesIcon, keywords: 'state diagram lifecycle status machine transition workflow mermaid' },
+    { kind: 'components', label: 'Components', hint: 'Responsibility, tech, owner', icon: this.ComponentsIcon, keywords: 'components services modules responsibility owner tech architecture table' },
+    { kind: 'endpoints', label: 'API endpoints', hint: 'Method, path, purpose, auth', icon: this.EndpointsIcon, keywords: 'api endpoints rest routes http method path interface table' },
+    { kind: 'risks', label: 'Risks', hint: 'Impact, likelihood, mitigation', icon: this.RisksIcon, keywords: 'risks risk impact likelihood mitigation threats table' },
+    { kind: 'decision', label: 'Decision record', hint: 'ADR: context, decision, trade-offs', icon: this.DecisionIcon, keywords: 'decision adr architecture record tradeoff trade-off alternatives why' },
   ];
 
   /** Offenes Menü: Block, markierter Eintrag, Position des „/" + Query dahinter. */
@@ -1241,14 +1365,59 @@ export class PlansView {
     query: string;
   } | null>(null);
 
-  /** Gefilterte Menü-Einträge zum aktuellen Query hinter dem „/". */
+  /**
+   * Wohin die Menues am Text („/" und „[[") aufklappen, und wie hoch sie
+   * werden duerfen. Unten am Fenster — Dokumentende, Tastatur offen — laegen
+   * sie sonst unsichtbar unter dem Rand; dann klappen sie nach oben, und der
+   * Text, in dem man tippt, bleibt stehen. Gemessen wird beim Oeffnen, nicht
+   * bei jedem Tastendruck: das Menue soll nicht springen, waehrend die
+   * Treffer weniger werden.
+   */
+  readonly inlineMenu = signal<{ above: boolean; room: number }>({ above: false, room: 352 });
+
+  private placeInlineMenu(blockId: string): void {
+    const field = this.field(this.blockFieldId(blockId));
+    if (!field) return;
+
+    const r = field.getBoundingClientRect();
+    const view = window.visualViewport;
+    // Oben begrenzt der klebende Dokumentkopf, unten die Tastatur.
+    const top = Math.max(view?.offsetTop ?? 0, document.querySelector('.doc-head')?.getBoundingClientRect().bottom ?? 0);
+    const bottom = view ? view.offsetTop + view.height : window.innerHeight;
+    const below = bottom - r.bottom - 12;
+    const above = r.top - top - 12;
+    const tallest = Math.min(352, (bottom - top) * 0.6);
+
+    const up = below < tallest && above > below;
+    this.inlineMenu.set({ above: up, room: Math.max(120, Math.min(tallest, up ? above : below)) });
+  }
+
+  /**
+   * Gefilterte Menü-Einträge zum aktuellen Query hinter dem „/".
+   *
+   * Sortiert nach Treffer, nicht nur nach Menüreihenfolge: „/components" soll
+   * die Tabelle „Components" oben haben und nicht das Architekturdiagramm,
+   * das „components" nur als Stichwort trägt. Name vorn vor Name irgendwo vor
+   * Stichwort; innerhalb gleicher Güte bleibt die Reihenfolge des Menüs.
+   */
   readonly slashResults = computed(() => {
     const s = this.slash();
     if (!s) return [];
     const q = s.query.toLowerCase();
-    return this.SLASH_MENU.filter(
-      (it) => !q || it.label.toLowerCase().includes(q) || it.keywords.includes(q),
-    );
+    if (!q) return this.SLASH_MENU;
+
+    const score = (it: (typeof this.SLASH_MENU)[number]): number => {
+      const label = it.label.toLowerCase();
+      if (label.startsWith(q)) return 0;
+      if (label.includes(q)) return 1;
+      if (it.keywords.split(' ').some((word) => word.startsWith(q))) return 2;
+      return it.keywords.includes(q) ? 3 : -1;
+    };
+
+    return this.SLASH_MENU.map((it) => ({ it, rank: score(it) }))
+      .filter((entry) => entry.rank >= 0)
+      .sort((a, b) => a.rank - b.rank)
+      .map((entry) => entry.it);
   });
 
   /**
@@ -1400,13 +1569,22 @@ export class PlansView {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       this.slash.set({ ...s, index: (idx + 1) % items.length });
+      this.scrollSlashIntoView();
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       this.slash.set({ ...s, index: (idx - 1 + items.length) % items.length });
+      this.scrollSlashIntoView();
     } else if (event.key === 'Enter') {
       event.preventDefault();
       this.chooseSlash(blockId, items[idx].kind);
     }
+  }
+
+  /** Das Menue scrollt in sich — der markierte Eintrag bleibt sichtbar. */
+  private scrollSlashIntoView(): void {
+    requestAnimationFrame(() =>
+      document.querySelector('.slash-menu .slash-item--active')?.scrollIntoView({ block: 'nearest' }),
+    );
   }
 
   slashActiveIndex(): number {
@@ -1461,7 +1639,7 @@ export class PlansView {
       this.focusItem(blockId, 0, 'end');
       return;
     }
-    if (kind === 'divider' || kind === 'table' || kind === 'diagram') return;
+    if (NO_FIELD.has(kind)) return;
     this.beginEdit(blockId);
   }
 
@@ -1498,6 +1676,26 @@ export class PlansView {
         return { id, type: 'table', columns: ['Column 1', 'Column 2'], rows: [['', '']] };
       case 'diagram':
         return { id, type: 'diagram', code: DIAGRAM_TEMPLATE };
+      case 'diagram-system':
+        return diagramBlock(id, 'system');
+      case 'diagram-sequence':
+        return diagramBlock(id, 'sequence');
+      case 'diagram-data':
+        return diagramBlock(id, 'data');
+      case 'diagram-classes':
+        return diagramBlock(id, 'classes');
+      case 'diagram-states':
+        return diagramBlock(id, 'states');
+      case 'components':
+        return componentsTable(id);
+      case 'endpoints':
+        return endpointsTable(id);
+      case 'risks':
+        return risksTable(id);
+      case 'decision':
+        // Der Abschnitt bekommt die Kennung des Blocks, an dessen Stelle er
+        // tritt; nur seine Kinder brauchen neue.
+        return { ...decisionRecord(() => this.newId()), id };
     }
   }
 
@@ -1701,6 +1899,7 @@ export class PlansView {
     if (wiki) {
       this.slash.set(null);
       const current = this.wikiPick();
+      if (current?.blockId !== blockId) this.placeInlineMenu(blockId);
       this.wikiPick.set({
         blockId,
         index: current && current.blockId === blockId ? current.index : 0,
@@ -1714,6 +1913,7 @@ export class PlansView {
     const token = this.detectSlash(value, at);
     if (token) {
       const current = this.slash();
+      if (current?.blockId !== blockId) this.placeInlineMenu(blockId);
       this.slash.set({
         blockId,
         index: current && current.blockId === blockId ? current.index : 0,
