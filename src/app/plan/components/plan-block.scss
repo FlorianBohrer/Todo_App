@@ -497,6 +497,55 @@
 }
 
 
+// Abschnitte im Slash-Menue: leise Versalien, wie die Ueberschriften der
+// anderen Menues (.menu-section-label), nur ohne Linie — die Liste ist ohnehin
+// eine Flaeche.
+.slash-group {
+  padding: 0.6rem 0.65rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-subtle);
+}
+
+
+.slash-keys {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 0.9rem;
+  margin: 0.25rem -0.25rem 0;
+  border-top: 1px solid var(--color-line);
+  background: inherit;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.6875rem;
+  color: var(--color-subtle);
+}
+
+
+.slash-keys kbd {
+  display: inline-grid;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  place-items: center;
+  margin-right: 0.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.3rem;
+  padding-inline: 0.2rem;
+  font-family: inherit;
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+
+@media (hover: none) {
+  .slash-keys {
+    display: none;
+  }
+}
+
+
 // Rueckmeldung auf den Druck, nicht erst auf das Loslassen.
 .block-menu-item,
 .mode-tab,
@@ -557,10 +606,22 @@
 }
 
 
-// Ohne Zeigergeraet gibt es kein Ueberfahren — dort steht er leise da.
+// Ohne Zeigergeraet gibt es kein Ueberfahren. Dauerhaft an jeder Zeile
+// stand dort neben jedem Eintrag ein Papierkorb und ein „→ todo" — eine Liste
+// aus Werkzeugen. Jetzt nur an der Zeile, in der man gerade schreibt: wer
+// etwas mit einem Eintrag tun will, tippt ihn ohnehin zuerst an.
 @media (hover: none) {
-  .list-item-remove {
-    opacity: 0.5;
+  // Verschwinden erst nach einem Augenblick: tippt man auf den Papierkorb,
+  // verliert das Textfeld zuerst den Fokus — ohne die Verzoegerung waere der
+  // Knopf schon weg, wenn der Tipp ankommt.
+  .list-item-row:not(:focus-within) .list-item-remove,
+  .list-item-row:not(:focus-within) .item-promote {
+    visibility: hidden;
+    transition: visibility 0s linear 0.4s;
+  }
+
+  .list-item-row:focus-within .list-item-remove {
+    opacity: 0.6;
   }
 }
 
@@ -1095,13 +1156,227 @@ tr:focus-within .plan-td-gutter .plan-table-x,
     flex: none;
   }
 
-  app-mermaid-diagram {
+  .diagram-stage {
+    display: flex;
     flex: 1;
     min-height: 0;
+    gap: 1rem;
+  }
+
+  app-mermaid-diagram {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  // Links schreiben, rechts sehen. Im DOM steht die Zeichnung zuerst — so
+  // bleibt sie im Dokument oben —, hier tauscht die Reihenfolge.
+  &.has-source .diagram-stage {
+    flex-direction: row-reverse;
+  }
+
+  .diagram-source {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: clamp(18rem, 36%, 34rem);
+    margin-top: 0;
+  }
+
+  .diagram-code {
+    flex: 1;
+    height: auto !important;
+    min-height: 0;
+    overflow: auto;
   }
 
   .plan-dia-edit {
     opacity: 1;
+  }
+}
+
+
+// Auf dem Telefon ist nebeneinander kein Platz: oben die Zeichnung, unten
+// der Quelltext.
+@media (max-width: 639px) {
+  .plan-diagram--full.has-source .diagram-stage {
+    flex-direction: column;
+  }
+
+  .plan-diagram--full .diagram-source {
+    width: auto;
+    height: 42%;
+  }
+}
+
+
+// ---- Codeblock ----
+//
+// Dieselbe Karte wie Tabelle und Diagramm: runde Ecken, feiner Rand. Kopieren
+// sitzt rechts im Kopf, leise bis man es braucht.
+.code-card {
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: var(--color-bg3);
+}
+
+
+.code-copy {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.375rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.6875rem;
+  color: var(--color-subtle);
+  opacity: 0;
+  transition: opacity 120ms ease-out, color 120ms ease-out, background-color 120ms ease-out;
+}
+
+
+.code-card:hover .code-copy,
+.code-copy:focus-visible {
+  opacity: 1;
+}
+
+
+.code-copy:hover {
+  background: var(--color-fill-strong);
+  color: var(--color-text);
+}
+
+
+.code-copy:disabled {
+  pointer-events: none;
+  opacity: 0;
+}
+
+
+@media (hover: none) {
+  .code-copy {
+    opacity: 0.8;
+    padding: 0.35rem 0.55rem;
+  }
+}
+
+
+// ---- Tabellen auf dem Telefon ----
+//
+// Auf 300px teilte die Tabelle jede Spalte, bis „1200 €" zweizeilig und
+// „sehr gut" untereinander stand. Eine Mindestbreite je Zelle laesst sie
+// lieber seitlich rollen — dafuer gibt es den Randverlauf.
+@media (max-width: 639px) {
+  .plan-td .plan-cell,
+  .plan-th .plan-cell {
+    min-width: 6.5rem;
+  }
+}
+
+
+// ---- Quelltext ----
+//
+// Unter der Zeichnung, in derselben Karte, durch eine Linie getrennt. Oben
+// die Bausteine der jeweiligen Art (diagram-snippets.ts) und der Weg zur
+// Syntax — die beiden Dinge, nach denen man beim Schreiben sucht.
+.diagram-source {
+  margin-top: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: var(--color-bg);
+}
+
+
+.diagram-source-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  border-bottom: 1px solid var(--color-line);
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+}
+
+
+.diagram-source-label {
+  margin-right: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-subtle);
+}
+
+
+.diagram-snippets {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+
+.diagram-snippet {
+  border: 1px solid var(--color-line);
+  border-radius: 9999px;
+  padding: 0.125rem 0.55rem;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  transition: border-color 120ms ease-out, color 120ms ease-out, background-color 120ms ease-out;
+}
+
+
+.diagram-snippet:hover {
+  border-color: color-mix(in srgb, var(--plan-accent) 55%, transparent);
+  background: var(--plan-accent-soft);
+  color: var(--color-text);
+}
+
+
+.diagram-docs {
+  margin-left: auto;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+  transition: color 120ms ease-out;
+}
+
+
+.diagram-docs:hover {
+  color: var(--plan-accent);
+}
+
+
+.diagram-code {
+  display: block;
+  width: 100%;
+  resize: none;
+  background: transparent;
+  padding: 0.75rem 0.875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: var(--color-text);
+  tab-size: 2;
+  outline: none;
+}
+
+
+.diagram-code::placeholder {
+  color: var(--color-subtle);
+}
+
+
+@media (pointer: coarse) {
+  // 16px, sonst zoomt iOS beim Hineintippen.
+  .diagram-code {
+    font-size: 1rem;
+  }
+
+  .diagram-snippet {
+    padding: 0.3rem 0.7rem;
   }
 }
 
