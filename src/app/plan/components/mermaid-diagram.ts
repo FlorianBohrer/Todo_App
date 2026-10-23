@@ -31,7 +31,7 @@ import { scrollEdges } from '../scroll-edges.directive';
  */
 let mermaidLoader: Promise<typeof import('mermaid').default> | null = null;
 
-function loadMermaid(): Promise<typeof import('mermaid').default> {
+export function loadMermaid(): Promise<typeof import('mermaid').default> {
   mermaidLoader ??= import('mermaid').then((module) => module.default);
   return mermaidLoader;
 }

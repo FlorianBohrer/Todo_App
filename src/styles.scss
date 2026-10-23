@@ -916,6 +916,12 @@ select {
   color: var(--color-subtle);
 }
 
+/* Als Kopf eines Menues trennt die Linie nichts — darueber ist nur der Rand. */
+.menu-section-label:first-child {
+  margin-top: 0;
+  border-top: 0;
+}
+
 .popover-item:hover {
   background: var(--color-fill);
 }

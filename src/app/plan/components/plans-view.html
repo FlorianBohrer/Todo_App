@@ -81,6 +81,61 @@
         <lucide-icon [img]="ExportIcon" class="h-4 w-4"></lucide-icon>
       </button>
 
+      <!-- Übersetzen: der ganze Plan, Deutsch ⇄ Englisch. Ein Menü statt
+           eines Knopfs, weil es zwei Richtungen gibt — die naheliegende steht
+           oben. Während es läuft, dreht sich das Symbol. -->
+      <button type="button" cdkOverlayOrigin #translateAnchor="cdkOverlayOrigin"
+        class="grid h-8 w-8 flex-none place-items-center rounded-lg text-muted transition
+               hover:bg-fill hover:text-text"
+        [class.text-text]="translating() || activeTranslation()"
+        (click)="toggleTranslateMenu()"
+        [attr.aria-expanded]="translateMenuOpen()" aria-haspopup="menu"
+        title="Translate plan" aria-label="Translate plan">
+        @if (translating()) {
+          <span class="h-4 w-4 animate-spin rounded-full border-2 border-subtle border-t-transparent" aria-hidden="true"></span>
+        } @else {
+          <lucide-icon [img]="TranslateIcon" class="h-4 w-4"></lucide-icon>
+        }
+      </button>
+
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="translateAnchor"
+        [cdkConnectedOverlayOpen]="translateMenuOpen()"
+        [cdkConnectedOverlayPositions]="menuPositions"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayViewportMargin]="menuMargin"
+        [cdkConnectedOverlayHasBackdrop]="true"
+        cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+        (backdropClick)="closeTranslateMenu()"
+        (detach)="closeTranslateMenu()"
+        (overlayKeydown)="$event.key === 'Escape' && closeTranslateMenu()">
+        <div role="menu" class="popover w-64 px-1" aria-label="Translate plan">
+          <p class="menu-section-label" role="presentation">Translate plan into</p>
+          @for (language of translateTargets(); track language; let first = $first) {
+            <button role="menuitem" type="button" class="block-menu-item"
+              [disabled]="!translateAvailable() || !!translating()"
+              (click)="translatePlan(language)">
+              <span class="translate-code" aria-hidden="true">{{ language.toUpperCase() }}</span>
+              {{ languageName(language) }}
+              @if (first) {
+                <span class="translate-hint">Suggested</span>
+              }
+            </button>
+          }
+          <p class="px-2 pb-1.5 pt-1 text-2xs leading-snug text-subtle">
+            @if (translateAvailable()) {
+              Text, tables and diagram labels. The original stays one click away.
+              @if (aiRemaining() !== null) {
+                <span class="block pt-1">{{ aiRemaining() }} AI {{ aiRemaining() === 1 ? 'request' : 'requests' }} left today</span>
+              }
+            } @else {
+              Translation needs the AI service, which isn't set up on this server.
+            }
+          </p>
+        </div>
+      </ng-template>
+
       <!-- Speicherzustand. Im Normalfall steht hier nichts: „gespeichert" ist
            die Erwartung, und eine Bestaetigung fuer das Erwartete ist Rauschen.
            Zu sehen ist nur, was davon abweicht — und „retrying" faellt auf,
@@ -201,6 +256,7 @@
         rows="1"
         class="doc-title"
         [value]="plan.title"
+        [readOnly]="!!translating()"
         (input)="setTitle(plan.id, $any($event.target).value)"
         (blur)="commitTitle(plan.id, titleField)"
         (keydown.enter)="$event.preventDefault(); continueFromTitle()"
@@ -219,7 +275,36 @@
             {{ summary.todos.done }}/{{ summary.todos.total }} done
           </span>
         }
+        @if (translating(); as target) {
+          <span class="doc-meta-translating" role="status">
+            Translating into {{ languageName(target) }}…
+            @if (translateProgress(); as progress) {
+              @if (progress.total > 1) { {{ progress.done }}/{{ progress.total }} }
+            }
+          </span>
+        }
       </p>
+
+      <!-- Solange er steht, liegt das Original einen Klick entfernt. „Done"
+           nimmt nur den Hinweis weg — die Fassung, die dasteht, bleibt. -->
+      @if (activeTranslation(); as translation) {
+        <div class="translate-banner" role="status">
+          <lucide-icon [img]="TranslateIcon" class="h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+          <span class="translate-banner-text">
+            @if (translation.showing === 'translated') {
+              Translated into {{ languageName(translation.to) }}
+            } @else {
+              Showing the original
+            }
+          </span>
+          <button type="button" class="translate-banner-action" (click)="toggleTranslationView()">
+            {{ translation.showing === 'translated'
+              ? 'Show ' + languageName(translation.from)
+              : 'Show ' + languageName(translation.to) }}
+          </button>
+          <button type="button" class="translate-banner-done" (click)="endTranslation()">Done</button>
+        </div>
+      }
     </div>
 
     <!-- Canvas: alle Blöcke fließen auf einer ruhigen Fläche; eine Section
@@ -235,7 +320,7 @@
          liess sich kein Block je in ein Toggle ziehen. Ueber IDs laeuft die
          Verbindung an der Injektor-Hierarchie vorbei.
          cdkDropListData sagt dem Handler, welche Liste gemeint ist. -->
-    <div [class.is-grabbing]="grabbing()">
+    <div [class.is-grabbing]="grabbing()" [class.is-translating]="translating()" [attr.aria-busy]="!!translating()">
       <div class="space-y-0.5"
            cdkDropList
            [id]="ROOT_LIST"

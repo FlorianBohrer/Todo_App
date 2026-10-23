@@ -510,6 +510,132 @@
 }
 
 
+// ---- Übersetzen ----
+
+.block-menu-item:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+
+// Sprachkürzel als kleine Marke vor dem Namen — man erkennt die Richtung,
+// bevor man das Wort gelesen hat.
+.translate-code {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.15rem;
+  flex: none;
+  border-radius: 0.3rem;
+  background: var(--color-fill-strong);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+
+.translate-hint {
+  margin-left: auto;
+  border-radius: 9999px;
+  padding: 0.05rem 0.45rem;
+  background: var(--plan-accent-soft);
+  font-size: 0.6875rem;
+  color: var(--plan-accent);
+}
+
+
+.doc-meta-translating {
+  color: var(--plan-accent);
+  animation: translate-pulse 1.4s ease-in-out infinite;
+}
+
+
+@keyframes translate-pulse {
+  50% { opacity: 0.55; }
+}
+
+
+// Der Plan bleibt lesbar, aber man schreibt nicht hinein, solange er
+// übersetzt wird — die Antwort würde es überschreiben.
+.is-translating {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+
+
+.translate-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--plan-accent) 28%, transparent);
+  border-radius: 0.75rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.75rem;
+  background: var(--plan-accent-soft);
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  animation: translate-in var(--settle-ms) var(--spring-settle) both;
+}
+
+
+.translate-banner > lucide-icon {
+  color: var(--plan-accent);
+}
+
+
+.translate-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+
+.translate-banner-action,
+.translate-banner-done {
+  flex: none;
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  font-weight: 500;
+  transition: background-color 130ms ease-out, color 130ms ease-out;
+}
+
+
+.translate-banner-action {
+  color: var(--plan-accent);
+}
+
+
+.translate-banner-action:hover {
+  background: color-mix(in srgb, var(--plan-accent) 14%, transparent);
+}
+
+
+.translate-banner-done {
+  background: var(--color-fill-strong);
+  color: var(--color-text);
+}
+
+
+.translate-banner-done:hover {
+  background: var(--color-line-strong);
+}
+
+
+@keyframes translate-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .translate-banner,
+  .doc-meta-translating {
+    animation: none;
+  }
+}
+
+
 @media (max-width: 639px) {
   .doc-title {
     font-size: 1.625rem;
