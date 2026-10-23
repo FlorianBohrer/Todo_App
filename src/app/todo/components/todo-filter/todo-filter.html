@@ -43,23 +43,23 @@
        anderen schrumpften, und die Pille — die mit Vierteln rechnet — lag
        halb über „Favorites". min-w-0 hält die Viertel, und kleinere Schrift
        und Polster auf schmalen Bildschirmen lassen den Text hineinpassen. -->
-  <section class="filter-tabs relative flex gap-2 mt-6 mb-4 rounded-full bg-bg3 p-1"
+  <section class="filter-tabs filter-tabs--segment relative flex gap-2 mt-6 mb-4 rounded-full bg-bg3 p-1"
     role="tablist" [style.--tab-index]="tabIndex()">
     <span class="filter-pill" aria-hidden="true"></span>
 
-    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 text-sm sm:px-5 sm:text-base"
+    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 py-1.5 text-sm sm:px-5"
       [class.is-active]="filter() === 'active'"
       [attr.aria-selected]="filter() === 'active'"
       (click)="filter.set('active')">Active</button>
-    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 text-sm sm:px-5 sm:text-base"
+    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 py-1.5 text-sm sm:px-5"
       [class.is-active]="filter() === 'completed'"
       [attr.aria-selected]="filter() === 'completed'"
       (click)="filter.set('completed')">Done</button>
-    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 text-sm sm:px-5 sm:text-base"
+    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 py-1.5 text-sm sm:px-5"
       [class.is-active]="filter() === 'favorites'"
       [attr.aria-selected]="filter() === 'favorites'"
       (click)="filter.set('favorites')">Favorites</button>
-    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 text-sm sm:px-5 sm:text-base"
+    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 py-1.5 text-sm sm:px-5"
       [class.is-active]="filter() === 'all'"
       [attr.aria-selected]="filter() === 'all'"
       (click)="filter.set('all')">All</button>

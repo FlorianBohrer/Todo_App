@@ -265,17 +265,23 @@
 
           <!-- Termin: geplant -> Chip mit dem Tag, sonst -> Kalender-Knopf.
                Beide öffnen dasselbe Menü, damit Setzen und Ändern ein Weg sind. -->
+          <!-- Termine sprechen nur, wenn sie etwas zu sagen haben: heute in der
+               Ansichtsfarbe, überfällig in Bernstein, alles Spätere leise.
+               Vorher trug jeder Termin denselben Akzentrahmen — zehn Zeilen,
+               zehn gleich laute Pillen, und „Today" sah aus wie „Wed". -->
           <button
             type="button"
             cdkOverlayOrigin #scheduleTrigger="cdkOverlayOrigin"
-            class="row-action hidden flex-shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs
+            class="row-action hidden flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs
                    transition sm:flex"
             [class.row-action--kept]="todo.scheduledDate !== null"
             [class]="todo.scheduledDate === null
-              ? 'border-transparent px-1.5 text-muted/60 hover:border-indigo-500/60 hover:text-indigo-300'
+              ? 'px-1.5 text-muted/60 hover:bg-fill hover:text-text'
               : (row.isLate
-                  ? 'border-amber-500/60 text-amber-300 hover:border-amber-400'
-                  : 'border-indigo-500/50 text-indigo-300 hover:border-indigo-400')"
+                  ? 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                  : row.isToday
+                    ? 'bg-indigo-500/15 text-indigo-200 hover:bg-indigo-500/25'
+                    : 'text-muted hover:bg-fill hover:text-text')"
             (click)="toggleScheduleMenu(todo.id)"
             aria-haspopup="listbox"
             [attr.aria-expanded]="openScheduleId() === todo.id"
