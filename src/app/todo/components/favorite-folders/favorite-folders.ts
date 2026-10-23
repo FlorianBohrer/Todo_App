@@ -113,10 +113,6 @@ toggleFavorite(id: string, event: Event) {
     return folderColorClass(color, 'text');
   }
 
-  bgClass(color: string): string {
-    return folderColorClass(color, 'bg');
-  }
-
   /** Gedämpfter Hintergrund für den Typ-Chip, in der Folder-Farbe. */
   chipClass(color: string): string {
     return (

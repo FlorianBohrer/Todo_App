@@ -79,7 +79,7 @@
                   <span class="min-w-0 flex-1 truncate text-sm"
                     [class]="hit.todo.completed ? 'text-muted line-through decoration-1' : 'text-text'">
                     @for (part of segments(hit.title); track $index) {
-                      @if (part.match) { <mark class="search-mark">{{ part.text }}</mark> } @else { {{ part.text }} }
+                      @if (part.match) {<mark class="search-mark">{{ part.text }}</mark>} @else {<span>{{ part.text }}</span>}
                     }
                   </span>
                   <span class="max-w-[40%] flex-none truncate text-xs text-subtle">{{ todoMeta(hit.todo) }}</span>
@@ -90,13 +90,13 @@
                   <span class="min-w-0 flex-1">
                     <span class="block truncate text-sm text-text">
                       @for (part of segments(hit.plan.title || 'Untitled'); track $index) {
-                        @if (part.match) { <mark class="search-mark">{{ part.text }}</mark> } @else { {{ part.text }} }
+                        @if (part.match) {<mark class="search-mark">{{ part.text }}</mark>} @else {<span>{{ part.text }}</span>}
                       }
                     </span>
                     @if (hit.snippet; as found) {
                       <span class="block truncate text-xs text-muted">
                         @for (part of segments(found); track $index) {
-                          @if (part.match) { <mark class="search-mark">{{ part.text }}</mark> } @else { {{ part.text }} }
+                          @if (part.match) {<mark class="search-mark">{{ part.text }}</mark>} @else {<span>{{ part.text }}</span>}
                         }
                       </span>
                     }
@@ -108,7 +108,7 @@
                   <lucide-icon [img]="folderIconOf(hit)" class="h-4 w-4 flex-none" [class]="folderClass(hit)" aria-hidden="true"></lucide-icon>
                   <span class="min-w-0 flex-1 truncate text-sm text-text">
                     @for (part of segments(hit.label.name); track $index) {
-                      @if (part.match) { <mark class="search-mark">{{ part.text }}</mark> } @else { {{ part.text }} }
+                      @if (part.match) {<mark class="search-mark">{{ part.text }}</mark>} @else {<span>{{ part.text }}</span>}
                     }
                   </span>
                   <span class="flex-none text-xs text-subtle">Folder</span>

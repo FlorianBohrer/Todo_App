@@ -51,6 +51,7 @@ import { FocusSessionService, formatFocus } from '../../services/focus-session.s
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
+import { todayISO } from '../../shared/week';
 import { tap } from '../../shared/haptics';
 import { RewardService } from '../../../reward/reward.service';
 import { Rhythm, rhythmByTodo } from '../../shared/rhythm';
@@ -156,6 +157,8 @@ interface TodoRow {
   labelTitle: string;
   scheduleText: string;
   isLate: boolean;
+  /** Für heute geplant — der eine Termin, der in der Zeile hervortritt. */
+  isToday: boolean;
   /** Versatz beim Einlaufen, gedeckelt. */
   stagger: number;
 }
@@ -271,6 +274,7 @@ export class TodoList {
       lastSubs.add(subs[subs.length - 1].id);
     }
 
+    const today = todayISO();
     return items.map((todo, index) => {
       const badge = priorityBadge(todo.title);
       const stripped = stripPriorityPrefix(todo.title);
@@ -303,6 +307,7 @@ export class TodoList {
         scheduleText:
           todo.scheduledDate === null ? '' : scheduleLabel(todo.scheduledDate),
         isLate: !todo.completed && isOverdueDate(todo.scheduledDate),
+        isToday: todo.scheduledDate === today,
         stagger: Math.min(index, 5),
       };
     });

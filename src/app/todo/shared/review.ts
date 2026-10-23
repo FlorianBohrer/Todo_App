@@ -46,7 +46,8 @@ function completionDay(todo: Todo): string | null {
 }
 
 /**
- * Die Woche vor der laufenden. null, wenn es gar keine Erledigungszeiten gibt.
+ * Die Woche vor der laufenden. null, wenn es gar keine Erledigungszeiten gibt
+ * — oder erst welche ab einem Tag nach dieser Woche.
  *
  * Bewusst die vergangene KALENDERwoche und nicht „die letzten sieben Tage":
  * ein Rückblick braucht eine Grenze, die nicht jeden Tag woanders liegt,
@@ -84,6 +85,11 @@ export function weeklyReview(todos: readonly Todo[], today = todayISO()): Weekly
     .map(completionDay)
     .filter((day): day is string => day !== null)
     .sort()[0];
+
+  // Beginnt die Aufzeichnung erst nach dieser Woche, weiss niemand, was in
+  // ihr fertig wurde. „Nothing was finished" samt Fussnote „gezählt erst ab
+  // dem 20." widersprach sich in einem Atemzug — dann lieber kein Rückblick.
+  if (earliest !== undefined && earliest > to) return null;
 
   return {
     from,

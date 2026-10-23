@@ -1,6 +1,7 @@
 <!-- Auf dem Telefon derselbe Seitenrand wie Liste und Plaene; mit px-1
-     lagen die Tageskarten 4px an der Bildschirmkante. -->
-<section class="mx-auto w-full max-w-7xl px-3 sm:px-1">
+     lagen die Tageskarten 4px an der Bildschirmkante. Am Rechner galt das
+     noch: bis 1280px klebten Montag und Sonntag am Fensterrand. -->
+<section class="mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-8">
 
   <!-- Wochen-Kopf: wo bin ich, wie steht die Woche, wie komme ich zurück -->
   <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -145,13 +146,17 @@
             @for (todo of day.todos; track todo.id) {
               <div
                 cdkDrag [cdkDragData]="todo"
-                class="week-card group relative flex items-start gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
-                [class]="borderClass(todo)"
+                class="week-card group relative flex items-start gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-sm text-text"
                 [class.opacity-60]="todo.completed">
+                <!-- Die Ordnerfarbe steht im Haken-Kreis, wie in Erinnerungen
+                     auf dem iPhone. Vorher war es ein farbiger Streifen links
+                     an jeder Karte: sieben Spalten voller bunter Kanten, und
+                     der Kreis daneben sagte nichts. Jetzt trägt das eine
+                     Element, das man ohnehin anschaut, beides. -->
                 <button
                   type="button"
-                  class="week-check mt-0.5 h-4 w-4 flex-none rounded-full border-2 transition"
-                  [class]="todo.completed ? 'border-emerald-400 bg-emerald-400' : 'border-subtle hover:border-text'"
+                  class="week-check mt-0.5 h-4 w-4 flex-none rounded-full border-2 transition hover:opacity-80"
+                  [class]="todo.completed ? 'border-emerald-400 bg-emerald-400' : borderClass(todo)"
                   (click)="toggle(todo.id)"
                   [attr.aria-label]="todo.completed ? 'Mark as active' : 'Mark as done'"></button>
                 <!-- Auf drei Zeilen begrenzt. Eine Wochenkarte muss man
@@ -262,9 +267,9 @@
           @for (todo of backlog(); track todo.id) {
             <div
               cdkDrag [cdkDragData]="todo"
-              class="week-card flex min-w-0 max-w-full items-center gap-2 rounded-lg border-l-4 bg-panel2 px-2 py-1.5 text-sm text-text"
-              [class]="borderClass(todo)"
+              class="week-card flex min-w-0 max-w-full items-center gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-sm text-text"
               [class.opacity-60]="todo.completed">
+              <span class="h-2 w-2 flex-none rounded-full bg-current" [class]="folderDot(todo)" aria-hidden="true"></span>
               <span class="min-w-0 leading-snug [overflow-wrap:anywhere]" [class.line-through]="todo.completed">
                 @if (badge(todo.title); as level) {
                   <app-token-chip class="week-badge mr-1 align-[-0.2em]" [token]="level" size="sm" />

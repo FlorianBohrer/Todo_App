@@ -119,11 +119,17 @@ describe('weeklyReview', () => {
   it('reports an empty week as empty, not as missing', () => {
     // Zeitpunkte liegen vor, in dieser Woche wurde nur nichts fertig. Das ist
     // eine Aussage, und zwar eine andere als "wir wissen es nicht".
-    const review = weeklyReview([done('2026-10-08')], TODAY);
+    const review = weeklyReview([done('2026-09-20'), done('2026-10-08')], TODAY);
 
     expect(review).not.toBeNull();
     expect(review?.total).toBe(0);
     expect(review?.groups).toEqual([]);
+  });
+
+  it('has nothing to say about a week that ended before the record began', () => {
+    // Erste Erledigungszeit nach der Woche: ob darin etwas fertig wurde, ist
+    // unbekannt. „Nichts erledigt" wäre eine Behauptung ohne Grundlage.
+    expect(weeklyReview([done('2026-10-08')], TODAY)).toBeNull();
   });
 
   it('a Monday looks back at the week that just ended', () => {

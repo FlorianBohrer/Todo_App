@@ -1059,16 +1059,15 @@
   cursor: pointer;
   transition:
     border-color 160ms ease-out,
-    background-color 160ms ease-out,
-    box-shadow 200ms ease-out,
-    transform 200ms var(--spring-settle, ease-out);
+    background-color 160ms ease-out;
 }
 
 
+// Kein Anheben, kein Schatten: zwölf Kacheln, die beim Drüberfahren
+// hochspringen, sind Bewegung ohne Nachricht. Rand und Fläche reichen.
 .plan-card:hover {
   border-color: var(--color-line-strong);
-  box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.55);
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--color-bg2) 92%, white);
 }
 
 

@@ -8,35 +8,17 @@
  * (kein `bg-${color}-600` zusammenbauen).
  */
 export type FolderColorVariant =
-  | 'bg'       // Kachel-/Karten-Hintergrund
   | 'text'     // Text in Folder-Farbe
   | 'iconBox'  // Hintergrund des Icon-Quadrats
-  | 'tile'     // Gradient-Icon-Kachel (glasige Optik)
-  | 'bar'      // Füllung des Fortschrittsbalkens
   | 'dot'      // Farbpunkt
   | 'border';  // Rahmen
 
+// Getönte Flächen ('bg'), Verlaufskacheln ('tile') und Balkenfarben ('bar')
+// sind hier entfallen: die Ordnerfarbe steht nur noch an Punkt, Ring und
+// Chip. Eine getönte Karte je Ordner machte aus jeder Ordnerliste eine
+// Farbtafel.
+
 const CLASSES: Record<FolderColorVariant, Record<string, string>> = {
-  tile: {
-    violet:  'bg-gradient-to-br from-violet-500/45 to-violet-700/10 ring-violet-400/20',
-    emerald: 'bg-gradient-to-br from-emerald-500/45 to-emerald-700/10 ring-emerald-400/20',
-    rose:    'bg-gradient-to-br from-rose-500/45 to-rose-700/10 ring-rose-400/20',
-    orange:  'bg-gradient-to-br from-orange-500/45 to-orange-700/10 ring-orange-400/20',
-    amber:   'bg-gradient-to-br from-amber-500/45 to-amber-700/10 ring-amber-400/20',
-    teal:    'bg-gradient-to-br from-teal-500/45 to-teal-700/10 ring-teal-400/20',
-    sky:     'bg-gradient-to-br from-sky-500/45 to-sky-700/10 ring-sky-400/20',
-    fuchsia: 'bg-gradient-to-br from-fuchsia-500/45 to-fuchsia-700/10 ring-fuchsia-400/20',
-  },
-  bg: {
-    violet:  'bg-violet-600/15',
-    emerald: 'bg-emerald-600/15',
-    rose:    'bg-rose-600/15',
-    orange:  'bg-orange-600/15',
-    amber:   'bg-amber-600/15',
-    teal:    'bg-teal-600/15',
-    sky:     'bg-sky-600/15',
-    fuchsia: 'bg-fuchsia-600/15',
-  },
   text: {
     violet:  'text-violet-300',
     emerald: 'text-emerald-300',
@@ -56,16 +38,6 @@ const CLASSES: Record<FolderColorVariant, Record<string, string>> = {
     teal:    'bg-teal-500/25',
     sky:     'bg-sky-500/25',
     fuchsia: 'bg-fuchsia-500/25',
-  },
-  bar: {
-    violet:  'bg-violet-400',
-    emerald: 'bg-emerald-400',
-    rose:    'bg-rose-400',
-    orange:  'bg-orange-400',
-    amber:   'bg-amber-400',
-    teal:    'bg-teal-400',
-    sky:     'bg-sky-400',
-    fuchsia: 'bg-fuchsia-400',
   },
   dot: {
     violet:  'text-violet-400',
@@ -90,11 +62,8 @@ const CLASSES: Record<FolderColorVariant, Record<string, string>> = {
 };
 
 const FALLBACK: Record<FolderColorVariant, string> = {
-  bg:      'bg-highlight11',
   text:    'text-zinc-300',
   iconBox: 'bg-zinc-500/25',
-  tile:    'bg-gradient-to-br from-zinc-500/40 to-zinc-700/10 ring-zinc-400/20',
-  bar:     'bg-zinc-400',
   dot:     'text-zinc-400',
   border:  'border-zinc-600',
 };

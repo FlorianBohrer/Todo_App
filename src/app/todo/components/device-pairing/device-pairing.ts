@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   effect,
   inject,
@@ -20,9 +21,14 @@ import { DeviceService, PairedDevice } from '../../services/device.service';
   selector: 'app-device-pairing',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './device-pairing.html',
+  host: {
+    '(document:keydown.escape)': 'dismiss()',
+    '(document:pointerdown)': 'dismissOutside($event)',
+  },
 })
 export class DevicePairing {
   private readonly devices = inject(DeviceService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly open = signal(false);
@@ -80,6 +86,22 @@ export class DevicePairing {
     } else {
       this.devices.clearPairingCode();
     }
+  }
+
+  /**
+   * Esc und ein Klick daneben schliessen, wie bei jedem anderen Popover der
+   * App. Vorher blieb dieses offen, bis man genau den Knopf noch einmal traf
+   * — und lag beim Wechsel in die Woche über der Wochenleiste.
+   *
+   * Ein offener Code bleibt dabei stehen: wer ihn gerade abtippt und kurz
+   * daneben klickt, soll beim Wiederöffnen nicht von vorn anfangen.
+   */
+  protected dismiss(): void {
+    if (this.open()) this.open.set(false);
+  }
+
+  protected dismissOutside(event: PointerEvent): void {
+    if (this.open() && !this.host.nativeElement.contains(event.target as Node)) this.dismiss();
   }
 
   protected createCode(): Promise<void> {

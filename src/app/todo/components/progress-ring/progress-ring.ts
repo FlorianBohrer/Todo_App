@@ -66,7 +66,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
         fill="none"
         stroke="currentColor"
         [attr.stroke-width]="thickness()"
-        opacity="0.18"
+        [attr.opacity]="trackOpacity()"
       ></circle>
 
       <!-- Bei null Prozent gar kein Bogen: eine runde Kappe auf einer
@@ -131,6 +131,13 @@ export class ProgressRing {
    * findet (`.folder-progress`) — sie lag vorher auf dem Balken.
    */
   readonly arcClass = input('');
+
+  /**
+   * Wie deutlich die Spur steht. Auf einer neutralen Kachel trägt der Ring
+   * die Farbe des Ordners allein — dort darf die Spur kräftiger sein, sonst
+   * ist ein Ordner bei null Prozent farblos.
+   */
+  readonly trackOpacity = input(0.18);
 
   /**
    * Bei 100 % einen Haken in die Mitte setzen.

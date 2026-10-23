@@ -133,6 +133,26 @@ export class ShortcutsOverlay {
     },
   ];
 
+  /**
+   * Beides in einer Liste, je Bereich einmal. Vorher standen die festen
+   * Kürzel in einem zweiten Block darunter — mit denselben Überschriften:
+   * „Anywhere" kam zweimal vor, „List" auch, und wer Esc suchte, fand es
+   * nicht dort, wo die anderen „Anywhere"-Kürzel standen.
+   */
+  protected readonly sections = computed(() => {
+    const fixedByTitle = new Map(this.fixed.map((group) => [group.title, group.items]));
+    const merged = this.editable().map((group) => ({
+      title: group.title,
+      editable: group.items,
+      fixed: fixedByTitle.get(group.title) ?? [],
+    }));
+    const seen = new Set(merged.map((section) => section.title));
+    for (const group of this.fixed) {
+      if (!seen.has(group.title)) merged.push({ title: group.title, editable: [], fixed: group.items });
+    }
+    return merged;
+  });
+
   toggle() {
     this.open.update((o) => !o);
     this.stopRecording();

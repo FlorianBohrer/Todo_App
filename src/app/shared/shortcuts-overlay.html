@@ -22,12 +22,15 @@
       }
 
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <!-- Änderbar: jede Zeile trägt ihre eigene Taste zum Neubelegen. -->
-        @for (group of editable(); track group.title) {
-          <section class="mb-5">
-            <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">{{ group.title }}</h3>
+        <!-- Änderbar: jede Zeile trägt ihre eigene Taste zum Neubelegen.
+             Fest: „/" und „[[" sind keine Tastenkürzel, sondern getippte
+             Zeichen mit einer Bedeutung im Text — sie stehen im selben
+             Bereich, nur ohne Knopf. -->
+        @for (section of sections(); track section.title) {
+          <section class="mb-5 last:mb-0">
+            <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">{{ section.title }}</h3>
             <ul class="space-y-0.5">
-              @for (item of group.items; track item.action) {
+              @for (item of section.editable; track item.action) {
                 <li class="group/row flex items-center justify-between gap-3 rounded-lg px-1 py-1 transition hover:bg-fill">
                   <span class="min-w-0 flex-1 truncate text-sm text-muted">{{ item.label }}</span>
 
@@ -55,32 +58,19 @@
                   }
                 </li>
               }
+              @for (item of section.fixed; track item.description) {
+                <li class="flex items-center justify-between gap-3 px-1 py-1">
+                  <span class="min-w-0 flex-1 text-sm text-muted">{{ item.description }}</span>
+                  <span class="flex flex-none gap-1 px-1">
+                    @for (key of item.keys; track key) {
+                      <kbd class="rounded-lg border border-line px-1.5 py-0.5 font-mono text-2xs text-muted">{{ key }}</kbd>
+                    }
+                  </span>
+                </li>
+              }
             </ul>
           </section>
         }
-
-        <!-- Fest: „/" und „[[" sind keine Tastenkürzel, sondern getippte
-             Zeichen mit einer Bedeutung im Text. Sie umzubelegen hiesse, die
-             Syntax zu ändern, nicht eine Taste. -->
-        <div class="grid gap-5 border-t border-line pt-4 sm:grid-cols-2">
-          @for (group of fixed; track group.title) {
-            <section>
-              <h3 class="mb-2 text-xs font-medium uppercase tracking-wide text-subtle">{{ group.title }}</h3>
-              <ul class="space-y-1.5">
-                @for (item of group.items; track item.description) {
-                  <li class="flex items-baseline justify-between gap-3">
-                    <span class="text-sm text-muted">{{ item.description }}</span>
-                    <span class="flex flex-none gap-1">
-                      @for (key of item.keys; track key) {
-                        <kbd class="rounded-lg border border-line-strong bg-bg3 px-1.5 py-0.5 font-mono text-2xs text-text">{{ key }}</kbd>
-                      }
-                    </span>
-                  </li>
-                }
-              </ul>
-            </section>
-          }
-        </div>
       </div>
 
       <div class="mt-4 flex items-center gap-3 border-t border-line pt-3">
