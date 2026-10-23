@@ -67,6 +67,9 @@ import {
   LayoutTemplate,
   Maximize2,
   X,
+  MoreHorizontal,
+  ArrowUpRight,
+  ArrowDownUp,
 } from 'lucide-angular';
 import {
   PLAN_TEMPLATES,
@@ -104,6 +107,7 @@ import { DiagramKind, diagramKind } from '../diagram-theme';
 import { DIAGRAM_SNIPPETS, DiagramSnippet, diagramDocs, indentLines, insertSnippet } from '../diagram-snippets';
 import { cellChip } from '../table-cells';
 import { editedLabel, planSummary } from '../plan-summary';
+import { copyBlocks, copyTitle } from '../plan-copy';
 import {
   neighbourAfterRemoval,
   rangeBetween,
@@ -229,6 +233,33 @@ const DIAGRAM_TEMPLATE = `flowchart TD
   spike --> build[Build]
   build --> demo[Demo]`;
 
+const SORT_KEY = 'plans.overview-sort';
+
+function readSort(): 'custom' | 'recent' {
+  try {
+    return localStorage.getItem(SORT_KEY) === 'recent' ? 'recent' : 'custom';
+  } catch {
+    return 'custom';
+  }
+}
+
+/** Wie ein Plan heisst, solange man ihm keinen Namen gegeben hat. */
+const UNTITLED = 'Untitled plan';
+
+/**
+ * Etwas mit einem Element tun, sobald es im Dokument steht. Angular fasst
+ * Ereignisse zusammen und zeichnet erst im naechsten Frame (eventCoalescing)
+ * — ein einzelnes requestAnimationFrame kam dem manchmal zuvor und fand die
+ * eben geoeffnete Zelle noch nicht. Gesucht wird darum ein paar Frames lang.
+ */
+function whenPresent(id: string, act: (el: HTMLElement) => void, frames = 6): void {
+  requestAnimationFrame(() => {
+    const el = document.getElementById(id);
+    if (el) act(el);
+    else if (frames > 1) whenPresent(id, act, frames - 1);
+  });
+}
+
 @Component({
   selector: 'app-plans-view',
   imports: [
@@ -331,6 +362,9 @@ export class PlansView {
   readonly TableIcon = TableIcon;
   readonly DiagramIcon = Workflow;
   readonly ExpandIcon = Maximize2;
+  readonly MoreIcon = MoreHorizontal;
+  readonly OpenIcon = ArrowUpRight;
+  readonly SortIcon = ArrowDownUp;
   readonly CloseIcon = X;
   readonly SectionIcon = Layers;
   readonly H1Icon = Heading1;
@@ -781,16 +815,11 @@ export class PlansView {
     try {
       const plan = await this.planService.importPlan(
         template.title,
-        null,
+        this.overviewTarget(),
         templateContent(kind, () => this.newId()),
       );
+      this.focusTitleOnOpen = 'end';
       this.open(plan.id);
-      requestAnimationFrame(() => {
-        const title = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Plan title"]');
-        if (!title) return;
-        title.focus();
-        title.setSelectionRange(title.value.length, title.value.length);
-      });
     } catch {
       this.toast.error('Could not create plan');
     }
@@ -1281,7 +1310,7 @@ export class PlansView {
     const query = this.overviewQuery().trim().toLowerCase();
     const folder = this.overviewFolder();
 
-    return this.plans().filter((plan) => {
+    const found = this.plans().filter((plan) => {
       if (folder === this.NO_FOLDER) {
         if (plan.categoryId !== null) return false;
       } else if (folder !== this.ALL_FOLDERS && plan.categoryId !== folder) {
@@ -1290,7 +1319,68 @@ export class PlansView {
 
       return !query || this.haystack(plan).includes(query);
     });
+
+    return this.overviewSort() === 'recent'
+      ? [...found].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+      : found;
   });
+
+  /** Eigene Reihenfolge (ziehen) oder zuletzt bearbeitet zuerst. */
+  protected readonly overviewSort = signal<'custom' | 'recent'>(readSort());
+
+  setOverviewSort(mode: string) {
+    const sort = mode === 'recent' ? 'recent' : 'custom';
+    this.overviewSort.set(sort);
+    try {
+      localStorage.setItem(SORT_KEY, sort);
+    } catch {
+      // Ohne Speicher gilt die Wahl eben nur bis zum Neuladen.
+    }
+  }
+
+  // ---- Kachelmenue ----
+
+  /** Plan, dessen Menue an der Kachel offen ist. */
+  protected readonly cardMenuFor = signal<string | null>(null);
+
+  toggleCardMenu(id: string, event: Event) {
+    event.stopPropagation();
+    this.cardMenuFor.update((open) => (open === id ? null : id));
+  }
+
+  closeCardMenu() {
+    this.cardMenuFor.set(null);
+  }
+
+  /** Eine Kopie mit neuen Kennungen, ohne Verknuepfungen zu Todos (plan-copy.ts). */
+  async duplicatePlan(plan: Plan) {
+    this.closeCardMenu();
+    try {
+      await this.planService.importPlan(
+        copyTitle(plan.title, this.plans().map((p) => p.title)),
+        plan.categoryId,
+        copyBlocks(plan.content, () => this.newId()),
+      );
+      this.toast.success('Plan duplicated');
+    } catch {
+      this.toast.error('Could not duplicate plan');
+    }
+  }
+
+  movePlan(plan: Plan, folderId: string | null) {
+    this.closeCardMenu();
+    this.setFolder(plan.id, folderId ?? '');
+  }
+
+  exportFromCard(plan: Plan) {
+    this.closeCardMenu();
+    this.exportOne(plan);
+  }
+
+  deleteFromCard(plan: Plan, event: Event) {
+    this.closeCardMenu();
+    this.deletePlan(plan.id, event);
+  }
 
   /**
    * Die Folder, auf die sich filtern lässt — nur solche mit Plänen.
@@ -2604,17 +2694,80 @@ export class PlansView {
     // Das Feld entsteht erst im naechsten Durchlauf; vorher gibt es nichts zu
     // fokussieren. Der Cursor landet am Ende, nicht am Anfang: man will
     // weiterschreiben, nicht davor.
-    requestAnimationFrame(() => {
-      const el = document.getElementById(
-        this.cellId(blockId, row, col),
-      ) as HTMLInputElement | null;
-      el?.focus();
-      el?.setSelectionRange(el.value.length, el.value.length);
+    whenPresent(this.cellId(blockId, row, col), (el) => {
+      if (!(el instanceof HTMLInputElement)) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
     });
   }
 
-  stopCellEdit() {
+  /**
+   * Bearbeiten beenden. Mit Zelle nur, wenn genau diese noch bearbeitet wird:
+   * der blur der alten Zelle kommt, wenn Tab schon die naechste geoeffnet hat
+   * — ohne die Pruefung schloesse er sie gleich wieder.
+   */
+  stopCellEdit(blockId?: string, row?: number, col?: number) {
+    if (blockId !== undefined && !this.isEditingCell(blockId, row ?? -2, col ?? -2)) return;
     this.editingCell.set(null);
+  }
+
+  /**
+   * Tastatur in einer Zelle, wie in jeder Tabellenkalkulation. Vorher beendete
+   * Tab das Bearbeiten (man musste in der naechsten Zelle erst Enter druecken),
+   * Enter liess den Fokus ins Leere fallen, und Tab in der letzten Zelle
+   * sprang auf „Delete row".
+   *
+   * Tab / Umschalt+Tab: naechste / vorige Zelle, am Zeilenende in die naechste
+   * Zeile; nach der letzten Zelle entsteht eine neue Zeile. Enter und ↓: eine
+   * Zeile tiefer, ↑ eine hoeher (bis in den Kopf). Esc: fertig, der Fokus
+   * bleibt auf der Zelle.
+   */
+  onCellKeydown(event: KeyboardEvent, blockId: string, row: number, col: number) {
+    if (event.isComposing) return;
+    const plan = this.selected();
+    const table = plan && this.findById(plan.content, blockId);
+    if (!table || table.type !== 'table') return;
+    const cols = table.columns.length;
+    const rows = table.rows.length;
+
+    switch (event.key) {
+      case 'Tab': {
+        event.preventDefault();
+        let r = row;
+        let c = col + (event.shiftKey ? -1 : 1);
+        if (c >= cols) {
+          c = 0;
+          r++;
+        } else if (c < 0) {
+          c = cols - 1;
+          r--;
+        }
+        if (r < -1) return;
+        if (r >= rows) this.addRow(blockId);
+        this.startCellEdit(blockId, r, c);
+        return;
+      }
+      case 'Enter':
+      case 'ArrowDown':
+        event.preventDefault();
+        if (row + 1 < rows) this.startCellEdit(blockId, row + 1, col);
+        else if (event.key === 'Enter') this.leaveCell(blockId, row, col);
+        return;
+      case 'ArrowUp':
+        event.preventDefault();
+        if (row > -1) this.startCellEdit(blockId, row - 1, col);
+        return;
+      case 'Escape':
+        event.preventDefault();
+        this.leaveCell(blockId, row, col);
+        return;
+    }
+  }
+
+  /** Bearbeiten beenden, den Fokus aber auf der Zelle lassen. */
+  private leaveCell(blockId: string, row: number, col: number) {
+    this.editingCell.set(null);
+    whenPresent(`${this.cellId(blockId, row, col)}-view`, (el) => el.focus());
   }
 
   // ---- Diagramme ----
@@ -2911,6 +3064,20 @@ export class PlansView {
       });
     });
 
+    // Ein eben angelegter Plan: Titel markieren, sobald er dasteht.
+    effect(() => {
+      this.selected()?.id;
+      const field = this.titleField()?.nativeElement;
+      const how = this.focusTitleOnOpen;
+      if (!field || !how) return;
+      this.focusTitleOnOpen = null;
+      requestAnimationFrame(() => {
+        field.focus();
+        if (how === 'select') field.select();
+        else field.setSelectionRange(field.value.length, field.value.length);
+      });
+    });
+
     // Den grossen Titel beobachten: sobald er unter der Leiste verschwindet,
     // zeigt sie ihn klein. Der obere Rand des Beobachtungsfensters liegt
     // darum so tief wie Leiste und Dokumentkopf zusammen.
@@ -2990,7 +3157,59 @@ export class PlansView {
   }
 
   // ---- Liste ----
-  newPlan() { this.planService.createPlan('Untitled plan'); }
+  /**
+   * Ein neuer Plan oeffnet mit dem Cursor im Titel, der Platzhalter markiert:
+   * man tippt einfach los und ueberschreibt ihn. Vorher stand der Cursor
+   * nirgends, und „Untitled plan" musste man erst anklicken, markieren und
+   * loeschen. Ist die Uebersicht auf einen Folder gefiltert, landet der Plan
+   * dort — dort hat man ihn ja gerade gesucht.
+   */
+  newPlan() {
+    this.focusTitleOnOpen = 'select';
+    this.planService.createPlan(UNTITLED, this.overviewTarget());
+  }
+
+  /** Die Bloecke, mit denen ein leerer Plan meistens anfaengt. */
+  protected readonly quickStarts: readonly { kind: SlashKind; label: string; icon: LucideIconData }[] = [
+    { kind: 'todo', label: 'To-do list', icon: this.TodoIcon },
+    { kind: 'heading1', label: 'Heading', icon: this.H1Icon },
+    { kind: 'table', label: 'Table', icon: this.TableIcon },
+    { kind: 'diagram', label: 'Diagram', icon: this.DiagramIcon },
+  ];
+
+  /** Der Folder, auf den die Uebersicht gerade gefiltert ist — oder keiner. */
+  private overviewTarget(): string | null {
+    const folder = this.overviewFolder();
+    return folder !== this.ALL_FOLDERS && folder !== this.NO_FOLDER ? folder : null;
+  }
+
+  /**
+   * Beim naechsten Oeffnen in den Titel: markiert bei einem leeren Plan (man
+   * ueberschreibt den Platzhalter), am Ende bei einer Vorlage („System
+   * design: " will zuerst einen Namen).
+   */
+  private focusTitleOnOpen: 'select' | 'end' | null = null;
+
+  /**
+   * Eine Vorlage in den offenen, leeren Plan setzen — statt einen zweiten
+   * anzulegen. Wer „New plan" gedrueckt hat und dann merkt, dass es ein
+   * System Design wird, soll nicht von vorn anfangen muessen.
+   */
+  applyTemplate(kind: PlanTemplate) {
+    const plan = this.selected();
+    const template = PLAN_TEMPLATES.find((t) => t.kind === kind);
+    if (!plan || !template || plan.content.length) return;
+
+    this.updateContent(() => templateContent(kind, () => this.newId()));
+    if (plan.title.trim() && plan.title.trim() !== UNTITLED) return;
+
+    this.planService.patchPlan(plan.id, { title: template.title });
+    const field = this.titleField()?.nativeElement;
+    if (!field) return;
+    field.value = template.title;
+    field.focus();
+    field.setSelectionRange(field.value.length, field.value.length);
+  }
   open(id: string) { this.planService.select(id); }
   back() { this.planService.select(null); }
   deletePlan(id: string, event: Event) {
@@ -3008,9 +3227,27 @@ export class PlansView {
   }
 
   // ---- Editor: Kopf ----
+  /**
+   * Beim Tippen roh speichern, getrimmt wird erst beim Verlassen. Vorher
+   * wurde bei jedem Tastendruck getrimmt: liefen zwei Tastendruecke vor der
+   * naechsten Aktualisierung ein (Angular fasst Ereignisse zusammen), schrieb
+   * sie den getrimmten Titel zurueck ins Feld — und das eben getippte
+   * Leerzeichen war weg („neu undmehr").
+   */
   setTitle(id: string, value: string) {
-    const t = value.trim();
-    if (t) this.planService.patchPlan(id, { title: t });
+    if (value.trim()) this.planService.patchPlan(id, { title: value });
+  }
+
+  /** Beim Verlassen: Raender weg; ein leeres Feld bekommt den alten Titel zurueck. */
+  commitTitle(id: string, field: HTMLTextAreaElement) {
+    const title = this.planService.plans().find((p) => p.id === id)?.title ?? '';
+    const trimmed = field.value.trim();
+    if (!trimmed) {
+      field.value = title.trim();
+      field.dispatchEvent(new Event('input'));
+      return;
+    }
+    if (trimmed !== title) this.planService.patchPlan(id, { title: trimmed });
   }
 
   /** Enter im Titel: im ersten Block weiterschreiben — oder ihn anlegen. */
@@ -3235,14 +3472,19 @@ export class PlansView {
       ),
     });
   }
+  /** Wie beim Plantitel: roh beim Tippen, aufgeraeumt beim Verlassen. */
   setGroupTitle(groupId: string, title: string) {
     this.updateContent(
-      (b) =>
-        this.mapById(b, groupId, (x) =>
-          x.type === 'group' ? { ...x, title: title.trim() || 'Toggle' } : x,
-        ),
+      (b) => this.mapById(b, groupId, (x) => (x.type === 'group' ? { ...x, title } : x)),
       `group:${groupId}`,
     );
+  }
+
+  commitGroupTitle(groupId: string, field: HTMLInputElement) {
+    const tidy = field.value.trim() || 'Toggle';
+    if (tidy === field.value) return;
+    field.value = tidy;
+    this.setGroupTitle(groupId, tidy);
   }
   /** Den ersten Absatz in einen leeren Toggle setzen; alles Weitere per „/". */
   addToGroup(groupId: string) {

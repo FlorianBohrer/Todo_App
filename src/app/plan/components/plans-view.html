@@ -202,6 +202,7 @@
         class="doc-title"
         [value]="plan.title"
         (input)="setTitle(plan.id, $any($event.target).value)"
+        (blur)="commitTitle(plan.id, titleField)"
         (keydown.enter)="$event.preventDefault(); continueFromTitle()"
         placeholder="Untitled"
         aria-label="Plan title"></textarea>
@@ -260,12 +261,37 @@
 
     <!-- Leerer Plan braucht einen eigenen Einstieg: ohne Block gibt es kein
          „+" in der Randspalte, und die Add-Leiste ist am Zeigergerät aus. -->
+    <!-- Ein leerer Plan zeigt, womit man anfangen kann: schreiben, oder gleich
+         mit dem Block, um den es geht — und die Vorlagen, die in DIESEN Plan
+         wandern. Vorher stand nur „Press '/' for commands…", und wer erst
+         nach „New plan" merkte, dass es ein System Design wird, musste einen
+         zweiten Plan anlegen. -->
     @if (!plan.content.length) {
-      <button type="button"
-        class="w-full cursor-text rounded-lg px-2 py-2 text-left text-prose text-subtle transition hover:bg-fill"
-        (click)="startFirstBlock()">
-        Press '/' for commands…
-      </button>
+      <div class="empty-start">
+        <button type="button" class="empty-start-write" (click)="startFirstBlock()">
+          Start writing, or press „/" for blocks…
+        </button>
+
+        <div class="empty-start-row">
+          <span class="empty-start-label">Start with</span>
+          @for (option of quickStarts; track option.kind) {
+            <button type="button" class="empty-start-chip" (click)="addFromMenu(option.kind)">
+              <lucide-icon [img]="option.icon" class="h-3.5 w-3.5"></lucide-icon>
+              {{ option.label }}
+            </button>
+          }
+        </div>
+
+        <div class="empty-start-row">
+          <span class="empty-start-label">Or a template</span>
+          @for (template of planTemplates; track template.kind) {
+            <button type="button" class="empty-start-chip" (click)="applyTemplate(template.kind)" [title]="template.hint">
+              <lucide-icon [img]="templateIcon(template.kind)" class="h-3.5 w-3.5"></lucide-icon>
+              {{ template.label }}
+            </button>
+          }
+        </div>
+      </div>
     }
 
     <!-- Die Flaeche unter dem letzten Block schreibt weiter (Notion). Ohne sie
@@ -580,7 +606,8 @@
          Verbindungen, und ein halber Graph zeigt Inseln, die keine sind. -->
     @if (overviewMode() === 'list' && !loading() && plans().length > 0) {
       <div class="mb-4 flex flex-col gap-3">
-        <div class="flex h-10 w-full items-center gap-2.5 rounded-lg border border-line bg-bg2 px-3
+        <div class="flex items-center gap-2">
+        <div class="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-line bg-bg2 px-3
                     transition focus-within:border-line-strong">
           <lucide-icon [img]="SearchIcon" class="h-4 w-4 flex-none text-subtle" aria-hidden="true"></lucide-icon>
           <input
@@ -599,6 +626,18 @@
               (click)="overviewQuery.set(''); planSearch.value = ''"
               aria-label="Clear search">✕</button>
           }
+        </div>
+
+        <!-- Reihenfolge: die eigene (ziehen) oder zuletzt bearbeitet zuerst
+             — mit vielen Plaenen sucht man fast immer den, an dem man gestern
+             war. Die Wahl merkt sich der Browser. -->
+        <label class="overview-sort">
+          <lucide-icon [img]="SortIcon" class="h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+          <select (change)="setOverviewSort($any($event.target).value)" aria-label="Sort plans">
+            <option value="custom" [selected]="overviewSort() === 'custom'">Custom order</option>
+            <option value="recent" [selected]="overviewSort() === 'recent'">Last edited</option>
+          </select>
+        </label>
         </div>
 
         @if (folderFilters().length > 0) {
@@ -656,6 +695,8 @@
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2"
            cdkDropList
            cdkDropListOrientation="mixed"
+           [cdkDropListDisabled]="overviewSort() === 'recent'"
+           [class.is-sorted]="overviewSort() === 'recent'"
            (cdkDropListDropped)="dropPlan($event)">
         @for (plan of visiblePlans(); track plan.id) {
           <!-- Die Kachel sagt, worum es geht und wie weit man ist: Titel
@@ -680,12 +721,61 @@
                   aria-label="Drag plan">
                   <lucide-icon [img]="GripIcon" class="h-4 w-4"></lucide-icon>
                 </button>
-                <span
-                  class="plan-card-delete grid h-7 w-7 flex-none place-items-center rounded-lg text-subtle opacity-0 transition hover:bg-fill-strong hover:text-danger group-hover:opacity-100"
-                  (click)="deletePlan(plan.id, $event)"
-                  role="button" aria-label="Delete plan">
-                  <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
-                </span>
+                <!-- Alles, was man mit einem Plan tun kann, ohne ihn zu oeffnen:
+                     kopieren, verschieben, herausschreiben, loeschen. Vorher
+                     gab es an der Kachel nur den Papierkorb. -->
+                <button type="button" cdkOverlayOrigin #cardMenuAnchor="cdkOverlayOrigin"
+                  class="plan-card-delete grid h-7 w-7 flex-none place-items-center rounded-lg text-subtle opacity-0 transition hover:bg-fill-strong hover:text-text group-hover:opacity-100"
+                  [class.opacity-100]="cardMenuFor() === plan.id"
+                  (click)="toggleCardMenu(plan.id, $event)"
+                  (keydown.enter)="$event.stopPropagation()"
+                  (keydown.space)="$event.stopPropagation()"
+                  [attr.aria-expanded]="cardMenuFor() === plan.id" aria-haspopup="menu"
+                  aria-label="Plan actions">
+                  <lucide-icon [img]="MoreIcon" class="h-4 w-4"></lucide-icon>
+                </button>
+                <ng-template
+                  cdkConnectedOverlay
+                  [cdkConnectedOverlayOrigin]="cardMenuAnchor"
+                  [cdkConnectedOverlayOpen]="cardMenuFor() === plan.id"
+                  [cdkConnectedOverlayPositions]="menuPositions"
+                  [cdkConnectedOverlayPush]="true"
+                  [cdkConnectedOverlayViewportMargin]="menuMargin"
+                  [cdkConnectedOverlayHasBackdrop]="true"
+                  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+                  (backdropClick)="closeCardMenu()"
+                  (detach)="closeCardMenu()"
+                  (overlayKeydown)="$event.key === 'Escape' && closeCardMenu()">
+                  <div role="menu" class="popover max-h-[70vh] w-56 overflow-y-auto px-1">
+                    <button role="menuitem" type="button" class="block-menu-item" (click)="closeCardMenu(); open(plan.id)">
+                      <lucide-icon [img]="OpenIcon" class="h-4 w-4"></lucide-icon> Open
+                    </button>
+                    <button role="menuitem" type="button" class="block-menu-item" (click)="duplicatePlan(plan)">
+                      <lucide-icon [img]="CopyIcon" class="h-4 w-4"></lucide-icon> Duplicate
+                    </button>
+                    <button role="menuitem" type="button" class="block-menu-item" (click)="exportFromCard(plan)">
+                      <lucide-icon [img]="ExportIcon" class="h-4 w-4"></lucide-icon> Export as Markdown
+                    </button>
+                    <p class="menu-section-label" role="presentation">Move to</p>
+                    <button role="menuitemradio" type="button" class="block-menu-item"
+                      [attr.aria-checked]="!plan.categoryId" (click)="movePlan(plan, null)">
+                      <span class="w-4 text-center text-subtle">{{ plan.categoryId ? '' : '✓' }}</span> Standalone
+                    </button>
+                    @for (label of labels(); track label.id) {
+                      <button role="menuitemradio" type="button" class="block-menu-item"
+                        [attr.aria-checked]="label.id === plan.categoryId" (click)="movePlan(plan, label.id)">
+                        <span class="w-4 text-center" [class]="label.id === plan.categoryId ? 'text-text' : dotClass(label.id)">
+                          {{ label.id === plan.categoryId ? '✓' : '●' }}
+                        </span>
+                        <span class="truncate">{{ label.name }}</span>
+                      </button>
+                    }
+                    <div class="my-1 border-t border-line"></div>
+                    <button role="menuitem" type="button" class="block-menu-item block-menu-item--danger" (click)="deleteFromCard(plan, $event)">
+                      <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon> Delete
+                    </button>
+                  </div>
+                </ng-template>
               </span>
             </div>
 
