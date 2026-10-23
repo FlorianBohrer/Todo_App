@@ -1,10 +1,11 @@
 <!-- Kein Kasten um diesen Block: er steht auf derselben Fläche wie die Liste
      darunter. Eine Begrüßung, die sich eine eigene Fläche nimmt, ist keine
-     ruhige. -->
+     ruhige. Aus demselben Grund kein farbiger Schlusspunkt mehr hinter
+     „Good morning": eine Verzierung, die nur nach Marke aussehen will. -->
 <section class="flex items-start justify-between gap-5 px-1 pt-1 pb-4" aria-label="Today">
   <div class="min-w-0 flex-1">
     <h2 class="text-2xl/[1.15] font-semibold tracking-[-0.02em] text-text sm:text-3xl/[1.1]">
-      {{ greeting() }}<span [class]="accentClass()">.</span>
+      {{ greeting() }}
     </h2>
 
     <p class="mt-1.5 text-sm/[1.55] tabular-nums" [class]="todayLineClass()">{{ todayLine() }}</p>

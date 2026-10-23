@@ -86,7 +86,7 @@
       <button class="mb-3 flex w-full items-center gap-3 rounded-xl border border-line
                bg-fill p-4 text-left transition hover:border-line-strong hover:bg-fill"
         [class.ring-2]="activeLabelId() === null"
-        [class.ring-emerald-500]="activeLabelId() === null"
+        [class.ring-highlight2]="activeLabelId() === null"
         (click)="select(null)">
         <span class="text-muted">●</span>
         <span class="font-semibold text-text">All</span>
@@ -167,11 +167,10 @@
           <div
             cdkDrag
             [cdkDragDisabled]="touchOnly() || isSearching() || editingId() === label.id"
-            class="group relative flex flex-wrap items-center gap-2 rounded-xl p-4 text-left
-                   cursor-pointer transition hover:scale-[1.02]"
-            [class]="bgClass(label.color)"
+            class="group relative flex flex-wrap items-center gap-2 rounded-xl border border-line bg-fill p-4
+                   text-left cursor-pointer transition hover:border-line-strong"
             [class.ring-2]="activeLabelId() === label.id"
-            [class.ring-emerald-500]="activeLabelId() === label.id"
+            [class.ring-highlight2]="activeLabelId() === label.id"
             (click)="onCardClick(label.id)">
 
             <!-- Drag-Griff: beim Suchen und auf Touch-Geraeten ausgeblendet -->
@@ -187,7 +186,12 @@
               </button>
             }
 
-            <!-- Farbpunkt ist reine Anzeige -->
+            <!-- Farbpunkt ist reine Anzeige — und die einzige Stelle, an der
+                 die Karte ihre Farbe zeigt. Getönte Fläche, farbiger Name und
+                 Punkt sagten dreimal dasselbe; acht Ordner in acht Tönen
+                 machten aus der Liste eine Farbtafel, in der kein Name mehr
+                 vorne stand. Vergrößern beim Überfahren fiel aus demselben
+                 Grund: Bewegung, die nichts mitteilt. -->
             <span class="flex-none text-lg leading-none" [class]="textClass(label.color)">●</span>
 
             @if (editingId() === label.id) {
@@ -213,7 +217,7 @@
                 @if (nameParts(label.name).prefix; as prefix) {
                   <span [class]="'folder-chip ' + chipClass(label.color)">{{ prefix }}</span>
                 }
-                <span [class]="'folder-name font-semibold ' + textClass(label.color)">
+                <span class="folder-name font-semibold text-text">
                   {{ nameParts(label.name).name }}
                 </span>
               </span>
@@ -369,7 +373,7 @@
         type="text"
         placeholder="New folder…"
         class="input h-11 w-full rounded-lg border border-line bg-bg2 px-3 text-text
-               focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:h-10 sm:flex-1"
+               focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:h-10 sm:flex-1"
         (keydown.enter)="$event.preventDefault(); add(newCat.value); newCat.value=''"
       />
       <div class="flex items-center justify-center gap-1 sm:justify-start sm:gap-1.5"

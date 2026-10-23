@@ -411,10 +411,6 @@ pickColor(id: string, color: string, event: Event) {
     this.labelService.toggleFavorite(id);
   }
 
-  bgClass(color: string): string {
-    return folderColorClass(color, 'bg');
-  }
-
   /** Gedaempfter Hintergrund fuer den Typ-Chip, in der Folder-Farbe. */
   chipClass(color: string): string {
     return (

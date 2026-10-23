@@ -13,7 +13,13 @@
          Zusammen waren das vier Dinge, die alle dasselbe sagten — dass es
          sich hier um eine anklickbare Kachel handelt — und eins, das der
          Balken schon sagte. Was bleibt, ist die Farbe des Ordners und sein
-         Fortschritt. Die Farbe bekommt dadurch mehr Bühne, nicht weniger. -->
+         Fortschritt.
+
+         Die Farbe steht jetzt nur noch im Ring. Sie war dreimal da — als
+         getönte Fläche, als Rand und als Schrift —, und fünf Kacheln in fünf
+         Tönen lasen sich wie ein Regenbogen über der Liste, lauter als die
+         Liste selbst. Die Schrift ist wieder Schrift; `currentColor` am Knopf
+         bleibt die Ordnerfarbe, damit Ring und Erfolgsring sie finden. -->
     <div
       class="grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2"
       [class]="tileCount() === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'">
@@ -22,7 +28,7 @@
       @if (favoriteProgress().total > 0) {
         <button
           type="button"
-          class="favorite-tile folder-card flex items-center gap-2.5 rounded-3xl border border-amber-500/25 bg-amber-500/10 p-3 text-left text-amber-200 transition duration-200 hover:border-amber-400/45 sm:gap-3 sm:p-4"
+          class="favorite-tile folder-card flex items-center gap-2.5 rounded-3xl border border-line bg-panel1 p-3 text-left text-amber-300 transition duration-200 hover:border-line-strong sm:gap-3 sm:p-4"
           [class.favorite-tile--wide]="tileCount() % 2 === 1"
           [class.ring-2]="favoritesActive()"
           [class.ring-highlight2]="favoritesActive()"
@@ -36,6 +42,7 @@
           <app-progress-ring
             class="flex-none"
             arcClass="folder-progress"
+            [trackOpacity]="0.3"
             [size]="40"
             [thickness]="4"
             [check]="false"
@@ -45,8 +52,8 @@
           </app-progress-ring>
 
           <span class="min-w-0 flex-1">
-            <span class="folder-name block font-semibold">Favorites</span>
-            <span class="mt-0.5 block whitespace-nowrap text-xs tabular-nums text-amber-200/75">
+            <span class="folder-name block font-semibold text-text">Favorites</span>
+            <span class="mt-0.5 block whitespace-nowrap text-xs tabular-nums text-subtle">
               {{ favoriteProgress().completed }} of {{ favoriteProgress().total }} done
             </span>
           </span>
@@ -56,8 +63,8 @@
       @for (label of favorites(); track label.id) {
         <button
           type="button"
-          class="folder-card flex items-center gap-2.5 rounded-3xl border border-line p-3 pr-6 text-left transition duration-200 hover:border-line-strong sm:gap-3 sm:p-4 sm:pr-7"
-          [class]="bgClass(label.color) + ' ' + textClass(label.color)"
+          class="folder-card flex items-center gap-2.5 rounded-3xl border border-line bg-panel1 p-3 pr-6 text-left transition duration-200 hover:border-line-strong sm:gap-3 sm:p-4 sm:pr-7"
+          [class]="textClass(label.color)"
           [class.ring-2]="activeLabelId() === label.id"
           [class.ring-highlight2]="activeLabelId() === label.id"
           [class.celebrate]="isCelebrating(label.id)"
@@ -70,6 +77,7 @@
           <app-progress-ring
             class="flex-none"
             arcClass="folder-progress"
+            [trackOpacity]="0.3"
             [size]="40"
             [thickness]="4"
             [completed]="progress(label.id).completed"
@@ -82,10 +90,10 @@
             @if (nameParts(label.name).prefix; as prefix) {
               <span [class]="'folder-chip ' + chipClass(label.color)">{{ prefix }}</span>
             }
-            <span class="folder-name block font-semibold">
+            <span class="folder-name block font-semibold text-text">
               {{ nameParts(label.name).name }}
             </span>
-            <span class="mt-0.5 block whitespace-nowrap text-xs tabular-nums opacity-70">
+            <span class="mt-0.5 block whitespace-nowrap text-xs tabular-nums text-subtle">
               {{ progress(label.id).completed }} of {{ progress(label.id).total }} done
             </span>
           </span>

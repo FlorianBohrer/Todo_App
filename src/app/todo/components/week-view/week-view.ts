@@ -335,4 +335,10 @@ export class WeekView {
   borderClass(todo: Todo): string {
     return this.labelService.borderClassFor(todo.labelIds[0] ?? null);
   }
+
+  /** Der Punkt vor einer Karte ohne Haken (Ungeplant) — Farbe des ersten Ordners. */
+  folderDot(todo: Todo): string {
+    const color = this.labelService.labelById(todo.labelIds[0] ?? null)?.color;
+    return color ? folderColorClass(color, 'dot') : 'text-zinc-500';
+  }
 }
