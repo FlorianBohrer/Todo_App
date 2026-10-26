@@ -1122,6 +1122,30 @@ select {
   );
 }
 
+/* Telefon, offener Plan: die App-Leiste rollt mit dem Inhalt weg, damit der
+   Kopf des Dokuments als einzige Leiste oben kleben kann (plans-view.scss).
+   Zwei klebende Leisten übereinander nahmen mit offener Tastatur fast den
+   halben Bildschirm. */
+@media (max-width: 639px) {
+  /* :not(.doc-head): der Dokumentkopf trägt dieselbe Flächenklasse. */
+  .app-main:has(.doc-head) .app-chrome:not(.doc-head) {
+    position: relative;
+  }
+}
+
+/* Sprungziele im Plan (Gliederung, Verweise): nicht unter den klebenden
+   Leisten landen. scrollIntoView setzt die Überschrift sonst genau an die
+   Oberkante — hinter die Leiste, wo man sie nicht sieht. */
+[id^="block-"] {
+  scroll-margin-top: calc(var(--chrome-h, 3.75rem) + 4.5rem);
+}
+
+@media (max-width: 639px) {
+  [id^="block-"] {
+    scroll-margin-top: calc(4.5rem + env(safe-area-inset-top));
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Ansichtswechsel Liste / Woche / Plaene
    --------------------------------------------------------------------------- */
