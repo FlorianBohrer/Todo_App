@@ -1,9 +1,13 @@
-import {ChangeDetectionStrategy,
+import {
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   HostListener,
+  Injector,
+  afterNextRender,
   computed,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 import { LucideAngularModule, Search, X } from 'lucide-angular';
@@ -16,6 +20,7 @@ import { TOKEN_DESCRIPTION, TOKEN_ICON, splitTitle, tokenClass } from '../../sha
   imports: [LucideAngularModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-filter.html',
+  styleUrl: './todo-filter.scss',
 })
 export class TodoFilter {
   private readonly todoService = inject(TodoService);
@@ -28,7 +33,33 @@ export class TodoFilter {
   protected readonly tokenDescription = TOKEN_DESCRIPTION;
   protected readonly tokenClass = tokenClass;
 
+  private readonly injector = inject(Injector);
   private readonly searchField = viewChild<ElementRef<HTMLInputElement>>('todoSearch');
+  private readonly searchToggle = viewChild<ElementRef<HTMLButtonElement>>('searchToggle');
+
+  /**
+   * Aufgezogen ist die Suche, solange man darin ist — und solange sie etwas
+   * filtert. Sonst schlösse ein Tipp daneben die Leiste, die Liste bliebe
+   * gefiltert, und nichts zeigte mehr, warum Aufgaben fehlen.
+   */
+  private readonly expanded = signal(false);
+  protected readonly searchOpen = computed(
+    () => this.expanded() || this.searchTerm() !== '' || this.searchToken() !== null,
+  );
+
+  /** Gesucht wird in der gewählten Lasche — das sagt der Platzhalter. */
+  protected readonly placeholder = computed(() => {
+    switch (this.filter()) {
+      case 'active':
+        return 'Search active todos…';
+      case 'completed':
+        return 'Search done todos…';
+      case 'favorites':
+        return 'Search favorites…';
+      default:
+        return 'Search all todos…';
+    }
+  });
 
   /**
    * Position der aktiven Lasche. Treibt die gleitende Pille im Template: vier
@@ -55,7 +86,43 @@ export class TodoFilter {
     if (isTypingTarget(event.target)) return;
 
     event.preventDefault();
-    this.searchField()?.nativeElement.focus();
+    this.openSearch();
+  }
+
+  /**
+   * Fokus noch im Klick, nicht nach dem Rendern: iOS öffnet die Tastatur nur
+   * innerhalb der Geste. Das Feld ist dafür auch zugeklappt im DOM, nur
+   * durchsichtig — ein verstecktes (visibility/display) nähme keinen Fokus.
+   */
+  openSearch(focus = true): void {
+    this.expanded.set(true);
+    if (focus) this.searchField()?.nativeElement.focus();
+  }
+
+  /** ✕ leert und klappt zu; der Fokus geht zurück auf die Lupe. */
+  closeSearch(field: HTMLInputElement): void {
+    this.clearSearch();
+    field.value = '';
+    this.expanded.set(false);
+    field.blur();
+    afterNextRender(() => this.searchToggle()?.nativeElement.focus({ preventScroll: true }), {
+      injector: this.injector,
+    });
+  }
+
+  /** Leer verlassen klappt zu; mit Suchbegriff bleibt die Leiste offen. */
+  onBlur(): void {
+    this.expanded.set(false);
+  }
+
+  /** Esc leert zuerst, das zweite Esc klappt zu. */
+  onEscape(field: HTMLInputElement): void {
+    if (this.searchTerm() || this.searchToken()) {
+      this.clearSearch();
+      field.value = '';
+      return;
+    }
+    this.closeSearch(field);
   }
 
   clearSearch(): void {

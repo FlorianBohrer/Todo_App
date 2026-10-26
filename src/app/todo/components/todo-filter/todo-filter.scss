@@ -1,0 +1,251 @@
+/* ---------------------------------------------------------------------------
+   Suche: eine Lupe, die zur Leiste aufgeht
+   ---------------------------------------------------------------------------
+
+   Zu ist sie ein Kreis rechts neben den Laschen, so hoch wie diese. Ein Tipp
+   zieht sie nach links über die ganze Zeile auf: die rechte Kante bleibt
+   stehen, die linke wandert, und die Lupe reist mit ihr an den Anfang der
+   Leiste. Dieselbe Fläche, die sich dehnt, statt einem Kreis, der
+   verschwindet, und einem Feld, das auftaucht. Man sieht, woher das Feld
+   kommt, und wohin es beim Schliessen zurückgeht.
+
+   Die Laschen darunter weichen zur Seite, als schöbe die Leiste sie weg:
+   sie stauchen sich zum linken Rand und verblassen. Text und ✕ kommen erst,
+   wenn die Leiste schon Platz hat; zu früh lägen sie gequetscht im Kreis.
+
+   Breite statt transform: scale würde Lupe und Text mitverzerren. Die Leiste
+   ist ein einzelnes kleines Element, das Layout dafür kostet nichts.
+   --------------------------------------------------------------------------- */
+
+.search-morph {
+  position: absolute;
+  z-index: 2; /* über den Laschen, deren Knöpfe selbst z-index 1 tragen */
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  /* Platz für die Lupe: 12px Rand, 16px Glas, 10px Luft. */
+  padding-left: 2.375rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--color-bg3);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  color: var(--color-muted);
+  transition:
+    width 380ms var(--spring),
+    transform 140ms var(--ease-out),
+    background-color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
+}
+
+.search-morph.is-open {
+  width: 100%;
+  transition:
+    width 560ms var(--spring),
+    transform 140ms var(--ease-out),
+    background-color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
+}
+
+/* Zu: Hover und Druck gehören dem ganzen Kreis, nicht nur dem Knopf darin. */
+.search-morph:not(.is-open):hover {
+  background: var(--color-fill-strong);
+  color: var(--color-text);
+}
+
+.search-morph:has(> .search-morph__toggle:active) {
+  transform: scale(0.92);
+}
+
+/* Der Fokusring liegt auf dem Kreis: der Knopf darin würde von overflow
+   abgeschnitten. Offen zeigt ein Ring an, dass man tippt. */
+.search-morph:has(> .search-morph__toggle:focus-visible) {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 2px;
+}
+
+.search-morph.is-open:focus-within {
+  box-shadow: inset 0 0 0 2px var(--color-indigo-500);
+}
+
+.search-morph__toggle {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.search-morph__toggle:focus-visible {
+  outline: none;
+}
+
+.search-morph__toggle:active {
+  transform: none; /* drückt der Kreis, nicht die unsichtbare Fläche */
+}
+
+.search-morph__icon {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  margin-top: -0.5rem;
+  pointer-events: none;
+}
+
+/* Beim Aufgehen nickt die Lupe kurz: ein kleiner Schwenk, während sie nach
+   links reist. Beim Schliessen nicht, da soll nichts mehr Aufmerksamkeit
+   ziehen. */
+.search-morph.is-open .search-morph__icon {
+  animation: lens-nudge 560ms var(--spring);
+}
+
+@keyframes lens-nudge {
+  35% {
+    transform: rotate(-16deg) scale(0.9);
+  }
+}
+
+.search-morph__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1rem; /* 16px: darunter zoomt iOS beim Fokus in die Seite */
+  outline: none;
+  opacity: 0;
+  transform: translateX(0.75rem);
+  pointer-events: none;
+  transition:
+    opacity 90ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+
+.search-morph__input::placeholder {
+  color: var(--color-muted);
+}
+
+.search-morph__input:focus-visible {
+  outline: none; /* der Ring der Leiste zeigt den Fokus */
+}
+
+.search-morph.is-open .search-morph__input {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity 240ms var(--ease-out) 150ms,
+    transform 480ms var(--spring) 110ms;
+}
+
+.search-morph__token {
+  opacity: 0;
+}
+
+.search-morph.is-open .search-morph__token {
+  opacity: 1;
+  transition: opacity 200ms var(--ease-out) 140ms;
+}
+
+.search-morph__close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-right: 0.25rem;
+  border-radius: 9999px;
+  color: var(--color-muted);
+  opacity: 0;
+  transform: scale(0.4) rotate(-90deg);
+  pointer-events: none;
+  transition:
+    opacity 80ms var(--ease-out),
+    transform 140ms var(--ease-out),
+    background-color 140ms var(--ease-out),
+    color 140ms var(--ease-out);
+}
+
+.search-morph.is-open .search-morph__close {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity 180ms var(--ease-out) 220ms,
+    transform 440ms var(--pop) 200ms,
+    background-color 140ms var(--ease-out),
+    color 140ms var(--ease-out);
+}
+
+.search-morph.is-open .search-morph__close:hover {
+  background: var(--color-fill);
+  color: var(--color-text);
+}
+
+.search-morph.is-open .search-morph__close:active {
+  transform: scale(0.88);
+  transition-delay: 0s;
+}
+
+/* Die Laschen weichen. visibility erst nach der Bewegung, damit sie nicht
+   mitten im Wegschieben verschwinden; zurück kommen sie sofort und mit
+   kurzem Versatz, wenn die Leiste schon schrumpft. */
+.filter-tabs {
+  transform-origin: left center;
+  transition:
+    opacity 260ms var(--ease-out) 80ms,
+    transform 480ms var(--spring) 40ms,
+    filter 260ms var(--ease-out) 80ms,
+    visibility 0s;
+}
+
+.filter-row.is-searching .filter-tabs {
+  opacity: 0;
+  transform: scale(0.9);
+  filter: blur(3px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 480ms var(--spring),
+    filter 200ms var(--ease-out),
+    visibility 0s linear 480ms;
+}
+
+/* Ohne Bewegung: die Leiste ist sofort da, nur Text und ✕ blenden über. */
+@media (prefers-reduced-motion: reduce) {
+  .search-morph,
+  .search-morph.is-open {
+    transition:
+      background-color 160ms var(--ease-out),
+      box-shadow 160ms var(--ease-out);
+  }
+
+  .search-morph:has(> .search-morph__toggle:active) {
+    transform: none;
+  }
+
+  .search-morph.is-open .search-morph__icon {
+    animation: none;
+  }
+
+  .search-morph__input,
+  .search-morph__close,
+  .search-morph.is-open .search-morph__input,
+  .search-morph.is-open .search-morph__close {
+    transform: none;
+    transition: opacity 120ms var(--ease-out);
+  }
+
+  .filter-tabs,
+  .filter-row.is-searching .filter-tabs {
+    transform: none;
+    filter: none;
+    transition:
+      opacity 120ms var(--ease-out),
+      visibility 0s;
+  }
+}

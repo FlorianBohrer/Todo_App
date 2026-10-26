@@ -1,38 +1,3 @@
-  <div class="mt-6 mb-3">
-  <div class="flex h-11 w-full items-center gap-3 rounded-full bg-bg3 px-4
-              ring-1 ring-line transition focus-within:ring-2 focus-within:ring-indigo-500">
-    <lucide-icon [img]="SearchIcon" class="h-4 w-4 flex-none text-muted" aria-hidden="true"></lucide-icon>
-    @if (searchToken(); as token) {
-      <button type="button"
-        class="flex h-6 flex-none items-center gap-0.5 rounded-md pl-1 pr-1"
-        [class]="tokenClass(token)"
-        (click)="searchToken.set(null); todoSearch.focus()"
-        [attr.aria-label]="'Only ' + tokenDescription[token] + ', remove filter'"
-        [title]="'Only ' + tokenDescription[token] + ' · remove (Backspace at the start)'">
-        <lucide-icon [img]="tokenIcon[token]" class="h-4 w-4" aria-hidden="true"></lucide-icon>
-        <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
-      </button>
-    }
-    <input #todoSearch type="text" placeholder="Filter this list…"
-      class="min-w-0 flex-1 bg-transparent text-text outline-none placeholder:text-muted"
-      [value]="searchTerm()"
-      (input)="onInput(todoSearch)"
-      (keydown.backspace)="onBackspace($event, todoSearch)"
-      (keydown.escape)="clearSearch(); todoSearch.value = ''"
-      aria-label="Filter this list" />
-    @if (searchTerm() || searchToken()) {
-      <button type="button"
-        class="grid h-7 w-7 flex-none place-items-center rounded-lg text-muted transition hover:bg-fill hover:text-text"
-        (click)="clearSearch(); todoSearch.value = ''" aria-label="Clear search">✕</button>
-    } @else {
-      <!-- Ein Kürzel, das niemand kennt, nützt nichts — also zeigt das Feld es
-           selbst. Am Handy ausgeblendet, dort gibt es keine Taste dafür. -->
-      <kbd class="hidden flex-none rounded-lg border border-line-strong px-1.5 py-0.5 font-mono text-2xs text-subtle sm:block"
-        aria-hidden="true">/</kbd>
-    }
-  </div>
-</div>
-  
   <!-- Eine Pille, die wandert — statt vier Knöpfe, die unabhängig aufleuchten.
        Der Index treibt sie; vier gleich breite Laschen (flex-1) machen die
        Rechnung ohne Messen im DOM möglich.
@@ -42,25 +7,88 @@
        Text. Auf dem Telefon war „Favorites" breiter als ein Viertel, die
        anderen schrumpften, und die Pille — die mit Vierteln rechnet — lag
        halb über „Favorites". min-w-0 hält die Viertel, und kleinere Schrift
-       und Polster auf schmalen Bildschirmen lassen den Text hineinpassen. -->
-  <section class="filter-tabs filter-tabs--segment relative flex gap-2 mt-6 mb-4 rounded-full bg-bg3 p-1"
-    role="tablist" [style.--tab-index]="tabIndex()">
+       und Polster auf schmalen Bildschirmen lassen den Text hineinpassen.
+       Seit die Lupe in derselben Zeile steht, fehlen „Favorites" auf dem
+       Telefon die 48px, die sie belegt (59px Text in 53px Lasche bei 360px).
+       Deshalb hier keine Lücken zwischen den Laschen (--tab-gap: 0, die
+       Pille rechnet mit): den Abstand zwischen den Wörtern macht ohnehin das
+       Zentrieren, nicht die Lücke. Unter 390px dazu 13px Schrift. -->
+  <!-- Laschen und Suche in EINER Zeile. Die Suche ist eine Lupe, bis man sie
+       braucht: ein Tipp zieht sie aus dem Kreis zur Leiste über die ganze
+       Zeile auf (todo-filter.scss), die Laschen treten darunter zurück.
+       Vorher stand ein Suchfeld dauerhaft als eigene Zeile über den Laschen —
+       auf dem Telefon 70px vor der ersten Aufgabe, für etwas, das man selten
+       braucht. Wonach gesucht wird, sagt der Platzhalter: in der Lasche, die
+       gerade gewählt ist. -->
+  <div class="filter-row relative mt-6 mb-4 flex items-center gap-2" [class.is-searching]="searchOpen()">
+  <section class="filter-tabs filter-tabs--segment relative flex min-w-0 flex-1 gap-0 rounded-full bg-bg3 p-1"
+    style="--tab-gap: 0px" role="tablist" [style.--tab-index]="tabIndex()" [attr.aria-hidden]="searchOpen() || null">
     <span class="filter-pill" aria-hidden="true"></span>
 
-    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 py-1.5 text-sm sm:px-5"
+    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-1 py-1.5 text-sm max-[389px]:text-[13px] sm:px-5"
       [class.is-active]="filter() === 'active'"
       [attr.aria-selected]="filter() === 'active'"
       (click)="filter.set('active')">Active</button>
-    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 py-1.5 text-sm sm:px-5"
+    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-1 py-1.5 text-sm max-[389px]:text-[13px] sm:px-5"
       [class.is-active]="filter() === 'completed'"
       [attr.aria-selected]="filter() === 'completed'"
       (click)="filter.set('completed')">Done</button>
-    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 py-1.5 text-sm sm:px-5"
+    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-1 py-1.5 text-sm max-[389px]:text-[13px] sm:px-5"
       [class.is-active]="filter() === 'favorites'"
       [attr.aria-selected]="filter() === 'favorites'"
       (click)="filter.set('favorites')">Favorites</button>
-    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-2 py-1.5 text-sm sm:px-5"
+    <button type="button" role="tab" class="filter-tab btn min-w-0 flex-1 rounded-full px-1 py-1.5 text-sm max-[389px]:text-[13px] sm:px-5"
       [class.is-active]="filter() === 'all'"
       [attr.aria-selected]="filter() === 'all'"
       (click)="filter.set('all')">All</button>
   </section>
+
+  <!-- Platzhalter für die Lupe im Fluss der Zeile; die Suche selbst liegt
+       absolut darüber und wächst von hier nach links. -->
+  <span class="h-10 w-10 flex-none" aria-hidden="true"></span>
+
+  <div class="search-morph" [class.is-open]="searchOpen()" role="search">
+    <!-- Zu: die ganze Kreisfläche ist der Knopf. Offen: Enter schließt nur die
+         Tastatur (auf dem Telefon verdeckt sie sonst die Treffer), die Leiste
+         bleibt mit dem Begriff stehen. -->
+    @if (!searchOpen()) {
+      <button #searchToggle type="button" class="search-morph__toggle"
+        (click)="openSearch()"
+        aria-label="Search this list" [attr.aria-expanded]="false"
+        title="Search this list (/)"></button>
+    }
+    <lucide-icon [img]="SearchIcon" class="search-morph__icon h-4 w-4" aria-hidden="true"></lucide-icon>
+    @if (searchToken(); as token) {
+      <button type="button"
+        class="search-morph__token flex h-6 flex-none items-center gap-0.5 rounded-md pl-1 pr-1"
+        [class]="tokenClass(token)"
+        (mousedown)="$event.preventDefault()"
+        (click)="searchToken.set(null); todoSearch.focus()"
+        [attr.aria-label]="'Only ' + tokenDescription[token] + ', remove filter'"
+        [title]="'Only ' + tokenDescription[token] + ' · remove (Backspace at the start)'">
+        <lucide-icon [img]="tokenIcon[token]" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+        <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
+      </button>
+    }
+    <input #todoSearch type="text" [placeholder]="placeholder()"
+      class="search-morph__input"
+      [value]="searchTerm()"
+      [tabindex]="searchOpen() ? 0 : -1"
+      (focus)="openSearch(false)"
+      (blur)="onBlur()"
+      (input)="onInput(todoSearch)"
+      (keydown.backspace)="onBackspace($event, todoSearch)"
+      (keydown.escape)="onEscape(todoSearch)"
+      (keydown.enter)="todoSearch.blur()"
+      enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+      aria-label="Filter this list" />
+    <button type="button"
+      class="search-morph__close"
+      (mousedown)="$event.preventDefault()"
+      (click)="closeSearch(todoSearch)"
+      [attr.tabindex]="searchOpen() ? 0 : -1"
+      aria-label="Close search">
+      <lucide-icon [img]="ClearIcon" class="h-4 w-4"></lucide-icon>
+    </button>
+  </div>
+  </div>
