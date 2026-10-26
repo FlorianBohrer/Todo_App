@@ -452,8 +452,40 @@ export class PlansView {
    */
   protected readonly outlineOpen = signal(false);
 
+  /** Das Kapitel, in dem man beim Öffnen der Gliederung gerade liest. */
+  protected readonly currentChapter = signal<string | null>(null);
+
+  /**
+   * Beim Öffnen: das Kapitel bestimmen, in dem man gerade liest — die letzte
+   * Überschrift, die schon unter der Leiste hindurch ist —, und die Liste so
+   * rollen, dass es in der Mitte steht. In einem Plan mit dreissig Kapiteln
+   * fängt man sonst immer oben an zu suchen.
+   */
   toggleOutline() {
-    this.outlineOpen.update((open) => !open);
+    const opening = !this.outlineOpen();
+    this.outlineOpen.set(opening);
+    if (!opening) return;
+
+    // Etwas unter der Leiste: ein Sprung über die Gliederung setzt die
+    // Überschrift mit scroll-margin knapp darunter ab, und sie soll dann als
+    // gelesen gelten.
+    const line = (document.querySelector('.doc-head')?.getBoundingClientRect().bottom ?? 0) + 48;
+    let current: string | null = null;
+    for (const item of this.outline()) {
+      const top = document.getElementById('block-' + item.id)?.getBoundingClientRect().top;
+      if (top === undefined || top > line) break;
+      current = item.id;
+    }
+    this.currentChapter.set(current);
+    if (!current) return;
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const link = document.querySelector<HTMLElement>(`.cdk-overlay-pane [data-outline-id="${current}"]`);
+      const box = link?.closest<HTMLElement>('.popover');
+      if (!link || !box) return;
+      const offset = link.getBoundingClientRect().top - box.getBoundingClientRect().top;
+      box.scrollTop += offset - box.clientHeight / 2 + link.offsetHeight / 2;
+    }));
   }
 
   closeOutline() {

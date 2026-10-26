@@ -893,6 +893,20 @@ select {
   box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.65);
 }
 
+/* Ein Popover mit Höhengrenze muss rollen können.
+
+   overflow: hidden oben hält die runden Ecken sauber — steht aber ausserhalb
+   von @layer und schlug damit jedes `overflow-y-auto` im Markup. Lange Menüs
+   wurden am unteren Rand abgeschnitten statt gerollt: die Gliederung eines
+   langen Plans, das Kartenmenü mit vielen Ordnern, das Add- und das
+   Slash-Menü. Auf dem Telefon hiess das: was unten lag, war nicht zu
+   erreichen. overscroll-behavior hält das Wischen im Menü, statt am Ende die
+   Seite darunter mitzunehmen. */
+.popover.overflow-y-auto {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 /* Nur Geometrie und Hover. Schriftgrad und Farbe bleiben bewusst im Markup:
    diese Regeln stehen ausserhalb von @layer und wuerden Tailwind-Utilities
    sonst schlagen — ein text-muted am Element haette keine Wirkung mehr. */
