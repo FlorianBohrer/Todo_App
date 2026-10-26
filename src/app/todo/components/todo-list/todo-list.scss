@@ -110,35 +110,45 @@ li.todo-expanded-row {
 // Der Termin unter dem Titel, nur auf dem Telefon (siehe Vorlage). Eine
 // eigene Zeile im Umbruch der Zeile, genau unter dem Titel eingerückt — mit
 // denselben Massen wie .todo-detail.
+//
+// Alles steht in der Medienabfrage, auch das display. Ein `sm:hidden` im
+// Markup reicht nicht: diese Regeln stehen ausserhalb von @layer und
+// schlagen Tailwinds Hilfsklassen. Am Rechner stand die Zeile deshalb mit
+// flex-basis 100% in einer Zeile ohne Umbruch und quetschte den Titel auf
+// null Breite.
+.todo-when {
+  display: none;
+}
+
 @media (max-width: 639px) {
   li.todo-has-when {
     flex-wrap: wrap;
     row-gap: 0.125rem;
   }
-}
 
-.todo-when {
-  order: 11;
-  flex-basis: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin-left: 4.875rem;
-  font-size: 0.75rem;
-  line-height: 1.3;
-  color: var(--color-subtle);
-}
+  .todo-when {
+    order: 11;
+    flex-basis: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: 4.875rem;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    color: var(--color-subtle);
+  }
 
-.no-outline .todo-when {
-  margin-left: 3.25rem;
-}
+  .no-outline .todo-when {
+    margin-left: 3.25rem;
+  }
 
-.todo-when--today {
-  color: var(--color-highlight2);
-}
+  .todo-when--today {
+    color: var(--color-highlight2);
+  }
 
-.todo-when--late {
-  color: var(--color-amber-300);
+  .todo-when--late {
+    color: var(--color-amber-300);
+  }
 }
 
 .todo-dot {
