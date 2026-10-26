@@ -1030,8 +1030,9 @@ select {
    alle Laschen GLEICH breit sind: entweder flex-1 (basis 0) in einem Container
    mit fester Breite, oder eine ausgeschriebene Breite pro Lasche. Ungleiche
    Laschen und die Pille steht daneben.
-   Dazu Luecken von 0.5rem und je 0.25rem Polster; --tab-count sagt, wie viele
-   Laschen es sind (Voreinstellung: vier). */
+   Dazu je 0.25rem Polster und Luecken von --tab-gap (Voreinstellung 0.5rem,
+   muss zur gap-Klasse passen); --tab-count sagt, wie viele Laschen es sind
+   (Voreinstellung: vier). */
 .filter-tabs {
   position: relative;
 }
@@ -1042,13 +1043,13 @@ select {
   bottom: 0.25rem;
   left: 0.25rem;
   width: calc(
-    (100% - (var(--tab-count, 4) - 1) * 0.5rem - 0.5rem) / var(--tab-count, 4)
+    (100% - (var(--tab-count, 4) - 1) * var(--tab-gap, 0.5rem) - 0.5rem) / var(--tab-count, 4)
   );
   border-radius: 9999px;
   /* Weiß darauf (.filter-tab.is-active): 5.48 bis 6.42, gemessen. */
   background: var(--color-button);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
-  transform: translateX(calc(var(--tab-index, 0) * (100% + 0.5rem)));
+  transform: translateX(calc(var(--tab-index, 0) * (100% + var(--tab-gap, 0.5rem))));
   transition: transform 340ms var(--spring);
 }
 
