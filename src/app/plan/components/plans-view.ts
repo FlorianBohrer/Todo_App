@@ -70,7 +70,6 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   ArrowDownUp,
-  Languages,
 } from 'lucide-angular';
 import {
   PLAN_TEMPLATES,
@@ -123,8 +122,6 @@ import { makeZip, readZip, ZipEntry } from '../zip';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
 import { PlanTitleService } from '../plan-title.service';
-import { PlanTranslateService, TranslateError } from '../plan-translate.service';
-import { applyTexts, collectTexts, guessLanguage, PlanTexts, TranslateTarget } from '../plan-translate';
 import {
   UntitledSection,
   blockText,
@@ -3160,158 +3157,6 @@ export class PlansView {
     // reduzierte Bewegung eingestellt hat, springt lieber direkt.
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-  }
-
-  // ---- Übersetzen (Deutsch ⇄ Englisch) ----
-  //
-  // Der ganze Plan auf einmal, ins Dokument geschrieben — nicht als Vorschau
-  // daneben: wer einen Plan übersetzen lässt, will ihn in der anderen Sprache
-  // weiterbearbeiten, teilen, exportieren. Das Original bleibt einen Klick
-  // entfernt, solange der Hinweis steht (und im Rückgängig sowieso).
-
-  private readonly translator = inject(PlanTranslateService);
-  readonly TranslateIcon = Languages;
-
-  protected readonly translateMenuOpen = signal(false);
-  /** Wohin gerade übersetzt wird; null = es läuft nichts. */
-  protected readonly translating = signal<TranslateTarget | null>(null);
-  protected readonly translateProgress = this.translator.progress;
-  protected readonly translateAvailable = this.titles.available;
-  protected readonly aiRemaining = this.titles.remaining;
-
-  /**
-   * Beide Fassungen des zuletzt übersetzten Plans. Wer in der Übersetzung
-   * weiterschreibt und dann ins Original schaut, findet beim Zurückschalten
-   * seine Änderungen wieder — umgeschaltet wird immer mit dem aktuellen Stand.
-   */
-  private readonly translation = signal<{
-    planId: string;
-    from: TranslateTarget;
-    to: TranslateTarget;
-    original: PlanTexts;
-    translated: PlanTexts;
-    showing: 'original' | 'translated';
-  } | null>(null);
-
-  protected readonly activeTranslation = computed(() => {
-    const translation = this.translation();
-    return translation && translation.planId === this.selected()?.id ? translation : null;
-  });
-
-  protected languageName(language: TranslateTarget): string {
-    return language === 'de' ? 'German' : 'English';
-  }
-
-  /**
-   * Die naheliegende Richtung zuerst: steht der Plan auf Deutsch, oben
-   * Englisch. Nur im offenen Menü gelesen, nicht bei jedem Tastendruck.
-   */
-  protected readonly translateTargets = computed<TranslateTarget[]>(() => {
-    const plan = this.selected();
-    const prose = plan
-      ? collectTexts(plan).filter((item) => item.kind === 'text').map((item) => item.text).join(' ')
-      : '';
-    return guessLanguage(prose) === 'de' ? ['en', 'de'] : ['de', 'en'];
-  });
-
-  toggleTranslateMenu(): void {
-    // Erst beim Öffnen fragen, ob der Server übersetzen kann — und wie viel
-    // vom Tageskontingent übrig ist. Wer nie übersetzt, löst das nie aus.
-    this.titles.checkAvailability();
-    this.translateMenuOpen.update((open) => !open);
-  }
-
-  closeTranslateMenu(): void {
-    this.translateMenuOpen.set(false);
-  }
-
-  async translatePlan(target: TranslateTarget): Promise<void> {
-    this.closeTranslateMenu();
-    const plan = this.selected();
-    if (!plan || this.translating()) return;
-
-    // Zurück in eine Sprache, die schon daliegt, kostet keine Anfrage.
-    const active = this.activeTranslation();
-    if (active && target === (active.showing === 'translated' ? active.from : active.to)) {
-      this.toggleTranslationView();
-      return;
-    }
-
-    // Der Platzhalter-Titel bleibt, wie er ist: an ihm erkennt die App einen
-    // Plan, der noch keinen Namen hat.
-    const untitled = plan.title.trim() === UNTITLED;
-    const source: PlanTexts = { title: untitled ? '' : plan.title, content: plan.content };
-    const items = collectTexts(source);
-    if (!items.length) {
-      this.toast.show('Nothing to translate yet');
-      return;
-    }
-
-    this.translating.set(target);
-    try {
-      const translations = await this.translator.translate(items, target);
-
-      // Während der Anfrage geändert (oder gelöscht)? Dann nichts überschreiben.
-      const current = this.planService.plans().find((p) => p.id === plan.id);
-      if (!current) return;
-      if (current.content !== plan.content || current.title !== plan.title) {
-        this.toast.error('The plan changed while translating: try again');
-        return;
-      }
-
-      const result = applyTexts(source, translations);
-      const translated = untitled ? { ...result, title: plan.title } : result;
-      this.translation.set({
-        planId: plan.id,
-        from: target === 'en' ? 'de' : 'en',
-        to: target,
-        original: { title: plan.title, content: plan.content },
-        translated,
-        showing: 'translated',
-      });
-      this.showVersion(plan.id, translated);
-      if (this.selected()?.id !== plan.id) this.toast.success(`“${plan.title.trim() || UNTITLED}” translated`);
-    } catch (error) {
-      this.toast.error(error instanceof TranslateError ? error.message : 'Translation failed');
-    } finally {
-      this.translating.set(null);
-    }
-  }
-
-  /** Zwischen Original und Übersetzung wechseln — mit allem, was seitdem geschrieben wurde. */
-  toggleTranslationView(): void {
-    const translation = this.activeTranslation();
-    const plan = this.selected();
-    if (!translation || !plan) return;
-
-    const current: PlanTexts = { title: plan.title, content: plan.content };
-    if (translation.showing === 'translated') {
-      this.translation.set({ ...translation, translated: current, showing: 'original' });
-      this.showVersion(plan.id, translation.original);
-    } else {
-      this.translation.set({ ...translation, original: current, showing: 'translated' });
-      this.showVersion(plan.id, translation.translated);
-    }
-  }
-
-  /** Der Hinweis geht, die Fassung, die gerade dasteht, bleibt. */
-  endTranslation(): void {
-    this.translation.set(null);
-  }
-
-  /** Eine Fassung ins Dokument schreiben — als ein Schritt im Rückgängig. */
-  private showVersion(planId: string, texts: PlanTexts): void {
-    if (this.selected()?.id === planId) {
-      this.updateContent(() => texts.content);
-      // Der Titel steht in einem Feld, das mit dem Inhalt wächst; ein neuer
-      // Wert über die Bindung misst es nicht nach, ein input-Ereignis schon.
-      const field = this.titleField()?.nativeElement;
-      if (field && field.value !== texts.title) {
-        field.value = texts.title;
-        field.dispatchEvent(new Event('input'));
-      }
-    }
-    this.planService.patchPlan(planId, { title: texts.title, content: texts.content });
   }
 
   // ---- Liste ----
