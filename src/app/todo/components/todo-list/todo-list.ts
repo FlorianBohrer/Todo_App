@@ -335,6 +335,25 @@ export class TodoList {
   protected readonly stats = this.todoService.stats;
   protected readonly filter = this.todoService.filter;
   protected readonly favoritesAllDone = this.todoService.favoritesAllDone;
+
+  /**
+   * Die Suche filtert nur, was die Lasche zeigt. Findet sie dort nichts,
+   * stand vorher „No active todos at the moment" — als gäbe es keine, dabei
+   * passte nur keine. Und die Laschen liegen während der Suche unter der
+   * Leiste; der Weg zu „All" muss also hier stehen.
+   */
+  protected readonly isSearching = computed(
+    () => this.todoService.searchTerm().trim() !== '' || this.todoService.searchToken() !== null,
+  );
+
+  protected searchEverywhere(): void {
+    this.filter.set('all');
+  }
+
+  protected clearSearch(): void {
+    this.todoService.searchTerm.set('');
+    this.todoService.searchToken.set(null);
+  }
   protected readonly labels = this.labelService.labels;
   protected readonly FolderIcon = Folder;
 

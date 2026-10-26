@@ -21,6 +21,24 @@
     </ul>
   } @else if (stats().total === 0) {
     <p class="text-text">No todos yet, add one above</p>
+  } @else if (todos().length === 0 && isSearching()) {
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <p class="text-text">
+        @switch (filter()) {
+          @case ('active')    { No active todo matches }
+          @case ('completed') { No done todo matches }
+          @case ('favorites') { No favorite matches }
+          @default            { Nothing matches }
+        }
+      </p>
+      @if (filter() !== 'all') {
+        <button type="button" class="btn rounded-full bg-fill px-3 py-1 text-sm text-text hover:bg-fill-strong"
+          (click)="searchEverywhere()">Search all todos</button>
+      } @else {
+        <button type="button" class="btn rounded-full bg-fill px-3 py-1 text-sm text-text hover:bg-fill-strong"
+          (click)="clearSearch()">Clear search</button>
+      }
+    </div>
   } @else if (todos().length === 0) {
     <p class="text-text">
       @switch (filter()) {
