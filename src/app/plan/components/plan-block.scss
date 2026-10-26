@@ -75,23 +75,55 @@
     height: 28px;
   }
 
-  // Am Zeigergeraet treten die Griffe zurueck, bis der Block ueberfahren wird —
-  // auf Touch bleiben sie stehen, dort gibt es kein Hover.
+  // Am Zeigergeraet treten die Griffe zurueck, bis der Block ueberfahren wird.
+  // Auf Touch siehe unten.
   .drag-handle {
     opacity: 0;
     transition: opacity 0.15s;
   }
 
-  // .cdk-drag deckt alle drei Faelle ab: Block, Section und Plan-Kachel.
-  // Ohne das waere der Griff auf der Plan-Kachel dauerhaft unsichtbar.
-  // .is-open haelt ihn stehen, solange sein Menue offen ist — sonst schwebte
-  // das Menue ohne sichtbaren Anker, sobald die Maus den Block verlaesst.
-  .cdk-drag:hover .drag-handle,
-  .cdk-drag:focus-within .drag-handle,
+  // Gefragt wird an der Zeile des Blocks bzw. am Kopf des Toggles, nicht am
+  // Ziehrahmen (.cdk-drag): der steht für Blöcke der obersten Ebene in der
+  // Vorlage der Ansicht, trägt nicht das Kennzeichen dieser Komponente, und
+  // eine Regel darauf griff hier nie. Griff und „+" blieben beim Überfahren
+  // unsichtbar. .is-open hält den Griff stehen, solange sein Menü offen ist —
+  // sonst schwebte das Menü ohne sichtbaren Anker.
+  .block-row:hover > .drag-handle,
+  .block-row:hover > .block-grip .drag-handle,
+  .block-row:focus-within > .block-grip .drag-handle,
+  .section-header:hover .drag-handle,
+  .section-header:focus-within .drag-handle,
   .drag-handle:focus-visible,
   .drag-handle.is-open {
     opacity: 1;
   }}
+
+
+// Auf Touch sind die Griffe unsichtbar und nicht antippbar: in jeder Zeile
+// ein Punktraster am Rand machte aus einem Text eine Bedienoberfläche, und
+// beim Lesen braucht man keinen davon. Sichtbar wird nur der Griff des
+// Blocks, in dem man gerade schreibt — über ihn bleiben Verschieben,
+// Umwandeln, Duplizieren und Löschen erreichbar. Dasselbe Muster wie am
+// Rechner, nur ohne Hover.
+//
+// Gefragt wird am eigenen Element des Blocks, nicht am Ziehrahmen: der
+// .cdk-drag eines Blocks der obersten Ebene steht in der Vorlage der Ansicht
+// und trägt deshalb nicht das Kennzeichen dieser Komponente — eine Regel
+// darauf greift hier nie.
+@media (hover: none) {
+  .drag-handle {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+  }
+
+  .block-row:focus-within > .block-grip .drag-handle,
+  .section-header:focus-within .drag-handle,
+  .drag-handle.is-open {
+    opacity: 0.6;
+    pointer-events: auto;
+  }
+}
 
 
 // ---- Drag & Drop ----

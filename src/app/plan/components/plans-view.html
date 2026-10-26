@@ -841,6 +841,14 @@
                     <button role="menuitem" type="button" class="block-menu-item" (click)="exportFromCard(plan)">
                       <lucide-icon [img]="ExportIcon" class="h-4 w-4"></lucide-icon> Export as Markdown
                     </button>
+                    <!-- Löschen bei den Handlungen am Plan, zwischen zwei Linien —
+                         nicht unter einer Ordnerliste, die zwanzig Einträge lang
+                         sein kann und es aus dem Bild schiebt. Die Linien halten
+                         es von „Export" und von der Liste fern. -->
+                    <div class="my-1 border-t border-line" role="separator"></div>
+                    <button role="menuitem" type="button" class="block-menu-item block-menu-item--danger" (click)="deleteFromCard(plan, $event)">
+                      <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon> Delete
+                    </button>
                     <p class="menu-section-label" role="presentation">Move to</p>
                     <button role="menuitemradio" type="button" class="block-menu-item"
                       [attr.aria-checked]="!plan.categoryId" (click)="movePlan(plan, null)">
@@ -855,10 +863,6 @@
                         <span class="truncate">{{ label.name }}</span>
                       </button>
                     }
-                    <div class="my-1 border-t border-line"></div>
-                    <button role="menuitem" type="button" class="block-menu-item block-menu-item--danger" (click)="deleteFromCard(plan, $event)">
-                      <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon> Delete
-                    </button>
                   </div>
                 </ng-template>
               </span>
