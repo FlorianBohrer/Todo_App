@@ -667,10 +667,13 @@
 
 // Der negative Rand braucht Luft neben der Textspalte (48rem). Darunter steht
 // sie 4px am Fensterrand — auf dem Telefon wie auf dem Tablet hochkant.
+// Rechts trotzdem etwas Luft: der Plus-Knopf hat einen Rahmen, und der stand
+// sonst 4px an der Kante, während der Zurück-Pfeil links (ohne Rahmen)
+// optisch 11px Abstand hat.
 @media (max-width: 799px) {
   .doc-head {
     margin-inline: 0;
-    padding-inline: 0;
+    padding-inline: 0 0.5rem;
   }
 }
 
@@ -773,10 +776,21 @@
 
 @media (max-width: 639px) {
   // Am Telefon nur das Symbol und die Auswahl dahinter — der Platz gehoert
-  // dem Suchfeld.
+  // dem Suchfeld. Ein quadratischer Knopf, so hoch wie das Feld daneben; das
+  // select liegt unsichtbar über der ganzen Fläche. Vorher stand es 24px
+  // breit und durchsichtig neben dem Symbol, und der Kasten sah leer aus.
+  .overview-sort {
+    position: relative;
+    width: 2.5rem;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
   .overview-sort select {
-    width: 1.5rem;
-    color: transparent;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
   }
 }
 
