@@ -92,10 +92,19 @@ export class FocusPanel {
   }
 }
 
+/**
+ * Hat man es selbst auf- oder zugeklappt, gilt das. Sonst: am Telefon zu.
+ * Dort standen vor der ersten Aufgabe der Liste über einen Bildschirm
+ * Kacheln, Begrüssung und Vorschläge, und die Vorschläge sind Aufgaben, die
+ * gleich darunter in der Liste noch einmal stehen. Zugeklappt zeigt die
+ * Zeile den ersten Vorschlag an, ein Tipp öffnet den Rest.
+ */
 function readCollapsed(): boolean {
   try {
-    return localStorage.getItem(COLLAPSED_KEY) === 'true';
+    const stored = localStorage.getItem(COLLAPSED_KEY);
+    if (stored !== null) return stored === 'true';
   } catch {
-    return false;
+    /* ohne Speicher: wie beim ersten Besuch */
   }
+  return window.matchMedia?.('(max-width: 639px)').matches ?? false;
 }
