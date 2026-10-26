@@ -10,6 +10,8 @@ import {ChangeDetectionStrategy,
   viewChild,
 } from '@angular/core';
 import { CdkDropListGroup, CdkDropList, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { DatePicker } from '../date-picker/date-picker';
 import { HoldToDrag } from '../../../shared/hold-to-drag';
 import {
   LucideAngularModule,
@@ -26,6 +28,7 @@ import { Todo } from '../../model/todo.model';
 import {
   WeekDay,
   buildWeek,
+  fromISODate,
   isoWeekNumber,
   shiftISODate,
   todayISO,
@@ -53,7 +56,16 @@ const UNSCHEDULED = '';
 
 @Component({
   selector: 'app-week-view',
-  imports: [LucideAngularModule, CdkDropListGroup, CdkDropList, CdkDrag, HoldToDrag, TokenChip],
+  imports: [
+    LucideAngularModule,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
+    HoldToDrag,
+    TokenChip,
+    OverlayModule,
+    DatePicker,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './week-view.html',
   styleUrl: './week-view.scss',
@@ -244,6 +256,8 @@ export class WeekView {
   onWeekShortcut(event: KeyboardEvent): void {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (isTypingTarget(event.target)) return;
+    // Der Kalender zum Umplanen ist offen: die Pfeile gehören ihm.
+    if (this.moverTodo() !== null) return;
 
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
@@ -255,6 +269,80 @@ export class WeekView {
       event.preventDefault();
       this.goToday();
     }
+  }
+
+  // ---- Umplanen per Antippen ----
+  //
+  // Bisher ging es nur per Ziehen: am Telefon zwei Sekunden halten und dann
+  // über gestapelte Tage scrollen, und über den Sonntag hinaus gar nicht.
+  // Jetzt öffnet ein Tipp auf die Karte den Kalender, und jeder Tag ist
+  // einen Tipp entfernt. Ziehen bleibt für den Rechner.
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly moverId = signal<string | null>(null);
+  protected readonly moverTodo = computed(() => this.todoService.todoById(this.moverId()));
+  protected readonly moverOrigin = signal<HTMLElement>(this.host.nativeElement);
+
+  /** Auf dem Telefon ein Blatt von unten, am Rechner ein Menü an der Karte. */
+  protected readonly sheet =
+    typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 639px)').matches;
+
+  protected readonly moverPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 },
+  ];
+
+  /**
+   * Nach dem Loslassen einer gezogenen Karte feuert der Browser noch einen
+   * Klick auf sie. Der soll nicht den Kalender öffnen.
+   */
+  private suppressClickUntil = 0;
+
+  onDragEnded(): void {
+    this.suppressClickUntil = Date.now() + 300;
+  }
+
+  openMover(todo: Todo, event: Event): void {
+    if (Date.now() < this.suppressClickUntil) return;
+    this.moverOrigin.set(event.currentTarget as HTMLElement);
+    this.moverId.set(todo.id);
+  }
+
+  closeMover(): void {
+    this.moverId.set(null);
+  }
+
+  /**
+   * Auf den gewählten Tag. Landet die Karte ausserhalb der angezeigten Woche,
+   * verschwindet sie aus dem Blick — dann sagt eine Meldung, wohin, und
+   * bietet den Rückweg an.
+   */
+  moveTo(iso: string | null): void {
+    const todo = this.moverTodo();
+    this.closeMover();
+    if (!todo || iso === todo.scheduledDate) return;
+
+    const before = todo.scheduledDate;
+    this.todoService.scheduleTodo(todo.id, iso);
+
+    const stillVisible = iso !== null && this.week().some((day) => day.iso === iso);
+    if (stillVisible) return;
+    this.toast.show(iso === null ? 'Moved to Unscheduled' : `Moved to ${this.dayName(iso)}`, {
+      actionLabel: 'Undo',
+      action: () => this.todoService.scheduleTodo(todo.id, before),
+      durationMs: 6000,
+    });
+  }
+
+  /** „Thu, Nov 20" — eindeutig auch über die Woche hinaus. */
+  private dayName(iso: string): string {
+    return fromISODate(iso).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
   }
 
   /** Drag zwischen Tagen (und Backlog): setzt das Datum des Ziel-Containers. */

@@ -143,3 +143,48 @@
     display: none;
   }
 }
+
+/* ---- Kalender zum Umplanen ---- */
+.week-mover {
+  width: 18rem;
+  padding: 0.625rem;
+}
+
+/* Im Blatt die volle Breite, der Kalender darin aber nicht breiter als ein
+   Telefon: auf dem Tablet quer stünden sonst Tage von 6rem nebeneinander. */
+.week-mover.action-sheet {
+  width: 100%;
+  padding: 0.25rem 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+.week-mover.action-sheet app-date-picker {
+  max-width: 26rem;
+  margin: 0 auto;
+}
+
+.week-mover__title {
+  overflow: hidden;
+  margin: 0 0 0.625rem;
+  padding: 0 0.25rem;
+  color: var(--color-subtle);
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Die Karte, deren Datum gerade gewählt wird, bleibt als Bezug markiert. */
+.week-card.is-moving {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 1px;
+}
+
+.week-card:focus-visible {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 1px;
+}
+
+/* Die Karte ist jetzt auch ein Knopf: der Zeiger sagt es, solange er nicht
+   zum Ziehen greift. */
+.week-card {
+  cursor: pointer;
+}

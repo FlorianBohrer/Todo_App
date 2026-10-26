@@ -144,10 +144,18 @@
             (cdkDropListDropped)="drop($event)">
 
             @for (todo of day.todos; track todo.id) {
+              <!-- Ein Tipp öffnet den Kalender (moveTo), Ziehen geht weiter.
+                   Per Tastatur: Tab auf die Karte, Enter. -->
               <div
                 cdkDrag [cdkDragData]="todo"
+                (cdkDragEnded)="onDragEnded()"
                 class="week-card group relative flex items-start gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-sm text-text"
-                [class.opacity-60]="todo.completed">
+                [class.opacity-60]="todo.completed"
+                [class.is-moving]="moverTodo()?.id === todo.id"
+                tabindex="0"
+                aria-haspopup="dialog"
+                (click)="openMover(todo, $event)"
+                (keydown.enter)="openMover(todo, $event)">
                 <!-- Die Ordnerfarbe steht im Haken-Kreis, wie in Erinnerungen
                      auf dem iPhone. Vorher war es ein farbiger Streifen links
                      an jeder Karte: sieben Spalten voller bunter Kanten, und
@@ -157,7 +165,8 @@
                   type="button"
                   class="week-check mt-0.5 h-4 w-4 flex-none rounded-full border-2 transition hover:opacity-80"
                   [class]="todo.completed ? 'border-emerald-400 bg-emerald-400' : borderClass(todo)"
-                  (click)="toggle(todo.id)"
+                  (click)="$event.stopPropagation(); toggle(todo.id)"
+                  (keydown.enter)="$event.stopPropagation()"
                   [attr.aria-label]="todo.completed ? 'Mark as active' : 'Mark as done'"></button>
                 <!-- Auf drei Zeilen begrenzt. Eine Wochenkarte muss man
                      wiedererkennen, nicht lesen: ungekuerzt brach ein Satz auf
@@ -187,7 +196,8 @@
                 <!-- Einen Tag vor oder zurück, ohne zu ziehen. Auf schmalen
                      Spalten wäre dauerhaft Platz dafür zu teuer, deshalb legen
                      sie sich beim Zeigen (oder Antippen der Tastatur) darüber. -->
-                <span class="week-shift absolute right-1 top-1 flex gap-0.5 rounded-lg bg-panel2/95 p-0.5 opacity-0 shadow-sm transition focus-within:opacity-100 group-hover:opacity-100">
+                <span class="week-shift absolute right-1 top-1 flex gap-0.5 rounded-lg bg-panel2/95 p-0.5 opacity-0 shadow-sm transition focus-within:opacity-100 group-hover:opacity-100"
+                  (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
                   <button type="button"
                     class="grid h-5 w-5 place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
                     (click)="shiftTodo(todo, -1)" aria-label="Move one day earlier" title="One day earlier">
@@ -267,8 +277,14 @@
           @for (todo of backlog(); track todo.id) {
             <div
               cdkDrag [cdkDragData]="todo"
+              (cdkDragEnded)="onDragEnded()"
               class="week-card flex min-w-0 max-w-full items-center gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-sm text-text"
-              [class.opacity-60]="todo.completed">
+              [class.opacity-60]="todo.completed"
+              [class.is-moving]="moverTodo()?.id === todo.id"
+              tabindex="0"
+              aria-haspopup="dialog"
+              (click)="openMover(todo, $event)"
+              (keydown.enter)="openMover(todo, $event)">
               <span class="h-2 w-2 flex-none rounded-full bg-current" [class]="folderDot(todo)" aria-hidden="true"></span>
               <span class="min-w-0 leading-snug [overflow-wrap:anywhere]" [class.line-through]="todo.completed">
                 @if (badge(todo.title); as level) {
@@ -284,4 +300,31 @@
       </div>
     }
   </div>
+
+  <!-- Der Kalender zum Umplanen: am Telefon ein Blatt von unten (dieselben
+       Klassen wie das Zeilenmenü der Liste), am Rechner an der Karte. -->
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="moverOrigin()"
+    [cdkConnectedOverlayOpen]="moverTodo() !== null"
+    [cdkConnectedOverlayPositions]="moverPositions"
+    [cdkConnectedOverlayPush]="!sheet"
+    [cdkConnectedOverlayViewportMargin]="16"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    [cdkConnectedOverlayBackdropClass]="sheet ? 'action-sheet-backdrop' : 'cdk-overlay-transparent-backdrop'"
+    [cdkConnectedOverlayPanelClass]="sheet ? 'action-sheet-pane' : ''"
+    (backdropClick)="closeMover()"
+    (detach)="closeMover()"
+    (overlayKeydown)="$event.key === 'Escape' && closeMover()">
+    @if (moverTodo(); as todo) {
+      <div class="popover week-mover" [class.action-sheet]="sheet" role="dialog"
+        [attr.aria-label]="'Change the date of ' + displayTitle(todo.title)">
+        @if (sheet) {
+          <span class="action-sheet-grabber" aria-hidden="true"></span>
+        }
+        <p class="week-mover__title">{{ displayTitle(todo.title) }}</p>
+        <app-date-picker [value]="todo.scheduledDate" [autofocus]="!sheet" (picked)="moveTo($event)" />
+      </div>
+    }
+  </ng-template>
 </section>
