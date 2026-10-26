@@ -37,7 +37,7 @@
          das Wichtigste am Dokument, abgeschnitten. Die Leiste fuehrt jetzt
          wie ein Brotkrumenpfad: zurueck, Folder, und sobald der grosse Titel
          aus dem Bild gerollt ist, der Titel klein daneben. -->
-    <div class="doc-head app-chrome flex items-center gap-x-1.5">
+    <div class="doc-head app-chrome flex items-center gap-x-1.5" [class.is-scrolled]="titleScrolledAway()">
       <button
         type="button"
         class="grid h-9 w-9 flex-none place-items-center rounded-full text-muted transition hover:bg-fill-strong hover:text-text"
