@@ -57,6 +57,41 @@
       (keydown.backspace)="onBackspace($event)"
       [attr.aria-label]="fieldLabel()"
     ></textarea>
+
+    <!-- Termin. Ohne Datum nur ein leises Symbol am Ende des Felds; mit
+         Datum steht es als Chip da, wie die Präfixe vorn. -->
+    <button
+      type="button"
+      cdkOverlayOrigin #dateTrigger="cdkOverlayOrigin"
+      class="todo-add-date -my-1 -mr-2 flex h-8 flex-none items-center gap-1 self-start rounded-full px-2 text-xs transition"
+      [class.is-set]="date() !== null"
+      (click)="$event.stopPropagation(); dateOpen.set(!dateOpen())"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="dateOpen()"
+      [attr.aria-label]="date() === null ? 'Plan for a day' : 'Planned for ' + dateText() + ', change'"
+      [title]="date() === null ? 'Plan for a day' : 'Planned for ' + dateText()">
+      <lucide-icon [img]="DateIcon" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+      @if (date() !== null) {
+        <span>{{ dateText() }}</span>
+      }
+    </button>
+
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="dateTrigger"
+      [cdkConnectedOverlayOpen]="dateOpen()"
+      [cdkConnectedOverlayPositions]="datePositions"
+      [cdkConnectedOverlayPush]="true"
+      [cdkConnectedOverlayViewportMargin]="16"
+      [cdkConnectedOverlayHasBackdrop]="true"
+      cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+      (backdropClick)="dateOpen.set(false)"
+      (detach)="dateOpen.set(false)"
+      (overlayKeydown)="$event.key === 'Escape' && dateOpen.set(false)">
+      <div class="popover w-[min(18rem,calc(100vw-2rem))] p-2.5" role="dialog" aria-label="Plan the new todo for a day">
+        <app-date-picker [value]="date()" [autofocus]="true" (picked)="setDate($event)" />
+      </div>
+    </ng-template>
   </div>
 
   <button

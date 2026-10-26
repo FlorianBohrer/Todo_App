@@ -1,0 +1,52 @@
+@if (presets()) {
+  <div class="date-presets" role="group" aria-label="Quick dates">
+    @for (option of options; track option.key) {
+      <button type="button" class="date-preset"
+        [class.is-selected]="value() === option.iso"
+        [attr.aria-pressed]="value() === option.iso"
+        (click)="pick(option.iso)">
+        <span>{{ option.label }}</span>
+        <span class="date-preset__hint">{{ hint(option.iso) }}</span>
+      </button>
+    }
+  </div>
+}
+
+<div class="date-head">
+  <span class="date-head__title" aria-live="polite">{{ title() }}</span>
+  <button type="button" class="date-head__nav" (click)="page(-1)" aria-label="Previous month">
+    <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
+  </button>
+  <button type="button" class="date-head__nav" (click)="page(1)" aria-label="Next month">
+    <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
+  </button>
+</div>
+
+<div class="date-grid" role="group" [attr.aria-label]="title()" (keydown)="onKeydown($event)">
+  @for (day of weekdays; track $index) {
+    <span class="date-grid__weekday" [attr.title]="day.long" aria-hidden="true">{{ day.short }}</span>
+  }
+  @for (week of weeks(); track week[0].iso) {
+    @for (day of week; track day.iso) {
+      <button type="button" class="date-day"
+        [attr.data-iso]="day.iso"
+        [tabIndex]="day.iso === focusIso() ? 0 : -1"
+        [class.is-outside]="!day.inMonth"
+        [class.is-past]="day.isPast"
+        [class.is-today]="day.isToday"
+        [class.is-selected]="day.iso === value()"
+        [attr.aria-pressed]="day.iso === value()"
+        [attr.aria-current]="day.isToday ? 'date' : null"
+        [attr.aria-label]="longLabel(day.iso) + (day.isToday ? ', today' : '')"
+        (focus)="focusIso.set(day.iso)"
+        (click)="pick(day.iso)">{{ day.dayNum }}</button>
+    }
+  }
+</div>
+
+@if (clearable() && value() !== null) {
+  <button type="button" class="date-clear" (click)="pick(null)">
+    <lucide-icon [img]="ClearIcon" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+    Remove date
+  </button>
+}

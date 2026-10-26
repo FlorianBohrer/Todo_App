@@ -52,12 +52,14 @@ import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
 import { todayISO } from '../../shared/week';
+import { DatePicker } from '../date-picker/date-picker';
 import { tap } from '../../shared/haptics';
 import { RewardService } from '../../../reward/reward.service';
 import { Rhythm, rhythmByTodo } from '../../shared/rhythm';
 
 import {
   CalendarPlus,
+  CalendarDays,
   ChevronDown,
   ChevronsUpDown,
   EllipsisVertical,
@@ -175,6 +177,7 @@ interface TodoRow {
     
     CdkDragPlaceholder,
     TokenChip,
+    DatePicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-list.html',
@@ -365,6 +368,7 @@ export class TodoList {
   protected readonly TrashIcon = Trash2;
     protected readonly PencilIcon = Pencil;
   protected readonly ScheduleIcon = CalendarPlus;
+  protected readonly CalendarIcon = CalendarDays;
   protected readonly RepeatIcon = Repeat;
   protected readonly ArchiveIcon = Archive;
   protected readonly RestoreIcon = Undo2;
@@ -397,6 +401,10 @@ export class TodoList {
   /** Platzhalterzeilen, damit @for etwas zu zaehlen hat. */
   protected readonly skeletonRows = [0, 1, 2];
   protected readonly folderListOpen = signal(false);
+  /** Das Monatsblatt im Telefon-Menü; zu, bis man „Pick date" tippt. */
+  protected readonly sheetCalendarOpen = signal(false);
+  /** Das Menü nur mit dem Termin, geöffnet über die Datumszeile. */
+  protected readonly sheetDateOnly = signal(false);
 
 toggleFolderList(): void {
   this.folderListOpen.update(open => !open);
@@ -698,11 +706,23 @@ toggleFolderList(): void {
  toggleOptionsMenu(id: string): void {
   this.openOptionsId.update(current => current === id ? null : id);
   this.folderListOpen.set(false);
+  this.sheetCalendarOpen.set(false);
+  this.sheetDateOnly.set(false);
 }
 
 closeOptionsMenu(): void {
   this.openOptionsId.set(null);
   this.folderListOpen.set(false);
+  this.sheetCalendarOpen.set(false);
+  this.sheetDateOnly.set(false);
+}
+
+/** Von der Datumszeile aus: dasselbe Blatt, nur der Termin, Kalender offen. */
+openDateSheet(id: string): void {
+  this.folderListOpen.set(false);
+  this.sheetCalendarOpen.set(true);
+  this.sheetDateOnly.set(true);
+  this.openOptionsId.set(id);
 }
 
   toggleMenu(id: string): void {
@@ -732,6 +752,12 @@ closeOptionsMenu(): void {
   /** Termin verstrichen und noch offen — nur dann ist die Warnfarbe ehrlich. */
   isLate(todo: Todo): boolean {
     return !todo.completed && isOverdueDate(todo.scheduledDate);
+  }
+
+  /** Ein Termin, den keine Schnellwahl trifft, etwa in drei Wochen. */
+  isCustomDate(todo: Todo): boolean {
+    const date = todo.scheduledDate;
+    return date !== null && !this.scheduleChoices().some((choice) => choice.iso === date);
   }
 
   toggleScheduleMenu(id: string): void {
