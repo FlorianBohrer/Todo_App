@@ -460,7 +460,9 @@
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: -0.025em;
+  // Instrument Sans läuft von Haus aus enger als Figtree; mehr als ein
+  // Hauch Tracking liess „2027" zusammenkleben.
+  letter-spacing: -0.012em;
   color: var(--color-text);
   outline: none;
 }

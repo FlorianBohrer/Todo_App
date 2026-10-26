@@ -32,7 +32,8 @@
             ],
             "styles": [
               "node_modules/@angular/cdk/overlay-prebuilt.css",
-              "node_modules/@fontsource-variable/figtree/index.css",
+              "node_modules/@fontsource-variable/instrument-sans/index.css",
+              "node_modules/@fontsource-variable/instrument-sans/wght-italic.css",
               "src/styles.scss"
             ],
             "allowedCommonJsDependencies": [
