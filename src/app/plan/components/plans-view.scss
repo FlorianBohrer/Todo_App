@@ -6,8 +6,8 @@
 
 @media (hover: hover) and (pointer: fine) {
 
-  // Am Zeigergeraet treten die Griffe zurueck, bis der Block ueberfahren wird —
-  // auf Touch bleiben sie stehen, dort gibt es kein Hover.
+  // Am Zeigergeraet treten die Griffe zurueck, bis der Block ueberfahren wird.
+  // Auf Touch siehe unten.
   .drag-handle {
     opacity: 0;
     transition: opacity 0.15s;
@@ -23,6 +23,16 @@
   .drag-handle.is-open {
     opacity: 1;
   }}
+
+
+// Auf Touch an den Plankarten gar kein Griff: dort wird nicht sortiert,
+// sondern geöffnet, und das „…" daneben trägt alles Übrige. Die Griffe im
+// Dokument regelt plan-block.scss.
+@media (hover: none) {
+  .plan-card .drag-handle {
+    display: none;
+  }
+}
 
 
 // ---- Drag & Drop ----
