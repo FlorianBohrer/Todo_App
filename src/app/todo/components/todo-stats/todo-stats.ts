@@ -88,8 +88,8 @@ export class TodoStats {
       const open = this.stats().active;
       if (open === 0) return 'Nothing planned for today.';
       return open === 1
-        ? 'Nothing planned for today — one thing is waiting.'
-        : `Nothing planned for today — ${open} things are waiting.`;
+        ? 'Nothing planned for today: one thing is waiting.'
+        : `Nothing planned for today: ${open} things are waiting.`;
     }
 
     if (load.open === 0) return 'Everything planned for today is done.';

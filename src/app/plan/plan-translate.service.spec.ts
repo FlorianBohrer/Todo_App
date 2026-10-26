@@ -52,7 +52,7 @@ describe('PlanTranslateService', () => {
     const done = service.translate([text('Ziele')], 'en');
     http.expectOne(url).flush('limit', { status: 429, statusText: 'Too Many Requests' });
 
-    await expect(done).rejects.toThrow(new TranslateError('Daily AI limit reached — try again tomorrow'));
+    await expect(done).rejects.toThrow(new TranslateError('Daily AI limit reached: try again tomorrow'));
     expect(titles.remaining()).toBe(0);
   });
 

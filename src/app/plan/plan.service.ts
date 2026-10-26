@@ -271,7 +271,7 @@ export class PlanService {
 
         // Einmal sagen, nicht bei jedem Versuch — sonst ist der Bildschirm
         // voller Meldungen, während die App das Problem selbst löst.
-        if (tries === 1) this.toast.error('Could not save — keeping your changes and retrying');
+        if (tries === 1) this.toast.error('Could not save: keeping your changes and retrying');
 
         this.schedule(id, Math.min(MAX_BACKOFF, 1000 * 2 ** (tries - 1)));
       },

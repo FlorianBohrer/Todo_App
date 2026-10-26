@@ -30,7 +30,7 @@ function readable(error: unknown): string {
     case 413:
       return 'This plan is too long to translate';
     case 429:
-      return 'Daily AI limit reached — try again tomorrow';
+      return 'Daily AI limit reached: try again tomorrow';
     default:
       return status ? `Translation failed (HTTP ${status})` : 'Translation failed';
   }
@@ -65,7 +65,7 @@ export class PlanTranslateService {
     if (left !== null && left < batches.length) {
       throw new TranslateError(
         left === 0
-          ? 'Daily AI limit reached — try again tomorrow'
+          ? 'Daily AI limit reached: try again tomorrow'
           : `This plan needs ${batches.length} AI requests, ${left} left today`,
       );
     }
