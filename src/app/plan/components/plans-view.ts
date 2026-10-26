@@ -3252,7 +3252,7 @@ export class PlansView {
       const current = this.planService.plans().find((p) => p.id === plan.id);
       if (!current) return;
       if (current.content !== plan.content || current.title !== plan.title) {
-        this.toast.error('The plan changed while translating — try again');
+        this.toast.error('The plan changed while translating: try again');
         return;
       }
 

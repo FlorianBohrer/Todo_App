@@ -271,7 +271,7 @@ export class App {
 
   /** Der volle Name samt Sammlung — fuer den Tooltip, wenn gekuerzt wird. */
   protected readonly folderTitle = computed(
-    () => `${this.activeLabel()?.name ?? 'All Tasks'} — open folders (f)`,
+    () => `${this.activeLabel()?.name ?? 'All Tasks'}: open folders (f)`,
   );
 
   /**
