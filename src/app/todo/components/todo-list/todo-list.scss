@@ -107,6 +107,40 @@ li.todo-expanded-row {
 // Ein ● in einer festen Box, damit die Breite nicht an der Schrift haengt:
 // das Zeichen ist in jeder Schriftart anders breit, und eine Spalte, die
 // mit der Schrift wandert, ist keine.
+// Der Termin unter dem Titel, nur auf dem Telefon (siehe Vorlage). Eine
+// eigene Zeile im Umbruch der Zeile, genau unter dem Titel eingerückt — mit
+// denselben Massen wie .todo-detail.
+@media (max-width: 639px) {
+  li.todo-has-when {
+    flex-wrap: wrap;
+    row-gap: 0.125rem;
+  }
+}
+
+.todo-when {
+  order: 11;
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 4.875rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--color-subtle);
+}
+
+.no-outline .todo-when {
+  margin-left: 3.25rem;
+}
+
+.todo-when--today {
+  color: var(--color-highlight2);
+}
+
+.todo-when--late {
+  color: var(--color-amber-300);
+}
+
 .todo-dot {
   display: grid;
   place-items: center;

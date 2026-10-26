@@ -900,6 +900,67 @@ select {
   text-align: left;
 }
 
+/* ---- Aktionsblatt (Telefon) ----
+   Ein Menü, das von unten hereinkommt, statt an einem Knopf zu hängen. Das
+   CDK-Overlay positioniert sein Fenster am Auslöser; hier wird es an den
+   unteren Bildschirmrand gelegt. Der Rand unten hält die Home-Leiste frei. */
+.action-sheet-pane {
+  position: fixed !important;
+  inset: auto 0 0 0 !important;
+  margin: 0 !important;
+  max-width: none !important;
+  transform: none !important;
+}
+
+.action-sheet-backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.action-sheet {
+  width: 100%;
+  max-height: 85dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-width: 1px 0 0;
+  border-radius: 1.25rem 1.25rem 0 0;
+  padding: 0.25rem 0.5rem calc(0.75rem + env(safe-area-inset-bottom));
+  animation: action-sheet-in 280ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.action-sheet .popover-item {
+  min-height: 3rem;
+}
+
+.action-sheet-grabber {
+  display: block;
+  width: 2.25rem;
+  height: 0.3125rem;
+  margin: 0.25rem auto 0.5rem;
+  border-radius: 9999px;
+  background: var(--color-line-strong);
+}
+
+.action-sheet-title {
+  overflow: hidden;
+  padding: 0 0.75rem 0.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: var(--color-subtle);
+}
+
+@keyframes action-sheet-in {
+  from { transform: translateY(100%); }
+}
+
+@keyframes action-sheet-fade {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-sheet { animation: action-sheet-fade 160ms ease-out both; }
+}
+
 /* Zwischentitel in einem Menue („Architecture", „Templates"): leise, klein,
    mit einer Haarlinie darueber. Gliedert, ohne selbst ein Eintrag zu sein. */
 .menu-section-label {
@@ -1211,6 +1272,14 @@ body.is-block-selecting * {
 @media (pointer: coarse) {
   :root {
     --text-prose: 1rem;
+  }
+
+  /* Dasselbe gilt für Auswahlfelder: iOS zoomt auch in ein select unter
+     16px. Betraf „Sort plans" und die Ordnerwahl im Plan — die liegt als
+     unsichtbares select über dem Chip, und gerade da sieht man nicht, warum
+     die Seite plötzlich vergrössert ist. */
+  select {
+    font-size: max(1rem, 16px);
   }
 }
 
