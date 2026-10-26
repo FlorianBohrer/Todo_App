@@ -183,7 +183,7 @@ export function floatText(origin: Point, text: string, variant: FloatVariant = '
       zIndex: '2147483001',
       pointerEvents: 'none',
       whiteSpace: 'nowrap',
-      font: '600 12px/1 "Figtree Variable", system-ui, sans-serif',
+      font: '600 12px/1 "Instrument Sans Variable", system-ui, sans-serif',
       letterSpacing: '0.01em',
       fontVariantNumeric: 'tabular-nums',
       color: FLOAT_COLORS[variant],

@@ -62,8 +62,8 @@ describe('diagramConfig', () => {
   });
 
   it('draws in the app font and the chosen accent', () => {
-    expect(config.fontFamily).toContain('Figtree');
-    expect(config.sequence?.actorFontFamily).toContain('Figtree');
+    expect(config.fontFamily).toContain('Instrument Sans');
+    expect(config.sequence?.actorFontFamily).toContain('Instrument Sans');
     // Mermaid setzt sonst 16px — auch in der Abfolge, deren eigene Größen
     // diese Zahl überschreibt.
     expect(config.fontSize).toBe(14);

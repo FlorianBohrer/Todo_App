@@ -6,7 +6,7 @@
  * Zeile hellgrau auf weiß — schlicht nicht zu lesen. Hier bekommt jedes
  * Diagramm dieselbe Sprache wie die App: ruhige Flächen, die sich mit einem
  * weichen Schatten vom gepunkteten Grund abheben, feine Linien, abgerundete
- * Ecken, Figtree, und die Akzentfarbe nur dort, wo sie etwas bedeutet —
+ * Ecken, die App-Schrift, und die Akzentfarbe nur dort, wo sie etwas bedeutet —
  * Entitätsnamen, Schlüssel, Grenzen, die Nummern einer Abfolge.
  *
  * Die Gestaltung steht in `themeCSS`, nicht im Stylesheet der Komponente:
@@ -47,7 +47,7 @@ export const DIAGRAM_PALETTE: DiagramPalette = {
   subtle: '#8C9AB0',
   wire: '#5E6C84',
   accent: '#5CC7BC',
-  font: '"Figtree Variable", ui-sans-serif, system-ui, sans-serif',
+  font: '"Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif',
 };
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';

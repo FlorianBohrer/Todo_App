@@ -369,20 +369,25 @@
     background: var(--color-bg);
     color: var(--color-text);
 
-    /* Figtree, selbst ausgeliefert (@fontsource-variable/figtree, siehe
-       angular.json).
+    /* Instrument Sans, selbst ausgeliefert
+       (@fontsource-variable/instrument-sans, siehe angular.json).
 
-       Vorher stand hier Inter an erster Stelle — geladen wurde Inter aber
-       nirgends. Kein @font-face, kein Link. Die App lief also seit jeher in
-       der Systemschrift, und die Zeile behauptete etwas anderes. Wer sie las,
-       musste glauben, Inter sei die Schrift dieser App.
+       Vorher Figtree, davor Inter (das nie geladen wurde). Beide sind runde,
+       freundliche Grotesken, wie sie heute auf jeder zweiten generierten
+       Oberfläche stehen: Inter, Figtree, DM Sans, Geist. Instrument Sans ist
+       eine klassische Grotesk mit klaren, leicht kantigen Zügen: kompakt in
+       der Weite (auf dem Telefon passt mehr Titel in eine Zeile), ruhig im
+       Fliesstext, eigen in den Details (G, y, ß).
 
-       Figtree statt Inter: rundere Formen, offenere Buchstaben, dieselbe
-       Lesbarkeit in kleinen Graden. Es ist der Teil von Headspace, der keine
-       Farbe kostet. Als variable Schrift ist es EINE Datei für alle Schnitte
-       von 300 bis 900, und weil sie mit der App kommt, gibt es keine Anfrage
-       an einen fremden Server und keinen Moment ohne Schrift (swap). */
-    font-family: "Figtree Variable", ui-sans-serif, system-ui, -apple-system,
+       Verglichen wurde auch Schibsted Grotesk. Sie sperrt in den
+       Tabellenziffern Doppelpunkt und Komma („20 : 33") — und die App setzt
+       Zeiten, Zähler und Fortschritt überall in Tabellenziffern.
+
+       Als variable Schrift EINE Datei für die Schnitte 400 bis 700, dazu
+       eine echte Kursive für Zitate (lädt nur, wenn eine dasteht). Weil sie
+       mit der App kommt, gibt es keine Anfrage an einen fremden Server und
+       keinen Moment ohne Schrift (swap). */
+    font-family: "Instrument Sans Variable", ui-sans-serif, system-ui, -apple-system,
                  "Segoe UI", Arial, "Apple Color Emoji", "Segoe UI Emoji";
   }
 
