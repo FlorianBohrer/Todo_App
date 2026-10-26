@@ -641,11 +641,11 @@ toggleFavorite(id: string) {
     return id ? this.todosById().get(id) ?? null : null;
   }
 
-  addTodos(titles: string[], parentId: string | null = null) {
+  addTodos(titles: string[], parentId: string | null = null, scheduledDate: string | null = null) {
     const clean = titles.map((t) => t.trim()).filter((t) => t.length > 0);
     if (clean.length === 0) return;
     if (clean.length === 1) {
-      this.addTodo(clean[0], null, parentId);
+      this.addTodo(clean[0], scheduledDate, parentId);
       return;
     }
 
@@ -661,7 +661,7 @@ toggleFavorite(id: string) {
         return;
       }
       this.http
-        .post<TodoDto>(this.apiUrl, { title: clean[index], categoryId })
+        .post<TodoDto>(this.apiUrl, { title: clean[index], categoryId, scheduledDate })
         .subscribe({
           next: (dto) => {
             this.todos.update((items) => [...items, this.toTodo(dto)]);

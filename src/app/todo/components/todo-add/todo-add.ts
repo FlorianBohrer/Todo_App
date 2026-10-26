@@ -19,11 +19,14 @@ import {
   tokenClass,
   withToken,
 } from '../../shared/title-token';
-import { CornerDownRight, Plus, X, LucideAngularModule } from 'lucide-angular';
+import { CalendarPlus, CornerDownRight, Plus, X, LucideAngularModule } from 'lucide-angular';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { DatePicker } from '../date-picker/date-picker';
+import { scheduleLabel } from '../../shared/schedule';
 
 @Component({
   selector: 'app-todo-add',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, OverlayModule, DatePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-add.html',
   // Der Fokusring gehört dem Rahmen um Chip und Text. Die globale
@@ -38,6 +41,28 @@ import { CornerDownRight, Plus, X, LucideAngularModule } from 'lucide-angular';
     .todo-add-field textarea:focus-visible {
       outline: none;
     }
+
+    .todo-add-date {
+      color: var(--color-subtle);
+    }
+
+    .todo-add-date:hover {
+      background: var(--color-fill);
+      color: var(--color-text);
+    }
+
+    .todo-add-date.is-set {
+      background: color-mix(in srgb, var(--color-indigo-500) 18%, transparent);
+      color: var(--color-text);
+    }
+
+    /* Unter 360px mit Präfix-Chip blieben dem Text keine 60px: dort zeigt
+       der getönte Kalender allein, dass ein Termin gesetzt ist. */
+    @media (max-width: 359px) {
+      .todo-add-date span {
+        display: none;
+      }
+    }
   `,
 })
 export class TodoAdd {
@@ -45,6 +70,31 @@ export class TodoAdd {
   readonly Plus = Plus;
   protected readonly SubIcon = CornerDownRight;
   protected readonly ClearIcon = X;
+  protected readonly DateIcon = CalendarPlus;
+
+  /**
+   * Termin gleich beim Anlegen. Vorher legte man an und setzte das Datum
+   * danach über das Menü der Zeile — zwei Wege für einen Gedanken
+   * („Zahnarzt, am 20."). Gilt für alles, was mit diesem Enter entsteht,
+   * und ist danach wieder leer, wie die Chips.
+   */
+  protected readonly date = signal<string | null>(null);
+  protected readonly dateOpen = signal(false);
+  protected readonly datePositions: ConnectedPosition[] = [
+    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
+  ];
+
+  protected dateText(): string {
+    const date = this.date();
+    return date === null ? '' : scheduleLabel(date);
+  }
+
+  protected setDate(iso: string | null): void {
+    this.date.set(iso);
+    this.dateOpen.set(false);
+    this.field()?.nativeElement.focus();
+  }
 
   /** Die angeklickte Hauptaufgabe; neue Todos landen bei ihr. */
   protected readonly parent = this.todoService.activeParent;
@@ -69,7 +119,12 @@ export class TodoAdd {
 
   /** Was die Vorlesesoftware zum Feld sagt: es selbst und seine Chips. */
   protected fieldLabel(): string {
-    return ['New todo', ...this.tokens().map((t) => TOKEN_DESCRIPTION[t])].join(', ');
+    const date = this.date();
+    return [
+      'New todo',
+      ...this.tokens().map((t) => TOKEN_DESCRIPTION[t]),
+      ...(date === null ? [] : ['planned for ' + scheduleLabel(date)]),
+    ].join(', ');
   }
 
   protected readonly tokenIcon = TOKEN_ICON;
@@ -109,9 +164,10 @@ export class TodoAdd {
     });
     if (titles.length === 0) return;
 
-    this.todoService.addTodos(titles, parent?.id ?? null);
+    this.todoService.addTodos(titles, parent?.id ?? null, this.date());
     this.newTitle = '';
     this.tokens.set([]);
+    this.date.set(null);
   }
 
   /**
@@ -162,6 +218,7 @@ export class TodoAdd {
     }
     this.newTitle = '';
     this.tokens.set([]);
+    this.date.set(null);
   }
 
      private parseTitles(raw: string): string[] {

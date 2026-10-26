@@ -259,17 +259,23 @@
                nähme — und damit stand auf dem Telefon nirgends, was heute
                dran ist und was schon drüber. Heute in der Ansichtsfarbe,
                überfällig in Bernstein, wie am Rechner. -->
+          <!-- Antippen öffnet den Kalender direkt (openDateSheet): wer das
+               Datum sieht und es ändern will, tippt aufs Datum, nicht auf
+               die drei Punkte daneben. -->
           @if (todo.scheduledDate !== null && editingId() !== todo.id) {
-            <span class="todo-when sm:hidden"
+            <button type="button" class="todo-when sm:hidden"
               [class.todo-when--today]="row.isToday && !todo.completed"
-              [class.todo-when--late]="row.isLate">
+              [class.todo-when--late]="row.isLate"
+              (click)="$event.stopPropagation(); openDateSheet(todo.id)"
+              aria-haspopup="dialog"
+              [attr.aria-label]="'Planned for ' + row.scheduleText + ', change'">
               <lucide-icon [img]="ScheduleIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
               {{ row.scheduleText }}
               @if (todo.repeat) {
                 <lucide-icon [img]="RepeatIcon" class="h-3 w-3 opacity-70"
                   [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
               }
-            </span>
+            </button>
           }
 
           <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
@@ -363,33 +369,20 @@
             [cdkConnectedOverlayOrigin]="scheduleTrigger"
             [cdkConnectedOverlayOpen]="openScheduleId() === todo.id"
             [cdkConnectedOverlayPositions]="overlayPositions"
+            [cdkConnectedOverlayPush]="true"
+            [cdkConnectedOverlayViewportMargin]="16"
             [cdkConnectedOverlayHasBackdrop]="true"
             cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
             (backdropClick)="closeScheduleMenu()"
             (overlayKeydown)="$event.key === 'Escape' && closeScheduleMenu()">
+            <!-- Ein Blatt statt vier fester Knöpfe: die Schnellwahl steht oben im
+                 Kalender, darunter jeder andere Tag (date-picker.ts). -->
             <div
-              role="listbox"
-              class="popover w-52">
-              @for (choice of scheduleChoices(); track choice.key) {
-                <button
-                  type="button" role="option"
-                  [attr.aria-selected]="todo.scheduledDate === choice.iso"
-                  class="popover-item text-sm text-text transition"
-                  (click)="schedule(todo.id, choice.iso)">
-                  <span class="flex-1">{{ choice.label }}</span>
-                  @if (todo.scheduledDate === choice.iso) {
-                    <span class="text-highlight2">✓</span>
-                  }
-                </button>
-              }
-              @if (todo.scheduledDate !== null) {
-                <button
-                  type="button" role="option" [attr.aria-selected]="false"
-                  class="popover-item border-t border-border text-sm text-muted transition"
-                  (click)="schedule(todo.id, null)">
-                  Clear date
-                </button>
-              }
+              role="dialog" aria-label="Plan for a day"
+              class="popover w-72">
+              <app-date-picker class="p-2.5" [autofocus]="true"
+                [value]="todo.scheduledDate"
+                (picked)="schedule(todo.id, $event)" />
               <!-- Wiederholung. Sitzt hier und nicht in einem eigenen Menue,
                    weil Termin und Rhythmus dieselbe Frage sind: wann. Und
                    dieses Menue gibt es auf Desktop wie Mobil, das
@@ -581,6 +574,8 @@
               <span class="action-sheet-grabber" aria-hidden="true"></span>
               <p class="action-sheet-title">{{ row.firstLine }}</p>
 
+              <!-- Vom Datum aus geöffnet nur der Termin; sonst alles. -->
+              @if (!sheetDateOnly()) {
               <button
                 type="button" role="menuitem"
                 class="popover-item text-sm text-text transition"
@@ -601,9 +596,10 @@
                 <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
                 <span>Edit text</span>
               </button>
+              }
 
               <!-- Termin, mobil: dieselben Angebote als Reihe -->
-              <div class="border-t border-border px-3 pb-2.5 pt-2.5">
+              <div class="px-3 pb-2.5 pt-2.5" [class.border-t]="!sheetDateOnly()" [class.border-border]="!sheetDateOnly()">
                 <div class="mb-1.5 flex items-center gap-2.5 text-xs text-muted">
                   <lucide-icon [img]="ScheduleIcon" class="h-3.5 w-3.5"></lucide-icon>
                   <span>Plan for</span>
@@ -625,9 +621,30 @@
                       {{ choice.label }}
                     </button>
                   }
+                  <!-- Jeder andere Tag. Steht ein eigener Termin, zeigt der
+                       Knopf ihn — sonst wäre er im Menü nirgends zu sehen. -->
+                  <button
+                    type="button"
+                    class="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition"
+                    [class]="isCustomDate(todo) || sheetCalendarOpen()
+                      ? 'border-indigo-400 text-indigo-300'
+                      : 'border-border text-text hover:border-indigo-400 hover:text-indigo-300'"
+                    [attr.aria-expanded]="sheetCalendarOpen()"
+                    (click)="sheetCalendarOpen.set(!sheetCalendarOpen())">
+                    <lucide-icon [img]="CalendarIcon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+                    {{ isCustomDate(todo) ? row.scheduleText : 'Pick date' }}
+                  </button>
                 </div>
+                @if (sheetCalendarOpen()) {
+                  <app-date-picker class="date-in-sheet mt-3"
+                    [value]="todo.scheduledDate"
+                    [presets]="false"
+                    [clearable]="false"
+                    (picked)="schedule(todo.id, $event); closeOptionsMenu()" />
+                }
               </div>
 
+@if (!sheetDateOnly()) {
 <!-- Folders: collapsible and scrollable. Multi-select keeps the menu open. -->
 <div class="border-t border-border">
   <button
@@ -704,6 +721,7 @@
                 <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
                 <span>Delete</span>
               </button>
+}
             </div>
           </ng-template>
         </li>
