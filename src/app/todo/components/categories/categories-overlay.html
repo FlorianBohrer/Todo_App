@@ -1,18 +1,29 @@
 @if (isOpen()) {
+  <!-- Auf- und Zugehen: categories-overlay.scss. animate.leave hält beide
+       Flächen im DOM, bis sie draussen sind; vorher verschwand der Dialog in
+       einem Bild. -->
   <div
     class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+    animate.enter="folders-fade-in"
+    animate.leave="folders-fade-out"
     (click)="close()">
   </div>
 
   <!-- Spalten-Layout: Header + Suche oben fix, Folder-Liste scrollt, Add-Form
        bleibt als Footer immer sichtbar. -->
   <div
-    class="fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[92vw] max-w-3xl -translate-x-1/2 -translate-y-1/2
+    class="folders-panel fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[92vw] max-w-3xl -translate-x-1/2 -translate-y-1/2
            flex-col rounded-xl border border-line bg-panel1 shadow-lg"
+    [class.is-fresh]="fresh()"
+    [style.--from-x.px]="origin().x"
+    [style.--from-y.px]="origin().y"
+    animate.enter="folders-panel-in"
+    animate.leave="folders-panel-out"
+    role="dialog" aria-modal="true" aria-labelledby="folders-title"
     (click)="$event.stopPropagation()">
 
     <div class="flex items-center justify-between px-4 pt-4 sm:px-6 sm:pt-6">
-      <h2 class="text-2xl font-bold text-text">Folders</h2>
+      <h2 id="folders-title" class="text-2xl font-bold text-text">Folders</h2>
       <button
         class="rounded-lg p-1 text-muted transition hover:text-text"
         (click)="close()"
@@ -41,7 +52,7 @@
           class="min-w-0 flex-1 bg-transparent text-text outline-none placeholder:text-muted"
           [value]="searchTerm()"
           (input)="searchTerm.set(search.value)"
-          (keydown.escape)="$event.stopPropagation(); clearSearch(); search.value = ''"
+          (keydown.escape)="onSearchEscape($event, search)"
           aria-label="Search folders" />
 
         @if (isSearching()) {
@@ -80,11 +91,14 @@
     </div>
 
     <!-- Scrollbereich: nur die Folder-Liste scrollt -->
-    <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6">
+    <!-- overscroll-contain: am Ende der Liste zog das Wischen sonst die Seite
+         dahinter mit. -->
+    <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-6">
 
       <!-- All-Karte: nicht sortierbar, daher außerhalb des Grids -->
-      <button class="mb-3 flex w-full items-center gap-3 rounded-xl border border-line
+      <button class="folder-stagger mb-3 flex w-full items-center gap-3 rounded-xl border border-line
                bg-fill p-4 text-left transition hover:border-line-strong hover:bg-fill"
+        style="--i: 0"
         [class.ring-2]="activeLabelId() === null"
         [class.ring-highlight2]="activeLabelId() === null"
         (click)="select(null)">
@@ -110,14 +124,14 @@
       @for (section of sections(); track section.key; let first = $first; let i = $index) {
 
         <div cdkDrag [cdkDragDisabled]="touchOnly() || sectionDragOff(section) !== null">
-          <!-- Platzhalter mit eigenen Klassen statt einer SCSS-Regel: dieser
-               Dialog hat keine eigene Stildatei. -->
+          <!-- Platzhalter mit eigenen Klassen: er gehört dem CDK, das ihn
+               ausserhalb dieser Vorlage erzeugt. -->
           <div *cdkDragPlaceholder
                class="mb-2 h-12 rounded-xl border border-dashed border-line-strong bg-fill/40"
                [class.mt-5]="!first"></div>
 
         @if (section.title) {
-          <div class="mb-2 flex items-center gap-1.5" [class.mt-5]="!first">
+          <div class="folder-stagger mb-2 flex items-center gap-1.5" [class.mt-5]="!first" [style.--i]="i + 1">
             <!-- Der Griff ist der EINZIGE Weg, einen Abschnitt zu ziehen.
                  Sonst würde jeder Zug an einer Karte auch den Abschnitt
                  anfassen, in dem sie liegt. -->
@@ -163,11 +177,12 @@
              [cdkDropListEnterPredicate]="canEnter"
              (cdkDropListDropped)="drop($event)">
 
-        @for (label of section.labels; track label.id) {
+        @for (label of section.labels; track label.id; let j = $index) {
           <div
             cdkDrag
             [cdkDragDisabled]="touchOnly() || isSearching() || editingId() === label.id"
-            class="group relative flex flex-wrap items-center gap-2 rounded-xl border border-line bg-fill p-4
+            [style.--i]="i + j + 1"
+            class="folder-stagger group relative flex flex-wrap items-center gap-2 rounded-xl border border-line bg-fill p-4
                    text-left cursor-pointer transition hover:border-line-strong"
             [class.ring-2]="activeLabelId() === label.id"
             [class.ring-highlight2]="activeLabelId() === label.id"
