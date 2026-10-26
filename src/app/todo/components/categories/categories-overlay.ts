@@ -1,5 +1,16 @@
 import { LabelService, Label } from '../../services/label.service';
-import {ChangeDetectionStrategy, Component, computed, effect, inject, HostListener, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  HostListener,
+  Injector,
+  afterNextRender,
+  signal,
+  untracked,
+} from '@angular/core';
 import {
   CdkDropList,
   CdkDrag,
@@ -58,6 +69,7 @@ function storedGrouping(): FolderGrouping {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './categories-overlay.html',
+  styleUrl: './categories-overlay.scss',
 })
 export class CategoriesOverlay {
   private readonly labelService = inject(LabelService);
@@ -98,6 +110,65 @@ export class CategoriesOverlay {
   protected readonly labels        = this.labelService.labels;
   protected readonly isOpen        = this.labelService.isOverlayOpen;
   protected readonly activeLabelId = this.labelService.activeLabelId;
+  /**
+   * Woher der Dialog kommt: die Mitte des Folder-Knopfs, als Abstand zur
+   * Bildschirmmitte, wo der Dialog steht. Er wächst von dort auf und
+   * schrumpft beim Schliessen dorthin zurück — man sieht, was man geöffnet
+   * hat und wohin es geht. Ohne sichtbaren Knopf (Kürzel „f" auf einer
+   * Ansicht ohne Kopfleiste) kommt er aus der Mitte.
+   *
+   * Gemessen beim Öffnen; der Wert bleibt, bis er wieder zu ist.
+   */
+  protected readonly origin = computed(() => {
+    if (!this.isOpen()) return { x: 0, y: 0 };
+    return untracked(() => {
+      const rect = document.querySelector('.folder-pill')?.getBoundingClientRect();
+      if (!rect || rect.width === 0) return { x: 0, y: 0 };
+      return {
+        x: Math.round(rect.left + rect.width / 2 - window.innerWidth / 2),
+        y: Math.round(rect.top + rect.height / 2 - window.innerHeight / 2),
+      };
+    });
+  });
+
+  /**
+   * Die Karten kommen beim Öffnen nacheinander herein — nur dann. Beim Suchen,
+   * Umgruppieren oder Ziehen entstehen Karten neu; liefen sie da jedesmal
+   * gestaffelt ein, hinge die Liste beim Tippen hinterher.
+   */
+  private readonly settled = signal(false);
+  protected readonly fresh = computed(() => this.isOpen() && !this.settled());
+  private readonly settle = effect((onCleanup) => {
+    if (!this.isOpen()) {
+      this.settled.set(false);
+      return;
+    }
+    const timer = setTimeout(() => this.settled.set(true), 1000);
+    onCleanup(() => clearTimeout(timer));
+  });
+
+  /**
+   * Am Rechner steht der Cursor gleich in der Suche: man öffnet die Folder
+   * (Klick oder „f") meist, um einen bestimmten zu finden, und tippt los.
+   * Auf Touch nicht — dort schöbe die Tastatur die halbe Liste weg.
+   *
+   * Gemerkt wird, was vorher den Fokus hatte; Esc gibt ihn dorthin zurück.
+   */
+  private readonly injector = inject(Injector);
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('search');
+  private opener: HTMLElement | null = null;
+  private readonly focusOnOpen = effect(() => {
+    if (!this.isOpen()) return;
+    untracked(() => {
+      const active = document.activeElement;
+      this.opener = active instanceof HTMLElement && active !== document.body ? active : null;
+      if (this.touchOnly()) return;
+      afterNextRender(() => this.searchInput()?.nativeElement.focus({ preventScroll: true }), {
+        injector: this.injector,
+      });
+    });
+  });
+
   protected readonly palette = ['rose', 'orange', 'amber', 'emerald', 'teal', 'sky', 'violet', 'fuchsia'];
   protected readonly draftColor = signal('rose');
 
@@ -431,7 +502,22 @@ pickColor(id: string, color: string, event: Event) {
   onEscape() {
     if (this.isOpen()) {
       this.close();
+      const opener = this.opener ?? document.querySelector<HTMLElement>('.folder-pill');
+      this.opener = null;
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
     }
+  }
+
+  /**
+   * Esc in der Suche leert sie zuerst; ist sie leer, schliesst Esc den
+   * Dialog. Vorher hielt das Feld jedes Esc fest — seit der Cursor beim
+   * Öffnen darin steht, ging der Dialog per Tastatur gar nicht mehr zu.
+   */
+  protected onSearchEscape(event: Event, field: HTMLInputElement): void {
+    if (!this.isSearching()) return;
+    event.stopPropagation();
+    this.clearSearch();
+    field.value = '';
   }
 
 
