@@ -27,11 +27,44 @@
   }
 }
 
-/* Zwei Spalten auf dem Telefon: bei ungerader Zahl nimmt die Favoriten-
-   Kachel die ganze erste Reihe, statt dass unten eine Kachel allein steht. */
+/* Telefon: eine Reihe zum Wischen statt eines Rasters.
+
+   Als Raster standen fünf Ordner in drei Reihen (unter 360px in fünf) vor
+   der ersten Aufgabe der Liste, gut 270px. Als Reihe ist es eine Höhe, und
+   die angeschnittene Kachel am Rand sagt, dass es weitergeht. Die Reihe
+   läuft bis an beide Bildschirmkanten (der negative Rand hebt das Polster
+   der Seite genau auf) und rastet an jeder Kachel ein. Oben und unten ein
+   paar Pixel Luft, sonst schnitte der Rollbereich den Ring der aktiven
+   Kachel ab. */
+@media (max-width: 639px) {
+  .favorite-strip {
+    display: flex;
+    gap: 0.625rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-inline: -0.75rem;
+    padding: 3px 0.75rem;
+    scroll-padding-inline: 0.75rem;
+  }
+
+  .favorite-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .favorite-strip > .folder-card {
+    flex: 0 0 auto;
+    width: 10rem;
+    scroll-snap-align: start;
+  }
+}
+
 @media (min-width: 360px) and (max-width: 639px) {
-  .favorite-tile--wide {
-    grid-column: span 2;
+  .favorite-strip {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    scroll-padding-inline: 1rem;
   }
 }
 

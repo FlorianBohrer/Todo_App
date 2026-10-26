@@ -20,8 +20,11 @@
          Tönen lasen sich wie ein Regenbogen über der Liste, lauter als die
          Liste selbst. Die Schrift ist wieder Schrift; `currentColor` am Knopf
          bleibt die Ordnerfarbe, damit Ring und Erfolgsring sie finden. -->
+    <!-- Auf dem Telefon eine Reihe zum Wischen statt eines Rasters
+         (favorite-folders.scss, .favorite-strip): drei Reihen Kacheln standen
+         dort vor der ersten Aufgabe. -->
     <div
-      class="grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2"
+      class="favorite-strip grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2"
       [class]="tileCount() === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'">
 
       <!-- Virtueller Favoriten-Ordner: Fortschritt aller favorisierten Todos -->

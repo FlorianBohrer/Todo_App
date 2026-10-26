@@ -8,7 +8,21 @@
 
     <div class="flex items-center gap-2">
       <lucide-icon [img]="FocusIcon" class="h-3.5 w-3.5 flex-none text-brand-2" aria-hidden="true"></lucide-icon>
-      <h2 class="text-sm font-medium text-text">Next up</h2>
+      <h2 class="flex-none text-sm font-medium text-text">Next up</h2>
+
+      <!-- Zugeklappt: der erste Vorschlag als Vorschau, damit die Zeile auch
+           zu etwas sagt, was als Nächstes dran ist. Ein Tipp öffnet alles. -->
+      @if (collapsed()) {
+        <button type="button"
+          class="flex min-w-0 flex-1 items-baseline gap-1.5 text-left text-sm text-subtle transition hover:text-text"
+          (click)="toggleCollapsed()"
+          aria-hidden="true" tabindex="-1">
+          <span class="min-w-0 truncate">{{ title(suggestions()[0]) }}</span>
+          @if (suggestions().length > 1) {
+            <span class="flex-none text-xs tabular-nums">+{{ suggestions().length - 1 }}</span>
+          }
+        </button>
+      }
 
       <!-- Die Tagesbilanz stand hier klein und noch einmal: sie steht jetzt
            oben im Auftakt, in voller Größe und im Zusammenhang. Zweimal
@@ -20,7 +34,7 @@
         [attr.aria-expanded]="!collapsed()"
         [attr.aria-label]="collapsed() ? 'Show suggestions' : 'Hide suggestions'">
         <lucide-icon [img]="ChevronIcon" class="h-4 w-4 transition-transform duration-200"
-          [class.rotate-180]="collapsed()"></lucide-icon>
+          [class.rotate-180]="!collapsed()"></lucide-icon>
       </button>
     </div>
 
