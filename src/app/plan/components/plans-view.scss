@@ -753,6 +753,13 @@
 }
 
 
+.outline-link.is-current {
+  background-color: var(--color-fill);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+
 // ---- Micro-Animationen ----
 //
 // Ausschliesslich transform und opacity: beides laeuft auf dem Compositor,

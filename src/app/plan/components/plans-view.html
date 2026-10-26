@@ -127,8 +127,8 @@
           (backdropClick)="closeOutline()"
           (detach)="closeOutline()"
           (overlayKeydown)="$event.key === 'Escape' && closeOutline()">
-          <div class="popover max-h-[70vh] w-64 overflow-y-auto px-1 py-1">
-            <ng-container *ngTemplateOutlet="outlineTpl"></ng-container>
+          <div class="popover max-h-[70vh] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto px-1 py-1">
+            <ng-container *ngTemplateOutlet="outlineTpl; context: { inPopover: true }"></ng-container>
           </div>
         </ng-template>
       }
@@ -359,7 +359,7 @@
 
     <!-- Einmal geschrieben, zweimal gezeigt: in der Seitenleiste, solange sie
          Platz hat, und sonst im Popover am Knopf oben. -->
-    <ng-template #outlineTpl>
+    <ng-template #outlineTpl let-inPopover="inPopover">
         @if (outline().length) {
           <p class="mb-2 px-2 text-2xs font-medium uppercase tracking-wide text-subtle">
             Outline
@@ -367,8 +367,14 @@
           <ul class="space-y-0.5">
             @for (item of outline(); track item.id) {
               <li>
+                <!-- Im Popover ist das Kapitel markiert, in dem man gerade
+                     liest — beim Öffnen gemessen (toggleOutline). Am Telefon
+                     ist das die einzige Antwort auf „wo bin ich gerade". -->
                 <button type="button"
                   class="outline-link block w-full truncate rounded-lg py-1 pr-2 text-left text-sm transition pointer-coarse:py-2.5 pointer-coarse:text-base"
+                  [class.is-current]="inPopover && item.id === currentChapter()"
+                  [attr.aria-current]="inPopover && item.id === currentChapter() ? 'location' : null"
+                  [attr.data-outline-id]="inPopover ? item.id : null"
                   [style.padding-left.rem]="0.5 + (item.level - 1) * 0.7"
                   [title]="item.text"
                   (click)="jumpTo(item.id); closeOutline()">{{ item.text }}</button>
