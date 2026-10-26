@@ -462,7 +462,7 @@
                              Grenze zu sehen ist. -->
                         <span class="plan-col-grip" role="separator" tabindex="0"
                           aria-orientation="vertical"
-                          [attr.aria-label]="'Resize column ' + (ci + 1) + ' — arrow keys'"
+                          [attr.aria-label]="'Resize column ' + (ci + 1) + ': arrow keys'"
                           (pointerdown)="view.startColResize($event, block.id, ci)"
                           (keydown)="view.nudgeColumn($event, block.id, ci)"></span>
                       </th>

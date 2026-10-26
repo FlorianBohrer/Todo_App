@@ -145,7 +145,7 @@
               [class.text-subtle]="saveState() === 'saving'"
               [class.text-amber-300]="saveState() === 'retrying'"
               role="status">
-          {{ saveState() === 'saving' ? 'Saving…' : 'Not saved — retrying' }}
+          {{ saveState() === 'saving' ? 'Saving…' : 'Not saved: retrying' }}
         </span>
       }
 
