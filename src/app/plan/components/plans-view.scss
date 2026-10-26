@@ -460,9 +460,11 @@
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.2;
-  // Instrument Sans läuft von Haus aus enger als Figtree; mehr als ein
-  // Hauch Tracking liess „2027" zusammenkleben.
-  letter-spacing: -0.012em;
+  // Instrument Sans läuft von Haus aus enger als Figtree, und ihr
+  // Wortabstand ist im fetten Schnitt knapp: „Sommer 2027" las sich wie ein
+  // Wort. Kaum Tracking, dafür etwas mehr Luft zwischen den Wörtern.
+  letter-spacing: -0.008em;
+  word-spacing: 0.06em;
   color: var(--color-text);
   outline: none;
 }
