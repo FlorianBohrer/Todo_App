@@ -74,6 +74,7 @@
       (cdkDragStarted)="onDragStarted()"
       (cdkDragEnded)="onDragEnded()"
       class="todo-card group flex items-center justify-between gap-2.5 px-2 py-3 transition hover:bg-fill sm:px-2.5"
+      [class.todo-has-when]="todo.scheduledDate !== null"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
         todo.completed || completingTodoIds().has(todo.id)
@@ -233,6 +234,24 @@
 
           @if (showsDetail(row)) {
             <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)">{{ row.detailLines }}</div>
+          }
+
+          <!-- Telefon: der Termin als leise Zeile unter dem Titel. Der Chip
+               rechts ist dort ausgeblendet, weil er dem Titel die halbe Breite
+               nähme — und damit stand auf dem Telefon nirgends, was heute
+               dran ist und was schon drüber. Heute in der Ansichtsfarbe,
+               überfällig in Bernstein, wie am Rechner. -->
+          @if (todo.scheduledDate !== null && editingId() !== todo.id) {
+            <span class="todo-when sm:hidden"
+              [class.todo-when--today]="row.isToday && !todo.completed"
+              [class.todo-when--late]="row.isLate">
+              <lucide-icon [img]="ScheduleIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
+              {{ row.scheduleText }}
+              @if (todo.repeat) {
+                <lucide-icon [img]="RepeatIcon" class="h-3 w-3 opacity-70"
+                  [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
+              }
+            </span>
           }
 
           <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
@@ -528,12 +547,21 @@
             [cdkConnectedOverlayOpen]="openOptionsId() === todo.id"
             [cdkConnectedOverlayPositions]="overlayPositions"
             [cdkConnectedOverlayHasBackdrop]="true"
-            cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+            cdkConnectedOverlayBackdropClass="action-sheet-backdrop"
+            cdkConnectedOverlayPanelClass="action-sheet-pane"
             (backdropClick)="closeOptionsMenu()"
             (overlayKeydown)="$event.key === 'Escape' && closeOptionsMenu()">
+            <!-- Auf dem Telefon ein Blatt von unten, kein Popover an der Zeile.
+                 Am Punkt-Menü aufgehängt lief es bei geöffneter Ordnerliste
+                 über den Bildschirmrand und unter die Leiste, und „Delete"
+                 war nicht mehr zu erreichen. Unten liegt es da, wo der Daumen
+                 ohnehin ist; der Titel oben sagt, welche Zeile gemeint ist. -->
             <div
               role="menu"
-              class="popover w-64">
+              class="popover action-sheet"
+              [attr.aria-label]="'Options for ' + row.firstLine">
+              <span class="action-sheet-grabber" aria-hidden="true"></span>
+              <p class="action-sheet-title">{{ row.firstLine }}</p>
 
               <button
                 type="button" role="menuitem"
@@ -604,14 +632,15 @@
       [class.rotate-180]="folderListOpen()"></lucide-icon>
   </button>
 
-  <!-- grid-rows 0fr -> 1fr animates to the natural height, no magic pixel value -->
+  <!-- grid-rows 0fr -> 1fr animates to the natural height, no magic pixel value.
+       As a style binding: the escaped class names ([class.grid-rows-\[0fr\]])
+       never reached Tailwind's scanner, so the list was always open. -->
  <div
   [id]="'folders-' + todo.id"
   role="group"
   aria-label="Folders"
   class="grid transition-[grid-template-rows] duration-200 ease-out"
-  [class.grid-rows-\[1fr\]]="folderListOpen()"
-  [class.grid-rows-\[0fr\]]="!folderListOpen()">
+  [style.grid-template-rows]="folderListOpen() ? '1fr' : '0fr'">
     <div class="min-h-0 overflow-hidden">
       <div class="folder-scroll max-h-48 overflow-y-auto overscroll-contain pb-1">
         @for (label of labels(); track label.id) {
