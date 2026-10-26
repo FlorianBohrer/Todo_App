@@ -1,0 +1,98 @@
+/* ---------------------------------------------------------------------------
+   Folder-Dialog: wächst aus dem Knopf, der ihn öffnet
+   ---------------------------------------------------------------------------
+
+   Vorher war er einfach da und einfach weg. Jetzt kommt er aus dem
+   Folder-Knopf oben links (--from-x/--from-y, gemessen in
+   categories-overlay.ts), wächst zur Mitte und federt kurz nach, und beim
+   Schliessen fliegt er dorthin zurück. Wählt man einen Folder, schrumpft der
+   Dialog also genau in den Knopf, der gerade seinen neuen Namen bekommt.
+
+   transform ist frei: Tailwind 4 zentriert über die eigene translate-
+   Eigenschaft, die sich mit transform verrechnet statt sie zu ersetzen.
+
+   Die Feder ist eine echte (Dämpfung 0,78, rund 2 % Nachschwingen), als
+   linear()-Kurve ausgeschrieben. Browser ohne linear() nehmen die Zeile
+   davor, dieselbe Bewegung ohne Nachschwingen.
+   --------------------------------------------------------------------------- */
+
+.folders-panel-in {
+  animation: folders-panel-in 620ms var(--spring) both;
+  /* Ausgeschrieben, nicht als Variable: eine Variable mit unbekannter Kurve
+     fiele auf „ease" zurück statt auf die Zeile davor. */
+  animation-timing-function: linear(
+    0, 0.0714, 0.2278, 0.4082, 0.5776, 0.7197, 0.8293, 0.908, 0.9605, 0.9928,
+    1.0104, 1.0182, 1.0199, 1.0182, 1.015, 1.0114, 1.0081, 1.0053, 1.0032,
+    1.0017, 1.0007, 1.0001, 0.9998, 0.9996, 1
+  );
+}
+
+/* Die Deckkraft ist nach gut einem Drittel voll: der Dialog soll sichtbar
+   sein, bevor er ankommt, nicht erst mit dem Nachfedern auftauchen. */
+@keyframes folders-panel-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) scale(0.3);
+  }
+
+  35% {
+    opacity: 1;
+  }
+}
+
+.folders-panel-out {
+  pointer-events: none;
+  animation: folders-panel-out 260ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes folders-panel-out {
+  to {
+    opacity: 0;
+    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) scale(0.3);
+  }
+}
+
+.folders-fade-in {
+  animation: folders-fade-in 280ms var(--ease-out) both;
+}
+
+.folders-fade-out {
+  pointer-events: none;
+  animation: folders-fade-in 260ms cubic-bezier(0.4, 0, 1, 1) reverse both;
+}
+
+@keyframes folders-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Die Karten folgen, wenn der Dialog fast steht: von oben nach unten, je
+   eine Spur später. Nach zwölf hört das Staffeln auf — bei vierzig Foldern
+   wartete die letzte Karte sonst eine Sekunde. */
+.folders-panel.is-fresh .folder-stagger {
+  animation: folder-card-in 440ms var(--spring) both;
+  animation-delay: calc(140ms + min(var(--i, 0), 12) * 28ms);
+}
+
+@keyframes folder-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Nur Überblenden: kein Fliegen, kein Staffeln. */
+  .folders-panel-in {
+    animation: folders-fade-in 160ms var(--ease-out) both;
+  }
+
+  .folders-panel-out {
+    animation: folders-fade-in 140ms var(--ease-out) reverse both;
+  }
+
+  .folders-panel.is-fresh .folder-stagger {
+    animation: none;
+  }
+}
