@@ -3083,16 +3083,19 @@ export class PlansView {
 
     // Den grossen Titel beobachten: sobald er unter der Leiste verschwindet,
     // zeigt sie ihn klein. Der obere Rand des Beobachtungsfensters liegt
-    // darum so tief wie Leiste und Dokumentkopf zusammen.
+    // darum so tief wie Leiste und Dokumentkopf zusammen — am Telefon klebt
+    // nur der Dokumentkopf (plans-view.scss), dort reicht dessen Höhe, sonst
+    // stünde der Titel zweimal da.
     effect((onCleanup) => {
       const title = this.titleField()?.nativeElement;
       if (!title) {
         this.titleScrolledAway.set(false);
         return;
       }
+      const phone = window.matchMedia?.('(max-width: 639px)').matches ?? false;
       const watch = new IntersectionObserver(
         ([entry]) => this.titleScrolledAway.set(!entry.isIntersecting && entry.boundingClientRect.top < 200),
-        { rootMargin: '-120px 0px 0px 0px' },
+        { rootMargin: phone ? '-56px 0px 0px 0px' : '-120px 0px 0px 0px' },
       );
       watch.observe(title);
       onCleanup(() => watch.disconnect());
