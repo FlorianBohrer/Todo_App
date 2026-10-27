@@ -32,7 +32,6 @@ import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
 import {
   MoscowLevel,
-  moveWithSubtasks,
   stripPriorityPrefix,
   priorityBadge,
   subtaskGroups,
@@ -55,7 +54,8 @@ import { FocusSessionService, formatFocus } from '../../services/focus-session.s
 import { folderIcon } from '../../shared/folder-icon';
 import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
-import { todayISO } from '../../shared/week';
+import { shiftISODate, todayISO } from '../../shared/week';
+import { isSection, sectionName } from '../../shared/section';
 import { DatePicker } from '../date-picker/date-picker';
 import { tap } from '../../shared/haptics';
 import { RewardService } from '../../../reward/reward.service';
@@ -84,6 +84,7 @@ import {
   ListIndentIncrease,
   ListPlus,
   Plus,
+  Rows3,
 } from 'lucide-angular';
 
 /**
@@ -122,7 +123,48 @@ function readCollapsed(): ReadonlySet<string> {
  */
 type ListItem =
   | { kind: 'row'; key: string; row: TodoRow; addFollows: boolean }
-  | { kind: 'add'; key: string; headId: string; headTitle: string };
+  | { kind: 'add'; key: string; headId: string; headTitle: string }
+  | { kind: 'section'; key: string; row: TodoRow; collapsed: boolean }
+  | { kind: 'addTodo'; key: string; sectionId: string; sectionName: string }
+  | { kind: 'addSection'; key: string }
+  | { kind: 'bucket'; key: string; id: string; label: string; count: number; collapsed: boolean };
+
+/** Wie die Liste geordnet ist: von Hand, nach Termin oder nach Priorität. */
+type Grouping = 'manual' | 'date' | 'priority';
+
+const GROUPING_KEY = 'todos.grouping';
+
+function readGrouping(): Grouping {
+  try {
+    const value = localStorage.getItem(GROUPING_KEY);
+    return value === 'date' || value === 'priority' ? value : 'manual';
+  } catch {
+    return 'manual';
+  }
+}
+
+/**
+ * Die Fächer beim Gruppieren. Nach Termin: was drängt, steht oben; Erledigtes
+ * mit vergangenem Datum heisst „Earlier", nicht „Overdue". Nach Priorität in
+ * MoSCoW-Reihenfolge, Won't zuletzt.
+ */
+const DATE_BUCKETS = [
+  { id: 'overdue', label: 'Overdue' },
+  { id: 'today', label: 'Today' },
+  { id: 'tomorrow', label: 'Tomorrow' },
+  { id: 'week', label: 'Next 7 days' },
+  { id: 'later', label: 'Later' },
+  { id: 'earlier', label: 'Earlier' },
+  { id: 'none', label: 'No date' },
+] as const;
+
+const PRIORITY_BUCKETS = [
+  { id: 'must', label: 'Must-have' },
+  { id: 'should', label: 'Should-have' },
+  { id: 'could', label: 'Could-have' },
+  { id: 'none', label: 'No priority' },
+  { id: 'wont', label: "Won't-have" },
+] as const;
 
 interface TodoRow {
   id: string;
@@ -160,6 +202,12 @@ interface TodoRow {
   indentTarget: { id: string; title: string } | null;
   /** Ein Schritt, der wieder eine eigene Aufgabe werden kann. */
   canOutdent: boolean;
+  /** Eine Abschnitts-Überschrift statt eines Todos (section.ts). */
+  isSection: boolean;
+  /** Der Abschnitt, zu dem die Zeile gehört; null = vor dem ersten. */
+  sectionId: string | null;
+  /** Bei einer Überschrift: offene Aufgaben darin (ohne Schritte). */
+  sectionCount: number;
   /** Farbe des primären Ordners, als Punkt vor dem Titel. */
   folderDotClass: string;
   folderDotTitle: string;
@@ -296,9 +344,25 @@ export class TodoList {
     const today = todayISO();
     const progress = this.todoService.stepProgress();
     const byId = new Map(items.map((todo) => [todo.id, todo]));
+
+    // Zu welchem Abschnitt jede Zeile gehört, und wie viel darin offen ist.
+    const sectionOf = new Map<string, string | null>();
+    const openIn = new Map<string, number>();
+    let current: string | null = null;
+    for (const todo of items) {
+      if (isSection(todo.title)) {
+        current = todo.id;
+        openIn.set(todo.id, 0);
+      } else if (current !== null && !todo.completed && taskLevel(todo.title) !== 'sub') {
+        openIn.set(current, (openIn.get(current) ?? 0) + 1);
+      }
+      sectionOf.set(todo.id, current);
+    }
+
     return items.map((todo, index) => {
-      const badge = priorityBadge(todo.title);
-      const stripped = stripPriorityPrefix(todo.title);
+      const section = isSection(todo.title);
+      const badge = section ? null : priorityBadge(todo.title);
+      const stripped = section ? sectionName(todo.title) : stripPriorityPrefix(todo.title);
       const [first, ...rest] = stripped.split('\n');
       const detail = rest.join('\n').trim();
       const level = taskLevel(todo.title);
@@ -318,8 +382,11 @@ export class TodoList {
         subCount: subCounts.get(todo.id) ?? 0,
         lastOfGroup: lastSubs.has(todo.id),
         progress: progress.get(todo.id) ?? null,
-        indentTarget: this.indentTargetFor(items, index, parentOf, subCounts, byId),
+        indentTarget: section ? null : this.indentTargetFor(items, index, parentOf, subCounts, byId),
         canOutdent: level === 'sub' && parentOf.has(todo.id),
+        isSection: section,
+        sectionId: sectionOf.get(todo.id) ?? null,
+        sectionCount: openIn.get(todo.id) ?? 0,
         folderDotClass: this.folderDotClass(todo.labelIds),
         folderDotTitle: this.folderDotTitle(todo.labelIds),
         primaryLabelId: todo.labelIds[0] ?? null,
@@ -351,6 +418,7 @@ export class TodoList {
     const todo = items[index];
     if (index === 0 || taskLevel(todo.title) === 'sub' || subCounts.has(todo.id)) return null;
     const above = items[index - 1];
+    if (isSection(above.title)) return null;
     const head = byId.get(parentOf.get(above.id) ?? above.id);
     if (!head) return null;
     return { id: head.id, title: stripPriorityPrefix(head.title).split('\n')[0].trim() };
@@ -369,7 +437,9 @@ export class TodoList {
     const collapsed = this.collapsedIds();
     if (collapsed.size === 0) return this.rows();
     return this.rows().filter(
-      (row) => row.parentId === null || !collapsed.has(row.parentId),
+      (row) =>
+        (row.parentId === null || !collapsed.has(row.parentId)) &&
+        (row.isSection || row.sectionId === null || !collapsed.has(row.sectionId)),
     );
   });
   /**
@@ -389,29 +459,110 @@ export class TodoList {
     const rows = this.visibleRows();
     const filter = this.filter();
     const canAdd = filter === 'active' || filter === 'all';
+    const mode = this.grouping();
+    if (mode !== 'manual') return this.bucketItems(this.rows(), mode, canAdd);
+
     const collapsed = this.collapsedIds();
-    const adding = this.stepInputFor();
+    const addingStep = this.stepInputFor();
+    const addingIn = this.sectionInputFor();
     const byId = new Map(rows.map((row) => [row.id, row]));
 
     const out: ListItem[] = [];
     rows.forEach((row, i) => {
-      const headId = row.parentId ?? row.id;
       const next = rows[i + 1];
-      const endsGroup = !next || (next.parentId ?? next.id) !== headId;
-      const head = byId.get(headId);
-      const showAdd =
-        canAdd &&
-        endsGroup &&
-        head !== undefined &&
-        ((head.subCount > 0 && !collapsed.has(headId)) || adding === headId);
+      if (row.isSection) {
+        out.push({ kind: 'section', key: row.id, row, collapsed: collapsed.has(row.id) });
+      } else {
+        const headId = row.parentId ?? row.id;
+        const endsGroup = !next || (next.parentId ?? next.id) !== headId;
+        const head = byId.get(headId);
+        const showAdd =
+          canAdd &&
+          endsGroup &&
+          head !== undefined &&
+          ((head.subCount > 0 && !collapsed.has(headId)) || addingStep === headId);
 
-      out.push({ kind: 'row', key: row.id, row, addFollows: showAdd });
-      if (showAdd) {
-        out.push({ kind: 'add', key: 'add:' + headId, headId, headTitle: head.firstLine });
+        out.push({ kind: 'row', key: row.id, row, addFollows: showAdd });
+        if (showAdd) {
+          out.push({ kind: 'add', key: 'add:' + headId, headId, headTitle: head.firstLine });
+        }
+      }
+
+      // Am Ende eines Abschnitts: die Eingabe für ein neues Todo darin.
+      const sectionId = row.isSection ? row.id : row.sectionId;
+      const endsSection = !next || next.isSection;
+      if (canAdd && endsSection && sectionId !== null && addingIn === sectionId) {
+        const name = byId.get(sectionId)?.firstLine ?? '';
+        out.push({ kind: 'addTodo', key: 'addin:' + sectionId, sectionId, sectionName: name });
       }
     });
+
+    if (canAdd) out.push({ kind: 'addSection', key: 'add-section' });
     return out;
   });
+
+  /**
+   * Gruppiert nach Termin oder Priorität: jede Aufgabe mit ihren Schritten
+   * in ein Fach. Abschnitte treten zurück — sie sind die eigene Ordnung, und
+   * die ist gerade nicht gewählt. Deshalb aus allen Zeilen, nicht aus den
+   * sichtbaren: was in einem zugeklappten Abschnitt steht, fehlte sonst.
+   *
+   * Nach Termin zählt der früheste offene in der Gruppe. Eine Aufgabe ohne
+   * Datum, deren Schritt heute fällig ist, gehört unter „Today" — dort sucht
+   * man sie, und unter „No date" läge der Schritt versteckt.
+   */
+  private bucketItems(rows: readonly TodoRow[], mode: Grouping, canAdd: boolean): ListItem[] {
+    const today = todayISO();
+    const tomorrow = shiftISODate(today, 1);
+    const inWeek = shiftISODate(today, 7);
+    const bucketOf = (block: readonly TodoRow[]): string => {
+      const head = block[0];
+      if (mode === 'priority') return head.badge ?? 'none';
+      const open = block
+        .filter((row) => !row.todo.completed && row.todo.scheduledDate !== null)
+        .map((row) => row.todo.scheduledDate!)
+        .sort();
+      const date = open[0] ?? head.todo.scheduledDate;
+      if (date === null) return 'none';
+      if (date < today) return open.length > 0 ? 'overdue' : 'earlier';
+      if (date === today) return 'today';
+      if (date === tomorrow) return 'tomorrow';
+      return date <= inWeek ? 'week' : 'later';
+    };
+
+    // Blöcke: eine Aufgabe und ihre Schritte, in der Reihenfolge der Liste.
+    const blocks: TodoRow[][] = [];
+    for (const row of rows) {
+      if (row.isSection) continue;
+      const last = blocks[blocks.length - 1];
+      if (row.parentId !== null && last && last[0].id === row.parentId) last.push(row);
+      else blocks.push([row]);
+    }
+
+    const buckets = mode === 'date' ? DATE_BUCKETS : PRIORITY_BUCKETS;
+    const collapsed = this.collapsedBuckets();
+    const addingStep = this.stepInputFor();
+    const out: ListItem[] = [];
+    for (const bucket of buckets) {
+      const inside = blocks.filter((block) => bucketOf(block) === bucket.id);
+      if (inside.length === 0) continue;
+      const id = `${mode}:${bucket.id}`;
+      const shut = collapsed.has(id);
+      out.push({ kind: 'bucket', key: 'bucket:' + id, id, label: bucket.label, count: inside.length, collapsed: shut });
+      if (shut) continue;
+      for (const block of inside) {
+        const head = block[0];
+        const open = !this.isCollapsed(head.id);
+        const shown = open ? block : [head];
+        const showAdd = canAdd && ((head.subCount > 0 && open) || addingStep === head.id);
+        shown.forEach((row, i) =>
+          out.push({ kind: 'row', key: row.id, row, addFollows: showAdd && i === shown.length - 1 }),
+        );
+        if (showAdd) out.push({ kind: 'add', key: 'add:' + head.id, headId: head.id, headTitle: head.firstLine });
+      }
+    }
+    return out;
+  }
 
   /** Ob irgendeine Zeile Unteraufgaben hat — nur dann braucht die Liste die
    *  Spalte fuer das Gliederungs-Dreieck. */
@@ -449,6 +600,7 @@ export class TodoList {
   protected readonly TrashIcon = Trash2;
     protected readonly PencilIcon = Pencil;
   protected readonly ScheduleIcon = CalendarPlus;
+  protected readonly SectionIcon = Rows3;
   protected readonly IndentIcon = ListIndentIncrease;
   protected readonly OutdentIcon = ListIndentDecrease;
   protected readonly AddStepIcon = ListPlus;
@@ -673,13 +825,7 @@ toggleFolderList(): void {
   openStepInput(headId: string): void {
     if (this.isCollapsed(headId)) this.toggleSubtasks(headId);
     this.stepInputFor.set(headId);
-    afterNextRender(
-      () =>
-        this.host.nativeElement
-          .querySelector<HTMLInputElement>(`[data-step-for="${headId}"]`)
-          ?.focus(),
-      { injector: this.injector },
-    );
+    this.focusLater(`[data-step-for="${headId}"]`);
   }
 
   closeStepInput(): void {
@@ -700,6 +846,129 @@ toggleFolderList(): void {
   /** Leer verlassen schliesst; mit Text bleibt es stehen. */
   onStepBlur(field: HTMLInputElement): void {
     if (!field.value.trim()) this.closeStepInput();
+  }
+
+  // ---- Abschnitte ----
+  //
+  // Überschriften im Ordner: „Diese Woche", „Warten auf", „Später". Sie
+  // klappen ein wie Hauptaufgaben (dieselbe Menge collapsedIds), haben ein
+  // „+" zum Anlegen darin und lassen sich umbenennen und löschen. Gelöscht
+  // wird nur die Überschrift; ihre Todos rutschen in den Abschnitt darüber.
+
+  /** Unter welchem Abschnitt gerade ein neues Todo eingetippt wird. */
+  protected readonly sectionInputFor = signal<string | null>(null);
+  protected readonly renamingSectionId = signal<string | null>(null);
+  protected readonly addingSection = signal(false);
+  /** Im Telefon-Menü: die Liste der Abschnitte zum Verschieben. */
+  protected readonly sectionListOpen = signal(false);
+
+  /** Die Abschnitte in der Liste, für das Menü „Section". */
+  protected readonly sectionsInList = computed(() =>
+    this.rows()
+      .filter((row) => row.isSection)
+      .map((row) => ({ id: row.id, name: row.firstLine })),
+  );
+
+  protected sectionNameOf(id: string | null): string {
+    if (id === null) return 'None';
+    return this.sectionsInList().find((s) => s.id === id)?.name ?? 'None';
+  }
+
+  openSectionInput(sectionId: string): void {
+    if (this.isCollapsed(sectionId)) this.toggleSubtasks(sectionId);
+    this.sectionInputFor.set(sectionId);
+    this.focusLater(`[data-section-input="${sectionId}"]`);
+  }
+
+  closeSectionInput(): void {
+    this.sectionInputFor.set(null);
+  }
+
+  /** Enter legt ans Ende des Abschnitts an; das Feld bleibt offen. */
+  addTodoToSection(sectionId: string, field: HTMLInputElement): void {
+    const text = field.value.trim();
+    if (!text) {
+      this.closeSectionInput();
+      return;
+    }
+    this.todoService.addTodos([text], null, null, sectionId);
+    field.value = '';
+  }
+
+  onSectionInputBlur(field: HTMLInputElement): void {
+    if (!field.value.trim()) this.closeSectionInput();
+  }
+
+  startRenameSection(id: string): void {
+    this.renamingSectionId.set(id);
+    this.focusLater(`[data-section-rename="${id}"]`, true);
+  }
+
+  commitRenameSection(row: TodoRow, field: HTMLInputElement): void {
+    if (this.renamingSectionId() !== row.id) return;
+    this.renamingSectionId.set(null);
+    const name = field.value.trim();
+    if (name && name !== row.firstLine) this.todoService.renameSection(row.id, name);
+  }
+
+  /** Nur die Überschrift geht; mit Undo, wie jedes Löschen. */
+  deleteSection(row: TodoRow): void {
+    this.todoService.removeTodo(row.id);
+  }
+
+  openAddSection(): void {
+    this.addingSection.set(true);
+    this.focusLater('.todo-add-section__input');
+  }
+
+  commitAddSection(field: HTMLInputElement): void {
+    const name = field.value.trim();
+    if (name) this.todoService.addSection(name);
+    field.value = '';
+    this.addingSection.set(false);
+  }
+
+  moveRowToSection(row: TodoRow, sectionId: string | null): void {
+    this.todoService.moveTodoToSection(row.id, sectionId);
+  }
+
+  private focusLater(selector: string, select = false): void {
+    afterNextRender(
+      () => {
+        const el = this.host.nativeElement.querySelector<HTMLInputElement>(selector);
+        el?.focus();
+        if (select) el?.select();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  // ---- Gruppieren ----
+
+  protected readonly grouping = signal<Grouping>(readGrouping());
+  protected readonly groupings: readonly { value: Grouping; label: string }[] = [
+    { value: 'manual', label: 'My order' },
+    { value: 'date', label: 'Date' },
+    { value: 'priority', label: 'Priority' },
+  ];
+  /** Zugeklappte Fächer, nur für diese Sitzung. */
+  protected readonly collapsedBuckets = signal<ReadonlySet<string>>(new Set());
+
+  setGrouping(value: Grouping): void {
+    this.grouping.set(value);
+    try {
+      localStorage.setItem(GROUPING_KEY, value);
+    } catch {
+      // Privater Modus: dann gilt die Wahl eben nur bis zum Neuladen.
+    }
+  }
+
+  toggleBucket(id: string): void {
+    this.collapsedBuckets.update((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
   }
 
   // ---- Ein- und Ausrücken ----
@@ -746,7 +1015,7 @@ toggleFolderList(): void {
   onDragMoved(event: CdkDragMove<unknown>, row: TodoRow): void {
     const dx = event.distance.x;
     let next: -1 | 0 | 1 = 0;
-    if (dx > 36 && row.level !== 'sub' && row.subCount === 0) next = 1;
+    if (dx > 36 && row.level !== 'sub' && row.subCount === 0 && !row.isSection) next = 1;
     else if (dx < -36 && row.level === 'sub') next = -1;
     if (next !== this.dragIndent()) this.dragIndent.set(next);
   }
@@ -845,7 +1114,7 @@ toggleFolderList(): void {
     // Beim Sichern ausduennen: eine Hauptaufgabe kann geloescht, erledigt oder
     // zur gewoehnlichen Aufgabe geworden sein. Ohne das waechst die Liste
     // still vor sich hin und haelt IDs fest, die es nicht mehr gibt.
-    const alive = new Set(this.rows().filter((r) => r.subCount > 0).map((r) => r.id));
+    const alive = new Set(this.rows().filter((r) => r.subCount > 0 || r.isSection).map((r) => r.id));
     const keep = [...this.collapsedIds()].filter((known) => alive.has(known));
     try {
       localStorage.setItem(COLLAPSED_KEY, JSON.stringify(keep));
@@ -950,6 +1219,7 @@ toggleFolderList(): void {
   this.folderListOpen.set(false);
   this.sheetCalendarOpen.set(false);
   this.sheetDateOnly.set(false);
+  this.sectionListOpen.set(false);
 }
 
 closeOptionsMenu(): void {
@@ -1285,8 +1555,7 @@ openDateSheet(id: string): void {
     if (!moved || !target) return;
 
     if (event.previousIndex !== event.currentIndex) {
-      const ordered = moveWithSubtasks(this.todos(), moved.id, target.id);
-      if (ordered) this.todoService.reorderTo(ordered);
+      this.todoService.moveTo(moved.id, target.id);
     }
 
     // Erst an den neuen Platz, dann die Stufe: was „darüber" ist, entscheidet
@@ -1295,7 +1564,9 @@ openDateSheet(id: string): void {
       const rows = this.visibleRows();
       const at = rows.findIndex((r) => r.id === moved.id);
       const above = at > 0 ? rows[at - 1] : null;
-      if (above) this.todoService.makeStepOf(moved.id, above.parentId ?? above.id, true);
+      if (above && !above.isSection) {
+        this.todoService.makeStepOf(moved.id, above.parentId ?? above.id, true);
+      }
     } else if (shift === -1) {
       this.todoService.makeOwnTask(moved.id);
     }

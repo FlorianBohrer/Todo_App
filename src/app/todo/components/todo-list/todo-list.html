@@ -19,7 +19,7 @@
         </li>
       }
     </ul>
-  } @else if (stats().total === 0) {
+  } @else if (stats().total === 0 && todos().length === 0) {
     <p class="text-text">No todos yet, add one above</p>
   } @else if (todos().length === 0 && isSearching()) {
     <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -75,11 +75,26 @@
          Entscheidung, die die Unteraufgaben vor einer Weile schon getroffen
          haben: dort fiel die Karte weg, weil Karte neben Karte wie zwei
          gleichrangige Dinge liest. -->
+    <!-- Ordnung der Liste: von Hand (mit Abschnitten), nach Termin oder nach
+         Priorität. Die beiden letzten sind Ansichten — gezogen wird dann
+         nicht, denn die Reihenfolge ergibt sich aus Datum oder Stufe. -->
+    <div class="todo-toolbar">
+      <div class="todo-grouping" role="group" aria-label="Order the list">
+        @for (g of groupings; track g.value) {
+          <button type="button" class="todo-grouping__option"
+            [class.is-active]="grouping() === g.value"
+            [attr.aria-pressed]="grouping() === g.value"
+            (click)="setGrouping(g.value)">{{ g.label }}</button>
+        }
+      </div>
+    </div>
+
     <ul
       role="list"
       class="divide-y divide-line text-muted pb-2 sm:max-h-[min(70vh,44rem)] sm:overflow-auto sm:pr-2"
       [class.no-outline]="!hasOutline()"
       cdkDropList
+      [cdkDropListDisabled]="grouping() !== 'manual'"
       (cdkDropListDropped)="drop($event)">
       @for (item of listItems(); track item.key) {
         @if (item.kind === 'row') {
@@ -95,7 +110,7 @@
       (cdkDragEnded)="onDragEnded()"
       (cdkDragMoved)="onDragMoved($event, row)"
       class="todo-card group flex items-center justify-between gap-2.5 px-2 py-3 transition hover:bg-fill sm:px-2.5"
-      [class.todo-has-when]="todo.scheduledDate !== null"
+      [class.todo-has-when]="todo.scheduledDate !== null || row.progress !== null"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
         todo.completed || completingTodoIds().has(todo.id)
@@ -386,20 +401,45 @@
           <!-- Antippen öffnet den Kalender direkt (openDateSheet): wer das
                Datum sieht und es ändern will, tippt aufs Datum, nicht auf
                die drei Punkte daneben. -->
-          @if (todo.scheduledDate !== null && editingId() !== todo.id) {
-            <button type="button" class="todo-when sm:hidden"
-              [class.todo-when--today]="row.isToday && !todo.completed"
-              [class.todo-when--late]="row.isLate"
-              (click)="$event.stopPropagation(); openDateSheet(todo.id)"
-              aria-haspopup="dialog"
-              [attr.aria-label]="'Planned for ' + row.scheduleText + ', change'">
-              <lucide-icon [img]="ScheduleIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
-              {{ row.scheduleText }}
-              @if (todo.repeat) {
-                <lucide-icon [img]="RepeatIcon" class="h-3 w-3 opacity-70"
-                  [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
+          <!-- Der Fortschritt steht auf dem Telefon in derselben Zeile: neben
+               Dreieck, Haken, Punkt und Stufe blieb dem Titel einer Aufgabe
+               mit Schritten bei 320px sonst kaum ein Buchstabe pro Zeile. -->
+          @if ((todo.scheduledDate !== null || row.progress) && editingId() !== todo.id) {
+            <div class="todo-meta">
+              @if (row.progress; as p) {
+                <button
+                  type="button"
+                  class="todo-progress"
+                  [class.is-complete]="p.done === p.total"
+                  (click)="$event.stopPropagation(); toggleSubtasks(todo.id)"
+                  [attr.aria-expanded]="!isCollapsed(todo.id)"
+                  [attr.aria-label]="p.done + ' of ' + p.total + ' steps done, ' + (isCollapsed(todo.id) ? 'show' : 'hide') + ' steps'">
+                  <svg viewBox="0 0 16 16" class="todo-progress__ring" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6" class="todo-progress__track" />
+                    @if (p.done > 0) {
+                      <circle cx="8" cy="8" r="6" class="todo-progress__fill"
+                        [attr.stroke-dasharray]="(p.done / p.total) * 37.7 + ' 37.7'" />
+                    }
+                  </svg>
+                  <span>{{ p.done }}/{{ p.total }}</span>
+                </button>
               }
-            </button>
+              @if (todo.scheduledDate !== null) {
+                <button type="button" class="todo-when"
+                  [class.todo-when--today]="row.isToday && !todo.completed"
+                  [class.todo-when--late]="row.isLate"
+                  (click)="$event.stopPropagation(); openDateSheet(todo.id)"
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="'Planned for ' + row.scheduleText + ', change'">
+                  <lucide-icon [img]="ScheduleIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
+                  {{ row.scheduleText }}
+                  @if (todo.repeat) {
+                    <lucide-icon [img]="RepeatIcon" class="h-3 w-3 opacity-70"
+                      [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
+                  }
+                </button>
+              }
+            </div>
           }
 
           <!-- Aufklappen, wenn der Text wirklich abgeschnitten ist — gemessen
@@ -684,6 +724,43 @@
                 <span>Edit text</span>
               </button>
 
+              <!-- Abschnitt: wohin die Aufgabe gehört. Ziehen geht auf dem
+                   Telefon erst nach zwei Sekunden Halten; hier ist es ein Tipp. -->
+              @if (sectionsInList().length > 0 && row.level !== 'sub') {
+                <div class="border-t border-border">
+                  <button type="button" role="menuitem"
+                    class="popover-item text-sm text-text transition"
+                    [attr.aria-expanded]="sectionListOpen()"
+                    (click)="sectionListOpen.set(!sectionListOpen())">
+                    <lucide-icon [img]="SectionIcon" class="h-4 w-4 flex-none"></lucide-icon>
+                    <span class="flex-none">Section</span>
+                    <span class="ml-auto min-w-0 truncate text-right text-xs text-muted">{{ sectionNameOf(row.sectionId) }}</span>
+                    <lucide-icon [img]="ChevronDownIcon" class="h-4 w-4 flex-none transition-transform duration-200"
+                      [class.rotate-180]="sectionListOpen()"></lucide-icon>
+                  </button>
+                  @if (sectionListOpen()) {
+                    <div role="group" aria-label="Sections" class="pb-1">
+                      <button type="button" role="menuitemradio"
+                        [attr.aria-checked]="row.sectionId === null"
+                        class="popover-item pl-10 text-sm text-text transition"
+                        (click)="moveRowToSection(row, null); closeOptionsMenu()">
+                        <span class="flex-1">None</span>
+                        @if (row.sectionId === null) { <span class="text-highlight2">✓</span> }
+                      </button>
+                      @for (section of sectionsInList(); track section.id) {
+                        <button type="button" role="menuitemradio"
+                          [attr.aria-checked]="row.sectionId === section.id"
+                          class="popover-item pl-10 text-sm text-text transition"
+                          (click)="moveRowToSection(row, section.id); closeOptionsMenu()">
+                          <span class="min-w-0 flex-1 truncate">{{ section.name }}</span>
+                          @if (row.sectionId === section.id) { <span class="text-highlight2">✓</span> }
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
               <!-- Gliederung -->
               @if (row.canOutdent) {
                 <button type="button" role="menuitem"
@@ -839,7 +916,7 @@
             </div>
           </ng-template>
         </li>
-        } @else {
+        } @else if (item.kind === 'add') {
           <!-- „+ Add step" am Ende einer aufgeklappten Gruppe. Trägt die Form
                eines Schritts (Einzug, Winkel), damit sie als Teil der Gruppe
                liest und die Linie dort endet. -->
@@ -867,6 +944,108 @@
                 <span>Add step</span>
               </button>
             }
+          </li>
+        } @else if (item.kind === 'section') {
+          @let row = item.row;
+          <!-- Abschnitts-Überschrift. Ziehbar wie eine Zeile — und sie nimmt
+               alles mit, was zu ihr gehört (moveWithSubtasks). -->
+          <li
+            cdkDrag
+            [cdkDragStartDelay]="dragStartDelay"
+            (cdkDragStarted)="onDragStarted()"
+            (cdkDragEnded)="onDragEnded()"
+            class="todo-section group"
+            [class.is-collapsed]="item.collapsed"
+            [attr.data-todo-id]="row.id">
+            <div *cdkDragPlaceholder class="todo-drop h-10 rounded-xl border-2 border-dashed border-border bg-fill"></div>
+            <button type="button" class="todo-section__toggle"
+              (click)="toggleSubtasks(row.id)"
+              [attr.aria-expanded]="!item.collapsed"
+              [attr.aria-label]="(item.collapsed ? 'Show ' : 'Hide ') + row.firstLine">
+              <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-4 w-4" [class.is-collapsed]="item.collapsed"></lucide-icon>
+            </button>
+            @if (renamingSectionId() === row.id) {
+              <input #sectionNameField class="todo-section__rename"
+                [attr.data-section-rename]="row.id"
+                [value]="row.firstLine"
+                aria-label="Section name"
+                (keydown.enter)="commitRenameSection(row, sectionNameField)"
+                (keydown.escape)="renamingSectionId.set(null)"
+                (blur)="commitRenameSection(row, sectionNameField)" />
+            } @else {
+              <h3 class="todo-section__name" (dblclick)="startRenameSection(row.id)">{{ row.firstLine }}</h3>
+              @if (row.sectionCount > 0) {
+                <span class="todo-section__count" [attr.aria-label]="row.sectionCount + ' open'">{{ row.sectionCount }}</span>
+              }
+            }
+            <span class="todo-section__actions">
+              <button type="button" class="todo-section__action"
+                (click)="openSectionInput(row.id)"
+                [attr.aria-label]="'Add a todo to ' + row.firstLine" title="Add a todo here">
+                <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+              <button type="button" class="todo-section__action"
+                (click)="startRenameSection(row.id)"
+                [attr.aria-label]="'Rename ' + row.firstLine" title="Rename">
+                <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+              <button type="button" class="todo-section__action todo-section__action--danger"
+                (click)="deleteSection(row)"
+                [attr.aria-label]="'Delete section ' + row.firstLine" title="Delete section (its todos stay)">
+                <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+            </span>
+          </li>
+        } @else if (item.kind === 'addTodo') {
+          <!-- Neues Todo am Ende eines Abschnitts. -->
+          <li class="todo-card todo-add-step todo-add-in-section">
+            @if (hasOutline()) {
+              <span class="todo-outline-spacer w-4 flex-none" aria-hidden="true"></span>
+            }
+            <lucide-icon [img]="PlusIcon" class="todo-add-step__icon h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+            <input #sectionTodo
+              class="todo-add-step__input"
+              [attr.data-section-input]="item.sectionId"
+              placeholder="New todo…"
+              enterkeyhint="next"
+              autocomplete="off"
+              [attr.aria-label]="'New todo in ' + item.sectionName"
+              (keydown.enter)="addTodoToSection(item.sectionId, sectionTodo)"
+              (keydown.escape)="closeSectionInput()"
+              (blur)="onSectionInputBlur(sectionTodo)" />
+          </li>
+        } @else if (item.kind === 'addSection') {
+          <!-- Neuer Abschnitt, am Ende der Liste. Auch „/section Name" im
+               Feld oben legt einen an. -->
+          <li class="todo-add-section">
+            @if (addingSection()) {
+              <lucide-icon [img]="SectionIcon" class="h-4 w-4 flex-none text-subtle" aria-hidden="true"></lucide-icon>
+              <input #newSection class="todo-add-section__input"
+                placeholder="Section name…"
+                autocomplete="off"
+                aria-label="New section"
+                (keydown.enter)="commitAddSection(newSection)"
+                (keydown.escape)="addingSection.set(false)"
+                (blur)="commitAddSection(newSection)" />
+            } @else {
+              <button type="button" class="todo-add-section__button" (click)="openAddSection()">
+                <lucide-icon [img]="SectionIcon" class="h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+                <span>Add section</span>
+              </button>
+            }
+          </li>
+        } @else if (item.kind === 'bucket') {
+          <!-- Fach beim Gruppieren: wie eine Überschrift, aber nur zum
+               Einklappen — es ist eine Sicht, keine Zeile. -->
+          <li class="todo-section todo-section--virtual" [class.is-collapsed]="item.collapsed">
+            <button type="button" class="todo-section__toggle"
+              (click)="toggleBucket(item.id)"
+              [attr.aria-expanded]="!item.collapsed"
+              [attr.aria-label]="(item.collapsed ? 'Show ' : 'Hide ') + item.label">
+              <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-4 w-4" [class.is-collapsed]="item.collapsed"></lucide-icon>
+            </button>
+            <h3 class="todo-section__name">{{ item.label }}</h3>
+            <span class="todo-section__count">{{ item.count }}</span>
           </li>
         }
       }

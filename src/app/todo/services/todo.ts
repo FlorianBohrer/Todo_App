@@ -9,6 +9,7 @@ import { ToastService } from '../../shared/toast.service';
 import {
   appendUnder,
   moveOutOfGroup,
+  moveWithSubtasks,
   openGroups,
   orderWithSubtasks,
   setTaskLevel,
@@ -16,6 +17,13 @@ import {
   subtaskGroups,
   taskLevel,
 } from '../shared/title-priority';
+import {
+  isSection,
+  moveToSection,
+  pruneEmptySections,
+  sectionName,
+  sectionTitle,
+} from '../shared/section';
 import { TitleToken, splitTitle } from '../shared/title-token';
 import { normalize, score } from '../../search/search';
 import { scheduleLabel } from '../shared/schedule';
@@ -101,6 +109,9 @@ export type View = 'list' | 'week' | 'plans';
  */
 const LEGACY_VIEW_KEY = 'todo.view';
 
+/** Ein Schritt (/sub) — für moveToSection, das die Präfixe nicht selbst liest. */
+const isStepTitle = (title: string) => taskLevel(title) === 'sub';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -114,8 +125,11 @@ export class TodoService {
   /**
    * Alle Todos, ungefiltert. Die Wochenansicht sortiert sie selbst in Tage —
    * einmal durchlaufen ist billiger, als sieben Mal die ganze Liste zu filtern.
+   *
+   * Ohne Abschnitts-Überschriften (section.ts): die sind Gliederung der Liste,
+   * keine Aufgaben, und gehören weder in die Woche noch in die Suche.
    */
-  readonly allTodos = this.todos.asReadonly();
+  readonly allTodos = computed(() => this.todos().filter((t) => !isSection(t.title)));
 
   /**
    * Startet auf „Active": nach dem Neuladen steht da, was noch zu tun ist —
@@ -137,7 +151,9 @@ export class TodoService {
    * Ausschnitt, über den Kopfzeile und Statistik sprechen — und über den die
    * Priorisierung sprechen muss, damit beide dasselbe meinen.
    */
-  readonly scopedTodos = computed(() => this.todosInCategory());
+  readonly scopedTodos = computed(() =>
+    this.todosInCategory().filter((t) => !isSection(t.title)),
+  );
 
   private readonly todosInCategory = computed(() => {
     const labelId = this.labelService.activeLabelId();
@@ -173,9 +189,12 @@ export class TodoService {
     // Fortschritt, die Liste das, was noch aussteht.
     // "Active" behält erledigte Schritte, solange ihre Aufgabe offen ist
     // (openGroups): man sieht, wie weit sie ist.
+    //
+    // Abschnitts-Überschriften laufen durch jeden Filter mit; wo der Filter
+    // aussiebt (Done, Favorites, Suche), fallen die leeren unten weg.
     if (f === 'active')    items = openGroups(items);
-    if (f === 'completed') items = items.filter(i => i.completed);
-    if (f === 'favorites') items = items.filter(i => i.isFavorite && !i.completed);
+    if (f === 'completed') items = items.filter(i => i.completed || isSection(i.title));
+    if (f === 'favorites') items = items.filter(i => (i.isFavorite && !i.completed) || isSection(i.title));
 
     // Titel-Suche: im TEXT, nicht im Präfix.
     //
@@ -185,12 +204,14 @@ export class TodoService {
     // jedes Wort muss vorkommen, Reihenfolge, Akzente und Grossschreibung egal.
     const terms = normalize(this.searchTerm()).split(/\s+/).filter((t) => t.length > 0);
     if (terms.length > 0) {
-      items = items.filter((i) => score(splitTitle(i.title).text, terms) !== null);
+      items = items.filter(
+        (i) => isSection(i.title) || score(splitTitle(i.title).text, terms) !== null,
+      );
     }
 
     const token = this.searchToken();
     if (token !== null) {
-      items = items.filter((i) => splitTitle(i.title).tokens.includes(token));
+      items = items.filter((i) => isSection(i.title) || splitTitle(i.title).tokens.includes(token));
     }
 
     // Priorität per Titel-Präfix: /must zuerst, /could danach. Unteraufgaben
@@ -199,6 +220,10 @@ export class TodoService {
     // eigene Stufe traegt und allein zurueckbliebe, sobald ihre Hauptaufgabe
     // nach oben rutscht.
     items = orderWithSubtasks(items);
+
+    if (f === 'completed' || f === 'favorites' || terms.length > 0 || token !== null) {
+      items = pruneEmptySections(items);
+    }
 
     return items;
   });
@@ -281,7 +306,7 @@ export class TodoService {
   }
 
   readonly stats = computed(() => {
-    const items = this.todosInCategory();
+    const items = this.scopedTodos();
     return {
       total: items.length,
       active: items.filter(item => !item.completed).length,
@@ -291,7 +316,7 @@ export class TodoService {
 
   
   progressFor(labelId: string): { total: number; completed: number; percent: number } {
-    const items = this.todos().filter(t => t.labelIds.includes(labelId));
+    const items = this.allTodos().filter(t => t.labelIds.includes(labelId));
     const completed = items.filter(t => t.completed).length;
     const total = items.length;
     return {
@@ -530,7 +555,7 @@ export class TodoService {
    * im Archiv-Schnappschuss noch nicht).
    */
   readonly withArchive = computed(() => {
-    const current = this.todos();
+    const current = this.allTodos();
     const archived = this.archive();
     if (archived.length === 0) return current;
 
@@ -660,7 +685,12 @@ toggleFavorite(id: string) {
   // ---- Schreiben ----
   // Änderungen werden sofort lokal angezeigt (optimistic update) und ans
   // Backend geschickt. Schlägt der Request fehl, laden wir den Serverstand neu.
-  addTodo(title: string, scheduledDate: string | null = null, parentId: string | null = null) {
+  addTodo(
+    title: string,
+    scheduledDate: string | null = null,
+    parentId: string | null = null,
+    sectionId?: string | null,
+  ) {
     const t = title.trim();
     if (t === '') return;
     this.http
@@ -672,7 +702,7 @@ toggleFavorite(id: string) {
       .subscribe({
         next: (dto) => {
           this.todos.update(items => [...items, this.toTodo(dto)]);
-          if (parentId) this.placeUnder(dto.id, parentId);
+          this.placeNew(dto.id, dto.title, parentId, sectionId);
         },
         error: (err) => {
           console.error('Todo anlegen fehlgeschlagen', err);
@@ -729,11 +759,16 @@ toggleFavorite(id: string) {
     return id ? this.todosById().get(id) ?? null : null;
   }
 
-  addTodos(titles: string[], parentId: string | null = null, scheduledDate: string | null = null) {
+  addTodos(
+    titles: string[],
+    parentId: string | null = null,
+    scheduledDate: string | null = null,
+    sectionId?: string | null,
+  ) {
     const clean = titles.map((t) => t.trim()).filter((t) => t.length > 0);
     if (clean.length === 0) return;
     if (clean.length === 1) {
-      this.addTodo(clean[0], scheduledDate, parentId);
+      this.addTodo(clean[0], scheduledDate, parentId, sectionId);
       return;
     }
 
@@ -745,7 +780,7 @@ toggleFavorite(id: string) {
         if (hadError) {
           this.toast.error('Could not create some todos');
         }
-        if (parentId) this.persistOrder();
+        this.persistOrder();
         return;
       }
       this.http
@@ -755,7 +790,7 @@ toggleFavorite(id: string) {
             this.todos.update((items) => [...items, this.toTodo(dto)]);
             // Einsortieren ja, sichern erst am Ende: sonst geht fuer jede
             // eingefuegte Zeile eine eigene Reihenfolge an den Server.
-            if (parentId) this.placeUnder(dto.id, parentId, false);
+            this.placeNew(dto.id, dto.title, parentId, sectionId, false);
             postNext(index + 1);
           },
           error: (err) => {
@@ -823,37 +858,43 @@ toggleFavorite(id: string) {
 
 
   /**
-   * Sortiert die aktuell SICHTBARE (gefilterte) Liste um. Ausgefilterte Todos
-   * behalten ihre absolute Position.
+   * Ein Zug in der Liste: `movedId` an die Stelle von `targetId`, mit allem,
+   * was dazugehört (moveWithSubtasks).
    *
-   * Nimmt die fertige Reihenfolge statt zweier Indizes: ein Zug kann mehr als
-   * eine Zeile bewegen, weil eine Hauptaufgabe ihre Unteraufgaben mitnimmt,
-   * und zugeklappte Unteraufgaben stehen gar nicht in der Liste, aus der die
-   * Indizes stammen. Das Ausrechnen gehoert dorthin, wo die Gliederung bekannt
-   * ist — hier wird nur uebernommen.
+   * Gerechnet wird auf dem GANZEN Ordner, nicht auf der sichtbaren Liste.
+   * Vorher wurde die sichtbare umsortiert und eingesetzt, und ausgeblendete
+   * Zeilen behielten ihren absoluten Platz. In einer flachen Liste ging das
+   * gut; mit Gruppen und Abschnitten nicht mehr: zog man „Später" nach oben,
+   * blieb das erledigte Todo daraus an seinem alten Index stehen, mitten in
+   * einer fremden Gruppe, und wurde dort zum Kopf ihrer restlichen Schritte.
+   * Jetzt bewegt sich nur der gezogene Block, samt dem, was gerade nicht zu
+   * sehen ist: erledigte Todos eines Abschnitts, Schritte, die eine Suche
+   * ausblendet.
+   *
+   * In der Reihenfolge, in der die Liste steht (orderWithSubtasks): sonst
+   * hiesse „nach oben" im gespeicherten Stand manchmal „nach unten".
    */
-  reorderTo(orderedIds: string[]) {
-    const visible = this.filteredTodos();
-    if (orderedIds.length !== visible.length) return;
-
-    const byId = new Map(visible.map(t => [t.id, t]));
-    const reordered: Todo[] = [];
-    for (const id of orderedIds) {
-      const todo = byId.get(id);
-      // Fremde oder doppelte ID: lieber gar nicht sortieren als eine Zeile
-      // verlieren. byId gibt jede ID nur einmal her.
-      if (!todo) return;
-      byId.delete(id);
-      reordered.push(todo);
-    }
-
-    const visibleIds = new Set(visible.map(t => t.id));
-    let qi = 0;
-    this.todos.update(all =>
-      all.map(item => (visibleIds.has(item.id) ? reordered[qi++] : item)),
-    );
-
+  moveTo(movedId: string, targetId: string) {
+    const scope = orderWithSubtasks(this.todosInCategory());
+    const ordered = moveWithSubtasks(scope, movedId, targetId);
+    if (!ordered) return;
+    const byId = new Map(scope.map((t) => [t.id, t]));
+    this.reorderScope(() => ordered.map((id) => byId.get(id)!));
     this.persistOrder();
+  }
+
+  /**
+   * Ordnet die Todos des offenen Ordners neu. Die anderer Ordner behalten
+   * ihre Plätze — ihre Gliederung wird in ihrem eigenen Ordner gelesen, und
+   * dort zählt nur, dass ihre Reihenfolge untereinander bleibt.
+   */
+  private reorderScope(next: (scope: Todo[]) => Todo[]) {
+    const scope = this.todosInCategory();
+    const ordered = next(scope);
+    if (ordered.length !== scope.length) return;
+    const ids = new Set(scope.map((t) => t.id));
+    let i = 0;
+    this.todos.update((all) => all.map((item) => (ids.has(item.id) ? ordered[i++] : item)));
   }
 
   /** Komplette Reihenfolge sichern (Index = Position). */
@@ -889,6 +930,59 @@ toggleFavorite(id: string) {
   }
 
   /**
+   * Wohin ein neues Todo kommt.
+   *
+   * - unter eine Aufgabe (parentId): ans Ende ihrer Schritte,
+   * - in einen Abschnitt (sectionId): an dessen Ende; null = in den Bereich
+   *   vor dem ersten Abschnitt,
+   * - sonst, sobald der Ordner Abschnitte hat: ebenfalls in den Bereich vor
+   *   dem ersten. Am Listenende landete es im letzten Abschnitt („Später"),
+   *   und das hat man beim Tippen oben nicht gemeint.
+   * Ein Abschnitt selbst kommt ans Ende.
+   */
+  private placeNew(
+    id: string,
+    title: string,
+    parentId: string | null,
+    sectionId: string | null | undefined,
+    persist = true,
+  ) {
+    if (parentId) {
+      this.placeUnder(id, parentId, persist);
+      return;
+    }
+    if (isSection(title)) return;
+    const target =
+      sectionId !== undefined
+        ? sectionId
+        : this.todosInCategory().some((t) => isSection(t.title))
+          ? null
+          : undefined;
+    if (target === undefined) return;
+    this.reorderScope((scope) => moveToSection(scope, id, target, isStepTitle));
+    if (persist) this.persistOrder();
+  }
+
+  // ---- Abschnitte ----
+
+  /** Ein neuer Abschnitt im offenen Ordner, am Ende der Liste. */
+  addSection(name: string) {
+    if (!name.trim()) return;
+    this.addTodo(sectionTitle(name));
+  }
+
+  renameSection(id: string, name: string) {
+    if (!name.trim()) return;
+    this.renameTodo(id, sectionTitle(name));
+  }
+
+  /** Ein Todo samt Schritten in einen Abschnitt (null: vor den ersten). */
+  moveTodoToSection(id: string, sectionId: string | null) {
+    this.reorderScope((scope) => moveToSection(scope, id, sectionId, isStepTitle));
+    this.persistOrder();
+  }
+
+  /**
    * Schiebt ein frisch angelegtes Todo ans Ende der Gruppe seiner
    * Hauptaufgabe.
    *
@@ -915,7 +1009,9 @@ toggleFavorite(id: string) {
     this.todos.update(list => list.filter(item => item.id !== id));
 
     // Ohne Präfix: „/must Steuer" ist ein Steuerzeichen, kein Name.
-    const plain = stripPriorityPrefix(removed.title).split('\n')[0];
+    const plain = isSection(removed.title)
+      ? sectionName(removed.title)
+      : stripPriorityPrefix(removed.title).split('\n')[0];
     const shortTitle = plain.length > 30 ? `${plain.slice(0, 30)}…` : plain;
 
     const deleteTimeout = setTimeout(() => {
