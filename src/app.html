@@ -196,6 +196,15 @@
       </div>
     }
 
+    <!-- Zurück nach oben. Erscheint erst, wenn die App-Leiste beim Scrollen
+         ausgewichen ist (chrome-tucked, shared/chrome-tuck.ts), und bringt
+         sie mit nach oben zurück. Am Rechner holt sie auch der Zeiger am
+         oberen Rand; ohne Zeiger das Hochscrollen. -->
+    <button type="button" class="to-top" (click)="scrollToTop()"
+      aria-label="Back to top" title="Back to top">
+      <lucide-icon [img]="ToTopIcon" class="h-5 w-5" aria-hidden="true"></lucide-icon>
+    </button>
+
     <!-- Telefon: die Ansichten unten, wo der Daumen ist — wie in jeder
          App auf dem Telefon. Oben bleibt damit Platz fuer den Namen des
          Folders. Beim Tippen verschwindet die Leiste (styles.scss), sonst
