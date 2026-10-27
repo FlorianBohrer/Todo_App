@@ -20,6 +20,8 @@
  * Der Präfix bleibt im gespeicherten Titel — er trägt die Sortierung — und
  * wird in der Ansicht ausgeblendet.
  */
+import { isSection, sectionEndOf, sectionStartOf } from './section';
+
 export type MoscowLevel = 'must' | 'should' | 'could' | 'wont';
 
 /**
@@ -143,15 +145,17 @@ export function composeTitle(badge: MoscowLevel | null, level: TaskLevel | null,
  * nicht liegt, und das Einklappen versteckt die falschen Zeilen.
  *
  * Eine Unteraufgabe ohne Hauptaufgabe darüber bildet ihre eigene Gruppe: sie
- * ist dann eben eine gewöhnliche Aufgabe mit Einzug.
+ * ist dann eben eine gewöhnliche Aufgabe mit Einzug. Ebenso direkt unter
+ * einer Abschnittsüberschrift (section.ts): ein Abschnitt hat keine Schritte.
  */
 export function subtaskGroups<T extends { title: string }>(items: readonly T[]): T[][] {
   const groups: T[][] = [];
 
   for (const item of items) {
     const isSub = taskLevel(item.title) === 'sub';
-    if (isSub && groups.length > 0) {
-      groups[groups.length - 1].push(item);
+    const last = groups[groups.length - 1];
+    if (isSub && last && !isSection(last[0].title)) {
+      last.push(item);
     } else {
       groups.push([item]);
     }
@@ -170,19 +174,36 @@ export function subtaskGroups<T extends { title: string }>(items: readonly T[]):
  * als gehöre sie dorthin.
  *
  * Also: erst gruppieren, dann die GRUPPEN sortieren, dann wieder ausrollen.
+ *
+ * Und zwar je Abschnitt: ein Must-have aus „Später" springt nicht über die
+ * Überschrift nach „Diese Woche". Die Abschnitte selbst bleiben, wo sie sind.
  */
 export function orderWithSubtasks<T extends { title: string }>(items: T[]): T[] {
-  // Stabil: gleich priorisierte Gruppen behalten die Reihenfolge, die der
-  // Nutzer selbst gezogen hat.
-  const sorted = [...subtaskGroups(items)].sort(
-    (a, b) => titlePriority(a[0].title) - titlePriority(b[0].title),
-  );
+  const out: T[] = [];
+  let segment: T[][] = [];
+  const flush = () => {
+    // Stabil: gleich priorisierte Gruppen behalten die Reihenfolge, die der
+    // Nutzer selbst gezogen hat.
+    segment.sort((a, b) => titlePriority(a[0].title) - titlePriority(b[0].title));
+    for (const group of segment) out.push(...group);
+    segment = [];
+  };
 
-  return sorted.flat();
+  for (const group of subtaskGroups(items)) {
+    if (isSection(group[0].title)) {
+      flush();
+      out.push(...group);
+    } else {
+      segment.push(group);
+    }
+  }
+  flush();
+  return out;
 }
 
 /** Erste Zeile nach der Gruppe, zu der `index` gehört. */
 function groupEnd(items: readonly { title: string }[], index: number): number {
+  if (isSection(items[index].title)) return index + 1;
   let end = index + 1;
   while (end < items.length && taskLevel(items[end].title) === 'sub') end++;
   return end;
@@ -191,7 +212,13 @@ function groupEnd(items: readonly { title: string }[], index: number): number {
 /** Kopfzeile der Gruppe, zu der `index` gehört. */
 function groupStart(items: readonly { title: string }[], index: number): number {
   let start = index;
-  while (start > 0 && taskLevel(items[start].title) === 'sub') start--;
+  while (
+    start > 0 &&
+    taskLevel(items[start].title) === 'sub' &&
+    !isSection(items[start - 1].title)
+  ) {
+    start--;
+  }
   return start;
 }
 
@@ -223,6 +250,8 @@ export function moveWithSubtasks<T extends { id: string; title: string }>(
   const to = items.findIndex((i) => i.id === targetId);
   if (from === -1 || to === -1 || from === to) return null;
 
+  if (isSection(items[from].title)) return moveSection(items, from, to);
+
   const alone = taskLevel(items[from].title) === 'sub';
   const start = from;
   const end = alone ? from + 1 : groupEnd(items, from);
@@ -242,6 +271,38 @@ export function moveWithSubtasks<T extends { id: string; title: string }>(
   const found = anchorId === null ? -1 : rest.findIndex((i) => i.id === anchorId);
   const at = found === -1 ? rest.length : found;
 
+  return [...rest.slice(0, at), ...moved, ...rest.slice(at)].map((i) => i.id);
+}
+
+/**
+ * Ein Abschnitt zieht alles mit, was zu ihm gehört, und rastet an den
+ * Grenzen anderer Abschnitte ein — mitten in einen fremden fallen gelassen,
+ * würde er dessen hintere Hälfte übernehmen. Nach oben in den Bereich ohne
+ * Überschrift gezogen, landet er vor dem ersten Abschnitt: sonst gehörten
+ * die Todos dort plötzlich ihm.
+ */
+function moveSection<T extends { id: string; title: string }>(
+  items: readonly T[],
+  from: number,
+  to: number,
+): string[] | null {
+  const end = sectionEndOf(items, from);
+  if (to >= from && to < end) return null;
+
+  let anchorIndex: number;
+  if (to > from) {
+    anchorIndex = sectionEndOf(items, to);
+  } else {
+    const start = sectionStartOf(items, to);
+    anchorIndex = start === -1 ? items.findIndex((i) => isSection(i.title)) : start;
+  }
+  const anchorId = items[anchorIndex]?.id ?? null;
+  if (anchorId === items[from].id) return null;
+
+  const moved = items.slice(from, end);
+  const rest = [...items.slice(0, from), ...items.slice(end)];
+  const found = anchorId === null ? -1 : rest.findIndex((i) => i.id === anchorId);
+  const at = found === -1 ? rest.length : found;
   return [...rest.slice(0, at), ...moved, ...rest.slice(at)].map((i) => i.id);
 }
 
