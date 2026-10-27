@@ -77,9 +77,6 @@ import {
   X,
 } from 'lucide-angular';
 
-/** Ab dieser Laenge (oder bei einem Umbruch) laesst sich eine Zeile aufklappen. */
-const EXPAND_THRESHOLD = 40;
-
 /**
  * Zugeklappte Hauptaufgaben, ueber das Neuladen hinweg.
  *
@@ -134,7 +131,6 @@ interface TodoRow {
   detailLines: string;
   /** Hat der Text ueberhaupt etwas unter der ersten Zeile? */
   hasDetail: boolean;
-  canExpand: boolean;
   /** Die Priorität, gezeigt als Zeichen (TokenChip). */
   badge: MoscowLevel | null;
   /** Haupt- oder Unteraufgabe. Traegt die Einrueckung in der Liste. */
@@ -294,8 +290,6 @@ export class TodoList {
         firstLine: first.trim(),
         detailLines: detail,
         hasDetail: detail.length > 0,
-        canExpand:
-          todo.title.length > EXPAND_THRESHOLD || todo.title.includes('\n'),
         badge,
         level,
         parentId: parentOf.get(todo.id) ?? null,
@@ -620,7 +614,7 @@ toggleFolderList(): void {
   startEditing(todo: Todo, textarea: HTMLTextAreaElement): void {
     this.editTokens.set(tokensOf(todo.title));
     this.editingId.set(todo.id);
-    if (this.canExpand(todo.title) && !this.isExpanded(todo.id)) {
+    if (this.clampedIds().has(todo.id) && !this.isExpanded(todo.id)) {
       this.toggleExpanded(todo.id, textarea);
     }
     requestAnimationFrame(() => {
@@ -760,7 +754,14 @@ openDateSheet(id: string): void {
     return date !== null && !this.scheduleChoices().some((choice) => choice.iso === date);
   }
 
-  toggleScheduleMenu(id: string): void {
+  /**
+   * Woran das Termin-Menü hängt: am Chip, wenn ein Termin steht, sonst am
+   * Kalender in der Hover-Leiste. Zwei Knöpfe, ein Menü.
+   */
+  protected readonly scheduleOrigin = signal<HTMLElement>(inject<ElementRef<HTMLElement>>(ElementRef).nativeElement);
+
+  toggleScheduleMenu(id: string, event: Event): void {
+    this.scheduleOrigin.set(event.currentTarget as HTMLElement);
     this.openScheduleId.update(current => current === id ? null : id);
   }
 
@@ -804,8 +805,23 @@ openDateSheet(id: string): void {
     );
   }
 
-  canExpand(title: string): boolean {
-    return title.length > EXPAND_THRESHOLD || title.includes('\n');
+  /**
+   * Zeilen, deren Text zugeklappt nicht in zwei Zeilen passt — gemessen von
+   * Autosize. Nur sie bekommen den Auslauf am unteren Rand und den Knopf zum
+   * Aufklappen. Vorher entschied die Zeichenzahl (über 40): auch ein Titel,
+   * der vollständig in zwei Zeilen stand, lief unten aus, als ginge er
+   * weiter.
+   */
+  protected readonly clampedIds = signal<ReadonlySet<string>>(new Set());
+
+  protected setClamped(id: string, clamped: boolean): void {
+    this.clampedIds.update((current) => {
+      if (current.has(id) === clamped) return current;
+      const next = new Set(current);
+      if (clamped) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   }
 
   isExpanded(id: string): boolean {

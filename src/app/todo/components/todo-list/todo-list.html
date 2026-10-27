@@ -105,6 +105,7 @@
       [class.todo-parent]="row.subCount > 0"
       [class.todo-target]="activeParentId() === row.id"
       [class.todo-card--revealed]="revealedId() === row.id"
+      [class.is-editing]="editingId() === todo.id"
       [attr.data-todo-id]="row.id"
       [style.--i]="row.stagger"
       (click)="selectParent(row, $event)"
@@ -116,7 +117,7 @@
           </div>
 
           <!-- Drag-handle -->
-           <div class="flex flex-1 items-center gap-2.5 min-w-0">
+           <div class="todo-head relative flex flex-1 items-center gap-2.5 min-w-0">
             <!-- Gliederungs-Dreieck: klappt die Unteraufgaben weg.
                  Der Platz bleibt in JEDER Zeile stehen, auch wo es nichts
                  einzuklappen gibt — sonst säßen die Kacheln versetzt und die
@@ -138,7 +139,7 @@
                   [class.is-collapsed]="isCollapsed(todo.id)"></lucide-icon>
               </button>
             } @else if (hasOutline()) {
-              <span class="w-4 flex-none" aria-hidden="true"></span>
+              <span class="todo-outline-spacer w-4 flex-none" aria-hidden="true"></span>
             }
 
             <!-- Der Haken zuerst: das ist die Handlung, um die es in einer
@@ -202,7 +203,8 @@
 
             <textarea
               #todoText
-              appAutosize
+              [appAutosize]="row.displayTitle"
+              (autosizeOverflow)="setClamped(todo.id, $event)"
               rows="1"
                             [readOnly]="editingId() !== todo.id"
               [class.pointer-events-none]="editingId() !== todo.id"
@@ -211,10 +213,8 @@
               (input)="onEditInput(todoText)"
               (keydown.backspace)="onEditBackspace($event, todoText)"
               class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-lg bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-text"
-              [class.todo-collapsed]="
-                row.canExpand &&
-                !isExpanded(todo.id)
-              "
+              [class.todo-collapsed]="!isExpanded(todo.id)"
+              [class.is-clamped]="clampedIds().has(todo.id)"
               [class.todo-title--completed]="
                 todo.completed ||
                 completingTodoIds().has(todo.id)
@@ -248,6 +248,74 @@
                 {{ row.firstLine }}
               </p>
             }
+            <!-- Was man erst beim Zeigen braucht, nimmt keinen Platz weg.
+                 Termin setzen, Ordner, Stern, Bearbeiten und Löschen standen
+                 unsichtbar (opacity 0) in jeder Zeile und hielten rund 250px
+                 frei: der Titel brach in die zweite Zeile um, obwohl rechts
+                 alles leer aussah. Jetzt liegen sie beim Zeigen als Leiste
+                 über dem Ende des Titels (todo-list.scss, .row-hover). Ohne
+                 Zeigegerät stehen sie wie bisher in der Zeile. -->
+            <div class="row-hover hidden sm:flex">
+              @if (todo.scheduledDate === null && !todo.repeat) {
+                <button
+                  type="button"
+                  class="row-action grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-muted/70 transition hover:bg-fill hover:text-text"
+                  (click)="toggleScheduleMenu(todo.id, $event)"
+                  aria-haspopup="dialog"
+                  [attr.aria-expanded]="openScheduleId() === todo.id"
+                  aria-label="Schedule this todo"
+                  title="Plan for a day">
+                  <lucide-icon [img]="ScheduleIcon" class="h-4 w-4"></lucide-icon>
+                </button>
+              }
+              <button
+                type="button"
+                cdkOverlayOrigin #trigger="cdkOverlayOrigin"
+                class="row-action flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-2.5 py-1
+                       text-sm text-text transition hover:bg-panel/10"
+                [class]="labelService.borderClassFor(row.primaryLabelId)"
+                (click)="toggleMenu(todo.id)"
+                aria-haspopup="listbox"
+                [attr.aria-expanded]="openMenuId() === todo.id"
+                [attr.title]="row.labelTitle"
+                [attr.aria-label]="'Labels: ' + row.labelTitle">
+                <!-- Farbpunkte: einer je Label; kein Label = grauer Punkt -->
+                @if (todo.labelIds.length === 0) {
+                  <span class="text-subtle">●</span>
+                } @else {
+                  @for (dot of row.dotClasses; track $index) {
+                    <span [class]="dot">●</span>
+                  }
+                }
+                <lucide-icon [img]="ChevronDownIcon" class="h-3.5 w-3.5 text-muted"></lucide-icon>
+              </button>
+              @if (!todo.isFavorite) {
+                <button
+                  type="button"
+                  class="row-action block flex-shrink-0 rounded-full p-1 text-subtle transition hover:text-amber-400"
+                  aria-pressed="false"
+                  aria-label="Add to favorites"
+                  (click)="toggleFavorite(todo.id)">
+                  <lucide-icon [img]="StarIcon" class="h-[18px] w-[18px]"></lucide-icon>
+                </button>
+              }
+              <button
+                type="button"
+                class="row-action block flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
+                (click)="startEditing(todo, todoText)"
+                aria-label="Edit text">
+                <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+              @if (!todo.archivedAt) {
+                <button
+                  type="button"
+                  class="row-action block flex-none rounded-lg px-2 py-1 text-muted transition hover:text-red-400"
+                  (click)="removeTodos(todo.id)"
+                  aria-label="Delete">
+                  ✕
+                </button>
+              }
+            </div>
           </div>
 
           @if (showsDetail(row)) {
@@ -278,11 +346,14 @@
             </button>
           }
 
-          <!-- Aufklappen bei langem Text: mobil oft die einzige Chance, alles zu lesen -->
-          @if (row.canExpand) {
+          <!-- Aufklappen, wenn der Text wirklich abgeschnitten ist — gemessen
+               (Autosize meldet es), nicht an der Zeichenzahl geraten. Vorher
+               stand der Knopf an jedem Todo über 40 Zeichen, auch wenn alles
+               in zwei Zeilen passte. -->
+          @if (clampedIds().has(todo.id) || isExpanded(todo.id)) {
             <button
               type="button"
-              class="row-action flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
+              class="row-action flex-shrink-0 rounded-full p-1 text-muted/60 transition hover:text-text sm:p-1.5"
               [class.row-action--kept]="isExpanded(todo.id)"
               [class.text-text]="isExpanded(todo.id)"
               (click)="toggleExpanded(todo.id, todoText)"
@@ -312,21 +383,18 @@
                Ansichtsfarbe, überfällig in Bernstein, alles Spätere leise.
                Vorher trug jeder Termin denselben Akzentrahmen — zehn Zeilen,
                zehn gleich laute Pillen, und „Today" sah aus wie „Wed". -->
+          @if (todo.scheduledDate !== null || todo.repeat) {
           <button
             type="button"
-            cdkOverlayOrigin #scheduleTrigger="cdkOverlayOrigin"
-            class="row-action hidden flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs
+            class="row-action row-action--kept hidden flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs
                    transition sm:flex"
-            [class.row-action--kept]="todo.scheduledDate !== null"
-            [class]="todo.scheduledDate === null
-              ? 'px-1.5 text-muted/60 hover:bg-fill hover:text-text'
-              : (row.isLate
-                  ? 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
-                  : row.isToday
-                    ? 'bg-indigo-500/15 text-indigo-200 hover:bg-indigo-500/25'
-                    : 'text-muted hover:bg-fill hover:text-text')"
-            (click)="toggleScheduleMenu(todo.id)"
-            aria-haspopup="listbox"
+            [class]="row.isLate
+              ? 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+              : row.isToday
+                ? 'bg-indigo-500/15 text-indigo-200 hover:bg-indigo-500/25'
+                : 'text-muted hover:bg-fill hover:text-text'"
+            (click)="toggleScheduleMenu(todo.id, $event)"
+            aria-haspopup="dialog"
             [attr.aria-expanded]="openScheduleId() === todo.id"
             [attr.aria-label]="todo.scheduledDate === null
               ? 'Schedule this todo'
@@ -342,6 +410,7 @@
                 [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
             }
           </button>
+          }
 
           <!-- Der Rhythmus: die letzten fälligen Termine dieser Reihe, einer
                je Punkt. KEINE app-weite Serie — die belohnt das Öffnen der
@@ -366,7 +435,7 @@
 
           <ng-template
             cdkConnectedOverlay
-            [cdkConnectedOverlayOrigin]="scheduleTrigger"
+            [cdkConnectedOverlayOrigin]="scheduleOrigin()"
             [cdkConnectedOverlayOpen]="openScheduleId() === todo.id"
             [cdkConnectedOverlayPositions]="overlayPositions"
             [cdkConnectedOverlayPush]="true"
@@ -430,29 +499,7 @@
                Titel dasselbe, und zwar an der Stelle, an der er in eine
                Spalte fällt. Zwei Anzeigen für eine Auskunft sind eine zu
                viel, also ist dies hier wieder nur eine Handlung. -->
-          <button
-            type="button"
-            cdkOverlayOrigin #trigger="cdkOverlayOrigin"
 
-          
-            class="row-action hidden sm:flex flex-shrink-0 items-center gap-1.5 rounded-full border bg-bg2 px-2.5 py-1
-                   text-sm text-text transition hover:bg-panel/10"
-            [class]="labelService.borderClassFor(row.primaryLabelId)"
-            (click)="toggleMenu(todo.id)"
-            aria-haspopup="listbox"
-            [attr.aria-expanded]="openMenuId() === todo.id"
-            [attr.title]="row.labelTitle"
-            [attr.aria-label]="'Labels: ' + row.labelTitle">
-            <!-- Farbpunkte: einer je Label; kein Label = grauer Punkt -->
-            @if (todo.labelIds.length === 0) {
-              <span class="text-subtle">●</span>
-            } @else {
-              @for (dot of row.dotClasses; track $index) {
-                <span [class]="dot">●</span>
-              }
-            }
-            <lucide-icon [img]="ChevronDownIcon" class="h-3.5 w-3.5 text-muted"></lucide-icon>
-          </button>
 
           <!-- Mehrfachauswahl via CDK Overlay -->
           <ng-template
@@ -497,30 +544,22 @@
           <!-- Der Stern steht bei den uebrigen Handlungen, nicht mehr an der
                Spitze der Zeile: er ist ein Merkzeichen, kein Einstieg. Gesetzt
                bleibt er sichtbar — dann ist er Zustand. -->
-          <button
-            type="button"
-            class="row-action hidden sm:block flex-shrink-0 rounded-full p-1 text-subtle transition hover:text-amber-400"
-            [class.row-action--kept]="todo.isFavorite"
-            [class.text-amber-400]="todo.isFavorite"
-            [attr.aria-pressed]="todo.isFavorite"
-            [attr.aria-label]="todo.isFavorite
-              ? 'Remove from favorites'
-              : 'Add to favorites'"
-            (click)="toggleFavorite(todo.id)">
-            <lucide-icon
-              [img]="StarIcon"
-              class="h-[18px] w-[18px]"
-              [class.fill-amber-400]="todo.isFavorite">
-            </lucide-icon>
-          </button>
+          <!-- Gesetzt: gelb und gefüllt. Vorher stand der Stern grau da —
+               text-subtle und text-amber-400 lagen beide auf dem Knopf, und
+               die graue Klasse gewann; die Füllung hing per Bindung an der
+               Hülle des Symbols statt am SVG und kam nie an. Jetzt nur noch
+               feste Klassen, die lucide-icon ans SVG weitergibt. -->
+          @if (todo.isFavorite) {
+            <button
+              type="button"
+              class="row-action row-action--kept hidden sm:block flex-shrink-0 rounded-full p-1 text-amber-400 transition hover:text-amber-300"
+              aria-pressed="true"
+              aria-label="Remove from favorites"
+              (click)="toggleFavorite(todo.id)">
+              <lucide-icon [img]="StarIcon" class="h-[18px] w-[18px] fill-amber-400"></lucide-icon>
+            </button>
+          }
 
-          <button
-            type="button"
-            class="row-action ml-0.5 hidden sm:block flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
-            (click)="startEditing(todo, todoText)"
-            aria-label="Edit text">
-            <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
-          </button>
           @if (todo.archivedAt) {
             <!-- Im Archiv ist Zurueckholen die naheliegende Handlung, nicht
                  Loeschen. Das Kreuz waere dort die gefaehrlichere von beiden
@@ -531,20 +570,13 @@
               <lucide-icon [img]="RestoreIcon" class="h-3.5 w-3.5"></lucide-icon>
               Restore
             </button>
-          } @else {
-            <button
-              class="row-action hidden sm:block rounded-lg px-2 py-1 flex-none text-muted transition hover:text-red-400"
-              (click)="removeTodos(todo.id)"
-              aria-label="Delete">
-              ✕
-            </button>
           }
 
           <!-- Mobil: 3-Punkte-Menü bündelt Favorit, Zeitblock und Löschen -->
           <button
             type="button"
             cdkOverlayOrigin #optionsTrigger="cdkOverlayOrigin"
-            class="sm:hidden flex-shrink-0 rounded-full p-1.5 text-muted/60 transition hover:text-text"
+            class="-mr-1 sm:hidden flex-shrink-0 rounded-full p-1 text-muted/60 transition hover:text-text"
             (click)="toggleOptionsMenu(todo.id)"
             aria-haspopup="menu"
             [attr.aria-expanded]="openOptionsId() === todo.id"
@@ -580,12 +612,11 @@
                 type="button" role="menuitem"
                 class="popover-item text-sm text-text transition"
                 (click)="toggleFavorite(todo.id); closeOptionsMenu()">
-                <lucide-icon
-                  [img]="StarIcon"
-                  class="h-4 w-4"
-                  [class.text-amber-400]="todo.isFavorite"
-                  [class.fill-amber-400]="todo.isFavorite">
-                </lucide-icon>
+                @if (todo.isFavorite) {
+                  <lucide-icon [img]="StarIcon" class="h-4 w-4 text-amber-400 fill-amber-400"></lucide-icon>
+                } @else {
+                  <lucide-icon [img]="StarIcon" class="h-4 w-4"></lucide-icon>
+                }
                 <span>{{ todo.isFavorite ? 'Remove favorite' : 'Mark as favorite' }}</span>
               </button>
 
