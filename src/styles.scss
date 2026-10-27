@@ -1164,6 +1164,39 @@ select {
   }
 }
 
+/* ---- Hintergrund sperren, solange ein Overlay offen ist ----
+   Ein Menü, ein Blatt, der Ordner-Dialog, die Suche: rollte man darin bis
+   ans Ende oder neben das Fenster, scrollte die Seite dahinter weiter. Am
+   Telefon verschob sich so beim Wischen durch die Ordnerliste die ganze
+   Liste darunter, und beim Schliessen stand man woanders.
+
+   Eine Regel für alle statt eines Schalters je Overlay: offen ist eins,
+   solange es im DOM steht —
+   - jedes CDK-Overlay mit Hintergrund (Menüs, Blätter, Kalender),
+   - was .scroll-lock trägt (Ordner-Dialog, Suche, Tastenkürzel,
+     Plan-Umschalter),
+   - Tabelle und Diagramm im Vollbild, das Level-Fenster.
+   Die Scrollposition bleibt dabei stehen; scrollbar-gutter: stable (oben)
+   hält die Breite, die Seite springt also nicht. */
+html:has(
+  .cdk-overlay-backdrop,
+  .scroll-lock,
+  .plan-table-block--full,
+  .plan-diagram--full,
+  .level-sheet
+) {
+  overflow: hidden;
+}
+
+/* Ältere iOS-Versionen scrollen trotz overflow: hidden weiter, wenn die
+   Berührung auf dem abgedunkelten Grund beginnt. Dort gibt es nichts zu
+   wischen. Nur auf dem leeren Grund: touch-action vererbt sich in den
+   Inhalt, und ein Fenster darin (Tastenkürzel) muss scrollen können. */
+.cdk-overlay-backdrop,
+.scroll-lock:not(:has(*)) {
+  touch-action: none;
+}
+
 /* Zurück nach oben: unten rechts, über der Ansichten-Leiste des Telefons.
    Nur, solange die App-Leiste weg ist — ganz oben gibt es nichts zu holen,
    und ein Knopf, der immer dasteht, verdeckt immer etwas. */
