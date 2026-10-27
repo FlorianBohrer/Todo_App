@@ -273,6 +273,53 @@ export function appendUnder<T extends { id: string; title: string }>(
   return [...rest.slice(0, end), moved, ...rest.slice(end)];
 }
 
+/**
+ * Zieht ein Todo aus seiner Gruppe heraus: hinter deren letzte Zeile.
+ *
+ * An Ort und Stelle zur eigenen Aufgabe gemacht, würde es die Schritte, die
+ * ihm folgen, an sich ziehen — die Zugehörigkeit hängt an der Position. Aus
+ * „a1, a2, a3" würde beim Ausrücken von a2 eine Aufgabe a2 mit dem Schritt a3.
+ * Gemeint ist aber: a2 gehört nicht mehr dazu, der Rest schon.
+ */
+export function moveOutOfGroup<T extends { id: string; title: string }>(
+  items: readonly T[],
+  movedId: string,
+): T[] {
+  const from = items.findIndex((i) => i.id === movedId);
+  if (from === -1) return [...items];
+  const end = groupEnd(items, from); // erste Zeile nach der Gruppe
+  const moved = items[from];
+  const rest = items.filter((i) => i.id !== movedId);
+  // Durch das Herausnehmen rückt alles dahinter um eins auf.
+  const at = end - 1;
+  return [...rest.slice(0, at), moved, ...rest.slice(at)];
+}
+
+/**
+ * Setzt die Gliederungsstufe neu — anders als withTaskLevel auch dann, wenn
+ * schon eine im Titel steht. null nimmt sie heraus. Die Priorität bleibt.
+ */
+export function setTaskLevel(title: string, level: TaskLevel | null): string {
+  const typed = readPrefixes(title.trimStart());
+  if (typed.rest.trim() === '') return title;
+  return composeTitle(typed.badge, level, typed.rest);
+}
+
+/**
+ * Was unter „Active" steht: jede Gruppe, in der noch etwas offen ist — und
+ * zwar ganz, mit den erledigten Schritten.
+ *
+ * Vorher verschwand ein abgehakter Schritt sofort. Von „Umzug" mit fünf
+ * Schritten standen nach dreien noch zwei da, und nichts sagte, dass es
+ * vorangeht. Jetzt bleiben die erledigten durchgestrichen stehen, bis die
+ * ganze Aufgabe fertig ist; dann geht die Gruppe als Ganzes.
+ */
+export function openGroups<T extends { title: string; completed: boolean }>(items: readonly T[]): T[] {
+  return subtaskGroups(items)
+    .filter((group) => group.some((item) => !item.completed))
+    .flat();
+}
+
 /** Anzeigetext ohne Präfixe (und ohne die folgenden Leerzeichen). */
 export function stripPriorityPrefix(title: string): string {
   return readPrefixes(title).rest;

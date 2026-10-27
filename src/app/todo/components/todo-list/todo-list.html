@@ -81,16 +81,19 @@
       [class.no-outline]="!hasOutline()"
       cdkDropList
       (cdkDropListDropped)="drop($event)">
-      @for (row of visibleRows(); track row.id) {
+      @for (item of listItems(); track item.key) {
+        @if (item.kind === 'row') {
+        @let row = item.row;
         <!-- @let haelt alle todo.-Zugriffe unveraendert; ersetzt sind nur die
              Aufrufe, die pro Durchlauf gerechnet haben. -->
         @let todo = row.todo;
-        
+
         <li
       cdkDrag
       [cdkDragStartDelay]="dragStartDelay"
       (cdkDragStarted)="onDragStarted()"
       (cdkDragEnded)="onDragEnded()"
+      (cdkDragMoved)="onDragMoved($event, row)"
       class="todo-card group flex items-center justify-between gap-2.5 px-2 py-3 transition hover:bg-fill sm:px-2.5"
       [class.todo-has-when]="todo.scheduledDate !== null"
       [class.todo-expanded-row]="isExpanded(todo.id)"
@@ -100,7 +103,7 @@
       [class.todo-card--leaving]="leavingTodoIds().has(todo.id)"
       [class.todo-card--new]="newTodoId() === todo.id"
       [class.todo-sub]="row.level === 'sub'"
-      [class.todo-sub--last]="row.lastOfGroup"
+      [class.todo-sub--last]="row.lastOfGroup && !item.addFollows"
       [class.todo-main]="row.level === 'main'"
       [class.todo-parent]="row.subCount > 0"
       [class.todo-target]="activeParentId() === row.id"
@@ -111,9 +114,13 @@
       (click)="selectParent(row, $event)"
     >
           <!-- Platzhalter beim Ziehen -->
+          <!-- Rückt mit, wenn der seitliche Versatz die Stufe ändert
+               (dragIndent): so sieht man vor dem Loslassen, ob die Zeile ein
+               Schritt wird oder wieder eine eigene Aufgabe. -->
           <div
             *cdkDragPlaceholder
-            class="h-12 rounded-xl border-2 border-dashed border-border bg-fill">
+            class="todo-drop h-12 rounded-xl border-2 border-dashed border-border bg-fill"
+            [class.todo-drop--step]="dragIndent() === 1 || (row.level === 'sub' && dragIndent() !== -1)">
           </div>
 
           <!-- Drag-handle -->
@@ -210,6 +217,8 @@
               [class.pointer-events-none]="editingId() !== todo.id"
               (blur)="finishEditing(todo, todoText)"
               (keydown.escape)="cancelEditing(todo, todoText)"
+              (keydown.tab)="onEditTab($event, row, todoText, false)"
+              (keydown.shift.tab)="onEditTab($event, row, todoText, true)"
               (input)="onEditInput(todoText)"
               (keydown.backspace)="onEditBackspace($event, todoText)"
               class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-lg bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-text"
@@ -223,16 +232,28 @@
               [class.hidden]="showsDetail(row)"
             ></textarea>
 
-            <!-- Zugeklappt: die Zahl sagt, was darunter liegt. Ohne sie wäre
-                 eine eingeklappte Aufgabe von einer ohne Teilschritte nicht zu
-                 unterscheiden. Für die Tastatur reicht das Dreieck, deshalb
-                 bleibt die Zahl der Vorlesesoftware verborgen. -->
-            @if (row.subCount > 0 && isCollapsed(todo.id)) {
+            <!-- Fortschritt der Aufgabe: erledigte von allen Schritten, als
+                 Ring und Zahl. Vorher stand nur zugeklappt eine Zahl da — wie
+                 viele Schritte es gibt, nicht wie weit man ist. Ein Tipp
+                 klappt die Schritte auf und zu, wie das Dreieck. -->
+            @if (row.progress; as p) {
               <button
                 type="button"
-                class="flex-none rounded-full bg-fill px-1.5 py-0.5 text-2xs text-subtle transition hover:text-text"
+                class="todo-progress"
+                [class.is-complete]="p.done === p.total"
                 (click)="toggleSubtasks(todo.id)"
-                tabindex="-1" aria-hidden="true">{{ row.subCount }}</button>
+                [attr.aria-expanded]="!isCollapsed(todo.id)"
+                [attr.aria-label]="p.done + ' of ' + p.total + ' steps done, ' + (isCollapsed(todo.id) ? 'show' : 'hide') + ' steps'"
+                [title]="p.done + ' of ' + p.total + ' steps done'">
+                <svg viewBox="0 0 16 16" class="todo-progress__ring" aria-hidden="true">
+                  <circle cx="8" cy="8" r="6" class="todo-progress__track" />
+                  @if (p.done > 0) {
+                    <circle cx="8" cy="8" r="6" class="todo-progress__fill"
+                      [attr.stroke-dasharray]="(p.done / p.total) * 37.7 + ' 37.7'" />
+                  }
+                </svg>
+                <span>{{ p.done }}/{{ p.total }}</span>
+              </button>
             }
 
             <!-- Aufgeklappt: nur die erste Zeile steht hier, die Unterpunkte
@@ -298,6 +319,41 @@
                   (click)="toggleFavorite(todo.id)">
                   <lucide-icon [img]="StarIcon" class="h-[18px] w-[18px]"></lucide-icon>
                 </button>
+              }
+              <!-- Gliederung: ein Schritt kann wieder eigene Aufgabe werden;
+                   eine Aufgabe bekommt einen ersten Schritt oder wird Schritt
+                   der Aufgabe darüber. Dasselbe per Tab / Shift+Tab beim
+                   Bearbeiten und per seitlichem Ziehen. -->
+              @if (row.canOutdent) {
+                <button
+                  type="button"
+                  class="row-action grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-muted/70 transition hover:bg-fill hover:text-text"
+                  (click)="outdent(row)"
+                  aria-label="Make it its own task"
+                  title="Make it its own task (Shift+Tab while editing)">
+                  <lucide-icon [img]="OutdentIcon" class="h-4 w-4"></lucide-icon>
+                </button>
+              } @else {
+                @if (row.subCount === 0) {
+                  <button
+                    type="button"
+                    class="row-action grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-muted/70 transition hover:bg-fill hover:text-text"
+                    (click)="openStepInput(todo.id)"
+                    aria-label="Add a step"
+                    title="Add a step">
+                    <lucide-icon [img]="AddStepIcon" class="h-4 w-4"></lucide-icon>
+                  </button>
+                }
+                @if (row.indentTarget; as target) {
+                  <button
+                    type="button"
+                    class="row-action grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-muted/70 transition hover:bg-fill hover:text-text"
+                    (click)="indent(row)"
+                    [attr.aria-label]="'Make it a step of ' + target.title"
+                    [title]="'Make it a step of “' + target.title + '” (Tab while editing)'">
+                    <lucide-icon [img]="IndentIcon" class="h-4 w-4"></lucide-icon>
+                  </button>
+                }
               }
               <button
                 type="button"
@@ -627,6 +683,33 @@
                 <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
                 <span>Edit text</span>
               </button>
+
+              <!-- Gliederung -->
+              @if (row.canOutdent) {
+                <button type="button" role="menuitem"
+                  class="popover-item text-sm text-text transition"
+                  (click)="outdent(row); closeOptionsMenu()">
+                  <lucide-icon [img]="OutdentIcon" class="h-4 w-4"></lucide-icon>
+                  <span>Make it its own task</span>
+                </button>
+              } @else {
+                @if (row.subCount === 0) {
+                  <button type="button" role="menuitem"
+                    class="popover-item text-sm text-text transition"
+                    (click)="closeOptionsMenu(); openStepInput(todo.id)">
+                    <lucide-icon [img]="AddStepIcon" class="h-4 w-4"></lucide-icon>
+                    <span>Add a step</span>
+                  </button>
+                }
+                @if (row.indentTarget; as target) {
+                  <button type="button" role="menuitem"
+                    class="popover-item text-sm text-text transition"
+                    (click)="indent(row); closeOptionsMenu()">
+                    <lucide-icon [img]="IndentIcon" class="h-4 w-4 flex-none"></lucide-icon>
+                    <span class="min-w-0 truncate">Step of “{{ target.title }}”</span>
+                  </button>
+                }
+              }
               }
 
               <!-- Termin, mobil: dieselben Angebote als Reihe -->
@@ -756,6 +839,36 @@
             </div>
           </ng-template>
         </li>
+        } @else {
+          <!-- „+ Add step" am Ende einer aufgeklappten Gruppe. Trägt die Form
+               eines Schritts (Einzug, Winkel), damit sie als Teil der Gruppe
+               liest und die Linie dort endet. -->
+          <li class="todo-card todo-sub todo-sub--last todo-add-step">
+            @if (hasOutline()) {
+              <span class="todo-outline-spacer w-4 flex-none" aria-hidden="true"></span>
+            }
+            @if (stepInputFor() === item.headId) {
+              <lucide-icon [img]="PlusIcon" class="todo-add-step__icon h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+              <input #stepField
+                class="todo-add-step__input"
+                [attr.data-step-for]="item.headId"
+                placeholder="New step…"
+                enterkeyhint="next"
+                autocomplete="off"
+                [attr.aria-label]="'New step for ' + item.headTitle"
+                (keydown.enter)="addStep(item.headId, stepField)"
+                (keydown.escape)="closeStepInput()"
+                (blur)="onStepBlur(stepField)" />
+            } @else {
+              <button type="button" class="todo-add-step__button"
+                (click)="openStepInput(item.headId)"
+                [attr.aria-label]="'Add a step to ' + item.headTitle">
+                <lucide-icon [img]="PlusIcon" class="h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+                <span>Add step</span>
+              </button>
+            }
+          </li>
+        }
       }
     </ul>
   }

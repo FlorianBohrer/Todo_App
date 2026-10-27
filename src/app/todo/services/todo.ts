@@ -6,7 +6,16 @@ import { environment } from '../../../environments/enviroment';
 import { RepeatRule, Todo } from '../model/todo.model';
 import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
-import { appendUnder, orderWithSubtasks, stripPriorityPrefix } from '../shared/title-priority';
+import {
+  appendUnder,
+  moveOutOfGroup,
+  openGroups,
+  orderWithSubtasks,
+  setTaskLevel,
+  stripPriorityPrefix,
+  subtaskGroups,
+  taskLevel,
+} from '../shared/title-priority';
 import { TitleToken, splitTitle } from '../shared/title-token';
 import { normalize, score } from '../../search/search';
 import { scheduleLabel } from '../shared/schedule';
@@ -162,7 +171,9 @@ export class TodoService {
     //
     // Die Kachel oben zählt weiter alle (19 von 22): sie zeigt den
     // Fortschritt, die Liste das, was noch aussteht.
-    if (f === 'active')    items = items.filter(i => !i.completed);
+    // "Active" behält erledigte Schritte, solange ihre Aufgabe offen ist
+    // (openGroups): man sieht, wie weit sie ist.
+    if (f === 'active')    items = openGroups(items);
     if (f === 'completed') items = items.filter(i => i.completed);
     if (f === 'favorites') items = items.filter(i => i.isFavorite && !i.completed);
 
@@ -191,6 +202,83 @@ export class TodoService {
 
     return items;
   });
+
+  /**
+   * Fortschritt je Aufgabe mit Schritten: erledigt von allen, im offenen
+   * Folder und unabhängig vom Filter. Unter „Active" fehlen sonst nie
+   * Schritte, unter „Favorites" schon — die Zahl soll trotzdem stimmen.
+   */
+  readonly stepProgress = computed(() => {
+    const progress = new Map<string, { done: number; total: number }>();
+    for (const [head, ...steps] of subtaskGroups(this.todosInCategory())) {
+      if (steps.length === 0) continue;
+      progress.set(head.id, {
+        done: steps.filter((s) => s.completed).length,
+        total: steps.length,
+      });
+    }
+    return progress;
+  });
+
+  /** Die Schritte einer Aufgabe, im offenen Folder. */
+  stepsOf(headId: string): Todo[] {
+    const group = subtaskGroups(this.todosInCategory()).find((g) => g[0].id === headId);
+    return group ? group.slice(1) : [];
+  }
+
+  /** Die Aufgabe, zu der ein Schritt gehört; null, wenn er keine hat. */
+  headOf(stepId: string): Todo | null {
+    for (const [head, ...steps] of subtaskGroups(this.todosInCategory())) {
+      if (steps.some((s) => s.id === stepId)) return head;
+    }
+    return null;
+  }
+
+  // ---- Ein- und Ausrücken ----
+  //
+  // Die Zugehörigkeit hängt am Präfix „/sub" und an der Position: ein Schritt
+  // gehört zur nächsten Aufgabe darüber. Beides muss sich also zusammen
+  // ändern, sonst rückt ein Todo zwar ein, landet aber unter der falschen
+  // Aufgabe — etwa, weil die Liste nach Priorität sortiert anders aussieht,
+  // als die Reihenfolge darunter ist.
+
+  /**
+   * Macht ein Todo zum Schritt einer Aufgabe. Es rückt ans Ende ihrer
+   * Schritte, ausser `inPlace`: dann steht es schon dort, wo es hingehört
+   * (nach einem Zug), und nur die Stufe ändert sich.
+   *
+   * Eine Aufgabe, die selbst Schritte hat, wird kein Schritt — drei Ebenen
+   * gibt es nicht. false, wenn nichts geschah.
+   */
+  makeStepOf(id: string, headId: string, inPlace = false): boolean {
+    const todo = this.todoById(id);
+    if (!todo || id === headId) return false;
+    if (this.stepsOf(id).length > 0 && taskLevel(todo.title) !== 'sub') {
+      this.toast.show('A task with steps can\'t become a step');
+      return false;
+    }
+    const title = setTaskLevel(todo.title, 'sub');
+    this.todos.update((items) => {
+      const renamed = items.map((item) => (item.id === id ? { ...item, title } : item));
+      return inPlace ? renamed : appendUnder(renamed, id, headId);
+    });
+    this.updateOnServer(id, { title });
+    this.persistOrder();
+    return true;
+  }
+
+  /** Ein Schritt wird wieder eine eigene Aufgabe, direkt hinter seiner Gruppe. */
+  makeOwnTask(id: string): boolean {
+    const todo = this.todoById(id);
+    if (!todo || taskLevel(todo.title) !== 'sub') return false;
+    const title = setTaskLevel(todo.title, null);
+    this.todos.update((items) =>
+      moveOutOfGroup(items, id).map((item) => (item.id === id ? { ...item, title } : item)),
+    );
+    this.updateOnServer(id, { title });
+    this.persistOrder();
+    return true;
+  }
 
   readonly stats = computed(() => {
     const items = this.todosInCategory();
