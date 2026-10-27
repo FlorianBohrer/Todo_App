@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -17,6 +19,7 @@ import {
   CdkDrag,
   CdkDragDrop,
   CdkDragHandle,
+  CdkDragMove,
   CdkDragPlaceholder,
   CdkDropList,
 } from '@angular/cdk/drag-drop';
@@ -35,6 +38,7 @@ import {
   subtaskGroups,
   taskLevel,
   TaskLevel,
+  withTaskLevel,
 } from '../../shared/title-priority';
 import {
   TOKEN_DESCRIPTION,
@@ -55,6 +59,7 @@ import { todayISO } from '../../shared/week';
 import { DatePicker } from '../date-picker/date-picker';
 import { tap } from '../../shared/haptics';
 import { RewardService } from '../../../reward/reward.service';
+import { ToastService } from '../../../shared/toast.service';
 import { Rhythm, rhythmByTodo } from '../../shared/rhythm';
 
 import {
@@ -75,6 +80,10 @@ import {
   FileText,
   Timer,
   X,
+  ListIndentDecrease,
+  ListIndentIncrease,
+  ListPlus,
+  Plus,
 } from 'lucide-angular';
 
 /**
@@ -111,6 +120,10 @@ function readCollapsed(): ReadonlySet<string> {
  * Hier steht es einmal je Datenstand. Die Vorlage liest danach nur noch
  * Eigenschaften.
  */
+type ListItem =
+  | { kind: 'row'; key: string; row: TodoRow; addFollows: boolean }
+  | { kind: 'add'; key: string; headId: string; headTitle: string };
+
 interface TodoRow {
   id: string;
   todo: Todo;
@@ -141,6 +154,12 @@ interface TodoRow {
   subCount: number;
   /** Letzte Unteraufgabe ihrer Gruppe — dort endet die Fuehrungslinie. */
   lastOfGroup: boolean;
+  /** Erledigt von allen Schritten, im ganzen Folder. null = keine Schritte. */
+  progress: { done: number; total: number } | null;
+  /** Die Aufgabe darüber, deren Schritt diese Zeile werden kann. */
+  indentTarget: { id: string; title: string } | null;
+  /** Ein Schritt, der wieder eine eigene Aufgabe werden kann. */
+  canOutdent: boolean;
   /** Farbe des primären Ordners, als Punkt vor dem Titel. */
   folderDotClass: string;
   folderDotTitle: string;
@@ -182,6 +201,7 @@ interface TodoRow {
 export class TodoList {
   private readonly todoService = inject(TodoService);
   private readonly rewards = inject(RewardService);
+  private readonly toast = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Die Zeile, zu der die Suche gerade gesprungen ist — sie leuchtet kurz auf. */
@@ -274,6 +294,8 @@ export class TodoList {
     }
 
     const today = todayISO();
+    const progress = this.todoService.stepProgress();
+    const byId = new Map(items.map((todo) => [todo.id, todo]));
     return items.map((todo, index) => {
       const badge = priorityBadge(todo.title);
       const stripped = stripPriorityPrefix(todo.title);
@@ -295,6 +317,9 @@ export class TodoList {
         parentId: parentOf.get(todo.id) ?? null,
         subCount: subCounts.get(todo.id) ?? 0,
         lastOfGroup: lastSubs.has(todo.id),
+        progress: progress.get(todo.id) ?? null,
+        indentTarget: this.indentTargetFor(items, index, parentOf, subCounts, byId),
+        canOutdent: level === 'sub' && parentOf.has(todo.id),
         folderDotClass: this.folderDotClass(todo.labelIds),
         folderDotTitle: this.folderDotTitle(todo.labelIds),
         primaryLabelId: todo.labelIds[0] ?? null,
@@ -309,6 +334,27 @@ export class TodoList {
       };
     });
   });
+
+  /**
+   * Wessen Schritt diese Zeile werden kann: die Aufgabe, die in der Liste
+   * direkt darüber steht (bei einem Schritt darüber dessen Aufgabe). Nicht
+   * für Schritte (die sind es schon) und nicht für Aufgaben mit eigenen
+   * Schritten — drei Ebenen gibt es nicht.
+   */
+  private indentTargetFor(
+    items: readonly Todo[],
+    index: number,
+    parentOf: ReadonlyMap<string, string>,
+    subCounts: ReadonlyMap<string, number>,
+    byId: ReadonlyMap<string, Todo>,
+  ): { id: string; title: string } | null {
+    const todo = items[index];
+    if (index === 0 || taskLevel(todo.title) === 'sub' || subCounts.has(todo.id)) return null;
+    const above = items[index - 1];
+    const head = byId.get(parentOf.get(above.id) ?? above.id);
+    if (!head) return null;
+    return { id: head.id, title: stripPriorityPrefix(head.title).split('\n')[0].trim() };
+  }
 
   /**
    * Die Zeilen, die wirklich dastehen: ohne die Unteraufgaben zugeklappter
@@ -326,6 +372,47 @@ export class TodoList {
       (row) => row.parentId === null || !collapsed.has(row.parentId),
     );
   });
+  /**
+   * Was die Liste zeichnet: die Zeilen und, am Ende jeder aufgeklappten
+   * Gruppe, eine Zeile „+ Add step".
+   *
+   * Eine Liste mit Schlüsseln statt der Zeilen allein, damit die Eingabe
+   * beim Anlegen nicht neu entsteht: der neue Schritt wird VOR ihr
+   * eingefügt, sie selbst bleibt dasselbe Element — mit Fokus und offener
+   * Tastatur. Hinge sie an der jeweils letzten Zeile, würde sie mit jedem
+   * Schritt abgebaut und neu gebaut.
+   *
+   * Nur unter „Active" und „All": unter „Done" oder „Favorites" stünde ein
+   * neuer, offener Schritt gar nicht in der Liste.
+   */
+  protected readonly listItems = computed<ListItem[]>(() => {
+    const rows = this.visibleRows();
+    const filter = this.filter();
+    const canAdd = filter === 'active' || filter === 'all';
+    const collapsed = this.collapsedIds();
+    const adding = this.stepInputFor();
+    const byId = new Map(rows.map((row) => [row.id, row]));
+
+    const out: ListItem[] = [];
+    rows.forEach((row, i) => {
+      const headId = row.parentId ?? row.id;
+      const next = rows[i + 1];
+      const endsGroup = !next || (next.parentId ?? next.id) !== headId;
+      const head = byId.get(headId);
+      const showAdd =
+        canAdd &&
+        endsGroup &&
+        head !== undefined &&
+        ((head.subCount > 0 && !collapsed.has(headId)) || adding === headId);
+
+      out.push({ kind: 'row', key: row.id, row, addFollows: showAdd });
+      if (showAdd) {
+        out.push({ kind: 'add', key: 'add:' + headId, headId, headTitle: head.firstLine });
+      }
+    });
+    return out;
+  });
+
   /** Ob irgendeine Zeile Unteraufgaben hat — nur dann braucht die Liste die
    *  Spalte fuer das Gliederungs-Dreieck. */
   protected readonly hasOutline = computed(() => this.rows().some((row) => row.subCount > 0));
@@ -362,6 +449,10 @@ export class TodoList {
   protected readonly TrashIcon = Trash2;
     protected readonly PencilIcon = Pencil;
   protected readonly ScheduleIcon = CalendarPlus;
+  protected readonly IndentIcon = ListIndentIncrease;
+  protected readonly OutdentIcon = ListIndentDecrease;
+  protected readonly AddStepIcon = ListPlus;
+  protected readonly PlusIcon = Plus;
   protected readonly CalendarIcon = CalendarDays;
   protected readonly RepeatIcon = Repeat;
   protected readonly ArchiveIcon = Archive;
@@ -468,6 +559,12 @@ toggleFolderList(): void {
       return;
     }
 
+    // Was beim Abhaken mitgeht: die offenen Schritte einer Aufgabe. Jetzt
+    // festgehalten, nicht nach der Animation — bis dahin könnte jemand
+    // einen davon schon selbst abgehakt haben.
+    const openSteps = this.todoService.stepsOf(todo.id).filter((step) => !step.completed);
+    const head = taskLevel(todo.title) === 'sub' ? this.todoService.headOf(todo.id) : null;
+
     // Der Impuls im selben Frame wie das Bild, nicht danach.
     //
     // Haptik, die hinter dem Bild herläuft, fühlt sich nicht wie eine
@@ -486,21 +583,172 @@ toggleFolderList(): void {
       true,
     );
 
-    window.setTimeout(() => {
-      this.updateIdSet(
-        this.leavingTodoIds,
-        todo.id,
-        true,
-      );
-    }, 280);
+    // Bleibt die Zeile nach dem Abhaken stehen (ein Schritt einer offenen
+    // Aufgabe unter „Active", alles unter „All"), fährt sie nicht erst
+    // hinaus, um dann wieder aufzutauchen.
+    const stays = this.staysAfterDone(todo, head);
+    if (!stays) {
+      window.setTimeout(() => {
+        this.updateIdSet(
+          this.leavingTodoIds,
+          todo.id,
+          true,
+        );
+      }, 280);
+    }
 
     window.setTimeout(() => {
       try {
         this.todoService.toggleTodo(todo.id);
+        for (const step of openSteps) this.todoService.toggleTodo(step.id);
       } finally {
         this.clearTodoAnimationState(todo.id);
       }
-    }, 540);
+      if (openSteps.length > 0) this.offerUndoSteps(todo, openSteps);
+      else if (head) this.offerHeadCompletion(head);
+    }, stays ? 320 : 540);
+  }
+
+  /** Ob eine Zeile nach dem Abhaken in der Liste bleibt. */
+  private staysAfterDone(todo: Todo, head: Todo | null): boolean {
+    const filter = this.filter();
+    if (filter === 'all') return true;
+    if (filter !== 'active') return false;
+    // Unter „Active" bleibt ein Schritt stehen, solange in seiner Gruppe noch
+    // etwas offen ist (openGroups im Service).
+    if (!head) return false;
+    if (!head.completed) return true;
+    return this.todoService.stepsOf(head.id).some((s) => !s.completed && s.id !== todo.id);
+  }
+
+  /**
+   * Eine Aufgabe abgehakt, deren Schritte noch offen waren: die gingen mit.
+   * Das sagt eine Meldung, und Undo nimmt alles zurück — wer sich vertippt
+   * hat, will nicht fünf Schritte einzeln wieder aufmachen.
+   */
+  private offerUndoSteps(todo: Todo, steps: Todo[]): void {
+    const n = steps.length;
+    this.toast.show(`Done, with ${n} open ${n === 1 ? 'step' : 'steps'}`, {
+      actionLabel: 'Undo',
+      durationMs: 6000,
+      action: () => {
+        for (const id of [todo.id, ...steps.map((s) => s.id)]) {
+          if (this.todoService.todoById(id)?.completed) this.todoService.toggleTodo(id);
+        }
+      },
+    });
+  }
+
+  /**
+   * Der letzte offene Schritt ist erledigt, die Aufgabe selbst noch nicht:
+   * anbieten, sie auch abzuhaken. Nicht von selbst — manchmal gehört zur
+   * Aufgabe mehr als ihre Schritte, und das weiss nur, wer sie angelegt hat.
+   */
+  private offerHeadCompletion(head: Todo): void {
+    const current = this.todoService.todoById(head.id);
+    if (!current || current.completed) return;
+    const steps = this.todoService.stepsOf(head.id);
+    if (steps.length === 0 || steps.some((s) => !s.completed)) return;
+    const title = stripPriorityPrefix(current.title).split('\n')[0].trim();
+    this.toast.show(`All steps done: ${title}`, {
+      actionLabel: 'Complete',
+      durationMs: 6000,
+      action: () => {
+        const latest = this.todoService.todoById(head.id);
+        if (latest && !latest.completed) this.handleToggleTodo(latest);
+      },
+    });
+  }
+
+  // ---- Schritte direkt unter der Aufgabe anlegen ----
+  //
+  // Vorher: Aufgabe anklicken (unsichtbar ausgewählt) und oben ins Feld
+  // tippen. Jetzt steht unter jeder aufgeklappten Aufgabe „+ Add step", und
+  // für eine Aufgabe ohne Schritte öffnet ihr Menü dieselbe Zeile.
+
+  /** Unter welcher Aufgabe gerade ein Schritt eingetippt wird. */
+  protected readonly stepInputFor = signal<string | null>(null);
+  private readonly injector = inject(Injector);
+
+  openStepInput(headId: string): void {
+    if (this.isCollapsed(headId)) this.toggleSubtasks(headId);
+    this.stepInputFor.set(headId);
+    afterNextRender(
+      () =>
+        this.host.nativeElement
+          .querySelector<HTMLInputElement>(`[data-step-for="${headId}"]`)
+          ?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  closeStepInput(): void {
+    this.stepInputFor.set(null);
+  }
+
+  /** Enter legt an, das Feld bleibt offen für den nächsten Schritt. */
+  addStep(headId: string, field: HTMLInputElement): void {
+    const text = field.value.trim();
+    if (!text) {
+      this.closeStepInput();
+      return;
+    }
+    this.todoService.addTodos([withTaskLevel(text, 'sub')], headId);
+    field.value = '';
+  }
+
+  /** Leer verlassen schliesst; mit Text bleibt es stehen. */
+  onStepBlur(field: HTMLInputElement): void {
+    if (!field.value.trim()) this.closeStepInput();
+  }
+
+  // ---- Ein- und Ausrücken ----
+
+  indent(row: TodoRow): void {
+    if (row.indentTarget) this.todoService.makeStepOf(row.id, row.indentTarget.id);
+  }
+
+  outdent(row: TodoRow): void {
+    this.todoService.makeOwnTask(row.id);
+  }
+
+  /**
+   * Tab beim Bearbeiten rückt ein, Shift+Tab aus — wie in jedem Gliederungs-
+   * editor. Erst wird der Text gesichert, dann bleibt man im Feld. Nicht
+   * bearbeitet ist Tab, was es immer ist: der Sprung zum nächsten Element.
+   */
+  onEditTab(event: Event, row: TodoRow, textarea: HTMLTextAreaElement, out: boolean): void {
+    if (this.editingId() !== row.id) return;
+    if (out ? !row.canOutdent : !row.indentTarget) return;
+    event.preventDefault();
+    this.finishEditing(row.todo, textarea);
+    if (out) this.outdent(row);
+    else this.indent(row);
+    afterNextRender(
+      () => {
+        const todo = this.todoService.todoById(row.id);
+        if (todo) this.startEditing(todo, textarea);
+      },
+      { injector: this.injector },
+    );
+  }
+
+  // ---- Seitlich ziehen ----
+  //
+  // Beim Ziehen sagt der seitliche Versatz, wohin die Zeile gehört: ein
+  // Stück nach rechts macht sie zum Schritt der Aufgabe darüber, nach links
+  // wieder zur eigenen Aufgabe. Der Platzhalter rückt mit, damit man es vor
+  // dem Loslassen sieht.
+
+  /** 1 = wird Schritt, -1 = wird eigene Aufgabe, 0 = bleibt, was sie ist. */
+  protected readonly dragIndent = signal<-1 | 0 | 1>(0);
+
+  onDragMoved(event: CdkDragMove<unknown>, row: TodoRow): void {
+    const dx = event.distance.x;
+    let next: -1 | 0 | 1 = 0;
+    if (dx > 36 && row.level !== 'sub' && row.subCount === 0) next = 1;
+    else if (dx < -36 && row.level === 'sub') next = -1;
+    if (next !== this.dragIndent()) this.dragIndent.set(next);
   }
 
   private clearTodoAnimationState(todoId: string): void {
@@ -1029,13 +1277,28 @@ openDateSheet(id: string): void {
    * und die neue Reihenfolge dort ausrechnen, wo die Gliederung bekannt ist.
    */
   drop(event: CdkDragDrop<unknown>): void {
+    const shift = this.dragIndent();
+    this.dragIndent.set(0);
     const visible = this.visibleRows();
     const moved = visible[event.previousIndex];
     const target = visible[event.currentIndex];
     if (!moved || !target) return;
 
-    const ordered = moveWithSubtasks(this.todos(), moved.id, target.id);
-    if (ordered) this.todoService.reorderTo(ordered);
+    if (event.previousIndex !== event.currentIndex) {
+      const ordered = moveWithSubtasks(this.todos(), moved.id, target.id);
+      if (ordered) this.todoService.reorderTo(ordered);
+    }
+
+    // Erst an den neuen Platz, dann die Stufe: was „darüber" ist, entscheidet
+    // die Liste nach dem Zug.
+    if (shift === 1) {
+      const rows = this.visibleRows();
+      const at = rows.findIndex((r) => r.id === moved.id);
+      const above = at > 0 ? rows[at - 1] : null;
+      if (above) this.todoService.makeStepOf(moved.id, above.parentId ?? above.id, true);
+    } else if (shift === -1) {
+      this.todoService.makeOwnTask(moved.id);
+    }
   }
 
 }

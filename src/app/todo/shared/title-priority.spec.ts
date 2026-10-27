@@ -1,8 +1,11 @@
 import {
   appendUnder,
   MOSCOW_LABEL,
+  moveOutOfGroup,
   moveWithSubtasks,
+  openGroups,
   orderWithSubtasks,
+  setTaskLevel,
   priorityBadge,
   stripPriorityPrefix,
   subtaskGroups,
@@ -359,5 +362,47 @@ describe('withTaskLevel', () => {
   it('round-trips a main task as well', () => {
     expect(withTaskLevel('Einkaufen', 'main')).toBe('/main Einkaufen');
     expect(taskLevel(withTaskLevel('Einkaufen', 'main'))).toBe('main');
+  });
+});
+
+describe('moveOutOfGroup', () => {
+  const list = (...titles: string[]) => titles.map((title) => ({ id: title, title }));
+  const ids = (items: { id: string }[]) => items.map((i) => i.id);
+
+  it('puts a step behind the rest of its group', () => {
+    const items = list('A', '/sub a1', '/sub a2', '/sub a3', 'B');
+    expect(ids(moveOutOfGroup(items, '/sub a2'))).toEqual(['A', '/sub a1', '/sub a3', '/sub a2', 'B']);
+  });
+
+  it('leaves the last step where it is', () => {
+    const items = list('A', '/sub a1', 'B');
+    expect(ids(moveOutOfGroup(items, '/sub a1'))).toEqual(['A', '/sub a1', 'B']);
+  });
+});
+
+describe('setTaskLevel', () => {
+  it('replaces the level and keeps the priority', () => {
+    expect(setTaskLevel('/must /main Umzug', 'sub')).toBe('/must /sub Umzug');
+    expect(setTaskLevel('/sub Kartons', null)).toBe('Kartons');
+    expect(setTaskLevel('Kartons', 'sub')).toBe('/sub Kartons');
+  });
+});
+
+describe('openGroups', () => {
+  const t = (title: string, completed = false) => ({ id: title, title, completed });
+
+  it('keeps done steps while their task is open', () => {
+    const items = [t('A'), t('/sub a1', true), t('/sub a2'), t('B', true), t('C')];
+    expect(openGroups(items).map((i) => i.id)).toEqual(['A', '/sub a1', '/sub a2', 'C']);
+  });
+
+  it('drops a group once everything in it is done', () => {
+    const items = [t('A', true), t('/sub a1', true), t('B')];
+    expect(openGroups(items).map((i) => i.id)).toEqual(['B']);
+  });
+
+  it('keeps a done task while one of its steps is still open', () => {
+    const items = [t('A', true), t('/sub a1'), t('/sub a2', true)];
+    expect(openGroups(items).map((i) => i.id)).toEqual(['A', '/sub a1', '/sub a2']);
   });
 });
