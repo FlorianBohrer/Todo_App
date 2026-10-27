@@ -281,8 +281,13 @@
                       [attr.aria-label]="label.isFavorite
                         ? 'Remove folder from favorites'
                         : 'Mark folder as favorite'">
-                <lucide-icon [img]="StarIcon" class="h-4 w-4"
-                             [class.fill-amber-400]="label.isFavorite"></lucide-icon>
+                <!-- Feste Klassen: lucide-icon gibt nur sie ans SVG weiter,
+                     eine Bindung bliebe an der Hülle und füllte nichts. -->
+                @if (label.isFavorite) {
+                  <lucide-icon [img]="StarIcon" class="h-4 w-4 fill-amber-400"></lucide-icon>
+                } @else {
+                  <lucide-icon [img]="StarIcon" class="h-4 w-4"></lucide-icon>
+                }
               </button>
 
               @if (confirmDeleteId() === label.id) {

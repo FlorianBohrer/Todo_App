@@ -35,12 +35,22 @@ li.cdk-drag {
 }
 
 // Zusammengeklappt zwei Zeilen statt einer: die meisten mehrzeiligen Todos
-// sind kurze Beschreibungen, eine Zeile verbirgt zu viel. Der weiche Auslauf
-// zeigt, dass es weitergeht — ein textarea kann kein text-overflow: ellipsis.
+// sind kurze Beschreibungen, eine Zeile verbirgt zu viel.
+//
+// Ohne Auslauf am unteren Rand. Der lief vorher über jeden Titel ab 40
+// Zeichen, auch wenn er vollständig in zwei Zeilen stand, und die zweite
+// Zeile sah verblasst aus. Ob etwas abgeschnitten ist, sagt jetzt allein der
+// Knopf zum Aufklappen — und den gibt es nur, wenn Autosize es misst.
 textarea.todo-collapsed {
   max-height: 3rem; // genau zwei Zeilen à 1.5
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 0.75rem), transparent);
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 0.75rem), transparent);
+}
+
+// Auf dem Telefon drei: die Titelspalte ist dort 150–250px breit, und zwei
+// Zeilen schnitten schon einen gewöhnlichen Satz ab.
+@media (max-width: 639px) {
+  textarea.todo-collapsed {
+    max-height: 4.5rem;
+  }
 }
 
 li.todo-expanded-row {
@@ -334,6 +344,18 @@ li.todo-expanded-row {
     margin-left: 1.25rem;
   }
 
+  /* Die leere Spalte für das Gliederungs-Dreieck braucht ein Schritt nicht:
+     er hat nie eins, und Einzug und Winkel sagen schon, wohin er gehört.
+     Auf dem Telefon gibt das dem Text 26px. Die Datumszeile rückt mit:
+     Haken (1.0625) + Punkt (0.75) + zwei Lücken (0.625). */
+  .todo-card.todo-sub .todo-outline-spacer {
+    display: none;
+  }
+
+  .todo-card.todo-sub .todo-when {
+    margin-left: 3.0625rem;
+  }
+
   .todo-card.todo-sub::before,
   .todo-card.todo-sub:not(.todo-sub--last)::after {
     left: -0.75rem;
@@ -364,6 +386,54 @@ li.todo-expanded-row {
 .todo-card:focus-within .row-action,
 .row-action:focus-visible {
   opacity: 1;
+}
+
+/* ---- Hover-Leiste ----
+   Termin setzen, Ordner, Stern, Bearbeiten, Löschen: am Rechner erst beim
+   Zeigen, dann über dem Ende des Titels statt daneben. Die Leiste deckt den
+   Titel mit der Fläche der überfahrenen Zeile ab — ohne Auslauf, mit einer
+   klaren Kante, wie eine Werkzeugleiste, die sich darüberlegt.
+
+   Die Fläche muss deckend sein und genau der Zeile beim Überfahren
+   entsprechen: Panel plus die 5 % Weiss von bg-fill. */
+.row-hover {
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+@media (hover: hover) and (min-width: 640px) {
+  .todo-card {
+    --row-surface: color-mix(in srgb, #fff 5%, var(--color-panel1));
+  }
+
+  .todo-card.todo-target {
+    --row-surface: color-mix(in srgb, var(--color-brand-2) 12%, var(--color-panel1));
+  }
+
+  .row-hover {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    padding-left: 0.75rem;
+    background: var(--row-surface);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 140ms ease-out;
+  }
+
+  .todo-card:hover .row-hover,
+  .todo-card:focus-within .row-hover {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Beim Schreiben läge sie über dem Text, den man gerade tippt. */
+  .todo-card.is-editing .row-hover {
+    display: none;
+  }
 }
 
 /* Ohne Zeigergeraet gibt es kein Ueberfahren — dort stehen sie leise da,
