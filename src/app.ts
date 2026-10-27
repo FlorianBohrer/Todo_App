@@ -17,6 +17,7 @@ import {
   LucideAngularModule,
   FolderDown,
   ArrowDown,
+  ArrowUp,
   Plus,
   LayoutList,
   CalendarDays,
@@ -39,6 +40,7 @@ import { splitFolderName } from './app/todo/shared/folder-name';
 import { WeekView } from './app/todo/components/week-view/week-view';
 import { PlansView } from './app/plan/components/plans-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
+import { attachChromeTuck } from './app/shared/chrome-tuck';
 import { DevicePairing } from './app/todo/components/device-pairing/device-pairing';
 import { LevelBadge } from './app/reward/level-badge/level-badge';
 import { LevelUpOverlay } from './app/reward/level-up/level-up';
@@ -220,6 +222,13 @@ export class App {
       onCleanup(() => watch.disconnect());
     });
 
+    // Beim Scrollen weicht die Leiste nach oben aus (shared/chrome-tuck.ts).
+    effect((onCleanup) => {
+      const el = this.chrome()?.nativeElement;
+      if (!el) return;
+      onCleanup(attachChromeTuck(el));
+    });
+
     this.clerk.__init({ publishableKey: 'pk_test_d2lzZS1za3lsYXJrLTY3LmNsZXJrLmFjY291bnRzLmRldiQ' });
 
     // Schlägt der Script-Load fehl, gibt es keinen Retry — ohne diesen Hinweis
@@ -229,6 +238,12 @@ export class App {
       clearTimeout(timeout);
       this.clerkFailed.set(false);
     });
+  }
+
+  /** Ganz nach oben — dort kommt die App-Leiste von selbst zurück. */
+  scrollToTop() {
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
   }
 
   signIn() {
@@ -294,6 +309,7 @@ export class App {
   // Icons fürs Template
   protected readonly FolderDownIcon = FolderDown;
   protected readonly ArrowDown = ArrowDown;
+  protected readonly ToTopIcon = ArrowUp;
   protected readonly PlusIcon = Plus;
   protected readonly ListIcon = LayoutList;
   protected readonly WeekIcon = CalendarDays;

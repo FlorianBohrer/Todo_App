@@ -1137,6 +1137,92 @@ select {
   );
 }
 
+/* Beim Scrollen weicht die Leiste nach oben aus (shared/chrome-tuck.ts setzt
+   chrome-tucked). Was unter ihr klebt, rechnet mit --chrome-offset statt mit
+   --chrome-h und rückt dann an die Oberkante: im Plan steht so nur noch der
+   Dokumentkopf da statt zwei Leisten übereinander. Die Verlaufskante darunter
+   (1.5rem) fährt mit weg. */
+:root {
+  --chrome-offset: var(--chrome-h, 3.75rem);
+}
+
+:root.chrome-tucked {
+  --chrome-offset: 0px;
+}
+
+.app-chrome:not(.doc-head) {
+  transition: transform 340ms var(--spring);
+}
+
+:root.chrome-tucked .app-chrome:not(.doc-head) {
+  transform: translateY(calc(-100% - 1.5rem));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-chrome:not(.doc-head) {
+    transition: none;
+  }
+}
+
+/* Zurück nach oben: unten rechts, über der Ansichten-Leiste des Telefons.
+   Nur, solange die App-Leiste weg ist — ganz oben gibt es nichts zu holen,
+   und ein Knopf, der immer dasteht, verdeckt immer etwas. */
+.to-top {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  /* --bottom-nav-h enthält den unteren Sicherheitsabstand schon; ohne
+     Leiste (Rechner) gilt er allein. */
+  bottom: calc(1rem + var(--bottom-nav-h, env(safe-area-inset-bottom, 0px)));
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-panel1) 88%, transparent);
+  backdrop-filter: blur(16px) saturate(160%);
+  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  color: var(--color-muted);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.75rem) scale(0.9);
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 340ms var(--spring),
+    color 140ms var(--ease-out),
+    background-color 140ms var(--ease-out);
+}
+
+:root.chrome-tucked .to-top {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.to-top:hover {
+  background: var(--color-panel2);
+  color: var(--color-text);
+}
+
+:root.chrome-tucked .to-top:active {
+  transform: scale(0.92);
+}
+
+/* Beim Tippen (Tastatur unten) und solange die Blockleiste im Plan steht,
+   macht er Platz — dieselbe Regel wie für die Ansichten-Leiste. */
+body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]), textarea:not([readonly]), select, [contenteditable="true"]):focus) .to-top,
+body:has(.block-bar) .to-top {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .to-top {
+    transform: none;
+    transition: opacity 120ms var(--ease-out);
+  }
+}
+
 /* Telefon, offener Plan: die App-Leiste rollt mit dem Inhalt weg, damit der
    Kopf des Dokuments als einzige Leiste oben kleben kann (plans-view.scss).
    Zwei klebende Leisten übereinander nahmen mit offener Tastatur fast den
