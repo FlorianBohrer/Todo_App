@@ -233,9 +233,12 @@
     // Unter der App-Leiste, nicht dahinter: mit top:1.5rem schob sich die
     // Gliederung beim Scrollen unter die durchscheinende Leiste und war zur
     // Haelfte verdeckt.
-    top: calc(var(--chrome-h, 3.75rem) + 1rem);
+    top: calc(var(--chrome-offset, 3.75rem) + 1rem);
     align-self: flex-start;
-    max-height: calc(100vh - var(--chrome-h, 3.75rem) - 2.5rem);
+    // Unten Luft für den Knopf „nach oben" (styles.scss, .to-top), der
+    // erscheint, sobald die App-Leiste ausgewichen ist.
+    max-height: calc(100vh - var(--chrome-offset, 3.75rem) - 4.5rem);
+    transition: top 340ms var(--spring);
     overflow-y: auto;
     border: 1px solid rgb(255 255 255 / 0.07);
     border-radius: 0.75rem;
@@ -264,7 +267,10 @@
 // verschwinden.
 .doc-head {
   position: sticky;
-  top: var(--chrome-h, 3.75rem);
+  // --chrome-offset: 0, wenn die App-Leiste beim Scrollen ausgewichen ist
+  // (styles.scss) — dann rückt der Kopf mit derselben Bewegung nach oben.
+  top: var(--chrome-offset, 3.75rem);
+  transition: top 340ms var(--spring);
   z-index: 9;
   padding-block: 0.5rem;
   margin-inline: -0.5rem;

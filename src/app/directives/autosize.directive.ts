@@ -67,7 +67,10 @@ export class Autosize implements AfterViewInit, OnChanges, OnDestroy {
         const width = Math.round(entries[0].contentRect.width);
         // Nur die Breite zählt: die Höhe ändern wir selbst.
         if (width === 0 || width === this.width) return;
-        Autosize.queue(this);
+        // Erst im nächsten Bild messen. Noch im selben setzte die neue Höhe
+        // eine weitere Meldung desselben Beobachters ab, und der Browser
+        // quittierte das mit „ResizeObserver loop completed" als Fehler.
+        requestAnimationFrame(() => Autosize.queue(this));
       });
       this.observer.observe(this.el.nativeElement);
     }
