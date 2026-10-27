@@ -143,7 +143,7 @@ export class CategoriesOverlay {
       this.settled.set(false);
       return;
     }
-    const timer = setTimeout(() => this.settled.set(true), 1000);
+    const timer = setTimeout(() => this.settled.set(true), 700);
     onCleanup(() => clearTimeout(timer));
   });
 
