@@ -1,7 +1,7 @@
 @if (isOpen()) {
   <!-- Der Grund dahinter tritt zurück, statt zu verschwinden: man soll sehen,
        wo man ist, während man sucht, wo man hin will. -->
-  <div class="fixed inset-0 z-50 bg-bg/70 backdrop-blur-sm" (click)="close()" aria-hidden="true"></div>
+  <div class="scroll-lock fixed inset-0 z-50 bg-bg/70 backdrop-blur-sm" (click)="close()" aria-hidden="true"></div>
 
   <div
     class="sheet-in fixed left-1/2 top-[8vh] z-50 flex max-h-[80vh] w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-panel1 shadow-[0_24px_64px_-16px_rgb(0_0_0/0.7)]"
