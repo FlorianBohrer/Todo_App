@@ -1254,6 +1254,56 @@ tr:focus-within .plan-td-gutter .plan-table-x,
 }
 
 
+// ---- Zitat ----
+//
+// Dieselbe Karte, aber getönt und mit einem Balken in der Ordnerfarbe.
+// Der Balken ist ein eigenes Element statt border-left: an einer Karte mit
+// runden Ecken liefe ein dicker Rand links in einer Sichel aus.
+.plan-quote {
+  position: relative;
+  display: flex;
+  gap: 0.625rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-brand-2) 28%, transparent);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem 0.75rem 1.125rem;
+  background: color-mix(in srgb, var(--color-brand-2) 12%, transparent);
+}
+
+.plan-quote::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--color-brand-2);
+}
+
+// Auf der ersten Zeile: 1lh des Textes (15px × 1.6) minus Symbol, halbiert.
+.plan-quote__icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.25rem;
+  color: var(--color-brand-2);
+}
+
+@media (max-width: 639px) {
+  .plan-quote {
+    padding: 0.625rem 0.75rem 0.625rem 0.875rem;
+  }
+}
+
+// Bei hohem Kontrast trägt eine Tönung nicht: voller Rand statt Fläche.
+@media (prefers-contrast: more) {
+  .plan-quote {
+    border-color: var(--color-brand-2);
+    background: transparent;
+  }
+}
+
+
 .code-copy {
   display: inline-flex;
   flex: none;
