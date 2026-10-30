@@ -334,6 +334,46 @@
   :root { color-scheme: dark; }
 
   :root {
+    /* Die Grundtöne, aus denen Linien, Flächen und Schatten gemischt werden,
+       als RGB-Tripel: rgb(var(--ink) / 0.1) ist eine Hairline in jedem Theme.
+         ink     Linien und Flächen auf dem Grund (dunkel: Weiß)
+         lift    die Richtung, in die eine Fläche beim Anheben geht
+         shadow  Schatten, mit shadow-k als Stärke — auf hellem Grund trägt
+                 derselbe Schatten viel weiter und wird deshalb gedämpft */
+    --ink: 255 255 255;
+    --lift: 255 255 255;
+    --shadow: 0 0 0;
+    --shadow-k: 1;
+
+    /* Weiß auf der Akzentfläche: Knöpfe, aktive Laschen. */
+    --color-on-accent: #ECF0F6;
+
+    /* Der Daumen eines Umschalters (Active/Done, Week/Month, Day/Week):
+       dunkel eine hellere Fläche, hell ein weißer Knopf wie in iOS. */
+    --color-thumb: var(--color-fill-strong);
+
+    /* Die Pillen der Abschnitte (Tiimo-Look): Fläche und Schrift je Farbe. */
+    --tint-neutral-bg: rgb(255 255 255 / 0.07);
+    --tint-neutral-fg: var(--color-muted);
+    --tint-rose-bg: rgb(244 63 94 / 0.16);
+    --tint-rose-fg: #fda4af;
+    --tint-peach-bg: rgb(251 146 60 / 0.16);
+    --tint-peach-fg: #fdba74;
+    --tint-sky-bg: rgb(56 189 248 / 0.15);
+    --tint-sky-fg: #7dd3fc;
+    --tint-violet-bg: rgb(167 139 250 / 0.17);
+    --tint-violet-fg: #c4b5fd;
+    --tint-teal-bg: rgb(45 212 191 / 0.15);
+    --tint-teal-fg: #5eead4;
+
+    /* Farben mit Bedeutung (Tabellenmarken, Code, XP). */
+    --hue-sky: #7DD3FC;
+    --hue-green: #6EE7B7;
+    --hue-amber: #FCD34D;
+    --hue-red: #FB7185;
+    --hue-gold: #FCD34D;
+    --code-ink: #f8a3a3;
+
     /* Einschwingen — schnell los, sanft ankommen.
        War nie definiert: `transition: width 420ms var(--spring)` ist damit als
        ganze Deklaration ungültig, die Übergänge fielen also komplett aus statt
@@ -520,6 +560,166 @@
 }
 
 
+/* ================================================================
+   Hell
+
+   Dunkel bleibt der Standard; hell ist eine Wahl (Theme-Schalter oben
+   rechts, theme.service.ts), oder folgt dem System, wenn man das wählt.
+   Gesetzt wird data-theme am <html>, schon vor dem ersten Bild
+   (index.html), damit beim Laden nichts aufblitzt.
+
+   Keine Umkehrung der dunklen Werte, sondern eigene: ein kühler,
+   leicht violetter Grund, darauf weiße Karten mit weichem Schatten — wie
+   Papier auf einem Tisch. Linien und Flächen kommen aus demselben dunklen
+   Tinten-Ton (--ink), nicht aus Grau: so bleibt alles in einer Familie.
+
+   Kontraste gemessen (WCAG 2.1, auf Weiß / auf dem Seitengrund #F3F2F8):
+     text    #1D1B29   16.8 / 15.4
+     muted   #545168    7.6 /  7.0
+     subtle  #6A677E    5.4 /  5.0
+   Die Ansichtsfarben sind hier dunkler gestuft als im dunklen Theme, und
+   ihre Rollen bleiben: 300 ist Schrift auf hellem Grund (≥ 4.5 auf Weiß),
+   500 ist die Fläche, auf der weiße Schrift steht (≥ 4.9).
+   ================================================================ */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --ink: 29 27 41;
+  --lift: 108 104 135;
+  --shadow: 36 30 70;
+  --shadow-k: 0.3;
+
+  --color-bg:      #E9E8F0;
+  --color-bg3:     #EEEDF4;
+  --color-bg2:     #F3F2F8;
+  --color-panel:   #FFFFFF;
+  --color-panel1:  #FFFFFF;
+  --color-panel2:  #FAFAFD;
+  --color-border:  #E1DFEA;
+
+  --color-line:        rgb(29 27 41 / 0.10);
+  --color-line-strong: rgb(29 27 41 / 0.22);
+  --color-fill:        rgb(29 27 41 / 0.045);
+  --color-fill-strong: rgb(29 27 41 / 0.085);
+
+  --color-text:    #1D1B29;
+  --color-muted:   #545168;
+  --color-subtle:  #6A677E;
+
+  --color-on-accent: #FFFFFF;
+  --color-thumb: #FFFFFF;
+  --color-danger:  #D02F44;
+  --color-ok:      #0B7A55;
+
+  --tint-neutral-bg: rgb(29 27 41 / 0.06);
+  --tint-neutral-fg: var(--color-muted);
+  --tint-rose-bg: rgb(244 63 94 / 0.12);
+  --tint-rose-fg: #B4123A;
+  --tint-peach-bg: rgb(251 146 60 / 0.18);
+  --tint-peach-fg: #B23C0A;
+  --tint-sky-bg: rgb(14 165 233 / 0.13);
+  --tint-sky-fg: #035F92;
+  --tint-violet-bg: rgb(139 92 246 / 0.13);
+  --tint-violet-fg: #6524CF;
+  --tint-teal-bg: rgb(20 184 166 / 0.14);
+  --tint-teal-fg: #0B6B63;
+
+  /* Farben mit Bedeutung (Tabellenmarken, Code, XP). */
+  --hue-sky:   #035F92;
+  --hue-green: #047857;
+  --hue-amber: #A64B07;
+  --hue-red:   #BE123C;
+  --hue-gold:  #D29A0A;
+  --code-ink:  #B42318;
+
+  /* Diagramme (mermaid-diagram.ts liest sie): Kästen weiß, Kanten ruhig. */
+  --diagram-node:   #FFFFFF;
+  --diagram-raised: #F4F3F9;
+  --diagram-border: #D9D7E3;
+  --diagram-wire:   #9592A8;
+  --diagram-row:    #F8F7FB;
+
+  /* Tailwinds Palette, wo sie im Markup als Schrift auf dunklem Grund steht
+     (text-amber-300, text-rose-400 …): auf Weiß wäre sie unlesbar. Dieselben
+     Namen, dunklere Stufen — dann muss keine Vorlage ein dark:-Gegenstück
+     tragen. Die 500er bleiben: sie sind Punkte, Rahmen und Flächen. */
+  --color-amber-100:   #78350F;
+  --color-amber-300:   #A64B07;
+  --color-amber-400:   #C27D04;
+  --color-rose-100:    #881337;
+  --color-rose-300:    #BE123C;
+  --color-rose-400:    #E11D48;
+  --color-red-300:     #B91C1C;
+  --color-red-400:     #DC2626;
+  --color-emerald-100: #065F46;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #059669;
+  --color-sky-300:     #035F92;
+  --color-sky-400:     #0284C7;
+  --color-violet-300:  #6524CF;
+  --color-violet-400:  #7C3AED;
+  --color-teal-300:    #0B6B63;
+  --color-teal-400:    #0D9488;
+  --color-orange-300:  #B23C0A;
+  --color-orange-400:  #EA580C;
+  --color-fuchsia-300: #9D1AA8;
+  --color-fuchsia-400: #C026D3;
+  --color-zinc-300:    #3F3F46;
+  --color-zinc-400:    #71717A;
+  --color-zinc-600:    #A1A1AA;
+
+  /* Abdunkelnde Hintergründe (bg-black/60 hinter Dialogen): auf hellem Grund
+     wirkt dasselbe Schwarz wie ein Loch. Der Tinten-Ton bei 60% Deckung
+     macht aus /60 etwa /36 — der Dialog hebt sich ab, die Seite bleibt hell. */
+  --color-black: rgb(29 27 41 / 0.6);
+  --color-rose-950:    #FFF1F2;
+  --color-emerald-950: #ECFDF5;
+}
+
+/* Die Ansichtsfarben, hell. Zwei Attribute am selben Element schlagen das
+   eine von oben, egal in welcher Reihenfolge sie im Bundle stehen. */
+[data-theme='light']:not([data-view]),
+[data-theme='light'][data-view='list'] {
+  --accent-200: #134E4A;
+  --accent-300: #0B6B63;
+  --accent-400: #0D9488;
+  --accent-500: #0F766E;
+  --accent-600: #115E59;
+}
+
+[data-theme='light'][data-view='week'] {
+  --accent-200: #7C2D12;
+  --accent-300: #B23C0A;
+  --accent-400: #EA580C;
+  --accent-500: #B8430F;
+  --accent-600: #9A3412;
+}
+
+[data-theme='light'][data-view='plans'] {
+  --accent-200: #5E2433;
+  --accent-300: #93364B;
+  --accent-400: #B84D64;
+  --accent-500: #8E3A4D;
+  --accent-600: #74303F;
+}
+
+[data-theme='light'][data-view='focus'] {
+  --accent-200: #42279A;
+  --accent-300: #5B3FCB;
+  --accent-400: #7C63E6;
+  --accent-500: #5B3FCB;
+  --accent-600: #4A33AE;
+}
+
+[data-theme='light'][data-view='stats'] {
+  --accent-200: #1E3A8A;
+  --accent-300: #1D4ED8;
+  --accent-400: #3B82F6;
+  --accent-500: #1D5FCB;
+  --accent-600: #1A4FA8;
+}
+
+
  @layer components {
  
  lucide-icon svg {
@@ -563,7 +763,7 @@
      ein Aufhellen beim Hover, das genau sagt „das hier reagiert". */
   .btn-primary {
     background: var(--color-button);
-    color: var(--color-text);
+    color: var(--color-on-accent);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
   }
   .btn-primary:hover {
@@ -659,7 +859,7 @@ textarea::-webkit-resizer { display: none; }
   flex-shrink: 0;
 
   padding: 0;
-  border: 1.5px solid rgb(255 255 255 / 30%);
+  border: 1.5px solid rgb(var(--ink) / 30%);
   border-radius: 999px;
 
   color: white;
@@ -753,7 +953,7 @@ textarea::-webkit-resizer { display: none; }
   background: var(--color-bg2);
 
   box-shadow:
-    0 22px 45px rgb(0 0 0 / 38%);
+    0 22px 45px rgb(var(--shadow) / calc(0.38 * var(--shadow-k)));
 
   // rotate und scale als eigene Eigenschaften, nicht als transform: die CDK
   // setzt transform inline, um die Vorschau am Zeiger zu halten, und ein
@@ -788,8 +988,8 @@ textarea::-webkit-resizer { display: none; }
 
   box-shadow:
     0 1px 0 rgb(255 255 255 / 8%) inset,
-    0 18px 44px rgb(0 0 0 / 50%),
-    0 2px 8px rgb(0 0 0 / 35%);
+    0 18px 44px rgb(var(--shadow) / calc(0.5 * var(--shadow-k))),
+    0 2px 8px rgb(var(--shadow) / calc(0.35 * var(--shadow-k)));
 
   rotate: 0.6deg;
   animation: plan-pick-up 430ms linear(0, 0.0947, 0.3195, 0.5762, 0.7877, 0.9297, 1.0091, 1.0416, 1.0435, 1.0294, 1.0104, 0.9944, 0.9848, 0.9819, 0.9835, 0.9873, 0.9915, 0.9948, 0.9971, 0.9985, 0.9994, 1) both;
@@ -908,7 +1108,7 @@ select {
   border: 1px solid var(--color-border);
   background: var(--color-panel1);
   padding-block: 0.25rem;
-  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.65);
+  box-shadow: 0 12px 32px -12px rgb(var(--shadow) / calc(0.65 * var(--shadow-k)));
 }
 
 /* Ein Popover mit Höhengrenze muss rollen können.
@@ -950,7 +1150,7 @@ select {
 }
 
 .action-sheet-backdrop {
-  background: rgb(0 0 0 / 0.45);
+  background: rgb(var(--shadow) / calc(0.45 * min(1, var(--shadow-k) * 2)));
 }
 
 .action-sheet {
@@ -1077,10 +1277,10 @@ select {
    standen zwei gleich laute Leisten übereinander, und keine sagte mehr, wo
    man ist. */
 .filter-tabs--segment .filter-pill {
-  background: var(--color-fill-strong);
+  background: var(--color-thumb);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.06),
-    0 1px 2px rgb(0 0 0 / 0.25);
+    0 1px 2px rgb(var(--shadow) / calc(0.25 * var(--shadow-k)));
 }
 
 .filter-tabs--segment .filter-tab.is-active {
@@ -1233,7 +1433,7 @@ html:has(
   border-radius: 9999px;
   background: color-mix(in srgb, var(--color-panel1) 88%, transparent);
   backdrop-filter: blur(16px) saturate(160%);
-  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  box-shadow: 0 12px 32px -12px rgb(var(--shadow) / calc(0.7 * var(--shadow-k)));
   color: var(--color-muted);
   opacity: 0;
   pointer-events: none;
@@ -1399,8 +1599,8 @@ body:has(.block-bar) .to-top {
    auf einem dunklen Grund die Ersten, die verschwinden. */
 @media (prefers-contrast: more) {
   :root {
-    --color-line: rgb(255 255 255 / 0.30);
-    --color-line-strong: rgb(255 255 255 / 0.55);
+    --color-line: rgb(var(--ink) / 0.30);
+    --color-line-strong: rgb(var(--ink) / 0.55);
   }
 
   /* Bei angefordertem Kontrast ist eine weiche Verlaufskante zu wenig: die
@@ -1558,7 +1758,7 @@ body.is-block-selecting * {
   border: 1px solid var(--color-line);
   border-radius: 999px;
   background: color-mix(in srgb, var(--color-panel2) 86%, transparent);
-  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.75);
+  box-shadow: 0 12px 32px -12px rgb(var(--shadow) / calc(0.75 * var(--shadow-k)));
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
@@ -1603,8 +1803,8 @@ body.is-block-selecting * {
 }
 
 .bottom-nav__tab.is-active .bottom-nav__icon {
-  background: rgb(255 255 255 / 0.12);
-  color: #fff;
+  background: rgb(var(--ink) / 0.12);
+  color: var(--color-text);
 }
 
 .bottom-nav__tab:focus-visible {
@@ -1714,8 +1914,8 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
   border: 1px solid var(--color-line);
   border-radius: 999px;
   padding: 0.125rem;
-  background: color-mix(in srgb, #fff 4%, var(--color-panel1));
-  box-shadow: 0 8px 18px -12px rgb(0 0 0 / 0.7);
+  background: color-mix(in srgb, rgb(var(--lift)) 4%, var(--color-panel1));
+  box-shadow: 0 8px 18px -12px rgb(var(--shadow) / calc(0.7 * var(--shadow-k)));
 }
 
 .list-head__action {
@@ -1827,4 +2027,20 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
    Platz, und der Titel steht im Blatt, das der Ring öffnet. */
 .app-chrome .level-badge .level-badge__title {
   display: none;
+}
+
+
+/* ================================================================
+   Hell: Einzelheiten, die kein Token abdeckt
+   ================================================================ */
+[data-theme='light'] .list-head__counter--flame lucide-icon { color: rgb(234 88 12 / 0.55); }
+[data-theme='light'] .list-head__counter--flame.is-lit lucide-icon { color: #EA580C; fill: rgb(234 88 12 / 0.25); }
+[data-theme='light'] .list-head__counter--gem lucide-icon { color: #7C3AED; }
+
+/* Der Daumen: weiß braucht einen Rand aus Schatten, sonst verschwindet er
+   auf dem hellen Grund. */
+[data-theme='light'] .filter-tabs--segment .filter-pill {
+  box-shadow:
+    0 0 0 0.5px rgb(var(--ink) / 0.08),
+    0 1px 3px rgb(var(--shadow) / 0.12);
 }
