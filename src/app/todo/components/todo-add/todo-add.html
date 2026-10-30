@@ -37,9 +37,9 @@
         class="token-chip flex h-6 flex-none items-center gap-0.5 rounded-md pl-1 pr-1"
         [class]="tokenClass(current)"
         (click)="$event.stopPropagation(); clearToken(current)"
-        [attr.aria-label]="tokenDescription[current] + ', remove'"
-        [title]="tokenDescription[current] + ' · remove (Backspace at the start)'">
-        <lucide-icon [img]="tokenIcon[current]" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+        [attr.aria-label]="tokenDescription(current) + ', remove'"
+        [title]="tokenDescription(current) + ' · remove (Backspace at the start)'">
+        <lucide-icon [img]="tokenIcon(current)" class="h-4 w-4" aria-hidden="true"></lucide-icon>@if (tokenText(current); as t) {<span class="text-2xs font-medium tabular-nums">{{ t }}</span>}
         <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
       </button>
     }

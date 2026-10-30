@@ -84,3 +84,22 @@ describe('withToken', () => {
     expect(withToken([], 'sub')).toEqual(['sub']);
   });
 });
+
+describe('time of day and duration as tokens', () => {
+  it('reads them as tokens after priority and level', () => {
+    expect(splitTitle('/30m /evening /must Lesen')).toEqual({
+      tokens: ['must', 'evening', '30m'],
+      text: 'Lesen',
+    });
+  });
+
+  it('replaces only the token on the same axis', () => {
+    expect(withToken(['must', 'morning', '15m'], 'evening')).toEqual(['must', 'evening', '15m']);
+    expect(withToken(['must', 'morning', '15m'], '45m')).toEqual(['must', 'morning', '45m']);
+  });
+
+  it('writes them back in order', () => {
+    expect(joinTitle(['sub', '90m', 'afternoon'], 'Bericht')).toBe('/sub /afternoon /1h30m Bericht');
+    expect(joinTitle(['morning'], '/20m Wasser trinken')).toBe('/morning /20m Wasser trinken');
+  });
+});

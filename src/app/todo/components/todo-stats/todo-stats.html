@@ -1,33 +1,154 @@
-<!-- Kein Kasten um diesen Block: er steht auf derselben Fläche wie die Liste
-     darunter. Eine Begrüßung, die sich eine eigene Fläche nimmt, ist keine
-     ruhige. Aus demselben Grund kein farbiger Schlusspunkt mehr hinter
-     „Good morning": eine Verzierung, die nur nach Marke aussehen will. -->
-<section class="flex items-start justify-between gap-5 px-1 pt-1 pb-4" aria-label="Today">
-  <div class="min-w-0 flex-1">
-    <h2 class="text-2xl/[1.15] font-semibold tracking-[-0.01em] text-text sm:text-3xl/[1.1]">
-      {{ greeting() }}
-    </h2>
+<!-- Der Kopf der Liste, wie ein Tagesplaner ihn hat: oben links, was man
+     sich verdient hat (Flamme für die Tage in Folge, Edelstein für die
+     Fokus-Sitzungen), oben rechts „…" und „+", darunter der Titel gross in
+     der Serifenschrift. Kein Kasten: er steht auf derselben Fläche wie die
+     Liste darunter. -->
+<section class="list-head" aria-label="Today">
+  <div class="list-head__top">
+    <div class="list-head__counters">
+      <span class="list-head__counter list-head__counter--flame"
+        [class.is-lit]="streak().today"
+        [title]="streak().days === 1 ? '1 day in a row with something done' : streak().days + ' days in a row with something done'"
+        [attr.aria-label]="streak().days + ' day streak'">
+        <lucide-icon [img]="FlameIcon" class="h-[18px] w-[18px]" aria-hidden="true"></lucide-icon>
+        <span class="tabular-nums">{{ streak().days }}</span>
+      </span>
+      <span class="list-head__counter list-head__counter--gem"
+        [title]="gems() === 1 ? '1 focus session finished' : gems() + ' focus sessions finished'"
+        [attr.aria-label]="gems() + ' focus sessions'">
+        <lucide-icon [img]="GemIcon" class="h-[17px] w-[17px]" aria-hidden="true"></lucide-icon>
+        <span class="tabular-nums">{{ gems() }}</span>
+      </span>
+    </div>
 
-    <p class="mt-1.5 text-sm/[1.55] tabular-nums" [class]="todayLineClass()">{{ todayLine() }}</p>
+    <div class="list-head__actions">
+      <button type="button" class="list-head__action"
+        cdkOverlayOrigin #menuOrigin="cdkOverlayOrigin"
+        (click)="toggleMenu()"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="menuOpen()"
+        aria-label="List options">
+        <lucide-icon [img]="MoreIcon" class="h-5 w-5"></lucide-icon>
+      </button>
+      <button type="button" class="list-head__action" (click)="add()" aria-label="New todo" title="New todo (n)">
+        <lucide-icon [img]="PlusIcon" class="h-5 w-5"></lucide-icon>
+      </button>
+    </div>
+  </div>
 
-    @if (scopeName(); as scope) {
-      <!-- Welcher Ausschnitt gemeint ist, wenn es nicht alle sind. Der Ring
-           daneben spricht über genau diesen Ordner, und ohne diese Zeile
-           müsste man sich das aus der Leiste darüber zusammensuchen. -->
-      <p class="mt-1 text-xs tabular-nums text-subtle">
-        in <span [class]="accentClass()">{{ scope }}</span> ·
-        {{ stats().completed }} of {{ stats().total }} done
+  <div class="list-head__title-row">
+    <div class="min-w-0 flex-1">
+      <h1 class="display-title">{{ title() }}</h1>
+      <p class="mt-1 text-sm/[1.55] tabular-nums" [class]="todayLineClass()">
+        <span class="text-subtle">{{ greeting() }} · </span>{{ todayLine() }}
       </p>
+      @if (scopeName()) {
+        <p class="mt-0.5 text-xs tabular-nums text-subtle">
+          {{ stats().completed }} of {{ stats().total }} done in this folder
+        </p>
+      }
+    </div>
+
+    @if (stats().total > 0) {
+      <app-progress-ring
+        class="mt-1 flex-none"
+        [class]="accentClass()"
+        [size]="56"
+        [thickness]="5"
+        [completed]="stats().completed"
+        [total]="stats().total" />
     }
   </div>
 
-  @if (stats().total > 0) {
-    <app-progress-ring
-      class="mt-0.5 flex-none"
-      [class]="accentClass()"
-      [size]="56"
-      [thickness]="5"
-      [completed]="stats().completed"
-      [total]="stats().total" />
-  }
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="menuOrigin"
+    [cdkConnectedOverlayOpen]="menuOpen()"
+    [cdkConnectedOverlayPositions]="menuPositions"
+    [cdkConnectedOverlayPush]="true"
+    [cdkConnectedOverlayViewportMargin]="12"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    (backdropClick)="closeMenu()"
+    (overlayKeydown)="$event.key === 'Escape' && closeMenu()">
+    <div class="popover list-menu" role="menu" aria-label="List options">
+      @switch (menuPage()) {
+        @case ('root') {
+          <button type="button" role="menuitem" class="popover-item list-menu__item" (click)="newList()">
+            <lucide-icon [img]="NewListIcon" class="h-[18px] w-[18px]"></lucide-icon>
+            <span>Create new list</span>
+          </button>
+          <button type="button" role="menuitem" class="popover-item list-menu__item" (click)="editLists()">
+            <lucide-icon [img]="EditIcon" class="h-[18px] w-[18px]"></lucide-icon>
+            <span>Edit lists</span>
+          </button>
+          <div class="list-menu__rule" role="separator"></div>
+          <button type="button" role="menuitem" class="popover-item list-menu__item" (click)="menuPage.set('group')">
+            <lucide-icon [img]="GroupIcon" class="h-[18px] w-[18px]"></lucide-icon>
+            <span class="flex-1">Group by</span>
+            <span class="list-menu__value">{{ groupingLabel() }}</span>
+            <lucide-icon [img]="NextIcon" class="h-4 w-4 text-subtle"></lucide-icon>
+          </button>
+          <button type="button" role="menuitem" class="popover-item list-menu__item" (click)="menuPage.set('sort')">
+            <lucide-icon [img]="SortIcon" class="h-[18px] w-[18px]"></lucide-icon>
+            <span class="flex-1">Sort by</span>
+            <span class="list-menu__value">{{ sortLabel() }}</span>
+            <lucide-icon [img]="NextIcon" class="h-4 w-4 text-subtle"></lucide-icon>
+          </button>
+          <button type="button" role="menuitem" class="popover-item list-menu__item" (click)="menuPage.set('view')">
+            <lucide-icon [img]="ViewIcon" class="h-[18px] w-[18px]"></lucide-icon>
+            <span class="flex-1">View options</span>
+            <lucide-icon [img]="NextIcon" class="h-4 w-4 text-subtle"></lucide-icon>
+          </button>
+        }
+        @case ('group') {
+          <button type="button" class="popover-item list-menu__back" (click)="menuPage.set('root')">
+            <lucide-icon [img]="BackIcon" class="h-4 w-4"></lucide-icon>
+            <span>Group by</span>
+          </button>
+          @for (g of groupings; track g.value) {
+            <button type="button" role="menuitemradio" class="popover-item list-menu__item"
+              [attr.aria-checked]="grouping() === g.value"
+              (click)="setGrouping(g.value)">
+              <span class="flex-1">{{ g.label }}</span>
+              @if (grouping() === g.value) { <span class="text-highlight2">✓</span> }
+            </button>
+          }
+        }
+        @case ('sort') {
+          <button type="button" class="popover-item list-menu__back" (click)="menuPage.set('root')">
+            <lucide-icon [img]="BackIcon" class="h-4 w-4"></lucide-icon>
+            <span>Sort by</span>
+          </button>
+          @for (o of sorts; track o.value) {
+            <button type="button" role="menuitemradio" class="popover-item list-menu__item"
+              [attr.aria-checked]="sort() === o.value"
+              (click)="setSort(o.value)">
+              <span class="flex-1">{{ o.label }}</span>
+              @if (sort() === o.value) { <span class="text-highlight2">✓</span> }
+            </button>
+          }
+          <p class="list-menu__hint">Sorted lists can't be dragged. Pick “My order” to rearrange.</p>
+        }
+        @case ('view') {
+          <button type="button" class="popover-item list-menu__back" (click)="menuPage.set('root')">
+            <lucide-icon [img]="BackIcon" class="h-4 w-4"></lucide-icon>
+            <span>View options</span>
+          </button>
+          <button type="button" role="menuitemcheckbox" class="popover-item list-menu__item"
+            [attr.aria-checked]="showIcons()"
+            (click)="listView.setShowIcons(!showIcons())">
+            <span class="flex-1">Show icons</span>
+            <span class="list-menu__switch" [class.is-on]="showIcons()" aria-hidden="true"></span>
+          </button>
+          <button type="button" role="menuitemcheckbox" class="popover-item list-menu__item"
+            [attr.aria-checked]="showSuggestions()"
+            (click)="listView.setShowSuggestions(!showSuggestions())">
+            <span class="flex-1">Suggested tasks</span>
+            <span class="list-menu__switch" [class.is-on]="showSuggestions()" aria-hidden="true"></span>
+          </button>
+        }
+      }
+    </div>
+  </ng-template>
 </section>

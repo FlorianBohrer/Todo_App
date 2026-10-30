@@ -362,6 +362,13 @@ updateLabel(
   }
 
   openOverlay()  { this.isOverlayOpen.set(true); }
+
+  /** Öffnet die Ordner mit dem Feld „New folder…" im Fokus (Menü „Create new list"). */
+  readonly createOnOpen = signal(false);
+  openOverlayToCreate() {
+    this.createOnOpen.set(true);
+    this.isOverlayOpen.set(true);
+  }
   closeOverlay() { this.isOverlayOpen.set(false); }
 
   selectLabel(id: string | null) {

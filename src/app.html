@@ -74,7 +74,7 @@
              Gleiche Höhe wie der Folders-Knopf, damit die Leiste eine Linie hat;
              Symbole, weil man drei Ansichten am Bild schneller trifft als am Wort. -->
         <div class="filter-tabs hidden h-10 flex-none gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm sm:flex"
-          role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="3">
+          role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="4">
           <span class="filter-pill" aria-hidden="true"></span>
 
           <button type="button" role="tab"
@@ -103,6 +103,15 @@
             (click)="setView('plans')">
             <lucide-icon [img]="PlansIcon" class="h-4 w-4 flex-none"></lucide-icon>
             <span>Plans</span>
+          </button>
+          <button type="button" role="tab"
+            class="filter-tab flex w-24 items-center justify-center gap-1.5 rounded-full"
+            [class.is-active]="view() === 'focus'"
+            [attr.aria-selected]="view() === 'focus'"
+            title="Focus timer (4)"
+            (click)="setView('focus')">
+            <lucide-icon [img]="FocusIcon" class="h-4 w-4 flex-none"></lucide-icon>
+            <span class="tabular-nums">{{ focusLabel() }}</span>
           </button>
         </div>
 
@@ -141,7 +150,13 @@
          wurde mitten in der Bewegung durch die echte Ansicht ersetzt: erst
          „Opening plans…", dann ohne Halt der Plan, beides in einem Zug. Das
          las sich wie ein Ruckler, nicht wie ein Wechsel. -->
-    @if (view() === 'plans') {
+    @if (view() === 'focus') {
+      @defer (on immediate) {
+        <div class="view-swap"><app-focus-view></app-focus-view></div>
+      } @placeholder {
+        <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening focus…</p>
+      }
+    } @else if (view() === 'plans') {
       @defer (on immediate) {
         <div class="view-swap"><app-plans-view></app-plans-view></div>
       } @placeholder {
@@ -149,7 +164,7 @@
       }
     } @else if (view() === 'week') {
       @defer (on immediate) {
-        <div class="view-swap"><app-week-view></app-week-view></div>
+        <div class="view-swap"><app-day-view></app-day-view></div>
       } @placeholder {
         <p class="mx-auto max-w-6xl px-5 text-sm text-subtle">Opening the week…</p>
       }
@@ -214,6 +229,7 @@
         <button type="button" role="tab" class="bottom-nav__tab"
           [class.is-active]="view() === 'list'"
           [attr.aria-selected]="view() === 'list'"
+          title="List"
           (click)="setView('list')">
           <span class="bottom-nav__icon"><lucide-icon [img]="ListIcon" class="h-5 w-5"></lucide-icon></span>
           <span class="bottom-nav__label">List</span>
@@ -221,6 +237,7 @@
         <button type="button" role="tab" class="bottom-nav__tab"
           [class.is-active]="view() === 'week'"
           [attr.aria-selected]="view() === 'week'"
+          title="Week"
           (click)="setView('week')">
           <span class="bottom-nav__icon"><lucide-icon [img]="WeekIcon" class="h-5 w-5"></lucide-icon></span>
           <span class="bottom-nav__label">Week</span>
@@ -228,9 +245,19 @@
         <button type="button" role="tab" class="bottom-nav__tab"
           [class.is-active]="view() === 'plans'"
           [attr.aria-selected]="view() === 'plans'"
+          title="Plans"
           (click)="setView('plans')">
           <span class="bottom-nav__icon"><lucide-icon [img]="PlansIcon" class="h-5 w-5"></lucide-icon></span>
           <span class="bottom-nav__label">Plans</span>
+        </button>
+        <button type="button" role="tab" class="bottom-nav__tab"
+          [class.is-running]="timerRunning()"
+          [class.is-active]="view() === 'focus'"
+          [attr.aria-selected]="view() === 'focus'"
+          title="Focus"
+          (click)="setView('focus')">
+          <span class="bottom-nav__icon"><lucide-icon [img]="FocusIcon" class="h-5 w-5"></lucide-icon></span>
+          <span class="bottom-nav__label">Focus</span>
         </button>
       </div>
     </nav>
