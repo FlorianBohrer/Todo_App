@@ -156,12 +156,21 @@ export class CategoriesOverlay {
    */
   private readonly injector = inject(Injector);
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('search');
+  private readonly newFolderInput = viewChild<ElementRef<HTMLInputElement>>('newCat');
   private opener: HTMLElement | null = null;
   private readonly focusOnOpen = effect(() => {
     if (!this.isOpen()) return;
     untracked(() => {
       const active = document.activeElement;
       this.opener = active instanceof HTMLElement && active !== document.body ? active : null;
+      // Aus „Create new list": gleich ins Feld für den neuen Ordner.
+      if (this.labelService.createOnOpen()) {
+        this.labelService.createOnOpen.set(false);
+        afterNextRender(() => this.newFolderInput()?.nativeElement.focus({ preventScroll: false }), {
+          injector: this.injector,
+        });
+        return;
+      }
       if (this.touchOnly()) return;
       afterNextRender(() => this.searchInput()?.nativeElement.focus({ preventScroll: true }), {
         injector: this.injector,

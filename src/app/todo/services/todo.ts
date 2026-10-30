@@ -100,7 +100,7 @@ interface TodoListResponse {
 // Schlüssel der alten, rein lokalen Speicherung (vor der Server-Anbindung).
 const LEGACY_TODO_KEY = 'todos';
 
-export type View = 'list' | 'week' | 'plans';
+export type View = 'list' | 'week' | 'plans' | 'focus';
 
 /**
  * Früher merkte sich die App hier die zuletzt gewählte Ansicht. Ein Neuladen

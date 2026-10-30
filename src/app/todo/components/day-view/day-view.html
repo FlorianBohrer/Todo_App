@@ -1,0 +1,168 @@
+<section class="day-view" aria-label="Calendar">
+  <div class="day-top" [class.day-top--week]="mode() === 'week'">
+    <div class="day-mode" role="group" aria-label="Show a day or the week">
+      <button type="button" class="day-mode__option" [class.is-active]="mode() === 'day'"
+        [attr.aria-pressed]="mode() === 'day'" (click)="setMode('day')">Day</button>
+      <button type="button" class="day-mode__option" [class.is-active]="mode() === 'week'"
+        [attr.aria-pressed]="mode() === 'week'" (click)="setMode('week')">Week</button>
+    </div>
+    @if (mode() === 'day' && !isToday()) {
+      <button type="button" class="day-today" (click)="goToday()">Today</button>
+    }
+  </div>
+
+  @if (mode() === 'week') {
+    <app-week-view />
+  } @else {
+    <div class="day-body">
+      <div class="day-head">
+        <h1 class="display-title">{{ weekday() }}</h1>
+        <div class="day-month">
+          <button type="button" class="day-month__arrow" (click)="shiftWeek(-1)" aria-label="Previous week">
+            <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
+          </button>
+          <span class="day-month__label">{{ monthLabel() }}</span>
+          <button type="button" class="day-month__arrow" (click)="shiftWeek(1)" aria-label="Next week">
+            <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
+          </button>
+        </div>
+      </div>
+      <p class="day-summary tabular-nums">{{ summary() }}</p>
+
+      <!-- Die Woche als Leiste: ein Tipp wählt den Tag. Ein Punkt sagt, dass
+           an dem Tag noch etwas offen ist. -->
+      <div class="day-strip" role="tablist" aria-label="Days of the week">
+        @for (day of strip(); track day.iso) {
+          <button type="button" role="tab" class="day-strip__day"
+            [class.is-selected]="day.iso === selected()"
+            [class.is-today]="day.isToday"
+            [attr.aria-selected]="day.iso === selected()"
+            [attr.aria-label]="day.name + (day.open ? ', ' + day.open + ' open' : '')"
+            (click)="select(day.iso)">
+            <span class="day-strip__letter">{{ day.letter }}</span>
+            <span class="day-strip__num">{{ day.day }}</span>
+            <span class="day-strip__dot" [class.is-on]="day.open > 0" aria-hidden="true"></span>
+          </button>
+        }
+      </div>
+
+      @for (section of sections(); track section.id) {
+        <div class="day-section" [class]="'todo-section--tint-' + section.tint">
+          <div class="day-section__head">
+            <button type="button" class="todo-pill"
+              (click)="toggleSlot(section.id)"
+              [attr.aria-expanded]="!section.collapsed"
+              [attr.aria-label]="section.label + ', ' + section.cards.length + (section.collapsed ? ', show' : ', hide')">
+              @if (section.icon) {
+                <lucide-icon [img]="section.icon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+              }
+              <span class="todo-pill__label">{{ section.label }}</span>
+              <span class="todo-pill__count">({{ section.cards.length }})</span>
+              <lucide-icon [img]="ChevronIcon" class="todo-chevron h-3.5 w-3.5" [class.is-collapsed]="section.collapsed" aria-hidden="true"></lucide-icon>
+            </button>
+            @if (section.id !== 'overdue') {
+              <button type="button" class="day-section__add" (click)="openAdd(section.id)"
+                [attr.aria-label]="'Add to ' + section.label">
+                <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+            }
+          </div>
+
+          @if (!section.collapsed) {
+            <ul class="day-cards" role="list">
+              @for (card of section.cards; track card.id) {
+                <li class="day-card" [class.is-done]="card.done">
+                  <span class="todo-icon" [class]="card.iconClass" [class.todo-icon--initial]="card.icon.initial" aria-hidden="true">{{ card.icon.glyph }}</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="day-card__title">{{ card.title }}</p>
+                    @if (card.badge || card.duration || card.late) {
+                      <p class="day-card__meta">
+                        @if (card.badge) { <app-token-chip [token]="card.badge" size="sm" /> }
+                        @if (card.duration) { <span class="tabular-nums">{{ card.duration }}</span> }
+                        @if (card.late) { <span class="day-card__late">from {{ card.late }}</span> }
+                      </p>
+                    }
+                  </div>
+                  <button type="button" class="day-card__more"
+                    (click)="openMenu(card.id, $event)"
+                    aria-haspopup="menu"
+                    [attr.aria-expanded]="menuFor() === card.id"
+                    [attr.aria-label]="'Options for ' + card.title">
+                    <lucide-icon [img]="MoreIcon" class="h-5 w-5"></lucide-icon>
+                  </button>
+                  <button type="button" class="todo-checkbox day-card__check"
+                    [class.todo-checkbox--checked]="card.done"
+                    (click)="toggle(card.id)"
+                    [attr.aria-label]="(card.done ? 'Reopen ' : 'Complete ') + card.title"></button>
+                </li>
+              }
+              @if (addingIn() === section.id) {
+                <li class="day-add">
+                  <lucide-icon [img]="PlusIcon" class="h-4 w-4 flex-none text-subtle" aria-hidden="true"></lucide-icon>
+                  <input #dayInput class="day-add__input"
+                    [attr.data-day-input]="section.id"
+                    placeholder="New todo…"
+                    enterkeyhint="next"
+                    autocomplete="off"
+                    [attr.aria-label]="'New todo for ' + section.label"
+                    (keydown.enter)="add(section.id, dayInput)"
+                    (keydown.escape)="addingIn.set(null)"
+                    (blur)="onAddBlur(dayInput)" />
+                </li>
+              } @else if (section.cards.length === 0) {
+                <li class="todo-empty-slot">
+                  <button type="button" class="todo-empty-slot__button" (click)="openAdd(section.id)">
+                    <span>{{ section.hint }}</span>
+                    <lucide-icon [img]="PlusIcon" class="todo-empty-slot__plus h-4 w-4" aria-hidden="true"></lucide-icon>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="menuOrigin()!"
+    [cdkConnectedOverlayOpen]="menuFor() !== null && menuOrigin() !== null"
+    [cdkConnectedOverlayPositions]="menuPositions"
+    [cdkConnectedOverlayPush]="true"
+    [cdkConnectedOverlayViewportMargin]="12"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    (backdropClick)="closeMenu()"
+    (overlayKeydown)="$event.key === 'Escape' && closeMenu()">
+    @if (menuTodo(); as todo) {
+      <div class="popover list-menu" role="menu" aria-label="Task options">
+        <p class="day-menu__label">Time of day</p>
+        <div class="day-menu__chips">
+          @for (t of times; track t.label) {
+            <button type="button" role="menuitemradio" class="day-menu__chip"
+              [class.is-active]="currentTime(todo) === t.value"
+              [attr.aria-checked]="currentTime(todo) === t.value"
+              (click)="setTime(todo, t.value)">{{ t.label }}</button>
+          }
+        </div>
+        <p class="day-menu__label">Takes about</p>
+        <div class="day-menu__chips">
+          @for (d of durations; track $index) {
+            <button type="button" role="menuitemradio" class="day-menu__chip"
+              [class.is-active]="durationOf(todo.title) === d"
+              [attr.aria-checked]="durationOf(todo.title) === d"
+              (click)="setLength(todo, d)">{{ d === null ? '–' : formatDuration(d) }}</button>
+          }
+        </div>
+        <div class="list-menu__rule" role="separator"></div>
+        <button type="button" role="menuitem" class="popover-item list-menu__item" (click)="moveTo(todo, tomorrowOf())">
+          <span>Move to the next day</span>
+        </button>
+        <button type="button" role="menuitem" class="popover-item list-menu__item" (click)="moveTo(todo, null)">
+          <span>Take off the calendar</span>
+        </button>
+      </div>
+    }
+  </ng-template>
+</section>

@@ -75,26 +75,12 @@
          Entscheidung, die die Unteraufgaben vor einer Weile schon getroffen
          haben: dort fiel die Karte weg, weil Karte neben Karte wie zwei
          gleichrangige Dinge liest. -->
-    <!-- Ordnung der Liste: von Hand (mit Abschnitten), nach Termin oder nach
-         Priorität. Die beiden letzten sind Ansichten — gezogen wird dann
-         nicht, denn die Reihenfolge ergibt sich aus Datum oder Stufe. -->
-    <div class="todo-toolbar">
-      <div class="todo-grouping" role="group" aria-label="Order the list">
-        @for (g of groupings; track g.value) {
-          <button type="button" class="todo-grouping__option"
-            [class.is-active]="grouping() === g.value"
-            [attr.aria-pressed]="grouping() === g.value"
-            (click)="setGrouping(g.value)">{{ g.label }}</button>
-        }
-      </div>
-    </div>
-
     <ul
       role="list"
-      class="divide-y divide-line text-muted pb-2 sm:max-h-[min(70vh,44rem)] sm:overflow-auto sm:pr-2"
+      class="todo-cards text-muted pb-2 sm:max-h-[min(70vh,44rem)] sm:overflow-auto sm:pr-2"
       [class.no-outline]="!hasOutline()"
       cdkDropList
-      [cdkDropListDisabled]="grouping() !== 'manual'"
+      [cdkDropListDisabled]="!canDrag()"
       (cdkDropListDropped)="drop($event)">
       @for (item of listItems(); track item.key) {
         @if (item.kind === 'row') {
@@ -110,7 +96,7 @@
       (cdkDragEnded)="onDragEnded()"
       (cdkDragMoved)="onDragMoved($event, row)"
       class="todo-card group flex items-center justify-between gap-2.5 px-2 py-3 transition hover:bg-fill sm:px-2.5"
-      [class.todo-has-when]="todo.scheduledDate !== null || row.progress !== null"
+      [class.todo-has-when]="row.hasMeta"
       [class.todo-expanded-row]="isExpanded(todo.id)"
       [class.todo-card--completed]="
         todo.completed || completingTodoIds().has(todo.id)
@@ -147,7 +133,11 @@
                  Liste keine Unteraufgaben, faellt die Spalte weg: auf dem
                  Telefon waren das 26px leerer Rand vor jedem Haken, die dem
                  Titel fehlten. -->
-            @if (row.subCount > 0) {
+            @if (showIcons()) {
+              <!-- Mit Bildern kein Dreieck: es schöbe die Karten mit Schritten
+                   aus der Flucht. Eingeklappt wird über den Fortschritt in
+                   der Meta-Zeile. -->
+            } @else if (row.subCount > 0) {
               <button
                 type="button"
                 class="-m-1 flex-none rounded p-1 text-muted/70 transition hover:text-text"
@@ -164,32 +154,24 @@
               <span class="todo-outline-spacer w-4 flex-none" aria-hidden="true"></span>
             }
 
-            <!-- Der Haken zuerst: das ist die Handlung, um die es in einer
-                 Aufgabenliste geht. Danach erst die Kachel, die nur sagt,
-                 woher die Zeile kommt. -->
-            <button
-              type="button"
-              class="todo-checkbox"
-              [class.todo-checkbox--checked]="
-                todo.completed ||
-                completingTodoIds().has(todo.id)
-              "
-              [disabled]="leavingTodoIds().has(todo.id)"
-              (click)="handleToggleTodo(todo)"
-            >
-              <!-- SVG -->
-            </button>
-
-            <!-- Die Farb-Identität der Zeile: ein Punkt, keine Glaskachel.
-                 Hier stand ein Quadrat mit Verlauf und dem Ordnersymbol
-                 darin — in jeder Zeile dasselbe Symbol, denn der Ordner
-                 steht oben in der Leiste. Geleistet hat die Kachel genau
-                 eine Sache, und das war die Farbe. -->
-            <span
-              class="todo-dot flex-none"
-              [class]="row.folderDotClass"
-              [title]="row.folderDotTitle"
-              aria-hidden="true">●</span>
+            <!-- Das Bild der Aufgabe im Kreis, getönt in der Farbe ihres
+                 Ordners (task-icon.ts): ein Emoji vorn im Titel, sonst eins
+                 aus den Stichwörtern, sonst der erste Buchstabe. Es ersetzt
+                 den Farbpunkt — die Farbe trägt jetzt die Fläche dahinter. -->
+            @if (showIcons() && !(row.level === 'sub' && row.icon.initial)) {
+              <span
+                class="todo-icon flex-none"
+                [class]="row.iconClass"
+                [class.todo-icon--initial]="row.icon.initial"
+                [title]="row.folderDotTitle"
+                aria-hidden="true">{{ row.icon.glyph }}</span>
+            } @else if (!showIcons()) {
+              <span
+                class="todo-dot flex-none"
+                [class]="row.folderDotClass"
+                [title]="row.folderDotTitle"
+                aria-hidden="true">●</span>
+            }
 
             <!-- Prioritäts-Badge (Präfix /must-have bzw. /could-have) -->
             <!-- Aus einem Plan entstanden. Nur das Zeichen, nicht der
@@ -202,6 +184,8 @@
                 title="Came from a plan"></lucide-icon>
             }
 
+            <div class="todo-body">
+            <div class="todo-line">
             <!-- Das Präfix als Zeichen, nie als Text. Beim Bearbeiten wird
                  daraus ein Chip, den man wegnehmen kann — dann zeigt er auch
                  Main und Step, die sonst die Einrückung sagt. -->
@@ -213,14 +197,12 @@
                   [class]="tokenClass(token)"
                   (mousedown)="$event.preventDefault()"
                   (click)="clearEditToken(token, todoText)"
-                  [attr.aria-label]="tokenDescription[token] + ', remove'"
-                  [title]="tokenDescription[token] + ' · remove (Backspace at the start)'">
-                  <lucide-icon [img]="tokenIcon[token]" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+                  [attr.aria-label]="tokenDescription(token) + ', remove'"
+                  [title]="tokenDescription(token) + ' · remove (Backspace at the start)'">
+                  <lucide-icon [img]="tokenIcon(token)" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>@if (tokenText(token); as t) {<span class="text-2xs font-medium tabular-nums">{{ t }}</span>}
                   <lucide-icon [img]="ClearIcon" class="h-3 w-3 opacity-60" aria-hidden="true"></lucide-icon>
                 </button>
               }
-            } @else if (row.badge) {
-              <app-token-chip [token]="row.badge" />
             }
 
             <textarea
@@ -247,30 +229,6 @@
               [class.hidden]="showsDetail(row)"
             ></textarea>
 
-            <!-- Fortschritt der Aufgabe: erledigte von allen Schritten, als
-                 Ring und Zahl. Vorher stand nur zugeklappt eine Zahl da — wie
-                 viele Schritte es gibt, nicht wie weit man ist. Ein Tipp
-                 klappt die Schritte auf und zu, wie das Dreieck. -->
-            @if (row.progress; as p) {
-              <button
-                type="button"
-                class="todo-progress"
-                [class.is-complete]="p.done === p.total"
-                (click)="toggleSubtasks(todo.id)"
-                [attr.aria-expanded]="!isCollapsed(todo.id)"
-                [attr.aria-label]="p.done + ' of ' + p.total + ' steps done, ' + (isCollapsed(todo.id) ? 'show' : 'hide') + ' steps'"
-                [title]="p.done + ' of ' + p.total + ' steps done'">
-                <svg viewBox="0 0 16 16" class="todo-progress__ring" aria-hidden="true">
-                  <circle cx="8" cy="8" r="6" class="todo-progress__track" />
-                  @if (p.done > 0) {
-                    <circle cx="8" cy="8" r="6" class="todo-progress__fill"
-                      [attr.stroke-dasharray]="(p.done / p.total) * 37.7 + ' 37.7'" />
-                  }
-                </svg>
-                <span>{{ p.done }}/{{ p.total }}</span>
-              </button>
-            }
-
             <!-- Aufgeklappt: nur die erste Zeile steht hier, die Unterpunkte
                  kommen als eigener Block unter die Kopfzeile. Das Textfeld
                  bleibt im DOM, damit Bearbeiten und Autosize unveraendert
@@ -284,6 +242,75 @@
                 {{ row.firstLine }}
               </p>
             }
+            </div>
+
+            @if (showsDetail(row)) {
+              <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)">{{ row.detailLines }}</div>
+            }
+
+            <!-- Was man über die Aufgabe wissen will, ohne sie zu öffnen:
+                 wie lange, wann am Tag, an welchem Tag, wie weit. Leise unter
+                 dem Titel, auf jeder Breite — vorher stand der Termin am
+                 Rechner als Pille rechts aussen und auf dem Telefon darunter. -->
+            @if (row.hasMeta && editingId() !== todo.id) {
+              <div class="todo-meta">
+                @if (row.badge) {
+                  <span class="todo-meta__item todo-meta__badge">
+                    <app-token-chip [token]="row.badge" size="sm" />
+                  </span>
+                }
+                @if (row.durationText) {
+                  <span class="todo-meta__item tabular-nums" [attr.aria-label]="'Takes about ' + row.durationText">{{ row.durationText }}</span>
+                }
+                @if (row.when; as when) {
+                  <span class="todo-meta__item todo-meta__when" [class]="'todo-meta__when--' + when">
+                    <lucide-icon [img]="whenIcon(when)" class="h-3 w-3" aria-hidden="true"></lucide-icon>
+                    {{ whenLabel(when) }}
+                  </span>
+                }
+                @if (todo.scheduledDate !== null) {
+                  <button type="button" class="todo-when"
+                    [class.todo-when--today]="row.isToday && !todo.completed"
+                    [class.todo-when--late]="row.isLate"
+                    (click)="$event.stopPropagation(); openDate(todo.id, $event)"
+                    aria-haspopup="dialog"
+                    [attr.aria-label]="'Planned for ' + row.scheduleText + ', change'">
+                    <lucide-icon [img]="ScheduleIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
+                    {{ row.scheduleText }}
+                    @if (todo.repeat) {
+                      <lucide-icon [img]="RepeatIcon" class="h-3 w-3 opacity-70"
+                        [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
+                    }
+                  </button>
+                } @else if (todo.repeat) {
+                  <span class="todo-meta__item">
+                    <lucide-icon [img]="RepeatIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
+                    {{ repeatLabel(todo.repeat) }}
+                  </span>
+                }
+                @if (row.progress; as p) {
+                  <button
+                    type="button"
+                    class="todo-progress"
+                    [class.is-complete]="p.done === p.total"
+                    (click)="$event.stopPropagation(); toggleSubtasks(todo.id)"
+                    [attr.aria-expanded]="!isCollapsed(todo.id)"
+                    [attr.aria-label]="p.done + ' of ' + p.total + ' steps done, ' + (isCollapsed(todo.id) ? 'show' : 'hide') + ' steps'"
+                    [title]="p.done + ' of ' + p.total + ' steps done'">
+                    <svg viewBox="0 0 16 16" class="todo-progress__ring" aria-hidden="true">
+                      <circle cx="8" cy="8" r="6" class="todo-progress__track" />
+                      @if (p.done > 0) {
+                        <circle cx="8" cy="8" r="6" class="todo-progress__fill"
+                          [attr.stroke-dasharray]="(p.done / p.total) * 37.7 + ' 37.7'" />
+                      }
+                    </svg>
+                    <span>{{ p.done }}/{{ p.total }}</span>
+                    <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-3 w-3" [class.is-collapsed]="isCollapsed(todo.id)" aria-hidden="true"></lucide-icon>
+                  </button>
+                }
+              </div>
+            }
+            </div>
             <!-- Was man erst beim Zeigen braucht, nimmt keinen Platz weg.
                  Termin setzen, Ordner, Stern, Bearbeiten und Löschen standen
                  unsichtbar (opacity 0) in jeder Zeile und hielten rund 250px
@@ -389,58 +416,6 @@
             </div>
           </div>
 
-          @if (showsDetail(row)) {
-            <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)">{{ row.detailLines }}</div>
-          }
-
-          <!-- Telefon: der Termin als leise Zeile unter dem Titel. Der Chip
-               rechts ist dort ausgeblendet, weil er dem Titel die halbe Breite
-               nähme — und damit stand auf dem Telefon nirgends, was heute
-               dran ist und was schon drüber. Heute in der Ansichtsfarbe,
-               überfällig in Bernstein, wie am Rechner. -->
-          <!-- Antippen öffnet den Kalender direkt (openDateSheet): wer das
-               Datum sieht und es ändern will, tippt aufs Datum, nicht auf
-               die drei Punkte daneben. -->
-          <!-- Der Fortschritt steht auf dem Telefon in derselben Zeile: neben
-               Dreieck, Haken, Punkt und Stufe blieb dem Titel einer Aufgabe
-               mit Schritten bei 320px sonst kaum ein Buchstabe pro Zeile. -->
-          @if ((todo.scheduledDate !== null || row.progress) && editingId() !== todo.id) {
-            <div class="todo-meta">
-              @if (row.progress; as p) {
-                <button
-                  type="button"
-                  class="todo-progress"
-                  [class.is-complete]="p.done === p.total"
-                  (click)="$event.stopPropagation(); toggleSubtasks(todo.id)"
-                  [attr.aria-expanded]="!isCollapsed(todo.id)"
-                  [attr.aria-label]="p.done + ' of ' + p.total + ' steps done, ' + (isCollapsed(todo.id) ? 'show' : 'hide') + ' steps'">
-                  <svg viewBox="0 0 16 16" class="todo-progress__ring" aria-hidden="true">
-                    <circle cx="8" cy="8" r="6" class="todo-progress__track" />
-                    @if (p.done > 0) {
-                      <circle cx="8" cy="8" r="6" class="todo-progress__fill"
-                        [attr.stroke-dasharray]="(p.done / p.total) * 37.7 + ' 37.7'" />
-                    }
-                  </svg>
-                  <span>{{ p.done }}/{{ p.total }}</span>
-                </button>
-              }
-              @if (todo.scheduledDate !== null) {
-                <button type="button" class="todo-when"
-                  [class.todo-when--today]="row.isToday && !todo.completed"
-                  [class.todo-when--late]="row.isLate"
-                  (click)="$event.stopPropagation(); openDateSheet(todo.id)"
-                  aria-haspopup="dialog"
-                  [attr.aria-label]="'Planned for ' + row.scheduleText + ', change'">
-                  <lucide-icon [img]="ScheduleIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
-                  {{ row.scheduleText }}
-                  @if (todo.repeat) {
-                    <lucide-icon [img]="RepeatIcon" class="h-3 w-3 opacity-70"
-                      [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
-                  }
-                </button>
-              }
-            </div>
-          }
 
           <!-- Aufklappen, wenn der Text wirklich abgeschnitten ist — gemessen
                (Autosize meldet es), nicht an der Zeichenzahl geraten. Vorher
@@ -471,41 +446,6 @@
               <lucide-icon [img]="FocusIcon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
               {{ formatFocus(focused) }}
             </span>
-          }
-
-          <!-- Termin: geplant -> Chip mit dem Tag, sonst -> Kalender-Knopf.
-               Beide öffnen dasselbe Menü, damit Setzen und Ändern ein Weg sind. -->
-          <!-- Termine sprechen nur, wenn sie etwas zu sagen haben: heute in der
-               Ansichtsfarbe, überfällig in Bernstein, alles Spätere leise.
-               Vorher trug jeder Termin denselben Akzentrahmen — zehn Zeilen,
-               zehn gleich laute Pillen, und „Today" sah aus wie „Wed". -->
-          @if (todo.scheduledDate !== null || todo.repeat) {
-          <button
-            type="button"
-            class="row-action row-action--kept hidden flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs
-                   transition sm:flex"
-            [class]="row.isLate
-              ? 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
-              : row.isToday
-                ? 'bg-indigo-500/15 text-indigo-200 hover:bg-indigo-500/25'
-                : 'text-muted hover:bg-fill hover:text-text'"
-            (click)="toggleScheduleMenu(todo.id, $event)"
-            aria-haspopup="dialog"
-            [attr.aria-expanded]="openScheduleId() === todo.id"
-            [attr.aria-label]="todo.scheduledDate === null
-              ? 'Schedule this todo'
-              : 'Scheduled for ' + row.scheduleText + ', change'">
-            <lucide-icon [img]="ScheduleIcon" class="h-3.5 w-3.5"></lucide-icon>
-            @if (todo.scheduledDate !== null) {
-              <span>{{ row.scheduleText }}</span>
-            }
-            <!-- Wiederkehrend: ein Symbol genuegt. Der Rhythmus steht im
-                 Menue, hier zaehlt nur, dass es wiederkommt. -->
-            @if (todo.repeat) {
-              <lucide-icon [img]="RepeatIcon" class="h-3 w-3 opacity-70"
-                [attr.aria-label]="'Repeats ' + repeatLabel(todo.repeat)"></lucide-icon>
-            }
-          </button>
           }
 
           <!-- Der Rhythmus: die letzten fälligen Termine dieser Reihe, einer
@@ -584,6 +524,26 @@
                     <span>Count from when I finish it, not from the plan</span>
                   </button>
                 }
+              </div>
+
+              <!-- Wann am Tag und wie lange: dieselbe Frage wie der Termin. -->
+              <div class="when-block border-t border-border px-3 pb-2.5 pt-2.5">
+                <div class="mb-1.5 text-xs text-muted">Time of day</div>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (t of timeChoices; track t.label) {
+                    <button type="button" class="when-chip" [class.is-active]="whenOf(todo) === t.value"
+                      [attr.aria-pressed]="whenOf(todo) === t.value"
+                      (click)="setWhen(todo, t.value)">{{ t.label }}</button>
+                  }
+                </div>
+                <div class="mb-1.5 mt-2.5 text-xs text-muted">Takes about</div>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (d of durationChoices; track $index) {
+                    <button type="button" class="when-chip" [class.is-active]="minutesOf(todo) === d"
+                      [attr.aria-pressed]="minutesOf(todo) === d"
+                      (click)="setMinutes(todo, d)">{{ d === null ? 'None' : formatDurationText(d) }}</button>
+                  }
+                </div>
               </div>
 
             </div>
@@ -679,6 +639,23 @@
             aria-label="More options">
             <lucide-icon [img]="OptionsIcon" class="h-5 w-5"></lucide-icon>
           </button>
+
+          <!-- Der Haken rechts aussen, wo der Daumen ist: links steht das
+             Bild der Aufgabe, an dem man sie findet, rechts das, womit man
+             sie erledigt. -->
+          <button
+            type="button"
+            class="todo-checkbox"
+            [class.todo-checkbox--checked]="
+              todo.completed ||
+              completingTodoIds().has(todo.id)
+            "
+            [disabled]="leavingTodoIds().has(todo.id)"
+            (click)="handleToggleTodo(todo)"
+          >
+            <!-- SVG -->
+          </button>
+
 
           <ng-template
             cdkConnectedOverlay
@@ -835,6 +812,26 @@
                 }
               </div>
 
+              <!-- Wann am Tag und wie lange: dieselbe Frage wie der Termin. -->
+              <div class="when-block border-t border-border px-3 pb-2.5 pt-2.5">
+                <div class="mb-1.5 text-xs text-muted">Time of day</div>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (t of timeChoices; track t.label) {
+                    <button type="button" class="when-chip" [class.is-active]="whenOf(todo) === t.value"
+                      [attr.aria-pressed]="whenOf(todo) === t.value"
+                      (click)="setWhen(todo, t.value)">{{ t.label }}</button>
+                  }
+                </div>
+                <div class="mb-1.5 mt-2.5 text-xs text-muted">Takes about</div>
+                <div class="flex flex-wrap gap-1.5">
+                  @for (d of durationChoices; track $index) {
+                    <button type="button" class="when-chip" [class.is-active]="minutesOf(todo) === d"
+                      [attr.aria-pressed]="minutesOf(todo) === d"
+                      (click)="setMinutes(todo, d)">{{ d === null ? 'None' : formatDurationText(d) }}</button>
+                  }
+                </div>
+              </div>
+
 @if (!sheetDateOnly()) {
 <!-- Folders: collapsible and scrollable. Multi-select keeps the menu open. -->
 <div class="border-t border-border">
@@ -958,12 +955,6 @@
             [class.is-collapsed]="item.collapsed"
             [attr.data-todo-id]="row.id">
             <div *cdkDragPlaceholder class="todo-drop h-10 rounded-xl border-2 border-dashed border-border bg-fill"></div>
-            <button type="button" class="todo-section__toggle"
-              (click)="toggleSubtasks(row.id)"
-              [attr.aria-expanded]="!item.collapsed"
-              [attr.aria-label]="(item.collapsed ? 'Show ' : 'Hide ') + row.firstLine">
-              <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-4 w-4" [class.is-collapsed]="item.collapsed"></lucide-icon>
-            </button>
             @if (renamingSectionId() === row.id) {
               <input #sectionNameField class="todo-section__rename"
                 [attr.data-section-rename]="row.id"
@@ -973,10 +964,19 @@
                 (keydown.escape)="renamingSectionId.set(null)"
                 (blur)="commitRenameSection(row, sectionNameField)" />
             } @else {
-              <h3 class="todo-section__name" (dblclick)="startRenameSection(row.id)">{{ row.firstLine }}</h3>
-              @if (row.sectionCount > 0) {
-                <span class="todo-section__count" [attr.aria-label]="row.sectionCount + ' open'">{{ row.sectionCount }}</span>
-              }
+              <!-- Die Überschrift als Pille: Name, Zahl, Dreieck. Ein Tipp
+                   klappt ein, ein Doppelklick benennt um. -->
+              <h3 class="m-0 min-w-0">
+                <button type="button" class="todo-pill"
+                  (click)="toggleSubtasks(row.id)"
+                  (dblclick)="startRenameSection(row.id)"
+                  [attr.aria-expanded]="!item.collapsed"
+                  [attr.aria-label]="row.firstLine + ', ' + row.sectionCount + ' open, ' + (item.collapsed ? 'show' : 'hide')">
+                  <span class="todo-pill__label">{{ row.firstLine }}</span>
+                  <span class="todo-pill__count">({{ row.sectionCount }})</span>
+                  <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-3.5 w-3.5" [class.is-collapsed]="item.collapsed"></lucide-icon>
+                </button>
+              </h3>
             }
             <span class="todo-section__actions">
               <button type="button" class="todo-section__action"
@@ -1035,21 +1035,85 @@
             }
           </li>
         } @else if (item.kind === 'bucket') {
-          <!-- Fach beim Gruppieren: wie eine Überschrift, aber nur zum
-               Einklappen — es ist eine Sicht, keine Zeile. -->
-          <li class="todo-section todo-section--virtual" [class.is-collapsed]="item.collapsed">
-            <button type="button" class="todo-section__toggle"
+          <!-- Fach beim Gruppieren: eine farbige Pille mit Zahl, rechts „+".
+               Eine Sicht, keine Zeile — gezogen wird hier nicht. -->
+          <li class="todo-section todo-section--virtual" [class]="'todo-section--tint-' + item.tint" [class.is-collapsed]="item.collapsed">
+            <button type="button" class="todo-pill"
               (click)="toggleBucket(item.id)"
               [attr.aria-expanded]="!item.collapsed"
               [attr.aria-label]="(item.collapsed ? 'Show ' : 'Hide ') + item.label">
-              <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-4 w-4" [class.is-collapsed]="item.collapsed"></lucide-icon>
+              <span class="todo-pill__label">{{ item.label }}</span>
+              <span class="todo-pill__count">({{ item.count }})</span>
+              <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-3.5 w-3.5" [class.is-collapsed]="item.collapsed"></lucide-icon>
             </button>
-            <h3 class="todo-section__name">{{ item.label }}</h3>
-            <span class="todo-section__count">{{ item.count }}</span>
+            @if (item.canAdd) {
+              <button type="button" class="todo-section__action todo-section__add"
+                (click)="openBucketInput(item.id.split(':')[1])"
+                [attr.aria-label]="'Add to ' + item.label" title="Add here">
+                <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon>
+              </button>
+            }
+          </li>
+        } @else if (item.kind === 'bucketEmpty') {
+          <!-- Leeres Fach: ein gestrichelter Platzhalter, der sagt, dass hier
+               nichts ist, und mit einem Tipp etwas anlegt. -->
+          <li class="todo-empty-slot">
+            <button type="button" class="todo-empty-slot__button" (click)="openBucketInput(item.id)">
+              <span>{{ item.hint }}</span>
+              <lucide-icon [img]="PlusIcon" class="todo-empty-slot__plus h-4 w-4" aria-hidden="true"></lucide-icon>
+            </button>
+          </li>
+        } @else if (item.kind === 'bucketAdd') {
+          <li class="todo-card todo-add-step todo-add-in-section">
+            <lucide-icon [img]="PlusIcon" class="todo-add-step__icon h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+            <input #bucketTodo
+              class="todo-add-step__input"
+              [attr.data-bucket-input]="item.id"
+              placeholder="New todo…"
+              enterkeyhint="next"
+              autocomplete="off"
+              [attr.aria-label]="'New todo in ' + item.label"
+              (keydown.enter)="addTodoToBucket(item.id, bucketTodo)"
+              (keydown.escape)="bucketInputFor.set(null)"
+              (blur)="onBucketInputBlur(bucketTodo)" />
           </li>
         }
       }
     </ul>
+  }
+
+  <!-- Vorschläge aus der eigenen Liste (suggestions.ts): was man öfter
+       erledigt und gerade nicht offen hat, und alltägliche Ideen, die zu
+       dem passen, was überwiegt. Ein Tipp auf „+" legt an. -->
+  @if (!loading() && showSuggestions() && suggestions().length > 0) {
+    <section class="suggest" aria-label="Suggested tasks">
+      <div class="suggest__head">
+        <div>
+          <h2 class="suggest__title">Suggested tasks</h2>
+          <p class="suggest__sub">Based on your list</p>
+        </div>
+        <button type="button" class="suggest__refresh" (click)="refreshSuggestions()" aria-label="Show other suggestions" title="Show other suggestions">
+          <lucide-icon [img]="RefreshIcon" class="h-5 w-5" aria-hidden="true"></lucide-icon>
+        </button>
+      </div>
+      <ul class="suggest__list" role="list">
+        @for (s of suggestions(); track s.text) {
+          <li class="suggest__item">
+            <span class="todo-icon suggest__icon" [class.todo-icon--initial]="s.icon.initial" aria-hidden="true">{{ s.icon.glyph }}</span>
+            <div class="min-w-0 flex-1">
+              <p class="suggest__text">{{ s.text }}</p>
+              <p class="suggest__meta">
+                @if (s.minutes) { {{ s.durationText }} }
+                @if (s.reason === 'again') { <span>{{ s.minutes ? ' · ' : '' }}you do this often</span> }
+              </p>
+            </div>
+            <button type="button" class="suggest__add" (click)="addSuggestion(s)" [attr.aria-label]="'Add ' + s.text">
+              <lucide-icon [img]="PlusIcon" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
   }
 
   <!-- Archiv.

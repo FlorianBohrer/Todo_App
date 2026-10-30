@@ -32,20 +32,31 @@ import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
 import {
   MoscowLevel,
+  TimeOfDay,
+  durationOf,
+  durationPrefix,
+  formatDuration,
+  setDuration,
+  setTimeOfDay,
   stripPriorityPrefix,
   priorityBadge,
   subtaskGroups,
   taskLevel,
   TaskLevel,
+  timeOfDay,
   withTaskLevel,
 } from '../../shared/title-priority';
+import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
+import { Grouping, ListViewService, SortOrder } from '../../services/list-view.service';
+import { Suggestion, suggestTasks } from '../../shared/suggestions';
 import {
-  TOKEN_DESCRIPTION,
-  TOKEN_ICON,
   TitleToken,
   joinTitle,
   splitTitle,
   tokenClass,
+  tokenDescription,
+  tokenIcon,
+  tokenText,
   tokensOf,
   withToken,
 } from '../../shared/title-token';
@@ -85,6 +96,10 @@ import {
   ListPlus,
   Plus,
   Rows3,
+  Sunrise,
+  Sun,
+  Moon,
+  RefreshCw,
 } from 'lucide-angular';
 
 /**
@@ -127,44 +142,134 @@ type ListItem =
   | { kind: 'section'; key: string; row: TodoRow; collapsed: boolean }
   | { kind: 'addTodo'; key: string; sectionId: string; sectionName: string }
   | { kind: 'addSection'; key: string }
-  | { kind: 'bucket'; key: string; id: string; label: string; count: number; collapsed: boolean };
-
-/** Wie die Liste geordnet ist: von Hand, nach Termin oder nach Priorität. */
-type Grouping = 'manual' | 'date' | 'priority';
-
-const GROUPING_KEY = 'todos.grouping';
-
-function readGrouping(): Grouping {
-  try {
-    const value = localStorage.getItem(GROUPING_KEY);
-    return value === 'date' || value === 'priority' ? value : 'manual';
-  } catch {
-    return 'manual';
-  }
-}
+  | {
+      kind: 'bucket';
+      key: string;
+      id: string;
+      label: string;
+      count: number;
+      collapsed: boolean;
+      tint: string;
+      canAdd: boolean;
+    }
+  | { kind: 'bucketEmpty'; key: string; id: string; hint: string }
+  | { kind: 'bucketAdd'; key: string; id: string; label: string };
 
 /**
  * Die Fächer beim Gruppieren. Nach Termin: was drängt, steht oben; Erledigtes
  * mit vergangenem Datum heisst „Earlier", nicht „Overdue". Nach Priorität in
  * MoSCoW-Reihenfolge, Won't zuletzt.
  */
-const DATE_BUCKETS = [
-  { id: 'overdue', label: 'Overdue' },
-  { id: 'today', label: 'Today' },
-  { id: 'tomorrow', label: 'Tomorrow' },
-  { id: 'week', label: 'Next 7 days' },
-  { id: 'later', label: 'Later' },
-  { id: 'earlier', label: 'Earlier' },
-  { id: 'none', label: 'No date' },
-] as const;
+interface BucketDef {
+  id: string;
+  label: string;
+  /** Farbe der Pille (todo-list.scss, .todo-section--tint-*). */
+  tint: string;
+  /** Leer zeigen statt weglassen — mit Platzhalter zum Anlegen. */
+  keepEmpty?: boolean;
+  /** Was im leeren Fach steht. */
+  hint?: string;
+}
 
-const PRIORITY_BUCKETS = [
-  { id: 'must', label: 'Must-have' },
-  { id: 'should', label: 'Should-have' },
-  { id: 'could', label: 'Could-have' },
-  { id: 'none', label: 'No priority' },
-  { id: 'wont', label: "Won't-have" },
-] as const;
+const DATE_BUCKETS: readonly BucketDef[] = [
+  { id: 'overdue', label: 'Overdue', tint: 'rose' },
+  { id: 'today', label: 'Today', tint: 'teal', keepEmpty: true, hint: 'Nothing planned for today' },
+  { id: 'tomorrow', label: 'Tomorrow', tint: 'sky' },
+  { id: 'week', label: 'Next 7 days', tint: 'violet' },
+  { id: 'later', label: 'Later', tint: 'neutral' },
+  { id: 'earlier', label: 'Earlier', tint: 'neutral' },
+  { id: 'none', label: 'No date', tint: 'neutral' },
+];
+
+/**
+ * Nach Priorität stehen alle Fächer da, auch leere: wie viel „Must" gerade
+ * ansteht, ist eine Auskunft — auch wenn sie null lautet.
+ */
+const PRIORITY_BUCKETS: readonly BucketDef[] = [
+  { id: 'must', label: 'Must', tint: 'rose', keepEmpty: true, hint: 'Nothing that must happen' },
+  { id: 'should', label: 'Should', tint: 'peach', keepEmpty: true, hint: 'Not urgent' },
+  { id: 'could', label: 'Could', tint: 'sky', keepEmpty: true, hint: 'Nice to have, if time allows' },
+  { id: 'none', label: 'To-do', tint: 'neutral' },
+  { id: 'wont', label: "Won't", tint: 'violet' },
+];
+
+/** Tageszeit, wie in einem Tagesplan: jederzeit zuerst, dann der Tag entlang. */
+const TIME_BUCKETS: readonly BucketDef[] = [
+  { id: 'anytime', label: 'Anytime', tint: 'neutral', keepEmpty: true, hint: 'Anytime today works' },
+  { id: 'morning', label: 'Morning', tint: 'peach', keepEmpty: true, hint: 'Nothing for the morning' },
+  { id: 'afternoon', label: 'Afternoon', tint: 'sky', keepEmpty: true, hint: 'Nothing for the afternoon' },
+  { id: 'evening', label: 'Evening', tint: 'violet', keepEmpty: true, hint: 'Nothing for the evening' },
+];
+
+/** Was ein neues Todo aus einem Fach mitbekommt. */
+function bucketPrefix(mode: Grouping, id: string): string {
+  if (mode === 'priority') {
+    return id === 'must' ? '/must ' : id === 'should' ? '/should ' : id === 'could' ? '/could ' : id === 'wont' ? "/won't " : '';
+  }
+  if (mode === 'time') return id === 'anytime' ? '' : `/${id} `;
+  return '';
+}
+
+function bucketDate(mode: Grouping, id: string): string | null {
+  if (mode !== 'date') return null;
+  if (id === 'today') return todayISO();
+  if (id === 'tomorrow') return shiftISODate(todayISO(), 1);
+  return null;
+}
+
+/** Fächer, in die man direkt anlegen kann. */
+function bucketTakesNew(mode: Grouping, id: string): boolean {
+  if (mode === 'date') return id === 'today' || id === 'tomorrow' || id === 'none';
+  return mode === 'priority' || mode === 'time';
+}
+
+/**
+ * Sortiert Blöcke (Aufgabe mit ihren Schritten). Stabil: was gleich ist,
+ * bleibt in der gezogenen Reihenfolge.
+ */
+function sortBlocks(blocks: TodoRow[][], sort: SortOrder): TodoRow[][] {
+  if (sort === 'manual') return blocks;
+  const key = (block: TodoRow[]) => block[0];
+  const byName = (a: TodoRow, b: TodoRow) => a.firstLine.localeCompare(b.firstLine, undefined, { sensitivity: 'base' });
+  const cmp: Record<Exclude<SortOrder, 'manual'>, (a: TodoRow, b: TodoRow) => number> = {
+    date: (a, b) => (a.todo.scheduledDate ?? '9999').localeCompare(b.todo.scheduledDate ?? '9999'),
+    name: byName,
+    duration: (a, b) => (durationOf(a.todo.title) ?? 1e9) - (durationOf(b.todo.title) ?? 1e9),
+  };
+  return [...blocks].sort((a, b) => cmp[sort](key(a), key(b)));
+}
+
+/** Zeilen → Blöcke aus Aufgabe und Schritten, Überschriften für sich. */
+function blocksOf(rows: readonly TodoRow[]): TodoRow[][] {
+  const blocks: TodoRow[][] = [];
+  for (const row of rows) {
+    const last = blocks[blocks.length - 1];
+    if (!row.isSection && row.parentId !== null && last && last[0].id === row.parentId) last.push(row);
+    else blocks.push([row]);
+  }
+  return blocks;
+}
+
+/** Sortiert je Abschnitt; die Überschriften bleiben, wo sie sind. */
+function sortWithinSections(rows: readonly TodoRow[], sort: SortOrder): TodoRow[] {
+  if (sort === 'manual') return [...rows];
+  const out: TodoRow[] = [];
+  let segment: TodoRow[][] = [];
+  const flush = () => {
+    out.push(...sortBlocks(segment, sort).flat());
+    segment = [];
+  };
+  for (const block of blocksOf(rows)) {
+    if (block[0].isSection) {
+      flush();
+      out.push(...block);
+    } else {
+      segment.push(block);
+    }
+  }
+  flush();
+  return out;
+}
 
 interface TodoRow {
   id: string;
@@ -208,6 +313,16 @@ interface TodoRow {
   sectionId: string | null;
   /** Bei einer Überschrift: offene Aufgaben darin (ohne Schritte). */
   sectionCount: number;
+  /** Das Bild im Kreis vor dem Titel (task-icon.ts). */
+  icon: TaskIcon;
+  /** Tönung des Kreises: die Farbe des primären Ordners. */
+  iconClass: string;
+  /** „15m", „1h 30m" — leer ohne Dauer. */
+  durationText: string;
+  /** Tageszeit, null = Anytime. */
+  when: TimeOfDay | null;
+  /** Steht unter dem Titel eine Meta-Zeile (Dauer, Zeit, Termin, Fortschritt)? */
+  hasMeta: boolean;
   /** Farbe des primären Ordners, als Punkt vor dem Titel. */
   folderDotClass: string;
   folderDotTitle: string;
@@ -363,16 +478,33 @@ export class TodoList {
       const section = isSection(todo.title);
       const badge = section ? null : priorityBadge(todo.title);
       const stripped = section ? sectionName(todo.title) : stripPriorityPrefix(todo.title);
-      const [first, ...rest] = stripped.split('\n');
+      // Ein Emoji vorn im Titel steht im Kreis, nicht noch einmal im Text.
+      const shown = section ? stripped : splitLeadingEmoji(stripped).rest;
+      const [first, ...rest] = shown.split('\n');
       const detail = rest.join('\n').trim();
       const level = taskLevel(todo.title);
+      const minutes = section ? null : durationOf(todo.title);
+      const when = section ? null : timeOfDay(todo.title);
+      const steps = progress.get(todo.id) ?? null;
 
       return {
         id: todo.id,
         todo,
-        displayTitle: stripped,
+        displayTitle: shown,
         // Auch beim Bearbeiten ohne Präfix: es steht als Chip davor.
         editTitle: stripped,
+        icon: taskIcon(stripped),
+        iconClass: this.iconClass(todo.labelIds),
+        durationText: minutes === null ? '' : formatDuration(minutes),
+        when,
+        hasMeta:
+          !section &&
+          (badge !== null ||
+            minutes !== null ||
+            when !== null ||
+            todo.scheduledDate !== null ||
+            todo.repeat !== null ||
+            steps !== null),
         firstLine: first.trim(),
         detailLines: detail,
         hasDetail: detail.length > 0,
@@ -381,7 +513,7 @@ export class TodoList {
         parentId: parentOf.get(todo.id) ?? null,
         subCount: subCounts.get(todo.id) ?? 0,
         lastOfGroup: lastSubs.has(todo.id),
-        progress: progress.get(todo.id) ?? null,
+        progress: steps,
         indentTarget: section ? null : this.indentTargetFor(items, index, parentOf, subCounts, byId),
         canOutdent: level === 'sub' && parentOf.has(todo.id),
         isSection: section,
@@ -456,11 +588,12 @@ export class TodoList {
    * neuer, offener Schritt gar nicht in der Liste.
    */
   protected readonly listItems = computed<ListItem[]>(() => {
-    const rows = this.visibleRows();
+    const sort = this.sort();
+    const rows = sortWithinSections(this.visibleRows(), sort);
     const filter = this.filter();
     const canAdd = filter === 'active' || filter === 'all';
     const mode = this.grouping();
-    if (mode !== 'manual') return this.bucketItems(this.rows(), mode, canAdd);
+    if (mode !== 'manual') return this.bucketItems(this.rows(), mode, canAdd, sort);
 
     const collapsed = this.collapsedIds();
     const addingStep = this.stepInputFor();
@@ -511,13 +644,14 @@ export class TodoList {
    * Datum, deren Schritt heute fällig ist, gehört unter „Today" — dort sucht
    * man sie, und unter „No date" läge der Schritt versteckt.
    */
-  private bucketItems(rows: readonly TodoRow[], mode: Grouping, canAdd: boolean): ListItem[] {
+  private bucketItems(rows: readonly TodoRow[], mode: Grouping, canAdd: boolean, sort: SortOrder): ListItem[] {
     const today = todayISO();
     const tomorrow = shiftISODate(today, 1);
     const inWeek = shiftISODate(today, 7);
     const bucketOf = (block: readonly TodoRow[]): string => {
       const head = block[0];
       if (mode === 'priority') return head.badge ?? 'none';
+      if (mode === 'time') return head.when ?? 'anytime';
       const open = block
         .filter((row) => !row.todo.completed && row.todo.scheduledDate !== null)
         .map((row) => row.todo.scheduledDate!)
@@ -531,24 +665,30 @@ export class TodoList {
     };
 
     // Blöcke: eine Aufgabe und ihre Schritte, in der Reihenfolge der Liste.
-    const blocks: TodoRow[][] = [];
-    for (const row of rows) {
-      if (row.isSection) continue;
-      const last = blocks[blocks.length - 1];
-      if (row.parentId !== null && last && last[0].id === row.parentId) last.push(row);
-      else blocks.push([row]);
-    }
+    const blocks = blocksOf(rows).filter((block) => !block[0].isSection);
 
-    const buckets = mode === 'date' ? DATE_BUCKETS : PRIORITY_BUCKETS;
+    const buckets = mode === 'date' ? DATE_BUCKETS : mode === 'time' ? TIME_BUCKETS : PRIORITY_BUCKETS;
     const collapsed = this.collapsedBuckets();
     const addingStep = this.stepInputFor();
+    const addingIn = this.bucketInputFor();
     const out: ListItem[] = [];
     for (const bucket of buckets) {
-      const inside = blocks.filter((block) => bucketOf(block) === bucket.id);
-      if (inside.length === 0) continue;
+      const inside = sortBlocks(blocks.filter((block) => bucketOf(block) === bucket.id), sort);
+      const takesNew = canAdd && bucketTakesNew(mode, bucket.id);
+      const adding = takesNew && addingIn === bucket.id;
+      if (inside.length === 0 && !adding && !(bucket.keepEmpty && canAdd)) continue;
       const id = `${mode}:${bucket.id}`;
       const shut = collapsed.has(id);
-      out.push({ kind: 'bucket', key: 'bucket:' + id, id, label: bucket.label, count: inside.length, collapsed: shut });
+      out.push({
+        kind: 'bucket',
+        key: 'bucket:' + id,
+        id,
+        label: bucket.label,
+        count: inside.length,
+        collapsed: shut,
+        tint: bucket.tint,
+        canAdd: takesNew,
+      });
       if (shut) continue;
       for (const block of inside) {
         const head = block[0];
@@ -559,6 +699,11 @@ export class TodoList {
           out.push({ kind: 'row', key: row.id, row, addFollows: showAdd && i === shown.length - 1 }),
         );
         if (showAdd) out.push({ kind: 'add', key: 'add:' + head.id, headId: head.id, headTitle: head.firstLine });
+      }
+      if (adding) {
+        out.push({ kind: 'bucketAdd', key: 'bucketadd:' + id, id: bucket.id, label: bucket.label });
+      } else if (inside.length === 0) {
+        out.push({ kind: 'bucketEmpty', key: 'bucketempty:' + id, id: bucket.id, hint: bucket.hint ?? 'Nothing here' });
       }
     }
     return out;
@@ -599,6 +744,7 @@ export class TodoList {
   protected readonly OptionsIcon = EllipsisVertical;
   protected readonly TrashIcon = Trash2;
     protected readonly PencilIcon = Pencil;
+  protected readonly RefreshIcon = RefreshCw;
   protected readonly ScheduleIcon = CalendarPlus;
   protected readonly SectionIcon = Rows3;
   protected readonly IndentIcon = ListIndentIncrease;
@@ -617,8 +763,9 @@ export class TodoList {
   protected readonly formatFocus = formatFocus;
   protected readonly ClearIcon = X;
 
-  protected readonly tokenIcon = TOKEN_ICON;
-  protected readonly tokenDescription = TOKEN_DESCRIPTION;
+  protected readonly tokenIcon = tokenIcon;
+  protected readonly tokenDescription = tokenDescription;
+  protected readonly tokenText = tokenText;
   protected readonly tokenClass = tokenClass;
 
   /**
@@ -945,22 +1092,69 @@ toggleFolderList(): void {
 
   // ---- Gruppieren ----
 
-  protected readonly grouping = signal<Grouping>(readGrouping());
-  protected readonly groupings: readonly { value: Grouping; label: string }[] = [
-    { value: 'manual', label: 'My order' },
-    { value: 'date', label: 'Date' },
-    { value: 'priority', label: 'Priority' },
-  ];
+  private readonly listView = inject(ListViewService);
+  protected readonly grouping = this.listView.grouping;
+  protected readonly sort = this.listView.sort;
+  protected readonly showIcons = this.listView.showIcons;
   /** Zugeklappte Fächer, nur für diese Sitzung. */
   protected readonly collapsedBuckets = signal<ReadonlySet<string>>(new Set());
 
+  // ---- Vorschläge ----
+
+  protected readonly showSuggestions = computed(
+    () => this.listView.showSuggestions() && (this.filter() === 'active' || this.filter() === 'all') && !this.isSearching(),
+  );
+  private readonly suggestionSeed = signal(0);
+
+  protected readonly suggestions = computed(() =>
+    suggestTasks(this.todoService.scopedWithArchive(), { seed: this.suggestionSeed(), limit: 4 }).map((s) => ({
+      ...s,
+      icon: taskIcon(s.text),
+      durationText: s.minutes ? formatDuration(s.minutes) : '',
+    })),
+  );
+
+  refreshSuggestions(): void {
+    this.suggestionSeed.update((n) => n + 1);
+  }
+
+  addSuggestion(s: Suggestion): void {
+    this.todoService.addTodo((s.minutes ? durationPrefix(s.minutes) : '') + s.text);
+    tap();
+  }
+
+  /** Ziehen nur, wo die gezeigte Reihenfolge die gespeicherte ist. */
+  protected readonly canDrag = computed(() => this.grouping() === 'manual' && this.sort() === 'manual');
+
   setGrouping(value: Grouping): void {
-    this.grouping.set(value);
-    try {
-      localStorage.setItem(GROUPING_KEY, value);
-    } catch {
-      // Privater Modus: dann gilt die Wahl eben nur bis zum Neuladen.
+    this.listView.setGrouping(value);
+  }
+
+  // ---- Neues Todo direkt in einem Fach ----
+
+  /** Das Fach, in dem gerade eine Eingabe offen ist (Fach-id ohne Modus). */
+  protected readonly bucketInputFor = signal<string | null>(null);
+
+  openBucketInput(id: string): void {
+    const full = `${this.grouping()}:${id}`;
+    if (this.collapsedBuckets().has(full)) this.toggleBucket(full);
+    this.bucketInputFor.set(id);
+    this.focusLater(`[data-bucket-input="${CSS.escape(id)}"]`);
+  }
+
+  addTodoToBucket(id: string, input: HTMLInputElement): void {
+    const text = input.value.trim();
+    if (!text) {
+      this.bucketInputFor.set(null);
+      return;
     }
+    const mode = this.grouping();
+    this.todoService.addTodo(bucketPrefix(mode, id) + text, bucketDate(mode, id));
+    input.value = '';
+  }
+
+  onBucketInputBlur(input: HTMLInputElement): void {
+    if (!input.value.trim()) this.bucketInputFor.set(null);
   }
 
   toggleBucket(id: string): void {
@@ -1488,6 +1682,73 @@ openDateSheet(id: string): void {
    */
   folderDotClass(labelIds: string[]): string {
     return folderColorClass(this.primaryLabel(labelIds)?.color, 'dot');
+  }
+
+  /** Die Tönung des Kreises um das Bild: Ordnerfarbe, gedämpft. */
+  private iconClass(labelIds: string[]): string {
+    return folderColorClass(this.primaryLabel(labelIds)?.color, 'iconBox');
+  }
+
+  private static readonly WHEN_ICON: Record<TimeOfDay, LucideIconData> = {
+    morning: Sunrise,
+    afternoon: Sun,
+    evening: Moon,
+  };
+
+  private static readonly WHEN_LABEL: Record<TimeOfDay, string> = {
+    morning: 'Morning',
+    afternoon: 'Afternoon',
+    evening: 'Evening',
+  };
+
+  protected whenIcon(when: TimeOfDay): LucideIconData {
+    return TodoList.WHEN_ICON[when];
+  }
+
+  protected whenLabel(when: TimeOfDay): string {
+    return TodoList.WHEN_LABEL[when];
+  }
+
+  // ---- Tageszeit und Dauer ----
+
+  protected readonly timeChoices: readonly { value: TimeOfDay | null; label: string }[] = [
+    { value: null, label: 'Anytime' },
+    { value: 'morning', label: 'Morning' },
+    { value: 'afternoon', label: 'Afternoon' },
+    { value: 'evening', label: 'Evening' },
+  ];
+
+  protected readonly durationChoices: readonly (number | null)[] = [null, 5, 15, 30, 45, 60, 90];
+
+  protected whenOf(todo: Todo): TimeOfDay | null {
+    return timeOfDay(todo.title);
+  }
+
+  protected minutesOf(todo: Todo): number | null {
+    return durationOf(todo.title);
+  }
+
+  protected formatDurationText(minutes: number): string {
+    return formatDuration(minutes);
+  }
+
+  protected setWhen(todo: Todo, when: TimeOfDay | null): void {
+    const title = setTimeOfDay(todo.title, when);
+    if (title !== todo.title) this.todoService.renameTodo(todo.id, title);
+  }
+
+  protected setMinutes(todo: Todo, minutes: number | null): void {
+    const title = setDuration(todo.title, minutes);
+    if (title !== todo.title) this.todoService.renameTodo(todo.id, title);
+  }
+
+  /**
+   * Der Termin in der Meta-Zeile: am Rechner das Kalenderblatt neben der
+   * Zeile, auf dem Telefon das Blatt von unten.
+   */
+  protected openDate(id: string, event: Event): void {
+    if (window.matchMedia('(min-width: 640px)').matches) this.toggleScheduleMenu(id, event);
+    else this.openDateSheet(id);
   }
 
   /** Der Name des primären Ordners, für den Tooltip am Punkt. */

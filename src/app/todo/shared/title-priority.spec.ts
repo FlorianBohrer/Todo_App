@@ -12,6 +12,13 @@ import {
   taskLevel,
   titlePriority,
   withTaskLevel,
+  durationOf,
+  durationPrefix,
+  formatDuration,
+  setDuration,
+  setPriority,
+  setTimeOfDay,
+  timeOfDay,
 } from './title-priority';
 
 describe('priorityBadge', () => {
@@ -404,5 +411,53 @@ describe('openGroups', () => {
   it('keeps a done task while one of its steps is still open', () => {
     const items = [t('A', true), t('/sub a1'), t('/sub a2', true)];
     expect(openGroups(items).map((i) => i.id)).toEqual(['A', '/sub a1', '/sub a2']);
+  });
+});
+
+describe('time of day and duration', () => {
+  it('reads both, in any order and next to the other prefixes', () => {
+    const title = '/must /15m /morning Zahnarzt anrufen';
+    expect(timeOfDay(title)).toBe('morning');
+    expect(durationOf(title)).toBe(15);
+    expect(priorityBadge(title)).toBe('must');
+    expect(stripPriorityPrefix(title)).toBe('Zahnarzt anrufen');
+  });
+
+  it('reads hours, minutes and both', () => {
+    expect(durationOf('/1h Deep work')).toBe(60);
+    expect(durationOf('/1h30m Deep work')).toBe(90);
+    expect(durationOf('/90m Deep work')).toBe(90);
+  });
+
+  it('needs the space and a real amount', () => {
+    expect(durationOf('/15mDeep')).toBeNull();
+    expect(durationOf('/0m Deep')).toBeNull();
+    expect(durationOf('/h Deep')).toBeNull();
+    expect(durationOf('/m Deep')).toBeNull();
+    expect(timeOfDay('/mornings Deep')).toBeNull();
+    expect(stripPriorityPrefix('/15mDeep')).toBe('/15mDeep');
+  });
+
+  it('keeps both when the level or priority changes', () => {
+    expect(setTaskLevel('/evening /30m Lesen', 'sub')).toBe('/sub /evening /30m Lesen');
+    expect(withTaskLevel('/morning /5m Wasser', 'sub')).toBe('/sub /morning /5m Wasser');
+    expect(setPriority('/afternoon /1h Bericht', 'must')).toBe('/must /afternoon /1h Bericht');
+  });
+
+  it('sets and clears each on its own', () => {
+    expect(setTimeOfDay('/must Bericht', 'evening')).toBe('/must /evening Bericht');
+    expect(setTimeOfDay('/must /evening Bericht', null)).toBe('/must Bericht');
+    expect(setDuration('/must /evening Bericht', 90)).toBe('/must /evening /1h30m Bericht');
+    expect(setDuration('/1h Bericht', null)).toBe('Bericht');
+    expect(setPriority('/should Bericht', null)).toBe('Bericht');
+  });
+
+  it('formats durations the short way', () => {
+    expect(formatDuration(5)).toBe('5m');
+    expect(formatDuration(60)).toBe('1h');
+    expect(formatDuration(95)).toBe('1h 35m');
+    expect(durationPrefix(60)).toBe('/1h ');
+    expect(durationPrefix(90)).toBe('/1h30m ');
+    expect(durationPrefix(25)).toBe('/25m ');
   });
 });

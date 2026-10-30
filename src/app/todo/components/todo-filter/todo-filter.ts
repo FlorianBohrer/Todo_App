@@ -13,7 +13,7 @@ import {
 import { LucideAngularModule, Search, X } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { isTypingTarget } from '../../shared/keyboard';
-import { TOKEN_DESCRIPTION, TOKEN_ICON, splitTitle, tokenClass } from '../../shared/title-token';
+import { splitTitle, tokenClass, tokenDescription, tokenIcon, tokenText } from '../../shared/title-token';
 
 @Component({
   selector: 'app-todo-filter',
@@ -29,8 +29,9 @@ export class TodoFilter {
   protected readonly searchToken = this.todoService.searchToken;
   protected readonly SearchIcon = Search;
   protected readonly ClearIcon = X;
-  protected readonly tokenIcon = TOKEN_ICON;
-  protected readonly tokenDescription = TOKEN_DESCRIPTION;
+  protected readonly tokenIcon = tokenIcon;
+  protected readonly tokenDescription = tokenDescription;
+  protected readonly tokenText = tokenText;
   protected readonly tokenClass = tokenClass;
 
   private readonly injector = inject(Injector);

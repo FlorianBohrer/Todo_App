@@ -1,4 +1,6 @@
 import {ChangeDetectionStrategy,
+  untracked,
+  effect,
   Component,
   ElementRef,
   HostListener,
@@ -11,8 +13,9 @@ import { TodoService } from '../../services/todo';
 import { isTypingTarget } from '../../shared/keyboard';
 import { stripPriorityPrefix, withTaskLevel } from '../../shared/title-priority';
 import {
-  TOKEN_DESCRIPTION,
-  TOKEN_ICON,
+  tokenDescription,
+  tokenIcon,
+  tokenText,
   TitleToken,
   joinTitle,
   splitTitle,
@@ -23,6 +26,7 @@ import { CalendarPlus, CornerDownRight, Plus, X, LucideAngularModule } from 'luc
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { DatePicker } from '../date-picker/date-picker';
 import { scheduleLabel } from '../../shared/schedule';
+import { ListViewService } from '../../services/list-view.service';
 
 @Component({
   selector: 'app-todo-add',
@@ -122,16 +126,29 @@ export class TodoAdd {
     const date = this.date();
     return [
       'New todo',
-      ...this.tokens().map((t) => TOKEN_DESCRIPTION[t]),
+      ...this.tokens().map((t) => tokenDescription(t)),
       ...(date === null ? [] : ['planned for ' + scheduleLabel(date)]),
     ].join(', ');
   }
 
-  protected readonly tokenIcon = TOKEN_ICON;
-  protected readonly tokenDescription = TOKEN_DESCRIPTION;
+  protected readonly tokenIcon = tokenIcon;
+  protected readonly tokenDescription = tokenDescription;
+  protected readonly tokenText = tokenText;
   protected readonly tokenClass = tokenClass;
 
   private readonly field = viewChild<ElementRef<HTMLTextAreaElement>>('newTodoField');
+
+  /** „+" im Kopf der Liste: ins Feld, und es in den Blick holen. */
+  private readonly listView = inject(ListViewService);
+  private readonly focusOnRequest = effect(() => {
+    if (this.listView.addRequest() === 0) return;
+    untracked(() => {
+      const el = this.field()?.nativeElement;
+      if (!el) return;
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el.focus({ preventScroll: true });
+    });
+  });
 
   /** „n" für eine neue Aufgabe, ohne zur Maus zu greifen. */
   @HostListener('document:keydown', ['$event'])

@@ -99,6 +99,8 @@ export class ShortcutsOverlay {
         { keys: ['/should'], description: 'MoSCoW: painful to drop, but there is a workaround' },
         { keys: ['/could'], description: 'MoSCoW: the contingency you drop when time runs short' },
         { keys: ["/won't"], description: 'MoSCoW: out of scope for now, on purpose' },
+        { keys: ['/morning'], description: 'Time of day: also /afternoon and /evening' },
+        { keys: ['/15m'], description: 'How long it takes: /5m, /1h, /1h30m' },
       ],
     },
     {

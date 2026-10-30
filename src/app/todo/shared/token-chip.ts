@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 
-import { TOKEN_DESCRIPTION, TOKEN_ICON, TitleToken, tokenClass } from './title-token';
+import { TitleToken, tokenClass, tokenDescription, tokenIcon, tokenText } from './title-token';
 
 /**
  * Ein Präfix als Zeichen: Symbol auf Farbfläche, ohne Wort.
@@ -25,7 +25,7 @@ import { TOKEN_DESCRIPTION, TOKEN_ICON, TitleToken, tokenClass } from './title-t
     '[attr.aria-hidden]': 'decorative() ? "true" : null',
     '[attr.title]': 'description()',
   },
-  template: `<lucide-icon [img]="icon()" [class]="iconClass()" aria-hidden="true"></lucide-icon>`,
+  template: `<lucide-icon [img]="icon()" [class]="iconClass()" aria-hidden="true"></lucide-icon>@if (text(); as t) {<span class="text-2xs font-medium tabular-nums">{{ t }}</span>}`,
 })
 export class TokenChip {
   readonly token = input.required<TitleToken>();
@@ -33,12 +33,17 @@ export class TokenChip {
   readonly size = input<'sm' | 'md'>('md');
   readonly decorative = input(false);
 
-  protected readonly icon = computed(() => TOKEN_ICON[this.token()]);
-  protected readonly description = computed(() => TOKEN_DESCRIPTION[this.token()]);
+  protected readonly icon = computed(() => tokenIcon(this.token()));
+  protected readonly description = computed(() => tokenDescription(this.token()));
+  /** Nur die Dauer trägt Text: eine Uhr allein sagt nicht, wie lange. */
+  protected readonly text = computed(() => tokenText(this.token()));
 
-  protected readonly classes = computed(
-    () => `${tokenClass(this.token())} ${this.size() === 'sm' ? 'h-4 w-4' : 'h-5 w-5'}`,
-  );
+  protected readonly classes = computed(() => {
+    const box = this.text()
+      ? `${this.size() === 'sm' ? 'h-4' : 'h-5'} grid-flow-col gap-0.5 px-1`
+      : this.size() === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
+    return `${tokenClass(this.token())} ${box}`;
+  });
 
   protected readonly iconClass = computed(() =>
     this.size() === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5',

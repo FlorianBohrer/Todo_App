@@ -16,6 +16,7 @@ export type ShortcutAction =
   | 'view.list'
   | 'view.week'
   | 'view.plans'
+  | 'view.focus'
   | 'folders.toggle'
   | 'help.toggle'
   | 'format.bold'
@@ -60,6 +61,7 @@ export const DEFAULT_BINDINGS: Record<ShortcutAction, Binding> = {
   'view.list': bind('1'),
   'view.week': bind('2'),
   'view.plans': bind('3'),
+  'view.focus': bind('4'),
   'folders.toggle': bind('f'),
   'help.toggle': bind('?', { shift: true }),
   'format.bold': bind('b', { meta: true, shift: true }),
@@ -75,6 +77,7 @@ export const SHORTCUT_INFO: ShortcutInfo[] = [
   { action: 'view.list', label: 'List view', group: 'Anywhere' },
   { action: 'view.week', label: 'Week view', group: 'Anywhere' },
   { action: 'view.plans', label: 'Plans view', group: 'Anywhere' },
+  { action: 'view.focus', label: 'Focus timer', group: 'Anywhere' },
   { action: 'format.bold', label: 'Bold', group: 'Plans' },
   { action: 'format.italic', label: 'Italic', group: 'Plans' },
   { action: 'format.underline', label: 'Underline', group: 'Plans' },

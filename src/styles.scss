@@ -473,6 +473,15 @@
   --accent-600: #743C48;
 }
 
+/* Fokus: Lavendel — ruhig, und weit genug weg von den anderen dreien. */
+[data-view='focus'] {
+  --accent-200: #D9CCFF;
+  --accent-300: #B9A5FB;
+  --accent-400: #9B82F3;
+  --accent-500: #6A4FD3;
+  --accent-600: #573FB4;
+}
+
 :root,
 [data-view] {
   --color-indigo-200: var(--accent-200);
@@ -1518,7 +1527,7 @@ body.is-block-selecting * {
    Auswahlleiste im Plan), wie viel Platz die Leiste braucht. */
 @media (max-width: 639px) {
   :root {
-    --bottom-nav-h: calc(4rem + env(safe-area-inset-bottom, 0px));
+    --bottom-nav-h: calc(4.875rem + env(safe-area-inset-bottom, 0px));
   }
 
   .app-main {
@@ -1526,39 +1535,44 @@ body.is-block-selecting * {
   }
 }
 
+/* Eine schwebende Pille statt einer Leiste über die volle Breite: sie
+   liegt über dem Inhalt, lässt links und rechts Luft, und zeigt nur
+   Symbole — vier Ansichten erkennt man am Bild. Die Namen stehen für
+   Vorlesesoftware und als Tooltip da. */
 .bottom-nav {
   position: fixed;
-  inset-inline: 0;
-  bottom: 0;
+  inset-inline: 0.75rem;
+  bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px));
   z-index: 30;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  border-top: 1px solid var(--color-line);
-  background: color-mix(in srgb, var(--color-bg2) 82%, transparent);
+  max-width: 26rem;
+  margin-inline: auto;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-panel2) 86%, transparent);
+  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.75);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .bottom-nav__inner {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  height: 4rem;
-  max-width: 28rem;
-  margin-inline: auto;
+  grid-template-columns: repeat(4, 1fr);
+  height: 3.75rem;
+  padding-inline: 0.375rem;
 }
 
 .bottom-nav__tab {
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 0.25rem;
   color: var(--color-muted);
   -webkit-tap-highlight-color: transparent;
 }
 
 .bottom-nav__icon {
   display: grid;
-  width: 3.5rem;
-  height: 1.875rem;
+  width: 4rem;
+  height: 2.75rem;
   place-items: center;
   border-radius: 9999px;
   transition:
@@ -1567,23 +1581,42 @@ body.is-block-selecting * {
 }
 
 .bottom-nav__label {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .bottom-nav__tab.is-active {
   color: var(--color-text);
 }
 
-/* Weiß auf --color-button: dieselbe gemessene Paarung wie die Laschen. */
 .bottom-nav__tab.is-active .bottom-nav__icon {
-  background: var(--color-button);
+  background: rgb(255 255 255 / 0.12);
   color: #fff;
 }
 
 .bottom-nav__tab:focus-visible {
   outline: none;
+}
+
+/* Der Fokus-Timer läuft: ein Punkt am Symbol, in jeder Ansicht. */
+.bottom-nav__tab.is-running .bottom-nav__icon {
+  position: relative;
+}
+
+.bottom-nav__tab.is-running .bottom-nav__icon::after {
+  content: '';
+  position: absolute;
+  top: 0.5rem;
+  right: 1.125rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #b9a5fb;
+  box-shadow: 0 0 0 2px var(--color-panel2);
 }
 
 .bottom-nav__tab:focus-visible .bottom-nav__icon {
@@ -1611,6 +1644,172 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
     background: var(--color-bg2);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    border-top-color: var(--color-line-strong);
+    border-color: var(--color-line-strong);
+  }
+}
+
+/* ================================================================
+   Tagesplaner-Formen auf dunklem Grund
+
+   Grosse Titel in einer Serifenschrift (Instrument Serif, aus derselben
+   Familie wie die Grundschrift Instrument Sans), runde Zähler, eine Pille
+   mit „…" und „+". Die Fläche bleibt dunkel; Wärme kommt aus der Schrift
+   und den weichen Formen, nicht aus Pastell.
+   ================================================================ */
+.display-title {
+  margin: 0;
+  font-family: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
+  font-size: clamp(2.5rem, 8vw, 3.25rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.list-head {
+  padding: 0.25rem 0.25rem 1rem;
+}
+
+.list-head__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.list-head__counters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.list-head__counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.list-head__counter--flame lucide-icon { color: rgb(251 146 60 / 0.55); }
+.list-head__counter--flame.is-lit lucide-icon { color: #fb923c; fill: rgb(251 146 60 / 0.35); }
+.list-head__counter--gem lucide-icon { color: #a78bfa; }
+
+/* Eine Pille, zwei Knöpfe: wie die Werkzeugleiste eines Tagesplaners. */
+.list-head__actions {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0.125rem;
+  background: color-mix(in srgb, #fff 4%, var(--color-panel1));
+  box-shadow: 0 8px 18px -12px rgb(0 0 0 / 0.7);
+}
+
+.list-head__action {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  color: var(--color-text);
+  transition: background-color 140ms ease-out;
+}
+
+.list-head__action:hover {
+  background: var(--color-fill-strong);
+}
+
+.list-head__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+/* ---- Menü „…" ---- */
+.list-menu {
+  width: 17rem;
+  padding: 0.375rem;
+  border-radius: 1.25rem;
+}
+
+.list-menu__item,
+.list-menu__back {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.list-menu__back {
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.list-menu__value {
+  font-size: 0.8125rem;
+  color: var(--color-subtle);
+}
+
+.list-menu__rule {
+  height: 1px;
+  margin: 0.25rem 0.5rem;
+  background: var(--color-line);
+}
+
+.list-menu__hint {
+  margin: 0.25rem 0.75rem 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--color-subtle);
+}
+
+/* Ein Schalter, kein Haken: die Ansichtsoptionen sind an oder aus. */
+.list-menu__switch {
+  position: relative;
+  width: 2.125rem;
+  height: 1.25rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--color-fill-strong);
+  transition: background-color 160ms ease-out;
+}
+
+.list-menu__switch::after {
+  content: '';
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--color-muted);
+  transition: transform 200ms var(--spring), background-color 160ms ease-out;
+}
+
+.list-menu__switch.is-on {
+  background: var(--color-button);
+}
+
+.list-menu__switch.is-on::after {
+  transform: translateX(0.875rem);
+  background: #fff;
+}
+
+@media (pointer: coarse) {
+  .list-menu__item,
+  .list-menu__back {
+    padding-block: 0.75rem;
   }
 }

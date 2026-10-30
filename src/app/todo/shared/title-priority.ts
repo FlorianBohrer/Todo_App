@@ -36,6 +36,23 @@ export type MoscowLevel = 'must' | 'should' | 'could' | 'wont';
  */
 export type TaskLevel = 'main' | 'sub';
 
+/**
+ * Wann am Tag — die dritte Achse, für die Tagesansicht (Anytime, Morning,
+ * Afternoon, Evening). Ohne Präfix: „Anytime", jederzeit an diesem Tag.
+ */
+export type TimeOfDay = 'morning' | 'afternoon' | 'evening';
+
+/**
+ * Was ein Titel ausser Priorität und Gliederung noch trägt: Tageszeit und
+ * Dauer. Eigene Achsen, damit ein Umbau des Titels (Stufe setzen, Präfix
+ * tippen) sie nicht verliert.
+ */
+export interface TitleMeta {
+  when?: TimeOfDay | null;
+  /** Geschätzte Dauer in Minuten. */
+  minutes?: number | null;
+}
+
 interface TitlePrefix {
   /** Kleinbuchstaben, wird gegen den Titelanfang geprüft. */
   match: string;
@@ -65,9 +82,34 @@ const PREFIXES: TitlePrefix[] = [
   { match: '/sub ',    priority: NORMAL_PRIORITY, level: 'sub' },
 ];
 
+const WHEN_PREFIXES: { match: string; when: TimeOfDay }[] = [
+  { match: '/morning ', when: 'morning' },
+  { match: '/afternoon ', when: 'afternoon' },
+  { match: '/evening ', when: 'evening' },
+];
+
+/**
+ * Dauer als Präfix: „/15m", „/1h", „/1h30m". Erst das Leerzeichen dahinter
+ * macht es zum Zeichen, wie bei allen anderen.
+ */
+const DURATION = /^\/(?:(\d{1,2})h)?(?:(\d{1,3})m)?(?=\s)/i;
+
+/** Längste Dauer, die als Zeichen gilt: ein Tag. */
+const MAX_MINUTES = 24 * 60;
+
+function readDuration(lower: string): { length: number; minutes: number } | null {
+  const m = DURATION.exec(lower);
+  if (!m || (m[1] === undefined && m[2] === undefined)) return null;
+  const minutes = Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0);
+  if (minutes <= 0 || minutes > MAX_MINUTES) return null;
+  return { length: m[0].length, minutes };
+}
+
 interface TitlePrefixes {
   badge: MoscowLevel | null;
   level: TaskLevel | null;
+  when: TimeOfDay | null;
+  minutes: number | null;
   /** Der Titel ab dem ersten Zeichen nach den Präfixen. */
   rest: string;
 }
@@ -80,24 +122,75 @@ interface TitlePrefixes {
 function readPrefixes(title: string): TitlePrefixes {
   let badge: MoscowLevel | null = null;
   let level: TaskLevel | null = null;
+  let when: TimeOfDay | null = null;
+  let minutes: number | null = null;
   let rest = title.trimStart();
   let found = false;
 
+  // Hinter dem Wort zählt jedes Leerzeichen, auch ein Zeilenumbruch:
+  // „/sub" allein in der ersten Zeile ist genauso ein Präfix.
+  const at = (lower: string, match: string) =>
+    lower.startsWith(match.trimEnd()) && /\s/.test(lower.charAt(match.length - 1));
+
   for (;;) {
     const lower = rest.toLowerCase();
-    // Hinter dem Wort zählt jedes Leerzeichen, auch ein Zeilenumbruch:
-    // „/sub" allein in der ersten Zeile ist genauso ein Präfix.
-    const prefix = PREFIXES.find(
-      (p) => lower.startsWith(p.match.trimEnd()) && /\s/.test(lower.charAt(p.match.length - 1)),
-    );
-    if (!prefix) break;
-    found = true;
-    badge ??= prefix.badge ?? null;
-    level ??= prefix.level ?? null;
-    rest = rest.slice(prefix.match.length).trimStart();
+    const prefix = PREFIXES.find((p) => at(lower, p.match));
+    if (prefix) {
+      badge ??= prefix.badge ?? null;
+      level ??= prefix.level ?? null;
+      rest = rest.slice(prefix.match.length).trimStart();
+      found = true;
+      continue;
+    }
+    const time = WHEN_PREFIXES.find((p) => at(lower, p.match));
+    if (time) {
+      when ??= time.when;
+      rest = rest.slice(time.match.length).trimStart();
+      found = true;
+      continue;
+    }
+    const duration = readDuration(lower);
+    if (duration) {
+      minutes ??= duration.minutes;
+      rest = rest.slice(duration.length).trimStart();
+      found = true;
+      continue;
+    }
+    break;
   }
 
-  return { badge, level, rest: found ? rest : title };
+  return { badge, level, when, minutes, rest: found ? rest : title };
+}
+
+/** Die Tageszeit eines Titels, oder null für „Anytime". */
+export function timeOfDay(title: string): TimeOfDay | null {
+  return readPrefixes(title).when;
+}
+
+/** Die geschätzte Dauer in Minuten, oder null wenn keine dasteht. */
+export function durationOf(title: string): number | null {
+  return readPrefixes(title).minutes;
+}
+
+/** Was ein Titel an Tageszeit und Dauer trägt — für alles, was ihn umbaut. */
+export function titleMeta(title: string): TitleMeta {
+  const { when, minutes } = readPrefixes(title);
+  return { when, minutes };
+}
+
+/** 5 → „5m", 60 → „1h", 90 → „1h 30m". */
+export function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+/** So steht eine Dauer im Titel: „/15m", „/1h", „/1h30m". */
+export function durationPrefix(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `/${h > 0 ? `${h}h` : ''}${m > 0 || h === 0 ? `${m}m` : ''} `;
 }
 
 /** Sortier-Priorität: must 0, should 1, could 2, ohne 3, won't 4. */
@@ -131,9 +224,41 @@ const WRITTEN: Record<MoscowLevel | TaskLevel, string> = {
  * dann die Gliederung. Ohne Text kein Präfix — ein Titel, der nur aus
  * „/must " bestünde, wäre leer.
  */
-export function composeTitle(badge: MoscowLevel | null, level: TaskLevel | null, text: string): string {
+export function composeTitle(
+  badge: MoscowLevel | null,
+  level: TaskLevel | null,
+  text: string,
+  meta: TitleMeta = {},
+): string {
   if (text.trim() === '') return text;
-  return (badge ? WRITTEN[badge] : '') + (level ? WRITTEN[level] : '') + text;
+  return (
+    (badge ? WRITTEN[badge] : '') +
+    (level ? WRITTEN[level] : '') +
+    (meta.when ? `/${meta.when} ` : '') +
+    (meta.minutes ? durationPrefix(meta.minutes) : '') +
+    text
+  );
+}
+
+/** Setzt die Tageszeit neu (null: Anytime). Alles andere bleibt. */
+export function setTimeOfDay(title: string, when: TimeOfDay | null): string {
+  const typed = readPrefixes(title.trimStart());
+  if (typed.rest.trim() === '') return title;
+  return composeTitle(typed.badge, typed.level, typed.rest, { when, minutes: typed.minutes });
+}
+
+/** Setzt die Dauer neu (null: keine). Alles andere bleibt. */
+export function setDuration(title: string, minutes: number | null): string {
+  const typed = readPrefixes(title.trimStart());
+  if (typed.rest.trim() === '') return title;
+  return composeTitle(typed.badge, typed.level, typed.rest, { when: typed.when, minutes });
+}
+
+/** Setzt die Priorität neu (null: keine). Alles andere bleibt. */
+export function setPriority(title: string, badge: MoscowLevel | null): string {
+  const typed = readPrefixes(title.trimStart());
+  if (typed.rest.trim() === '') return title;
+  return composeTitle(badge, typed.level, typed.rest, { when: typed.when, minutes: typed.minutes });
 }
 
 /**
@@ -363,7 +488,7 @@ export function moveOutOfGroup<T extends { id: string; title: string }>(
 export function setTaskLevel(title: string, level: TaskLevel | null): string {
   const typed = readPrefixes(title.trimStart());
   if (typed.rest.trim() === '') return title;
-  return composeTitle(typed.badge, level, typed.rest);
+  return composeTitle(typed.badge, level, typed.rest, typed);
 }
 
 /**
@@ -406,7 +531,7 @@ export function withTaskLevel(title: string, level: TaskLevel | null): string {
   const trimmed = title.trimStart();
   const typed = readPrefixes(trimmed);
   if (typed.level !== null || typed.rest.trim() === '') return title;
-  return composeTitle(typed.badge, level, typed.rest);
+  return composeTitle(typed.badge, level, typed.rest, typed);
 }
 
 /** Beschriftung des Badges. */
