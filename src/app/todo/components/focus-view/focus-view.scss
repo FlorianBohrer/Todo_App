@@ -331,3 +331,54 @@
     transition: none;
   }
 }
+
+// ---- Sitzung aus Flow ----
+.focus-flow {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--color-ok) 35%, transparent);
+  border-radius: 1rem;
+  padding: 0.625rem 0.875rem;
+  background: color-mix(in srgb, var(--color-ok) 8%, transparent);
+}
+
+.focus-flow__dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--color-ok);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-ok) 20%, transparent);
+}
+
+.focus-flow__dot.is-paused {
+  background: var(--color-amber-300);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-amber-300) 20%, transparent);
+}
+
+.focus-flow__label {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.focus-flow__title {
+  margin: 0.125rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.focus-flow__left {
+  flex: none;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}

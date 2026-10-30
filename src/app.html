@@ -64,7 +64,7 @@
           [title]="folderTitle()"
           aria-label="Open folders">
           <lucide-icon [img]="titleIcon()" class="h-4 w-4 flex-none"></lucide-icon>
-          <span class="min-w-0 flex-1 truncate text-left sm:max-w-[14rem] sm:flex-none">{{ title() }}</span>
+          <span class="min-w-0 flex-1 truncate text-left sm:max-w-[10rem] sm:flex-none">{{ title() }}</span>
           <!-- Unter 360px fehlt der Platz: dort sagt der Name mehr als der Pfeil. -->
           <lucide-icon [img]="ArrowDown" class="h-3.5 w-3.5 flex-none opacity-60 max-[359px]:hidden"></lucide-icon>
         </button>
@@ -74,11 +74,11 @@
              Gleiche Höhe wie der Folders-Knopf, damit die Leiste eine Linie hat;
              Symbole, weil man drei Ansichten am Bild schneller trifft als am Wort. -->
         <div class="filter-tabs hidden h-10 flex-none gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm sm:flex"
-          role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="4">
+          role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="5">
           <span class="filter-pill" aria-hidden="true"></span>
 
           <button type="button" role="tab"
-            class="filter-tab flex w-24 items-center justify-center gap-1.5 rounded-full"
+            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
             [class.is-active]="view() === 'list'"
             [attr.aria-selected]="view() === 'list'"
             title="List view (1)"
@@ -87,7 +87,7 @@
             <span>List</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-24 items-center justify-center gap-1.5 rounded-full"
+            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
             [class.is-active]="view() === 'week'"
             [attr.aria-selected]="view() === 'week'"
             title="Week view (2)"
@@ -96,7 +96,7 @@
             <span>Week</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-24 items-center justify-center gap-1.5 rounded-full"
+            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
             [class.is-active]="view() === 'plans'"
             [attr.aria-selected]="view() === 'plans'"
             title="Plans view (3)"
@@ -105,13 +105,22 @@
             <span>Plans</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-24 items-center justify-center gap-1.5 rounded-full"
+            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
             [class.is-active]="view() === 'focus'"
             [attr.aria-selected]="view() === 'focus'"
             title="Focus timer (4)"
             (click)="setView('focus')">
             <lucide-icon [img]="FocusIcon" class="h-4 w-4 flex-none"></lucide-icon>
             <span class="tabular-nums">{{ focusLabel() }}</span>
+          </button>
+          <button type="button" role="tab"
+            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
+            [class.is-active]="view() === 'stats'"
+            [attr.aria-selected]="view() === 'stats'"
+            title="Stats (5)"
+            (click)="setView('stats')">
+            <lucide-icon [img]="StatsIcon" class="h-4 w-4 flex-none"></lucide-icon>
+            <span>Stats</span>
           </button>
         </div>
 
@@ -150,7 +159,13 @@
          wurde mitten in der Bewegung durch die echte Ansicht ersetzt: erst
          „Opening plans…", dann ohne Halt der Plan, beides in einem Zug. Das
          las sich wie ein Ruckler, nicht wie ein Wechsel. -->
-    @if (view() === 'focus') {
+    @if (view() === 'stats') {
+      @defer (on immediate) {
+        <div class="view-swap"><app-stats-view></app-stats-view></div>
+      } @placeholder {
+        <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening stats…</p>
+      }
+    } @else if (view() === 'focus') {
       @defer (on immediate) {
         <div class="view-swap"><app-focus-view></app-focus-view></div>
       } @placeholder {
@@ -258,6 +273,14 @@
           (click)="setView('focus')">
           <span class="bottom-nav__icon"><lucide-icon [img]="FocusIcon" class="h-5 w-5"></lucide-icon></span>
           <span class="bottom-nav__label">Focus</span>
+        </button>
+        <button type="button" role="tab" class="bottom-nav__tab"
+          [class.is-active]="view() === 'stats'"
+          [attr.aria-selected]="view() === 'stats'"
+          title="Stats"
+          (click)="setView('stats')">
+          <span class="bottom-nav__icon"><lucide-icon [img]="StatsIcon" class="h-5 w-5"></lucide-icon></span>
+          <span class="bottom-nav__label">Stats</span>
         </button>
       </div>
     </nav>

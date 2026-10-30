@@ -23,6 +23,19 @@
 
   <h1 class="display-title focus-title">Focus</h1>
 
+  <!-- Läuft gerade etwas in Flow, steht es hier: dieselbe Sitzung, die Flow
+       auf dem Server verbucht. -->
+  @if (flowSession(); as flow) {
+    <div class="focus-flow" role="status">
+      <span class="focus-flow__dot" [class.is-paused]="flow.paused" aria-hidden="true"></span>
+      <div class="min-w-0 flex-1">
+        <p class="focus-flow__label">{{ flow.paused ? 'Paused in Flow' : 'Running in Flow' }}</p>
+        <p class="focus-flow__title">{{ flow.title }}</p>
+      </div>
+      <span class="focus-flow__left tabular-nums">{{ flowLeft() }}</span>
+    </div>
+  }
+
   <!-- Das Rad. Ziehen stellt die Dauer, Pfeiltasten auch. -->
   <div class="focus-dial"
     [class.is-adjustable]="adjustable()"
