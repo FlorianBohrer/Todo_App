@@ -1,0 +1,598 @@
+// Die Statistik: Karten auf der dunklen Fläche, eine grosse Zahl, schmale
+// Balken mit runden Köpfen und eckigem Fuss, Gitter als Haarlinien, der
+// Schnitt als ruhige Linie. Farben je Aufgabe, nicht je Rang — geprüft mit
+// dem Farb-Validator (Kontrast und Farbsehschwäche) gegen die Kartenfläche.
+
+:host {
+  display: block;
+
+  /* Eine Reihe je Diagramm: Fokus Violett, Erledigt Blau. Tageszeit:
+     Orange, Türkis, Violett — alle Paare farbenblind-sicher getrennt. */
+  --viz-focus: #9085e9;
+  --viz-done: #3987e5;
+  --viz-morning: #d95926;
+  --viz-afternoon: #199e70;
+  --viz-evening: #9085e9;
+  --viz-surface: color-mix(in srgb, #fff 4%, var(--color-panel1));
+}
+
+.stats-view {
+  max-width: 44rem;
+  margin-inline: auto;
+  padding: 0 1rem 2rem;
+}
+
+.stats-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stats-csv {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.375rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0.375rem 0.875rem;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.stats-csv:hover:not(:disabled) {
+  border-color: var(--color-line-strong);
+}
+
+.stats-csv:disabled {
+  opacity: 0.45;
+}
+
+// ---- Zeitraum ----
+.stats-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 1.25rem 0 1rem;
+}
+
+.stats-span {
+  display: inline-flex;
+  gap: 0.125rem;
+  border-radius: 999px;
+  padding: 0.1875rem;
+  background: var(--color-fill);
+}
+
+.stats-span__option {
+  border-radius: 999px;
+  padding: 0.375rem 0.875rem;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.stats-span__option.is-active {
+  background: var(--color-fill-strong);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+.stats-period {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.stats-period__label {
+  min-width: 7.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text);
+}
+
+.stats-period__arrow {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--color-muted);
+}
+
+.stats-period__arrow:hover:not(:disabled) {
+  background: var(--color-fill);
+  color: var(--color-text);
+}
+
+.stats-period__arrow:disabled {
+  opacity: 0.3;
+}
+
+.stats-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-amber-300);
+}
+
+// ---- Karten ----
+.stats-card {
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+  padding: 1rem 1.125rem;
+  background: var(--viz-surface);
+  box-shadow: 0 8px 18px -14px rgb(0 0 0 / 0.7);
+}
+
+.stats-card__title {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.stats-hero.is-loading .bars__plot {
+  opacity: 0.5;
+}
+
+.stats-hero__label {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+// Die eine grosse Zahl der Ansicht: gross, in der Grundschrift, mit
+// proportionalen Ziffern — tabellarische stünden bei dieser Grösse locker.
+.stats-hero__value {
+  margin: 0.125rem 0 0;
+  font-size: clamp(3rem, 12vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.stats-hero__sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.stats-avg-key {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0;
+  border-top: 1.5px solid var(--color-text);
+  opacity: 0.7;
+}
+
+.stats-trend {
+  border-radius: 999px;
+  padding: 0.0625rem 0.5rem;
+  background: var(--color-fill);
+  color: var(--color-muted);
+}
+
+.stats-trend.is-up {
+  color: var(--color-ok);
+}
+
+.stats-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+}
+
+.stats-sync__dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 999px;
+  background: var(--color-ok);
+}
+
+// ---- Balken ----
+.bars {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.75rem 1fr;
+  grid-template-rows: 9.5rem auto;
+  column-gap: 0.375rem;
+  margin-top: 1rem;
+}
+
+.bars--small {
+  grid-template-rows: 5rem auto;
+  margin-top: 0.25rem;
+}
+
+.bars__grid {
+  position: relative;
+  grid-column: 1 / 3;
+  grid-row: 1;
+  pointer-events: none;
+}
+
+// Haarlinien, durchgezogen, eine Stufe neben der Fläche.
+.bars__tick {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.bars__tick > span {
+  position: absolute;
+  left: 0;
+  transform: translateY(-50%);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-subtle);
+}
+
+.bars__avg {
+  position: absolute;
+  right: 0;
+  left: 2.125rem;
+  height: 0;
+  border-top: 1.5px solid var(--color-text);
+  opacity: 0.55;
+}
+
+.bars__plot {
+  position: relative;
+  display: flex;
+  grid-column: 2;
+  grid-row: 1;
+  align-items: flex-end;
+  gap: 2px;
+  transition: opacity 160ms ease-out;
+}
+
+.bars__col {
+  position: relative;
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 0.375rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.bars__col:hover,
+.bars__col:focus-visible {
+  background: var(--color-fill);
+}
+
+.bars__col.is-future {
+  cursor: default;
+}
+
+.bars__col.is-future:hover {
+  background: transparent;
+}
+
+// Höchstens 24 Pixel breit, runde 4px am Kopf, eckig an der Grundlinie.
+.bars__bar {
+  width: min(100%, 24px);
+  min-height: 0;
+  border-radius: 4px 4px 0 0;
+  transition: height 420ms var(--spring), filter 140ms ease-out;
+}
+
+.bars__bar--focus {
+  background: var(--viz-focus);
+}
+
+.bars__bar--done {
+  background: var(--viz-done);
+}
+
+.bars__col:hover .bars__bar,
+.bars__col:focus-visible .bars__bar,
+.bars__col.is-selected .bars__bar {
+  filter: brightness(1.18);
+}
+
+.bars__col.is-selected {
+  background: var(--color-fill-strong);
+}
+
+.bars--month .bars__bar {
+  border-radius: 2px 2px 0 0;
+}
+
+.bars__axis {
+  display: flex;
+  grid-column: 2;
+  grid-row: 2;
+  gap: 2px;
+  margin-top: 0.375rem;
+}
+
+.bars__axis > span {
+  min-width: 0;
+  flex: 1;
+  overflow: visible;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--color-subtle);
+}
+
+.bars__axis > span.is-today {
+  color: var(--color-text);
+}
+
+// Die Einblendung: die Zahl zuerst und kräftig, der Tag darunter.
+.bars__tip {
+  position: absolute;
+  bottom: calc(100% + 0.375rem);
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 0.625rem;
+  padding: 0.3125rem 0.625rem;
+  background: var(--color-panel2);
+  box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.7);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.bars__tip strong {
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.bars__tip span {
+  font-size: 0.6875rem;
+  color: var(--color-muted);
+}
+
+// ---- Kacheln ----
+.stats-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.stats-tile {
+  margin-bottom: 0.75rem;
+  padding: 0.875rem 1rem;
+}
+
+.stats-tile__label {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.stats-tile__value {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0.25rem 0 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+.stats-tile__sub {
+  margin: 0.125rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-subtle);
+}
+
+.stats-flame {
+  color: rgb(251 146 60 / 0.55);
+}
+
+.stats-flame.is-lit {
+  color: #fb923c;
+}
+
+@media (max-width: 420px) {
+  .stats-tiles {
+    gap: 0.5rem;
+  }
+
+  .stats-tile {
+    padding: 0.75rem;
+  }
+
+  .stats-tile__value {
+    font-size: 1.5rem;
+  }
+}
+
+// ---- Tageszeit: ein Ganzes in drei Teilen ----
+.share {
+  display: flex;
+  height: 28px;
+  gap: 2px;
+}
+
+.share__part {
+  display: flex;
+  min-width: 4px;
+  align-items: center;
+  border-radius: 4px;
+  padding-left: 0.5rem;
+}
+
+.share__part--morning { background: var(--viz-morning); }
+.share__part--afternoon { background: var(--viz-afternoon); }
+.share__part--evening { background: var(--viz-evening); }
+
+.share__value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.share__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+}
+
+.share__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.share__swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
+  border-radius: 3px;
+  padding: 0;
+}
+
+// ---- Meiste Fokuszeit ----
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.top__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.top__icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--viz-focus) 20%, transparent);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.top__icon.is-initial {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.top__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.top__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+.top__time {
+  flex: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+// Ein Meter: die Spur ist eine hellere Stufe derselben Farbe.
+.top__meter {
+  display: block;
+  height: 4px;
+  margin-top: 0.375rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--viz-focus) 18%, transparent);
+}
+
+.top__meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--viz-focus);
+}
+
+// ---- Tage ----
+.days {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.days__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-line);
+  padding: 0.625rem 0;
+}
+
+.days__row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.days__name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.days__blocks {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-subtle);
+}
+
+.days__time {
+  flex: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bars__bar {
+    transition: none;
+  }
+}

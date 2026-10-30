@@ -16,6 +16,7 @@ import {
 } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { FocusTimerService } from '../../services/focus-timer.service';
+import { FocusSessionService } from '../../services/focus-session.service';
 import { Grouping, ListViewService, SortOrder } from '../../services/list-view.service';
 import { completionStreak } from '../../shared/streak';
 import { LabelService } from '../../services/label.service';
@@ -54,8 +55,12 @@ export class TodoStats {
   /** Tage in Folge mit etwas Erledigtem — über alles, nicht nur den Ordner. */
   protected readonly streak = computed(() => completionStreak(this.todoService.withArchive()));
 
-  /** Abgeschlossene Fokus-Sitzungen (Ansicht „Focus"). */
-  protected readonly gems = this.timer.finished;
+  /**
+   * Fokus-Sitzungen: was der Server kennt (aus Flow und von der Webseite),
+   * dazu die ohne Aufgabe, die nur auf diesem Gerät liefen.
+   */
+  private readonly sessions = inject(FocusSessionService);
+  protected readonly gems = computed(() => (this.sessions.sessionCount() ?? 0) + this.timer.finishedLocal());
 
   /** Der grosse Titel: der Ordner, sonst „To-do". */
   protected readonly title = computed(() => this.scopeName() ?? 'To-do');

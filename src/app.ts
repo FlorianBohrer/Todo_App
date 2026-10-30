@@ -25,6 +25,7 @@ import {
   LogOut,
   Search,
   Timer,
+  ChartColumn,
 } from 'lucide-angular';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
@@ -43,6 +44,7 @@ import { FocusTimerService } from './app/todo/services/focus-timer.service';
 import { clock } from './app/todo/shared/focus-dial';
 import { PlansView } from './app/plan/components/plans-view';
 import { FocusView } from './app/todo/components/focus-view/focus-view';
+import { StatsView } from './app/todo/components/stats-view/stats-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
 import { attachChromeTuck } from './app/shared/chrome-tuck';
 import { DevicePairing } from './app/todo/components/device-pairing/device-pairing';
@@ -74,6 +76,7 @@ import type { View } from './app/todo/services/todo';
     DayView,
     PlansView,
     FocusView,
+    StatsView,
     UserAccount,
     DevicePairing,
     LevelBadge,
@@ -141,7 +144,7 @@ export class App {
   );
 
 
-  private static readonly VIEWS: View[] = ['list', 'week', 'plans', 'focus'];
+  private static readonly VIEWS: View[] = ['list', 'week', 'plans', 'focus', 'stats'];
 
   /** Treibt die gleitende Pille im Umschalter — drei gleich breite Laschen. */
   protected readonly viewIndex = computed(() => App.VIEWS.indexOf(this.view()));
@@ -208,6 +211,10 @@ export class App {
       case 'view.focus':
         event.preventDefault();
         this.setView('focus');
+        return;
+      case 'view.stats':
+        event.preventDefault();
+        this.setView('stats');
         return;
       default:
         // help.toggle und die Formatierung gehoeren anderen Komponenten.
@@ -334,6 +341,7 @@ export class App {
   protected readonly WeekIcon = CalendarDays;
   protected readonly PlansIcon = NotebookPen;
   protected readonly FocusIcon = Timer;
+  protected readonly StatsIcon = ChartColumn;
   protected readonly LogoutIcon = LogOut;
   protected readonly SearchIcon = Search;
 
