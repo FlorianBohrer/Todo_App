@@ -30,11 +30,12 @@ import { folderColorClass } from '../../todo/shared/folder-color';
 import { folderIcon } from '../../todo/shared/folder-icon';
 import { scheduleLabel } from '../../todo/shared/schedule';
 import {
-  TOKEN_DESCRIPTION,
-  TOKEN_ICON,
   TitleToken,
   splitTitle,
   tokenClass,
+  tokenDescription,
+  tokenIcon,
+  tokenText,
 } from '../../todo/shared/title-token';
 import { TokenChip } from '../../todo/shared/token-chip';
 import {
@@ -120,8 +121,9 @@ export class SearchPalette {
   protected readonly OpenIcon = Circle;
   protected readonly DoneIcon = CircleCheck;
   protected readonly ArchivedIcon = Archive;
-  protected readonly tokenIcon = TOKEN_ICON;
-  protected readonly tokenDescription = TOKEN_DESCRIPTION;
+  protected readonly tokenIcon = tokenIcon;
+  protected readonly tokenDescription = tokenDescription;
+  protected readonly tokenText = tokenText;
   protected readonly tokenClass = tokenClass;
   protected readonly filterTokens = FILTER_TOKENS;
 

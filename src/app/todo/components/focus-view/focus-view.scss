@@ -1,0 +1,333 @@
+// Die Fokus-Ansicht: ein grosser Ring in der Mitte, darüber der Titel,
+// darunter Start und die Aufgabe. Die Fläche bekommt oben einen Schimmer in
+// der Farbe der Ansicht — wie Abendlicht, nicht wie ein Banner.
+
+:host {
+  position: relative;
+  display: block;
+  // Der Schein darf über die Ansicht hinaus leuchten, aber nie die Seite
+  // verbreitern: sonst zoomt das Telefon heraus.
+  overflow-x: clip;
+}
+
+:host::before {
+  content: '';
+  position: absolute;
+  inset: -6rem 0 auto;
+  z-index: -1;
+  height: 26rem;
+  background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--color-brand-2) 22%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.focus-view {
+  position: relative;
+  display: flex;
+  max-width: 34rem;
+  flex-direction: column;
+  align-items: center;
+  margin-inline: auto;
+  padding: 0 1rem 2rem;
+}
+
+.focus-top {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.focus-chip {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 50%;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0.625rem 1rem;
+  background: color-mix(in srgb, #fff 5%, var(--color-panel1));
+  box-shadow: 0 8px 18px -12px rgb(0 0 0 / 0.7);
+  color: var(--color-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: background-color 140ms ease-out, border-color 140ms ease-out;
+}
+
+.focus-chip:hover {
+  border-color: var(--color-line-strong);
+}
+
+.focus-chip.is-on {
+  border-color: color-mix(in srgb, var(--color-brand-2) 50%, transparent);
+  color: var(--color-brand-2);
+}
+
+.focus-title {
+  margin-top: 2.25rem;
+  text-align: center;
+}
+
+// ---- Rad ----
+.focus-dial {
+  position: relative;
+  width: min(19rem, 82vw);
+  aspect-ratio: 1;
+  margin-top: 1.75rem;
+  border-radius: 999px;
+  outline: none;
+}
+
+.focus-dial:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-2) 55%, transparent);
+}
+
+.focus-dial__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.focus-dial.is-adjustable .focus-dial__svg {
+  cursor: grab;
+  touch-action: none;
+}
+
+.focus-dial.is-adjustable .focus-dial__svg:active {
+  cursor: grabbing;
+}
+
+.focus-dial__track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-brand-2) 16%, transparent);
+  stroke-width: 46;
+}
+
+.focus-dial__arc {
+  fill: none;
+  stroke: var(--color-brand-2);
+  stroke-width: 46;
+  stroke-linecap: round;
+  transition: d 120ms ease-out;
+}
+
+.focus-dial__knob {
+  fill: color-mix(in srgb, #fff 85%, var(--color-brand-2));
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.35));
+}
+
+.focus-dial__knob-dot {
+  fill: var(--color-button);
+}
+
+.focus-dial__face {
+  fill: color-mix(in srgb, #fff 3%, var(--color-panel1));
+  stroke: var(--color-line);
+  stroke-width: 1;
+}
+
+.focus-dial__mark {
+  fill: var(--color-subtle);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-dial__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.focus-dial__big {
+  font-family: "Instrument Serif", ui-serif, Georgia, serif;
+  font-size: clamp(3.5rem, 15vw, 4.5rem);
+  line-height: 1;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-dial__big.is-clock {
+  font-size: clamp(2.75rem, 12vw, 3.5rem);
+}
+
+.focus-dial__sub {
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+// ---- Knöpfe ----
+.focus-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.focus-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 999px;
+  padding: 0.875rem 2rem;
+  background: var(--color-button);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 10px 24px -12px rgb(0 0 0 / 0.8);
+  color: #fff;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  transition: transform 150ms var(--pop), background-color 140ms ease-out;
+}
+
+.focus-button:hover {
+  background: color-mix(in srgb, var(--color-button) 88%, white);
+}
+
+.focus-button:active {
+  transform: scale(0.97);
+  background: var(--color-button-pressed);
+}
+
+.focus-button--ghost {
+  padding: 0.875rem;
+  background: var(--color-fill-strong);
+  box-shadow: none;
+  color: var(--color-text);
+}
+
+.focus-button--ghost:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+
+// ---- Aufgabe ----
+.focus-task {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 1.125rem;
+  padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+  background: color-mix(in srgb, #fff 4%, var(--color-panel1));
+}
+
+.focus-task__icon {
+  display: grid;
+  width: 2.375rem;
+  height: 2.375rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-brand-2) 20%, transparent);
+  font-size: 1.1875rem;
+  line-height: 1;
+}
+
+.focus-task__icon.is-initial {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.focus-task__icon--sm {
+  width: 1.875rem;
+  height: 1.875rem;
+  font-size: 0.9375rem;
+}
+
+.focus-task__title {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.focus-task__title.is-done {
+  text-decoration: line-through;
+  color: var(--color-subtle);
+}
+
+.focus-task__meta {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-subtle);
+}
+
+.focus-task__done,
+.focus-task__clear {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--color-muted);
+}
+
+.focus-task__done {
+  border: 2px solid rgb(255 255 255 / 0.3);
+}
+
+.focus-task__done:hover {
+  border-color: var(--color-ok);
+  color: var(--color-ok);
+}
+
+.focus-task__clear:hover {
+  background: var(--color-fill);
+  color: var(--color-text);
+}
+
+.focus-hint {
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--color-subtle);
+  text-align: center;
+}
+
+// ---- Auswahl der Aufgabe ----
+.focus-picker {
+  width: min(20rem, calc(100vw - 1.5rem));
+  max-height: min(26rem, 70vh);
+  padding: 0.375rem;
+  border-radius: 1.25rem;
+}
+
+.focus-picker__title {
+  margin: 0.375rem 0.75rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-subtle);
+}
+
+.focus-picker__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-dial__arc {
+    transition: none;
+  }
+}

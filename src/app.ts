@@ -24,6 +24,7 @@ import {
   NotebookPen,
   LogOut,
   Search,
+  Timer,
 } from 'lucide-angular';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
@@ -37,8 +38,11 @@ import { FavoriteFolders } from './app/todo/components/favorite-folders/favorite
 import { folderColorClass } from './app/todo/shared/folder-color';
 import { folderIcon } from './app/todo/shared/folder-icon';
 import { splitFolderName } from './app/todo/shared/folder-name';
-import { WeekView } from './app/todo/components/week-view/week-view';
+import { DayView } from './app/todo/components/day-view/day-view';
+import { FocusTimerService } from './app/todo/services/focus-timer.service';
+import { clock } from './app/todo/shared/focus-dial';
 import { PlansView } from './app/plan/components/plans-view';
+import { FocusView } from './app/todo/components/focus-view/focus-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
 import { attachChromeTuck } from './app/shared/chrome-tuck';
 import { DevicePairing } from './app/todo/components/device-pairing/device-pairing';
@@ -67,8 +71,9 @@ import type { View } from './app/todo/services/todo';
     WeeklyReview,
     CategoriesOverlay,
     FavoriteFolders,
-    WeekView,
+    DayView,
     PlansView,
+    FocusView,
     UserAccount,
     DevicePairing,
     LevelBadge,
@@ -104,8 +109,18 @@ export class App {
   protected readonly clerk = inject(ClerkService);
   private readonly shortcuts = inject(ShortcutService);
 
-  /** Aktive Ansicht: Liste, Woche oder Pläne. */
+  /** Aktive Ansicht: Liste, Woche, Pläne oder Fokus. */
   protected readonly view = this.todoService.view;
+
+  /**
+   * Läuft der Fokus-Timer, sieht man es auch ausserhalb seiner Ansicht: am
+   * Rechner steht die Restzeit in der Lasche, auf dem Telefon ein Punkt.
+   */
+  private readonly timer = inject(FocusTimerService);
+  protected readonly timerRunning = computed(() => this.timer.state() === 'running');
+  protected readonly focusLabel = computed(() =>
+    this.timer.state() === 'running' || this.timer.state() === 'paused' ? clock(this.timer.left()) : 'Focus',
+  );
 
   /**
    * Die Hoehe der klebenden Leiste, als CSS-Variable fuer die ganze App.
@@ -126,7 +141,7 @@ export class App {
   );
 
 
-  private static readonly VIEWS: View[] = ['list', 'week', 'plans'];
+  private static readonly VIEWS: View[] = ['list', 'week', 'plans', 'focus'];
 
   /** Treibt die gleitende Pille im Umschalter — drei gleich breite Laschen. */
   protected readonly viewIndex = computed(() => App.VIEWS.indexOf(this.view()));
@@ -189,6 +204,10 @@ export class App {
       case 'view.plans':
         event.preventDefault();
         this.setView('plans');
+        return;
+      case 'view.focus':
+        event.preventDefault();
+        this.setView('focus');
         return;
       default:
         // help.toggle und die Formatierung gehoeren anderen Komponenten.
@@ -314,6 +333,7 @@ export class App {
   protected readonly ListIcon = LayoutList;
   protected readonly WeekIcon = CalendarDays;
   protected readonly PlansIcon = NotebookPen;
+  protected readonly FocusIcon = Timer;
   protected readonly LogoutIcon = LogOut;
   protected readonly SearchIcon = Search;
 

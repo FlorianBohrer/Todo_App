@@ -1,0 +1,170 @@
+<section class="focus-view" aria-label="Focus timer">
+  <!-- Oben links der Klang, oben rechts die Aufgabe. -->
+  <div class="focus-top">
+    <button type="button" class="focus-chip"
+      [class.is-on]="ambience() !== 'off'"
+      cdkOverlayOrigin #soundOrigin="cdkOverlayOrigin"
+      (click)="soundOpen.set(!soundOpen())"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="soundOpen()">
+      <lucide-icon [img]="MusicIcon" class="h-[18px] w-[18px]" aria-hidden="true"></lucide-icon>
+      <span>{{ ambience() === 'off' ? 'Tune in' : soundLabel() }}</span>
+    </button>
+
+    <button type="button" class="focus-chip focus-chip--task"
+      cdkOverlayOrigin #taskOrigin="cdkOverlayOrigin"
+      (click)="pickerOpen.set(!pickerOpen())"
+      aria-haspopup="dialog"
+      [attr.aria-expanded]="pickerOpen()">
+      <lucide-icon [img]="TimerIcon" class="h-[18px] w-[18px]" aria-hidden="true"></lucide-icon>
+      <span class="truncate">{{ task() ? 'Change task' : 'Start focus' }}</span>
+    </button>
+  </div>
+
+  <h1 class="display-title focus-title">Focus</h1>
+
+  <!-- Das Rad. Ziehen stellt die Dauer, Pfeiltasten auch. -->
+  <div class="focus-dial"
+    [class.is-adjustable]="adjustable()"
+    role="slider"
+    tabindex="0"
+    aria-label="Focus length in minutes"
+    [attr.aria-valuemin]="5"
+    [attr.aria-valuemax]="60"
+    [attr.aria-valuenow]="minutes()"
+    [attr.aria-valuetext]="adjustable() ? minutes() + ' minutes' : bigText() + ' left'"
+    [attr.aria-readonly]="!adjustable()"
+    (keydown)="onKey($event)">
+    <svg #dial viewBox="0 0 300 300" class="focus-dial__svg"
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerUp()"
+      (pointercancel)="onPointerUp()">
+      <circle class="focus-dial__track" cx="150" cy="150" r="120" />
+      @if (arc()) {
+        <path class="focus-dial__arc" [attr.d]="arc()" />
+      }
+      @if (adjustable()) {
+        <circle class="focus-dial__knob" [attr.cx]="knob().x" [attr.cy]="knob().y" r="15" />
+        <circle class="focus-dial__knob-dot" [attr.cx]="knob().x" [attr.cy]="knob().y" r="4" />
+      }
+      <circle class="focus-dial__face" cx="150" cy="150" r="96" />
+      @if (adjustable()) {
+        @for (mark of marks; track mark.label) {
+          <text class="focus-dial__mark" [attr.x]="mark.x" [attr.y]="mark.y" text-anchor="middle" dominant-baseline="central">{{ mark.label }}</text>
+        }
+      }
+    </svg>
+    <div class="focus-dial__center" aria-hidden="true">
+      <span class="focus-dial__big" [class.is-clock]="!adjustable()">{{ bigText() }}</span>
+      <span class="focus-dial__sub">{{ subText() }}</span>
+    </div>
+  </div>
+
+  <div class="focus-controls">
+    @switch (state()) {
+      @case ('running') {
+        <button type="button" class="focus-button" (click)="timer.pause()">
+          <span>Pause</span>
+          <lucide-icon [img]="PauseIcon" class="h-5 w-5 fill-current" aria-hidden="true"></lucide-icon>
+        </button>
+        <button type="button" class="focus-button focus-button--ghost" (click)="timer.stop()" aria-label="Stop">
+          <lucide-icon [img]="StopIcon" class="h-4 w-4 fill-current" aria-hidden="true"></lucide-icon>
+        </button>
+      }
+      @case ('paused') {
+        <button type="button" class="focus-button" (click)="timer.start()">
+          <span>Resume</span>
+          <lucide-icon [img]="PlayIcon" class="h-5 w-5 fill-current" aria-hidden="true"></lucide-icon>
+        </button>
+        <button type="button" class="focus-button focus-button--ghost" (click)="timer.stop()" aria-label="Stop">
+          <lucide-icon [img]="StopIcon" class="h-4 w-4 fill-current" aria-hidden="true"></lucide-icon>
+        </button>
+      }
+      @default {
+        <button type="button" class="focus-button" (click)="timer.start()">
+          <span>Start</span>
+          <lucide-icon [img]="PlayIcon" class="h-5 w-5 fill-current" aria-hidden="true"></lucide-icon>
+        </button>
+      }
+    }
+  </div>
+
+  <!-- Die Aufgabe, um die es geht. Nach dem Ende lässt sie sich hier abhaken. -->
+  @if (task(); as t) {
+    <div class="focus-task">
+      <span class="focus-task__icon" [class.is-initial]="t.initial" aria-hidden="true">{{ t.glyph }}</span>
+      <div class="min-w-0 flex-1">
+        <p class="focus-task__title" [class.is-done]="taskDone()">{{ t.title }}</p>
+        <p class="focus-task__meta">
+          {{ taskDone() ? 'Done' : state() === 'running' ? 'Focusing on this' : 'Up next' }}@if (t.minutes) { · {{ formatDuration(t.minutes) }} }
+        </p>
+      </div>
+      @if (!taskDone()) {
+        <button type="button" class="focus-task__done" (click)="completeTask()" aria-label="Mark as done" title="Mark as done">
+          <lucide-icon [img]="CheckIcon" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+        </button>
+      }
+      <button type="button" class="focus-task__clear" (click)="choose(null)" aria-label="No task">
+        <lucide-icon [img]="ClearIcon" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+      </button>
+    </div>
+  } @else {
+    <p class="focus-hint">Pick a task with “Start focus”, or just start the timer.</p>
+  }
+
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="soundOrigin"
+    [cdkConnectedOverlayOpen]="soundOpen()"
+    [cdkConnectedOverlayPositions]="positions"
+    [cdkConnectedOverlayPush]="true"
+    [cdkConnectedOverlayViewportMargin]="12"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    (backdropClick)="soundOpen.set(false)"
+    (overlayKeydown)="$event.key === 'Escape' && soundOpen.set(false)">
+    <div class="popover list-menu" role="menu" aria-label="Background sound">
+      @for (sound of sounds; track sound.value) {
+        <button type="button" role="menuitemradio" class="popover-item list-menu__item"
+          [attr.aria-checked]="ambience() === sound.value"
+          (click)="setSound(sound.value)">
+          <span class="flex-1">{{ sound.label }}</span>
+          @if (ambience() === sound.value) { <span class="text-highlight2">✓</span> }
+        </button>
+      }
+      <p class="list-menu__hint">Generated on your device, nothing is streamed.</p>
+    </div>
+  </ng-template>
+
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="taskOrigin"
+    [cdkConnectedOverlayOpen]="pickerOpen()"
+    [cdkConnectedOverlayPositions]="positionsEnd"
+    [cdkConnectedOverlayPush]="true"
+    [cdkConnectedOverlayViewportMargin]="12"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    (backdropClick)="pickerOpen.set(false)"
+    (overlayKeydown)="$event.key === 'Escape' && pickerOpen.set(false)">
+    <div class="popover focus-picker overflow-y-auto" role="dialog" aria-label="Choose a task">
+      <p class="focus-picker__title">Focus on</p>
+      @for (pick of picks(); track pick.id) {
+        <button type="button" class="popover-item focus-picker__item" (click)="choose(pick)">
+          <span class="focus-task__icon focus-task__icon--sm" [class.is-initial]="pick.initial" aria-hidden="true">{{ pick.glyph }}</span>
+          <span class="min-w-0 flex-1 truncate">{{ pick.title }}</span>
+          @if (pick.minutes) { <span class="text-xs tabular-nums text-subtle">{{ formatDuration(pick.minutes) }}</span> }
+        </button>
+      } @empty {
+        <p class="list-menu__hint">No open tasks. The timer works without one too.</p>
+      }
+      @if (task()) {
+        <button type="button" class="popover-item focus-picker__item text-muted" (click)="choose(null)">
+          <span class="focus-task__icon focus-task__icon--sm" aria-hidden="true">–</span>
+          <span>No task</span>
+        </button>
+      }
+    </div>
+  </ng-template>
+</section>
