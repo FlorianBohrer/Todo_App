@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
 import {
   Check,
@@ -14,6 +14,7 @@ import {
 
 import { TodoService } from '../../services/todo';
 import { Ambience, FocusTimerService } from '../../services/focus-timer.service';
+import { FocusSessionService } from '../../services/focus-session.service';
 import {
   DIAL_MAX,
   DIAL_MIN,
@@ -61,6 +62,34 @@ interface Pick {
 export class FocusView {
   private readonly todoService = inject(TodoService);
   protected readonly timer = inject(FocusTimerService);
+
+  private readonly sessions = inject(FocusSessionService);
+
+  /**
+   * Eine Sitzung, die gerade in Flow läuft (oder auf einem anderen Gerät).
+   * Die eigene erkennt der Timer an ihrer Server-id und zeigt sie nicht
+   * doppelt. Nur angezeigt, nicht gesteuert: Flow führt seinen Timer selbst,
+   * und eine Pause von hier käme dort nicht an.
+   */
+  protected readonly flowSession = computed(() => {
+    const active = this.sessions.active();
+    if (!active || active.id === this.timer.serverId()) return null;
+    return active;
+  });
+
+  private readonly clockNow = signal(Date.now());
+  protected readonly flowLeft = computed(() => {
+    const session = this.flowSession();
+    if (!session) return '';
+    const seconds = session.endsAt === null ? session.remainingSeconds : (session.endsAt - this.clockNow()) / 1000;
+    return clock(seconds);
+  });
+
+  private readonly flowTicker = effect((onCleanup) => {
+    if (!this.flowSession()) return;
+    const id = window.setInterval(() => this.clockNow.set(Date.now()), 1000);
+    onCleanup(() => window.clearInterval(id));
+  });
 
   protected readonly minutes = this.timer.minutes;
   protected readonly state = this.timer.state;

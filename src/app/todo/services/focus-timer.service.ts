@@ -3,6 +3,7 @@ import { DIAL_MAX, DIAL_MIN } from '../shared/focus-dial';
 import { ToastService } from '../../shared/toast.service';
 import { TodoService } from './todo';
 import { stripPriorityPrefix } from '../shared/title-priority';
+import { FocusSessionService } from './focus-session.service';
 
 export type TimerState = 'idle' | 'running' | 'paused' | 'done';
 
@@ -17,10 +18,13 @@ interface Saved {
   /** Rest in Sekunden, solange es pausiert. */
   left: number | null;
   taskId: string | null;
+  /** Die Session auf dem Server, solange eine mit Aufgabe läuft (Flow-Sync). */
+  serverId?: string | null;
 }
 
 const KEY = 'focus.timer';
-const COUNT_KEY = 'focus.finished';
+/** Sitzungen ohne Aufgabe: die kennt nur dieses Gerät, nicht der Server. */
+const COUNT_KEY = 'focus.untracked';
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -46,6 +50,12 @@ function save(key: string, value: unknown): void {
  * Hintergrund bekommt seine Intervalle gedrosselt, und eine mitgezählte Zeit
  * ginge dann nach. Deshalb übersteht er auch ein Neuladen — der Zeitpunkt
  * steht im Speicher des Browsers.
+ *
+ * Mit Aufgabe wird jede Sitzung auf dem Server verbucht, mit denselben
+ * Aufrufen wie Flow: Start, Pause, Fortsetzen, Ende, Abbruch. Dann zählt sie
+ * in Flow unter „Today", an der Aufgabe und in der Statistik — und Flow und
+ * Webseite zeigen dieselben Zahlen. Ohne Aufgabe bleibt sie lokal, wie in
+ * Flow auch: der Server führt Sitzungen je Aufgabe.
  */
 @Injectable({ providedIn: 'root' })
 export class FocusTimerService {
@@ -62,10 +72,15 @@ export class FocusTimerService {
   readonly taskId = signal<string | null>(this.saved.taskId);
   private readonly endsAt = signal<number | null>(this.saved.endsAt);
   private readonly pausedLeft = signal<number | null>(this.saved.left);
+  /** Die eigene Session auf dem Server — null ohne Aufgabe oder ohne Verbindung. */
+  readonly serverId = signal<string | null>(this.saved.serverId ?? null);
   private readonly now = signal(Date.now());
 
-  /** Abgeschlossene Sitzungen, für den Zähler im Kopf der Liste. */
-  readonly finished = signal<number>(load<number>(COUNT_KEY, 0));
+  /**
+   * Abgeschlossene Sitzungen ohne Aufgabe. Die mit Aufgabe zählt der Server
+   * (FocusSessionService.sessionCount), zusammen mit denen aus Flow.
+   */
+  readonly finishedLocal = signal<number>(load<number>(COUNT_KEY, 0));
 
   readonly ambience = signal<Ambience>('off');
 
@@ -90,6 +105,7 @@ export class FocusTimerService {
   private readonly finishListeners = new Set<(taskId: string | null) => void>();
   private readonly toast = inject(ToastService);
   private readonly todos = inject(TodoService);
+  private readonly sessions = inject(FocusSessionService);
 
   constructor() {
     // Beim Neuladen abgelaufen? Dann ist die Sitzung fertig, ohne Gong —
@@ -118,19 +134,32 @@ export class FocusTimerService {
   }
 
   setTask(id: string | null): void {
+    if (id === this.taskId()) return;
     this.taskId.set(id);
+    // Mitten in einer Sitzung die Aufgabe gewechselt: die alte endet auf dem
+    // Server als abgebrochen, die neue beginnt mit der Zeit, die noch übrig ist.
+    const running = this.state() === 'running';
+    if (this.state() === 'running' || this.state() === 'paused') {
+      this.closeServer(false);
+      if (running && id) this.openServer(id, this.left());
+    }
     this.persist();
   }
 
   start(): void {
     this.unlockAudio();
-    const seconds = this.state() === 'paused' ? (this.pausedLeft() ?? this.minutes() * 60) : this.minutes() * 60;
+    const resuming = this.state() === 'paused';
+    const seconds = resuming ? (this.pausedLeft() ?? this.minutes() * 60) : this.minutes() * 60;
     this.endsAt.set(Date.now() + seconds * 1000);
     this.pausedLeft.set(null);
     this.state.set('running');
     this.now.set(Date.now());
     this.startTicking();
     this.persist();
+
+    const serverId = this.serverId();
+    if (resuming && serverId) void this.sessions.resume(serverId);
+    else if (this.taskId()) this.openServer(this.taskId()!, seconds);
   }
 
   pause(): void {
@@ -140,6 +169,8 @@ export class FocusTimerService {
     this.state.set('paused');
     this.stopTicking();
     this.persist();
+    const serverId = this.serverId();
+    if (serverId) void this.sessions.pause(serverId);
   }
 
   /** Abbrechen: zurück auf die eingestellte Dauer, ohne Zählung. */
@@ -148,7 +179,30 @@ export class FocusTimerService {
     this.pausedLeft.set(null);
     this.state.set('idle');
     this.stopTicking();
+    this.closeServer(false);
     this.persist();
+  }
+
+  // ---- Server (Flow-Sync) ----
+
+  private openServer(todoId: string, seconds: number): void {
+    void this.sessions.start(todoId, seconds).then((id) => {
+      // Inzwischen beendet oder gewechselt? Dann gleich wieder schliessen.
+      if (id && (this.state() === 'idle' || this.state() === 'done' || this.taskId() !== todoId)) {
+        void this.sessions.stop(id, false);
+        return;
+      }
+      if (id && this.state() === 'paused') void this.sessions.pause(id);
+      this.serverId.set(id);
+      this.persist();
+    });
+  }
+
+  private closeServer(completed: boolean): void {
+    const id = this.serverId();
+    if (!id) return;
+    this.serverId.set(null);
+    void this.sessions.stop(id, completed);
   }
 
   // ---- Klang ----
@@ -253,8 +307,12 @@ export class FocusTimerService {
     this.pausedLeft.set(null);
     this.state.set('done');
     this.stopTicking();
-    this.finished.update((n) => n + 1);
-    save(COUNT_KEY, this.finished());
+    const tracked = this.serverId() !== null;
+    this.closeServer(true);
+    if (!tracked) {
+      this.finishedLocal.update((n) => n + 1);
+      save(COUNT_KEY, this.finishedLocal());
+    }
     this.persist();
     if (withSound) this.chime();
     if ('vibrate' in navigator) navigator.vibrate?.([120, 80, 120]);
@@ -300,6 +358,7 @@ export class FocusTimerService {
       endsAt: this.endsAt(),
       left: this.pausedLeft(),
       taskId: this.taskId(),
+      serverId: this.serverId(),
     } satisfies Saved);
   }
 }
