@@ -1,59 +1,54 @@
 <!-- Auf dem Telefon derselbe Seitenrand wie Liste und Plaene; mit px-1
      lagen die Tageskarten 4px an der Bildschirmkante. Am Rechner galt das
      noch: bis 1280px klebten Montag und Sonntag am Fensterrand. -->
-<section class="mx-auto w-full max-w-7xl px-3 sm:px-5 lg:px-8">
+<section class="mx-auto w-full max-w-7xl px-3 min-[360px]:px-4 lg:px-8">
 
-  <!-- Wochen-Kopf: wo bin ich, wie steht die Woche, wie komme ich zurück -->
-  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-    <div class="flex min-w-0 items-center gap-2">
-      <button
-        type="button"
-        class="grid h-9 w-9 place-items-center rounded-full border border-line text-muted transition hover:border-line-strong hover:text-text"
-        (click)="prevWeek()" title="Previous week (←)" aria-label="Previous week">
-        <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
-      </button>
-      <button
-        type="button"
-        class="grid h-9 w-9 place-items-center rounded-full border border-line text-muted transition hover:border-line-strong hover:text-text"
-        (click)="nextWeek()" title="Next week (→)" aria-label="Next week">
-        <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
-      </button>
-
-      <div class="ml-1 min-w-0">
-        <span class="block truncate text-lg font-medium leading-tight text-text">{{ rangeLabel() }}</span>
-        <span class="block text-xs leading-tight text-subtle">
-          Week {{ weekNumber() }}
-          <!-- Beim Verplanen der Woche der einzige belastbare Maßstab: was an
-               einem verplanten Tag tatsächlich fertig wurde. -->
-          @if (typicalPerDay() !== null) {
-            · you finish about {{ typicalPerDay() }} a day
-          }
-        </span>
-      </div>
+  <!-- Wochen-Kopf, gebaut wie jede Ansicht (styles.scss, „Eine Spalte, ein
+       Kopf"): der Zeitraum als Titel, darunter links Day/Week (von der
+       Tagesansicht hereingereicht), rechts Blättern und der Weg zurück. -->
+  <div class="view-head">
+    <div class="min-w-0">
+      <h1 class="display-title">{{ rangeLabel() }}</h1>
+      <p class="view-sub">
+        Week {{ weekNumber() }}
+        <!-- Beim Verplanen der Woche der einzige belastbare Maßstab: was an
+             einem verplanten Tag tatsächlich fertig wurde. -->
+        @if (typicalPerDay() !== null) {
+          · you finish about {{ typicalPerDay() }} a day
+        }
+      </p>
     </div>
 
-    <div class="flex items-center gap-3">
-      <!-- Wochenbilanz: dieselbe Sprache wie die Statistik in der Liste -->
-      @if (weekProgress().total > 0) {
-        <div class="hidden items-center gap-2 sm:flex" [attr.aria-label]="weekProgress().done + ' of ' + weekProgress().total + ' done this week'">
-          <div class="h-1.5 w-24 overflow-hidden rounded-full bg-fill-strong">
-            <div class="progress-fill h-full rounded-full bg-emerald-400/80"
-              [style.width.%]="weekProgress().percent"></div>
-          </div>
-          <span class="tabular-nums text-xs text-muted">
-            {{ weekProgress().done }}/{{ weekProgress().total }}
-          </span>
+    <!-- Wochenbilanz: dieselbe Sprache wie die Statistik in der Liste -->
+    @if (weekProgress().total > 0) {
+      <div class="view-head__actions hidden sm:flex" [attr.aria-label]="weekProgress().done + ' of ' + weekProgress().total + ' done this week'">
+        <div class="h-1.5 w-24 overflow-hidden rounded-full bg-fill-strong">
+          <div class="progress-fill h-full rounded-full bg-emerald-400/80"
+            [style.width.%]="weekProgress().percent"></div>
         </div>
-      }
+        <span class="tabular-nums text-xs text-muted">
+          {{ weekProgress().done }}/{{ weekProgress().total }}
+        </span>
+      </div>
+    }
+  </div>
 
+  <div class="view-bar">
+    <ng-content />
+    <div class="ml-auto flex items-center gap-2">
       @if (!isCurrentWeek()) {
-        <button
-          type="button"
-          class="rounded-full border border-indigo-500/60 px-3 py-1.5 text-sm text-indigo-300 transition hover:border-indigo-400 hover:text-indigo-200"
-          (click)="goToday()" title="Jump to the current week (T)">
+        <button type="button" class="view-action" (click)="goToday()" title="Jump to the current week (T)">
           Today
         </button>
       }
+      <div class="view-nav">
+        <button type="button" class="view-nav__arrow" (click)="prevWeek()" title="Previous week (←)" aria-label="Previous week">
+          <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
+        </button>
+        <button type="button" class="view-nav__arrow" (click)="nextWeek()" title="Next week (→)" aria-label="Next week">
+          <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
+        </button>
+      </div>
     </div>
   </div>
 

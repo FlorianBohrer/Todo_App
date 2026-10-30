@@ -603,26 +603,6 @@
 
 
 // ---- Umschalter Notes / Graph ----
-.mode-tab {
-  border-radius: 9999px;
-  padding: 0.3rem 0.85rem;
-  font-size: 0.8125rem;
-  color: var(--color-muted);
-  transition: background-color 130ms ease-out, color 130ms ease-out;
-}
-
-
-.mode-tab:hover {
-  color: var(--color-text);
-}
-
-
-.mode-tab--active {
-  background-color: var(--plan-accent-soft);
-  color: var(--plan-accent);
-}
-
-
 // ---- Geteilter Knopf: neuer Plan, leer oder aus einer Datei ----
 //
 // Der Fokusring liegt um das Ganze. Ein Rechteck um eine Hälfte schnitte
@@ -820,7 +800,6 @@
 
 // Rueckmeldung auf den Druck, nicht erst auf das Loslassen.
 .block-menu-item,
-.mode-tab,
 .slash-item,
 .block-add {
   transition: transform 110ms var(--spring),
@@ -830,7 +809,6 @@
 
 
 .block-menu-item:active,
-.mode-tab:active,
 .slash-item:active,
 .block-add:active {
   transform: scale(0.97);
@@ -864,7 +842,6 @@
   }
 
   .block-menu-item:active,
-  .mode-tab:active,
   .slash-item:active,
   .block-add:active,
   .todo-box:active,
@@ -958,10 +935,6 @@
 // Umschalter und Filter sind 28px hoch — mit dem Daumen ein Ratespiel. Auf
 // Touch bekommen sie Hoehe, die Schrift bleibt.
 @media (pointer: coarse) {
-  .mode-tab {
-    padding-block: 0.5rem;
-  }
-
   .folder-filter {
     padding-block: 0.45rem;
   }

@@ -146,15 +146,16 @@
 }
 
 .focus-dial__big {
-  font-family: "Instrument Serif", ui-serif, Georgia, serif;
-  font-size: clamp(3.5rem, 15vw, 4.5rem);
+  font-size: clamp(3rem, 13vw, 4rem);
+  font-weight: 600;
   line-height: 1;
+  letter-spacing: -0.03em;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
 .focus-dial__big.is-clock {
-  font-size: clamp(2.75rem, 12vw, 3.5rem);
+  font-size: clamp(2.5rem, 11vw, 3.125rem);
 }
 
 .focus-dial__sub {
