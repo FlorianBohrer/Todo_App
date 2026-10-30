@@ -1,33 +1,46 @@
 <section class="day-view" aria-label="Calendar">
-  <div class="day-top" [class.day-top--week]="mode() === 'week'">
-    <div class="day-mode" role="group" aria-label="Show a day or the week">
-      <button type="button" class="day-mode__option" [class.is-active]="mode() === 'day'"
+  <!-- Day/Week steht in beiden Modi an derselben Stelle: links in der Leiste
+       unter dem Titel, wie Week/Month in der Statistik. Vorher stand es als
+       eigene Zeile über dem Titel, und in der Woche 16px neben der Kante. -->
+  <ng-template #modeToggle>
+    <div class="segmented" role="group" aria-label="Show a day or the week">
+      <button type="button" class="segmented__option" [class.is-active]="mode() === 'day'"
         [attr.aria-pressed]="mode() === 'day'" (click)="setMode('day')">Day</button>
-      <button type="button" class="day-mode__option" [class.is-active]="mode() === 'week'"
+      <button type="button" class="segmented__option" [class.is-active]="mode() === 'week'"
         [attr.aria-pressed]="mode() === 'week'" (click)="setMode('week')">Week</button>
     </div>
-    @if (mode() === 'day' && !isToday()) {
-      <button type="button" class="day-today" (click)="goToday()">Today</button>
-    }
-  </div>
+  </ng-template>
 
   @if (mode() === 'week') {
-    <app-week-view />
+    <app-week-view>
+      <ng-container *ngTemplateOutlet="modeToggle" />
+    </app-week-view>
   } @else {
-    <div class="day-body">
-      <div class="day-head">
-        <h1 class="display-title">{{ weekday() }}</h1>
-        <div class="day-month">
-          <button type="button" class="day-month__arrow" (click)="shiftWeek(-1)" aria-label="Previous week">
+    <div class="day-body page-column">
+      <div class="view-head">
+        <div class="min-w-0">
+          <h1 class="display-title">{{ weekday() }}</h1>
+          <p class="view-sub tabular-nums">{{ summary() }}</p>
+        </div>
+        @if (!isToday()) {
+          <div class="view-head__actions">
+            <button type="button" class="view-action" (click)="goToday()">Today</button>
+          </div>
+        }
+      </div>
+
+      <div class="view-bar">
+        <ng-container *ngTemplateOutlet="modeToggle" />
+        <div class="view-nav">
+          <button type="button" class="view-nav__arrow" (click)="shiftWeek(-1)" aria-label="Previous week">
             <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
           </button>
-          <span class="day-month__label">{{ monthLabel() }}</span>
-          <button type="button" class="day-month__arrow" (click)="shiftWeek(1)" aria-label="Next week">
+          <span class="view-nav__label">{{ monthLabel() }}</span>
+          <button type="button" class="view-nav__arrow" (click)="shiftWeek(1)" aria-label="Next week">
             <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
           </button>
         </div>
       </div>
-      <p class="day-summary tabular-nums">{{ summary() }}</p>
 
       <!-- Die Woche als Leiste: ein Tipp wählt den Tag. Ein Punkt sagt, dass
            an dem Tag noch etwas offen ist. -->

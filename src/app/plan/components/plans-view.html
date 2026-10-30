@@ -2,7 +2,7 @@
      laesst sich nicht zu Ende lesen, ohne dass man den Kopf senkt — und beim
      Schreiben will man die Zeile, an der man ist, in der Mitte haben, nicht
      ganz unten. -->
-<section class="w-full px-1 pb-32">
+<section class="w-full pb-32">
 
   @if (selected(); as plan) {
     <!-- Drei Spalten: Blindspalte, Inhalt, Outline. Die Outline steht rechts
@@ -10,7 +10,7 @@
          bleibt die Textspalte mittig im Fenster statt nach links zu rutschen.
          Beide belegen ihre Breite immer, damit nichts springt, sobald die
          erste Überschrift entsteht. -->
-    <div class="mx-auto flex w-full max-w-[72rem] gap-8">
+    <div class="mx-auto flex w-full max-w-[72rem] gap-8 px-1">
       <div class="outline-spacer"></div>
 
       <!-- Wie breit dieser Bereich ist, steht als --doc-w daran (siehe
@@ -427,7 +427,7 @@
     <!-- Dateien darf man auch einfach fallen lassen. Das Ziehen der Kacheln
          laeuft ueber Zeigerereignisse und kommt sich damit nicht in die
          Quere: hier reagiert nur, was Dateien mitbringt. -->
-    <div class="relative mx-auto w-full max-w-3xl px-3 sm:px-0"
+    <div class="relative page-column"
       (dragenter)="onFileDragEnter($event)"
       (dragover)="onFileDragOver($event)"
       (dragleave)="onFileDragLeave($event)"
@@ -443,30 +443,17 @@
       </div>
     }
 
-    <div class="mb-5 flex flex-wrap items-center gap-3">
-      <h2 class="text-lg font-medium text-text">Plans</h2>
-
-      <!-- Kacheln oder Graph. Der Graph lohnt erst, wenn verlinkt wurde —
-           deshalb bleibt die Liste die Voreinstellung. -->
-      <div class="flex items-center rounded-full border border-line p-0.5" role="tablist">
-        <button type="button" role="tab"
-          class="mode-tab"
-          [class.mode-tab--active]="overviewMode() === 'list'"
-          [attr.aria-selected]="overviewMode() === 'list'"
-          (click)="setOverviewMode('list')">Notes</button>
-        <button type="button" role="tab"
-          class="mode-tab"
-          [class.mode-tab--active]="overviewMode() === 'graph'"
-          [attr.aria-selected]="overviewMode() === 'graph'"
-          (click)="setOverviewMode('graph')">Graph</button>
-      </div>
+    <!-- Der Kopf wie in jeder Ansicht (styles.scss, „Eine Spalte, ein
+         Kopf"): der Titel gross, die Aktionen rechts. -->
+    <div class="view-head">
+      <h1 class="display-title">Plans</h1>
+      <div class="view-head__actions">
 
       <!-- Der Weg nach draussen. Steht neben „New plan", weil beides dasselbe
            Thema hat: was aus diesen Notizen wird. -->
       @if (plans().length) {
         <button type="button" cdkOverlayOrigin #exportAnchor="cdkOverlayOrigin"
-          class="ml-auto inline-flex items-center gap-2 rounded-full border border-line px-3 py-2
-                 text-sm text-muted transition hover:border-line-strong hover:text-text"
+          class="view-action"
           (click)="openExport()"
           [attr.aria-expanded]="exportOpen()" aria-haspopup="dialog">
           <lucide-icon [img]="ExportIcon" class="h-4 w-4"></lucide-icon>
@@ -549,12 +536,12 @@
       <!-- Die Haelften runden sich selbst, statt dass der Rahmen sie
            beschneidet: ein abgeschnittener Fokusring waere der Preis, und
            die Tastatur soll hier genauso zu sehen sein wie ueberall sonst. -->
-      <div class="split-button flex flex-none items-stretch rounded-full bg-button1 text-sm font-medium text-white"
-        [class.ml-auto]="!plans().length">
+      <div class="split-button flex h-9 flex-none items-stretch rounded-full bg-button1 text-sm font-medium text-white">
         <button type="button"
-          class="inline-flex items-center gap-2 rounded-l-full py-2 pl-4 pr-3 transition hover:bg-white/15"
+          class="inline-flex items-center gap-2 rounded-l-full pl-4 pr-3 transition hover:bg-white/15"
           (click)="newPlan()">
-          <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon> New plan
+          <lucide-icon [img]="PlusIcon" class="h-4 w-4"></lucide-icon>
+          <span>New<span class="max-[359px]:hidden"> plan</span></span>
         </button>
 
         <span class="my-1.5 w-px flex-none bg-white/25" aria-hidden="true"></span>
@@ -613,15 +600,31 @@
           </button>
         </div>
       </ng-template>
+      </div>
     </div>
 
-    <!-- Suche und Folder-Filter. Nur für die Kacheln: der Graph lebt von den
-         Verbindungen, und ein halber Graph zeigt Inseln, die keine sind. -->
+    <!-- Darunter die Leiste: links Notizen oder Graph, dann Suche und
+         Reihenfolge. Suche und Folder-Filter gibt es nur für die Kacheln:
+         der Graph lebt von den Verbindungen, und ein halber Graph zeigt
+         Inseln, die keine sind. Auf dem Telefon rückt die Suche in eine
+         eigene Zeile, Umschalter und Reihenfolge bleiben oben. -->
+    <div class="view-bar">
+      <div class="segmented" role="tablist" aria-label="Show plans as">
+        <button type="button" role="tab"
+          class="segmented__option"
+          [class.is-active]="overviewMode() === 'list'"
+          [attr.aria-selected]="overviewMode() === 'list'"
+          (click)="setOverviewMode('list')">Notes</button>
+        <button type="button" role="tab"
+          class="segmented__option"
+          [class.is-active]="overviewMode() === 'graph'"
+          [attr.aria-selected]="overviewMode() === 'graph'"
+          (click)="setOverviewMode('graph')">Graph</button>
+      </div>
+
     @if (overviewMode() === 'list' && !loading() && plans().length > 0) {
-      <div class="mb-4 flex flex-col gap-3">
-        <div class="flex items-center gap-2">
-        <div class="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-line bg-bg2 px-3
-                    transition focus-within:border-line-strong">
+        <div class="order-3 flex h-10 min-w-0 basis-full items-center gap-2.5 rounded-lg border border-line bg-bg2 px-3
+                    transition focus-within:border-line-strong sm:order-none sm:basis-auto sm:flex-1">
           <lucide-icon [img]="SearchIcon" class="h-4 w-4 flex-none text-subtle" aria-hidden="true"></lucide-icon>
           <input
             #planSearch
@@ -644,17 +647,19 @@
         <!-- Reihenfolge: die eigene (ziehen) oder zuletzt bearbeitet zuerst
              — mit vielen Plaenen sucht man fast immer den, an dem man gestern
              war. Die Wahl merkt sich der Browser. -->
-        <label class="overview-sort">
+        <label class="overview-sort ml-auto sm:ml-0">
           <lucide-icon [img]="SortIcon" class="h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
           <select (change)="setOverviewSort($any($event.target).value)" aria-label="Sort plans">
             <option value="custom" [selected]="overviewSort() === 'custom'">Custom order</option>
             <option value="recent" [selected]="overviewSort() === 'recent'">Last edited</option>
           </select>
         </label>
-        </div>
+    }
+    </div>
 
+    @if (overviewMode() === 'list' && !loading() && plans().length > 0) {
         @if (folderFilters().length > 0) {
-          <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by folder">
+          <div class="mb-4 flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by folder">
             <button type="button"
               class="folder-filter"
               [class.folder-filter--active]="overviewFolder() === ALL_FOLDERS"
@@ -677,7 +682,6 @@
             }
           </div>
         }
-      </div>
     }
 
     @if (overviewMode() === 'graph') {

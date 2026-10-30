@@ -46,12 +46,14 @@
        nicht als Utilities hier: sie haengen voneinander ab, und die drei
        prefers-Abfragen muessen sie gemeinsam umschalten koennen. -->
   <div #chrome class="app-chrome sticky top-0 z-10 mb-6 w-full">
-    <div class="mx-auto w-full max-w-3xl px-5 py-2.5">
+    <!-- Dieselbe Spalte wie die Ansichten darunter (.page-column): die
+         Ordner-Pille steht bündig über der Karte, nicht 20px eingerückt. -->
+    <div class="page-column py-2.5">
       <!-- Auf dem Telefon EINE Zeile: Folder-Knopf, Suche, Level. Die drei
            Ansichten stehen dort unten in der Leiste (.bottom-nav) — oben
            blieben dem Folder-Knopf neben Laschen, Suche und Level noch 50px,
            also nur sein Symbol, und bei 320px ragte das Level ueber den Rand. -->
-      <div class="flex items-center gap-2 sm:flex-wrap">
+      <div class="flex items-center gap-2">
         <!-- Der Knopf sagt, welcher Folder offen ist.
              Vorher stand hier das Wort „Folders" und darueber, 48 Pixel hoch,
              der Name: zwei Elemente fuer eine Auskunft, und die Ueberschrift
@@ -59,13 +61,13 @@
              ein Wort, das man gerade selbst ausgewaehlt hat. Ein Auswahlfeld,
              das seinen Wert zeigt, braucht keine Ueberschrift daneben. -->
         <button
-          class="folder-pill inline-flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition sm:flex-none sm:px-4"
+          class="folder-pill inline-flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full border px-3.5 text-sm font-medium transition sm:px-4 md:flex-none"
           [class]="folderPillClass()"
           (click)="openCategories()"
           [title]="folderTitle()"
           aria-label="Open folders">
           <lucide-icon [img]="titleIcon()" class="h-4 w-4 flex-none"></lucide-icon>
-          <span class="min-w-0 flex-1 truncate text-left sm:max-w-[10rem] sm:flex-none">{{ title() }}</span>
+          <span class="min-w-0 flex-1 truncate text-left md:max-w-[10rem] md:flex-none">{{ title() }}</span>
           <!-- Unter 360px fehlt der Platz: dort sagt der Name mehr als der Pfeil. -->
           <lucide-icon [img]="ArrowDown" class="h-3.5 w-3.5 flex-none opacity-60 max-[359px]:hidden"></lucide-icon>
         </button>
@@ -73,55 +75,57 @@
         <!-- Ansicht umschalten: Liste ↔ Woche ↔ Pläne. Dieselbe gleitende Pille
              wie bei den Filtern — drei gleich breite Laschen, --tab-count sagt es.
              Gleiche Höhe wie der Folders-Knopf, damit die Leiste eine Linie hat;
-             Symbole, weil man drei Ansichten am Bild schneller trifft als am Wort. -->
+             Symbole, weil man drei Ansichten am Bild schneller trifft als am Wort.
+             Zwischen 640 und 768px nur die Symbole: mit Wörtern brach die
+             Leiste dort in zwei Zeilen um. -->
         <div class="filter-tabs hidden h-10 flex-none gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm sm:flex"
           role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="5">
           <span class="filter-pill" aria-hidden="true"></span>
 
           <button type="button" role="tab"
-            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
+            class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
             [class.is-active]="view() === 'list'"
             [attr.aria-selected]="view() === 'list'"
-            title="List view (1)"
+            title="List view (1)" aria-label="List"
             (click)="setView('list')">
             <lucide-icon [img]="ListIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span>List</span>
+            <span class="hidden md:inline">List</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
+            class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
             [class.is-active]="view() === 'week'"
             [attr.aria-selected]="view() === 'week'"
-            title="Week view (2)"
+            title="Week view (2)" aria-label="Week"
             (click)="setView('week')">
             <lucide-icon [img]="WeekIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span>Week</span>
+            <span class="hidden md:inline">Week</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
+            class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
             [class.is-active]="view() === 'plans'"
             [attr.aria-selected]="view() === 'plans'"
-            title="Plans view (3)"
+            title="Plans view (3)" aria-label="Plans"
             (click)="setView('plans')">
             <lucide-icon [img]="PlansIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span>Plans</span>
+            <span class="hidden md:inline">Plans</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
+            class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
             [class.is-active]="view() === 'focus'"
             [attr.aria-selected]="view() === 'focus'"
-            title="Focus timer (4)"
+            title="Focus timer (4)" aria-label="Focus"
             (click)="setView('focus')">
             <lucide-icon [img]="FocusIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span class="tabular-nums">{{ focusLabel() }}</span>
+            <span class="hidden tabular-nums md:inline">{{ focusLabel() }}</span>
           </button>
           <button type="button" role="tab"
-            class="filter-tab flex w-[4.75rem] items-center justify-center gap-1 rounded-full text-[13px]"
+            class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
             [class.is-active]="view() === 'stats'"
             [attr.aria-selected]="view() === 'stats'"
-            title="Stats (5)"
+            title="Stats (5)" aria-label="Stats"
             (click)="setView('stats')">
             <lucide-icon [img]="StatsIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span>Stats</span>
+            <span class="hidden md:inline">Stats</span>
           </button>
         </div>
 
@@ -144,7 +148,7 @@
 
         <!-- Der Weg zu den Kürzeln, für alle, die „?" nicht raten. -->
         <button type="button"
-          class="hidden h-10 w-10 place-items-center rounded-full border border-line text-sm text-muted transition hover:border-line-strong hover:text-text sm:grid"
+          class="hidden h-10 w-10 place-items-center rounded-full border border-line text-sm text-muted transition hover:border-line-strong hover:text-text md:grid"
           (click)="shortcuts.toggle()"
           title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
       </div>
@@ -164,19 +168,19 @@
       @defer (on immediate) {
         <div class="view-swap"><app-stats-view></app-stats-view></div>
       } @placeholder {
-        <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening stats…</p>
+        <p class="page-column text-sm text-subtle">Opening stats…</p>
       }
     } @else if (view() === 'focus') {
       @defer (on immediate) {
         <div class="view-swap"><app-focus-view></app-focus-view></div>
       } @placeholder {
-        <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening focus…</p>
+        <p class="page-column text-sm text-subtle">Opening focus…</p>
       }
     } @else if (view() === 'plans') {
       @defer (on immediate) {
         <div class="view-swap"><app-plans-view></app-plans-view></div>
       } @placeholder {
-        <p class="mx-auto max-w-3xl px-5 text-sm text-subtle">Opening plans…</p>
+        <p class="page-column text-sm text-subtle">Opening plans…</p>
       }
     } @else if (view() === 'week') {
       @defer (on immediate) {
@@ -190,7 +194,7 @@
            Rand angeschnitten — das sah nach Versehen aus. Auf breiten
            Bildschirmen wirkt der Rand nicht: dort ist max-w-3xl schmaler als
            das Fenster. -->
-      <div class="view-swap px-3 min-[360px]:px-4">
+      <div class="view-swap page-column">
         <app-favorite-folders></app-favorite-folders>
 
         <!-- EINE Flaeche, und darauf Inhalt.

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
 import {
   ChevronDown,
@@ -86,7 +87,7 @@ function readMode(): Mode {
  */
 @Component({
   selector: 'app-day-view',
-  imports: [LucideAngularModule, OverlayModule, TokenChip, WeekView],
+  imports: [LucideAngularModule, NgTemplateOutlet, OverlayModule, TokenChip, WeekView],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './day-view.html',
   styleUrl: './day-view.scss',
@@ -117,7 +118,7 @@ export class DayView {
     fromISODate(this.selected()).toLocaleDateString('en-US', { weekday: 'long' }),
   );
   protected readonly monthLabel = computed(() =>
-    fromISODate(this.selected()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(),
+    fromISODate(this.selected()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
   );
 
   private readonly openCounts = computed(() => openPerDay(this.todoService.allTodos()));

@@ -1,7 +1,7 @@
-<section class="stats-view" aria-label="Stats">
-  <div class="stats-head">
+<section class="stats-view page-column" aria-label="Stats">
+  <div class="view-head">
     <h1 class="display-title">Stats</h1>
-    <button type="button" class="stats-csv" (click)="exportCSV()" [disabled]="worked().length === 0"
+    <button type="button" class="view-action" (click)="exportCSV()" [disabled]="worked().length === 0"
       title="Download the focus hours of this period as a timesheet">
       <lucide-icon [img]="DownloadIcon" class="h-4 w-4" aria-hidden="true"></lucide-icon>
       CSV
@@ -9,20 +9,20 @@
   </div>
 
   <!-- Zeitraum: eine Zeile über allem, was darunter steht. -->
-  <div class="stats-filters">
-    <div class="stats-span" role="group" aria-label="Period">
-      <button type="button" class="stats-span__option" [class.is-active]="span() === 'week'"
+  <div class="view-bar">
+    <div class="segmented" role="group" aria-label="Period">
+      <button type="button" class="segmented__option" [class.is-active]="span() === 'week'"
         [attr.aria-pressed]="span() === 'week'" (click)="setSpan('week')">Week</button>
-      <button type="button" class="stats-span__option" [class.is-active]="span() === 'month'"
+      <button type="button" class="segmented__option" [class.is-active]="span() === 'month'"
         [attr.aria-pressed]="span() === 'month'" (click)="setSpan('month')">Month</button>
     </div>
-    <div class="stats-period">
-      <button type="button" class="stats-period__arrow" (click)="shift(-1)" [disabled]="!canGoBack()"
+    <div class="view-nav">
+      <button type="button" class="view-nav__arrow" (click)="shift(-1)" [disabled]="!canGoBack()"
         [attr.aria-label]="'Previous ' + span()">
         <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
       </button>
-      <span class="stats-period__label">{{ title() }}</span>
-      <button type="button" class="stats-period__arrow" (click)="shift(1)" [disabled]="offset() === 0"
+      <span class="view-nav__label">{{ title() }}</span>
+      <button type="button" class="view-nav__arrow" (click)="shift(1)" [disabled]="offset() === 0"
         [attr.aria-label]="'Next ' + span()">
         <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
       </button>
