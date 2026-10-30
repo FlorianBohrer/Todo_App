@@ -105,12 +105,12 @@ li.todo-expanded-row {
 .todo-detail {
   margin-top: 0.125rem;
   padding-left: 0.875rem;
-  border-left: 1px solid rgb(255 255 255 / 12%);
+  border-left: 1px solid rgb(var(--ink) / 12%);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: rgb(255 255 255 / 62%);
+  color: rgb(var(--ink) / 62%);
 }
 
 // Die Meta-Zeile: Dauer, Tageszeit, Termin, Fortschritt. Leise, klein, in
@@ -403,7 +403,7 @@ li.todo-expanded-row {
 
 @media (hover: hover) and (min-width: 640px) {
   .todo-card {
-    --row-surface: color-mix(in srgb, #fff 5%, var(--color-panel1));
+    --row-surface: color-mix(in srgb, rgb(var(--lift)) 5%, var(--color-panel1));
   }
 
   .todo-card.todo-target {
@@ -707,9 +707,9 @@ li.todo-expanded-row {
 }
 
 .todo-grouping__option.is-active {
-  background: var(--color-fill-strong);
+  background: var(--color-thumb);
   color: var(--color-text);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  box-shadow: 0 1px 2px rgb(var(--shadow) / calc(0.25 * var(--shadow-k)));
 }
 
 @media (pointer: coarse) {
@@ -925,8 +925,8 @@ li.todo-expanded-row {
    Anlegen einlädt. Getrennt wird mit Luft, nicht mit Linien.
    ================================================================ */
 .todo-cards {
-  --card-surface: color-mix(in srgb, #fff 4%, var(--color-panel1));
-  --card-surface-hover: color-mix(in srgb, #fff 7%, var(--color-panel1));
+  --card-surface: color-mix(in srgb, rgb(var(--lift)) 4%, var(--color-panel1));
+  --card-surface-hover: color-mix(in srgb, rgb(var(--lift)) 7%, var(--color-panel1));
 }
 
 .todo-card:not(.todo-sub):not(.todo-add-step) {
@@ -935,7 +935,7 @@ li.todo-expanded-row {
   border-radius: 1.125rem;
   padding: 0.75rem 0.75rem 0.75rem 0.875rem;
   background: var(--card-surface);
-  box-shadow: 0 8px 18px -14px rgb(0 0 0 / 0.7);
+  box-shadow: 0 8px 18px -14px rgb(var(--shadow) / calc(0.7 * var(--shadow-k)));
 }
 
 .todo-card:not(.todo-sub):not(.todo-add-step):hover {
@@ -1022,7 +1022,7 @@ li.todo-expanded-row {
   height: 1.625rem;
   margin-left: 0.25rem;
   border-width: 2px;
-  border-color: rgb(255 255 255 / 0.32);
+  border-color: rgb(var(--ink) / 0.32);
 }
 
 .todo-card.todo-sub > .todo-checkbox {
@@ -1081,12 +1081,12 @@ li.todo-expanded-row {
   --pill-fg: var(--color-brand-2);
 }
 
-.todo-section--tint-neutral .todo-pill { --pill-bg: rgb(255 255 255 / 0.07); --pill-fg: var(--color-muted); }
-.todo-section--tint-rose .todo-pill { --pill-bg: rgb(244 63 94 / 0.16); --pill-fg: #fda4af; }
-.todo-section--tint-peach .todo-pill { --pill-bg: rgb(251 146 60 / 0.16); --pill-fg: #fdba74; }
-.todo-section--tint-sky .todo-pill { --pill-bg: rgb(56 189 248 / 0.15); --pill-fg: #7dd3fc; }
-.todo-section--tint-violet .todo-pill { --pill-bg: rgb(167 139 250 / 0.17); --pill-fg: #c4b5fd; }
-.todo-section--tint-teal .todo-pill { --pill-bg: rgb(45 212 191 / 0.15); --pill-fg: #5eead4; }
+.todo-section--tint-neutral .todo-pill { --pill-bg: var(--tint-neutral-bg); --pill-fg: var(--tint-neutral-fg); }
+.todo-section--tint-rose .todo-pill { --pill-bg: var(--tint-rose-bg); --pill-fg: var(--tint-rose-fg); }
+.todo-section--tint-peach .todo-pill { --pill-bg: var(--tint-peach-bg); --pill-fg: var(--tint-peach-fg); }
+.todo-section--tint-sky .todo-pill { --pill-bg: var(--tint-sky-bg); --pill-fg: var(--tint-sky-fg); }
+.todo-section--tint-violet .todo-pill { --pill-bg: var(--tint-violet-bg); --pill-fg: var(--tint-violet-fg); }
+.todo-section--tint-teal .todo-pill { --pill-bg: var(--tint-teal-bg); --pill-fg: var(--tint-teal-fg); }
 
 .todo-section {
   padding-top: 0.875rem;
@@ -1123,7 +1123,7 @@ li.todo-expanded-row {
 }
 
 .todo-empty-slot__button:hover {
-  border-color: rgb(255 255 255 / 0.36);
+  border-color: rgb(var(--ink) / 0.36);
   color: var(--color-muted);
 }
 
@@ -1213,7 +1213,7 @@ li.todo-expanded-row {
   border: 1px solid var(--color-line);
   border-radius: 1.125rem;
   padding: 0.625rem 0.625rem 0.625rem 0.875rem;
-  background: color-mix(in srgb, #fff 2.5%, var(--color-panel1));
+  background: color-mix(in srgb, rgb(var(--lift)) 2.5%, var(--color-panel1));
 }
 
 .suggest__icon {

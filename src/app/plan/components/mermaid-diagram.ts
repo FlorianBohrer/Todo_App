@@ -21,6 +21,7 @@ import {
   polishDiagram,
   screenFit,
 } from '../diagram-theme';
+import { ThemeService } from '../../shared/theme.service';
 import { scrollEdges } from '../scroll-edges.directive';
 
 /**
@@ -56,6 +57,15 @@ function applyTheme(mermaid: typeof import('mermaid').default, at: HTMLElement):
     muted: token('--color-muted', DIAGRAM_PALETTE.muted),
     subtle: token('--color-subtle', DIAGRAM_PALETTE.subtle),
     accent: token('--color-brand-2', DIAGRAM_PALETTE.accent),
+    // Kästen, Linien und Schatten stehen nur im hellen Theme als Token
+    // (styles.scss, --diagram-*); im dunklen gilt die Palette selbst.
+    node: token('--diagram-node', DIAGRAM_PALETTE.node),
+    raised: token('--diagram-raised', DIAGRAM_PALETTE.raised),
+    border: token('--diagram-border', DIAGRAM_PALETTE.border),
+    wire: token('--diagram-wire', DIAGRAM_PALETTE.wire),
+    row: token('--diagram-row', DIAGRAM_PALETTE.row),
+    shadow: token('--shadow', DIAGRAM_PALETTE.shadow),
+    dark: css.colorScheme !== 'light',
   });
 
   const key = JSON.stringify(config);
@@ -304,12 +314,15 @@ export class MermaidDiagram {
   /** Laufende Nummer, damit ein spaet zurueckkehrendes Rendern nicht ein
    *  neueres ueberschreibt. */
   private renderSeq = 0;
+  private readonly theme = inject(ThemeService);
   private readonly uid = Math.random().toString(36).slice(2, 9);
   private rendered = false;
 
   constructor() {
     effect((onCleanup) => {
       const code = this.code().trim();
+      // Hell oder dunkel: die Farben stehen in der SVG, also neu zeichnen.
+      this.theme.theme();
 
       // Der erste Aufbau soll sofort dastehen; erst beim Tippen wird entprellt,
       // sonst flackert das Diagramm bei jedem Zeichen.
