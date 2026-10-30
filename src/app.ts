@@ -59,6 +59,8 @@ import { ShortcutsOverlay } from './app/shared/shortcuts-overlay';
 import { isTypingTarget } from './app/todo/shared/keyboard';
 import { ShortcutService } from './app/shared/shortcut.service';
 import { formatBinding } from './app/shared/shortcuts';
+import { ThemeService } from './app/shared/theme.service';
+import { ThemeSwitch } from './app/shared/theme-switch';
 import type { View } from './app/todo/services/todo';
 
 @Component({
@@ -86,6 +88,7 @@ import type { View } from './app/todo/services/todo';
     LucideAngularModule,
     ToastContainer,
     ShortcutsOverlay,
+    ThemeSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',
@@ -109,6 +112,8 @@ export class App {
   private readonly todoService = inject(TodoService);
   /** Der offene Folder in der Adresse (my-todo.app/work). Muss nur leben. */
   private readonly folderRoute = inject(FolderRoute);
+  /** Hell oder dunkel, auch vor dem Anmelden. Muss nur leben. */
+  private readonly theme = inject(ThemeService);
   protected readonly clerk = inject(ClerkService);
   private readonly shortcuts = inject(ShortcutService);
 

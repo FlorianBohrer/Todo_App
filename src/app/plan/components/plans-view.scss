@@ -62,8 +62,8 @@
 .drop-preview {
   height: 2.25rem;
   border-radius: 0.5rem;
-  border: 1px dashed rgb(255 255 255 / 0.28);
-  background: rgb(255 255 255 / 0.05);
+  border: 1px dashed rgb(var(--ink) / 0.28);
+  background: rgb(var(--ink) / 0.05);
   animation: drop-preview-in 430ms linear(0.0000, 0.0249, 0.0890, 0.1780, 0.2809, 0.3887, 0.4951, 0.5955, 0.6867, 0.7670, 0.8357, 0.8929, 0.9390, 0.9750, 1.0021, 1.0214, 1.0343, 1.0419, 1.0454, 1.0458, 1.0439, 1.0405, 1.0361, 1.0312, 1.0263, 1.0215, 1.0170, 1.0130, 1.0095, 1.0065, 1.0041, 1.0021, 1.0006, 0.9995, 0.9988, 0.9983, 0.9980, 0.9979, 0.9979, 0.9980, 0.9982, 0.9984, 0.9986, 0.9989, 1.0000) both;
 }
 
@@ -90,7 +90,7 @@
 // Zielliste dezent hervorheben, statt sie hart zu umranden.
 .cdk-drop-list-receiving {
   border-radius: 0.5rem;
-  outline: 1px dashed rgb(255 255 255 / 0.16);
+  outline: 1px dashed rgb(var(--ink) / 0.16);
   outline-offset: 3px;
   transition: outline-color 140ms ease-out;
 }
@@ -136,7 +136,7 @@
   border: 1px solid var(--color-line);
   background: var(--color-bg3, #202024);
   padding: 0.25rem;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+  box-shadow: 0 8px 24px rgb(var(--shadow) / calc(0.45 * var(--shadow-k)));
   animation: format-bar-in 120ms ease-out;
 }
 
@@ -240,9 +240,9 @@
     max-height: calc(100vh - var(--chrome-offset, 3.75rem) - 4.5rem);
     transition: top 340ms var(--spring);
     overflow-y: auto;
-    border: 1px solid rgb(255 255 255 / 0.07);
+    border: 1px solid rgb(var(--ink) / 0.07);
     border-radius: 0.75rem;
-    background: rgb(255 255 255 / 0.022);
+    background: rgb(var(--ink) / 0.022);
     padding: 0.75rem 0.5rem;
   }
 
@@ -637,7 +637,7 @@
 
 .split-button > button:focus-visible {
   outline: none;
-  background-color: rgb(255 255 255 / 0.2);
+  background-color: rgb(var(--ink) / 0.2);
 }
 
 
@@ -896,7 +896,7 @@
   border-radius: 9999px;
   background: var(--color-panel1);
   padding: 0.3rem 0.5rem;
-  box-shadow: 0 16px 40px -16px rgb(0 0 0 / 0.75);
+  box-shadow: 0 16px 40px -16px rgb(var(--shadow) / calc(0.75 * var(--shadow-k)));
   animation: block-bar-in 160ms var(--spring) backwards;
 }
 
@@ -1005,7 +1005,17 @@
 // hochspringen, sind Bewegung ohne Nachricht. Rand und Fläche reichen.
 .plan-card:hover {
   border-color: var(--color-line-strong);
-  background: color-mix(in srgb, var(--color-bg2) 92%, white);
+  background: color-mix(in srgb, var(--color-bg2) 92%, rgb(var(--lift)));
+}
+
+// Hell liegen die Kacheln als weisse Karten auf dem Grund, wie die Ordner
+// in der Liste; dunkel sind sie Grund mit Rand.
+:host-context([data-theme='light']) .plan-card {
+  background: var(--color-panel1);
+}
+
+:host-context([data-theme='light']) .plan-card:hover {
+  background: color-mix(in srgb, var(--color-panel1) 96%, rgb(var(--lift)));
 }
 
 

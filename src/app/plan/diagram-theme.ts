@@ -34,6 +34,12 @@ export interface DiagramPalette {
   /** Kanten und Pfeile: leiser als Text, deutlicher als Rahmen. */
   wire: string;
   accent: string;
+  /** Jede zweite Zeile einer Entität: kaum abgesetzt, gerade genug zum Folgen. */
+  row: string;
+  /** Der Schatten unter den Kästen, als RGB-Tripel wie --shadow. */
+  shadow: string;
+  /** Dunkler Grund: Mermaid leitet daraus seine eigenen Restfarben ab. */
+  dark: boolean;
   font: string;
 }
 
@@ -47,14 +53,18 @@ export const DIAGRAM_PALETTE: DiagramPalette = {
   subtle: '#8C9AB0',
   wire: '#5E6C84',
   accent: '#5CC7BC',
+  row: '#1D2534',
+  shadow: '0 0 0',
+  dark: true,
   font: '"Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif',
 };
 
 const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
 
 export function diagramConfig(p: DiagramPalette): MermaidConfig {
-  // Jede zweite Zeile einer Entität: kaum heller, gerade genug zum Folgen.
-  const rowEven = '#1D2534';
+  const rowEven = p.row;
+  // Gruppen und zusammengesetzte Zustände: ein Hauch über dem Grund.
+  const group = p.dark ? 'rgba(255, 255, 255, 0.025)' : 'rgba(28, 25, 46, 0.03)';
 
   return {
     startOnLoad: false,
@@ -69,7 +79,7 @@ export function diagramConfig(p: DiagramPalette): MermaidConfig {
     fontSize: 14,
     themeCSS: diagramCss(p),
     themeVariables: {
-      darkMode: true,
+      darkMode: p.dark,
       background: p.canvas,
       fontFamily: p.font,
       fontSize: '14px',
@@ -90,7 +100,7 @@ export function diagramConfig(p: DiagramPalette): MermaidConfig {
       titleColor: p.muted,
       lineColor: p.wire,
       edgeLabelBackground: p.canvas,
-      clusterBkg: 'rgba(255, 255, 255, 0.025)',
+      clusterBkg: group,
       clusterBorder: p.border,
 
       // Abfolge
@@ -120,7 +130,7 @@ export function diagramConfig(p: DiagramPalette): MermaidConfig {
       // Zustände
       labelColor: p.ink,
       altBackground: p.raised,
-      compositeBackground: 'rgba(255, 255, 255, 0.025)',
+      compositeBackground: group,
       compositeTitleBackground: p.raised,
       specialStateColor: p.accent,
       innerEndBackground: p.accent,
@@ -168,8 +178,10 @@ export function diagramConfig(p: DiagramPalette): MermaidConfig {
 
 /** Was die Theme-Variablen nicht ausdrücken können. */
 export function diagramCss(p: DiagramPalette): string {
+  // Auf hellem Grund trägt ein dunkler Schatten viel weiter: ein Viertel genügt.
+  const k = p.dark ? 1 : 0.3;
   return `
-    .node { filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.35)) drop-shadow(0 8px 18px rgb(0 0 0 / 0.22)); }
+    .node { filter: drop-shadow(0 1px 1px rgb(${p.shadow} / ${0.35 * k})) drop-shadow(0 8px 18px rgb(${p.shadow} / ${0.22 * k})); }
     .node rect { rx: 10px; ry: 10px; }
 
     .cluster rect { rx: 14px; ry: 14px; stroke-dasharray: 5 5; }

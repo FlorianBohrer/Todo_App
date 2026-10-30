@@ -1,10 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <title>ToDo</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171E2A">
+  <!-- Das Theme vor dem ersten Bild, damit nichts aufblitzt. Dieselbe Regel
+       wie in theme.service.ts: dunkel, ausser es ist hell oder System gewählt. -->
+  <script>
+    (function () {
+      var choice = 'dark';
+      try { choice = localStorage.getItem('theme') || 'dark'; } catch (e) {}
+      var light = choice === 'light' ||
+        (choice === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches);
+      if (light) {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#F3F2F8');
+      }
+    })();
+  </script>
 
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>

@@ -13,7 +13,17 @@
   --viz-morning: #d95926;
   --viz-afternoon: #199e70;
   --viz-evening: #9085e9;
-  --viz-surface: color-mix(in srgb, #fff 4%, var(--color-panel1));
+  --viz-surface: color-mix(in srgb, rgb(var(--lift)) 4%, var(--color-panel1));
+}
+
+/* Hell: dieselben Farbtöne, eigene Stufen — gegen die helle Karte geprüft
+   (alle Paare ≥ 8 ΔE bei Farbsehschwäche, jede Farbe ≥ 3:1 zur Fläche). */
+:host-context([data-theme='light']) {
+  --viz-focus: #6250d6;
+  --viz-done: #2a78d6;
+  --viz-morning: #e0612c;
+  --viz-afternoon: #15936a;
+  --viz-evening: #6250d6;
 }
 
 .stats-view {
@@ -77,9 +87,9 @@
 }
 
 .stats-span__option.is-active {
-  background: var(--color-fill-strong);
+  background: var(--color-thumb);
   color: var(--color-text);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  box-shadow: 0 1px 2px rgb(var(--shadow) / calc(0.25 * var(--shadow-k)));
 }
 
 .stats-period {
@@ -127,7 +137,7 @@
   border-radius: 1.25rem;
   padding: 1rem 1.125rem;
   background: var(--viz-surface);
-  box-shadow: 0 8px 18px -14px rgb(0 0 0 / 0.7);
+  box-shadow: 0 8px 18px -14px rgb(var(--shadow) / calc(0.7 * var(--shadow-k)));
 }
 
 .stats-card__title {
@@ -354,7 +364,7 @@
   border-radius: 0.625rem;
   padding: 0.3125rem 0.625rem;
   background: var(--color-panel2);
-  box-shadow: 0 8px 20px -8px rgb(0 0 0 / 0.7);
+  box-shadow: 0 8px 20px -8px rgb(var(--shadow) / calc(0.7 * var(--shadow-k)));
   transform: translateX(-50%);
   white-space: nowrap;
   pointer-events: none;
@@ -410,7 +420,7 @@
 }
 
 .stats-flame.is-lit {
-  color: #fb923c;
+  color: var(--color-orange-400, #fb923c);
 }
 
 @media (max-width: 420px) {

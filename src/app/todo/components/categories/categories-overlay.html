@@ -261,7 +261,7 @@
               <button
                 type="button"
                 class="grid h-7 w-7 flex-none place-items-center rounded-full transition hover:bg-fill-strong"
-                [class]="editingId() === label.id ? 'text-indigo-300' : 'text-muted hover:text-white'"
+                [class]="editingId() === label.id ? 'text-indigo-300' : 'text-muted hover:text-text'"
                 (click)="toggleEdit(label.id, $event)"
                 [attr.aria-expanded]="editingId() === label.id"
                 [attr.aria-label]="'Edit folder ' + label.name">

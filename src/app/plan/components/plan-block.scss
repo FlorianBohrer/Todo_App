@@ -141,8 +141,8 @@
 .drop-preview {
   height: 2.25rem;
   border-radius: 0.5rem;
-  border: 1px dashed rgb(255 255 255 / 0.28);
-  background: rgb(255 255 255 / 0.05);
+  border: 1px dashed rgb(var(--ink) / 0.28);
+  background: rgb(var(--ink) / 0.05);
   animation: drop-preview-in 430ms linear(0.0000, 0.0249, 0.0890, 0.1780, 0.2809, 0.3887, 0.4951, 0.5955, 0.6867, 0.7670, 0.8357, 0.8929, 0.9390, 0.9750, 1.0021, 1.0214, 1.0343, 1.0419, 1.0454, 1.0458, 1.0439, 1.0405, 1.0361, 1.0312, 1.0263, 1.0215, 1.0170, 1.0130, 1.0095, 1.0065, 1.0041, 1.0021, 1.0006, 0.9995, 0.9988, 0.9983, 0.9980, 0.9979, 0.9979, 0.9980, 0.9982, 0.9984, 0.9986, 0.9989, 1.0000) both;
 }
 
@@ -169,7 +169,7 @@
 // Zielliste dezent hervorheben, statt sie hart zu umranden.
 .cdk-drop-list-receiving {
   border-radius: 0.5rem;
-  outline: 1px dashed rgb(255 255 255 / 0.16);
+  outline: 1px dashed rgb(var(--ink) / 0.16);
   outline-offset: 3px;
   transition: outline-color 140ms ease-out;
 }
@@ -209,11 +209,11 @@
 :host ::ng-deep {
   .plan-code {
     border-radius: 0.3rem;
-    background: rgb(255 255 255 / 0.07);
+    background: rgb(var(--ink) / 0.07);
     padding: 0.1em 0.35em;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.875em;
-    color: #f8a3a3; // wie im Referenzbild: Code hebt sich farblich ab
+    color: var(--code-ink); // wie im Referenzbild: Code hebt sich farblich ab
   }
 
   // Wikilink: als Verweis erkennbar, ohne die Zeile zu zerreissen. Er traegt
@@ -270,16 +270,16 @@
     letter-spacing: 0.04em;
   }
 
-  .cell-method--get { --chip: #7DD3FC; }
-  .cell-method--post { --chip: #6EE7B7; }
+  .cell-method--get { --chip: var(--hue-sky); }
+  .cell-method--post { --chip: var(--hue-green); }
   .cell-method--put,
-  .cell-method--patch { --chip: #FCD34D; }
-  .cell-method--delete { --chip: #FB7185; }
+  .cell-method--patch { --chip: var(--hue-amber); }
+  .cell-method--delete { --chip: var(--hue-red); }
 
-  .cell-status--2xx { --chip: #6EE7B7; }
-  .cell-status--3xx { --chip: #7DD3FC; }
-  .cell-status--4xx { --chip: #FCD34D; }
-  .cell-status--5xx { --chip: #FB7185; }
+  .cell-status--2xx { --chip: var(--hue-green); }
+  .cell-status--3xx { --chip: var(--hue-sky); }
+  .cell-status--4xx { --chip: var(--hue-amber); }
+  .cell-status--5xx { --chip: var(--hue-red); }
 
   // Stufen: ein Punkt vor dem Wort traegt die Farbe, die Flaeche bleibt leiser.
   .cell-level i {
@@ -289,13 +289,13 @@
     background: var(--chip);
   }
 
-  .cell-level--high { --chip: #FB7185; }
-  .cell-level--medium { --chip: #FCD34D; }
-  .cell-level--low { --chip: #6EE7B7; }
+  .cell-level--high { --chip: var(--hue-red); }
+  .cell-level--medium { --chip: var(--hue-amber); }
+  .cell-level--low { --chip: var(--hue-green); }
 
   .cell-path {
     border-radius: 0.375rem;
-    background: rgb(255 255 255 / 0.05);
+    background: rgb(var(--ink) / 0.05);
     padding: 0.1rem 0.4rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.8125rem;
@@ -1005,7 +1005,7 @@ tbody tr:last-child .plan-td:nth-last-child(2) { border-bottom-right-radius: 0.7
 // Statt Zebrastreifen: die Zeile unter dem Zeiger hebt sich. Die Linien
 // zwischen den Zeilen fuehren das Auge schon; Streifen dazu waren doppelt.
 .plan-table tbody tr:hover .plan-td:not(.plan-td-gutter) {
-  background: color-mix(in srgb, var(--color-bg3), white 3.5%);
+  background: color-mix(in srgb, var(--color-bg3), rgb(var(--lift)) 3.5%);
 }
 
 
@@ -1115,7 +1115,7 @@ tr:focus-within .plan-td-gutter .plan-table-x,
   border: 1px solid var(--color-line);
   border-radius: 0.875rem;
   background:
-    radial-gradient(rgb(255 255 255 / 0.055) 1px, transparent 1.25px) 0 0 / 16px 16px,
+    radial-gradient(rgb(var(--ink) / 0.055) 1px, transparent 1.25px) 0 0 / 16px 16px,
     var(--color-bg3);
   padding: 0.5rem 1rem 1.25rem;
 }
