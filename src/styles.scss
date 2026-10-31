@@ -262,28 +262,34 @@
 @layer base {
 
   /* ================================================================
-     EINZIGE Token-Quelle — Modern Dark (Indigo, entsättigt)
+     EINZIGE Token-Quelle — Dunkel: tiefe Tinte
      Flächen steigen über Helligkeit auf, nicht über Rahmen.
 
-     Die Rampe ist in L* (perzeptueller Helligkeit) gesetzt, nicht nach
-     Kontrastverhältnis: zwischen zwei dunklen Flächen staucht die
-     WCAG-Formel alles auf ~1.1 zusammen und taugt dort nicht als Maß.
-     Vorher lagen die unteren, meistgenutzten Stufen nur +2.0 und +2.4 L*
-     auseinander — daher der matschige Eindruck. Jetzt +3.9 / +3.0 / +6.2.
+     Gesetzt in OKLCH, alle Grautöne auf EINEM Farbton (278°, ein Hauch
+     Violett, dieselbe Familie wie der Tinten-Ton im hellen Theme) und mit
+     fast keiner Buntheit (0.012 bis 0.022). Vorher war es Stahlblau (260°),
+     und je heller die Fläche, desto blauer wurde sie (Buntheit 0.016 bis
+     0.035): Karten sahen schieferblau und schwer aus, und die Farben der
+     Ordner und Ansichten mussten gegen das Blau ankommen. Auf neutraler
+     Tinte leuchten sie.
 
-     Die Textfarben sind gegen die hellste Fläche gelöst, auf der sie
-     stehen: subtle kam auf Panels auf 2.78:1 und lag damit unter AA,
-     obwohl es Platzhalter und Hinweise trägt. Jetzt 4.99:1.
+     Die Stufen in OKLCH-Helligkeit L: 0.158 · 0.188 · 0.208 · 0.255 ·
+     0.300 · 0.328. Der Seitengrund liegt tiefer als vorher (0.208 statt
+     0.234), Karten heben sich deshalb mit weniger Helligkeit ab.
+
+     Text gegen die hellste Fläche, auf der er steht (panel2): text
+     12.0:1, muted 6.95:1, subtle 5.02:1 — subtle trägt Platzhalter und
+     Hinweise und muss deshalb über AA liegen.
      ================================================================ */
   @theme {
-    /* Surfaces – Elevation-Rampe (dunkel → hell), L*: 4.3 · 8.1 · 11.1 · 17.3 · 23.6 */
-    --color-bg:      #0B0F16;   /* Seite, tiefster Grund */
-    --color-bg3:     #121822;
-    --color-bg2:     #171E2A;   /* Cards / Todo-Items */
-    --color-panel:   #222B3A;   /* für bg-panel / hover:bg-panel */
-    --color-panel1:  #222B3A;   /* angehobene Fläche */
-    --color-panel2:  #2E3949;   /* aktive / oberste Fläche */
-    --color-border:  #313C4E;   /* Hairline-Rahmen */
+    /* Surfaces – Elevation-Rampe (dunkel → hell) */
+    --color-bg:      #0C0C12;   /* Seite, tiefster Grund */
+    --color-bg3:     #12131A;
+    --color-bg2:     #16171F;   /* Seitengrund der Ansichten */
+    --color-panel:   #21222B;   /* für bg-panel / hover:bg-panel */
+    --color-panel1:  #21222B;   /* angehobene Fläche */
+    --color-panel2:  #2B2D37;   /* aktive / oberste Fläche */
+    --color-border:  #323440;   /* Hairline-Rahmen */
 
     /* Overlay-Stufen. Vorher lagen 16 verschiedene Weiß-Alphawerte im Markup
        (white/[0.01] bis white/70), jeder einzeln nach Augenmaß gewählt — und
@@ -295,33 +301,35 @@
     --color-fill-strong: rgb(255 255 255 / 0.10);  /* gedrückt / aktiv */
 
     /* Text – AA auf jeder Fläche, auf der die Farbe vorkommt */
-    --color-text:    #ECF0F6;   /* primär, fast weiß */
-    --color-muted:   #A8B4C8;   /* sekundär, Labels — 6.80:1 auf panel */
-    --color-subtle:  #8C9AB0;   /* Placeholder, Hinweise — 4.99:1 auf panel */
+    --color-text:    #EFF0F4;   /* primär, fast weiß */
+    --color-muted:   #B6B8C6;   /* sekundär, Labels — 6.95:1 auf panel2 */
+    --color-subtle:  #999CAB;   /* Placeholder, Hinweise — 5.02:1 auf panel2 */
 
     /* Akzente — siehe „Drei Ansichten, drei Farben" weiter unten.
        Was hier steht, ist nur der Ausgangswert; die Ansicht überschreibt
        ihn am <html>-Element. */
-    --color-highlight1:  #35A79B;
-    --color-highlight2:  #5CC7BC;
-    --color-highlight11: #5CC7BC;   /* Hover / Fokus */
-    --color-highlight22: #9FE3DB;   /* hellster Akzent */
+    --color-highlight1:  #0DB3A1;
+    --color-highlight2:  #5AD4C1;
+    --color-highlight11: #5AD4C1;   /* Hover / Fokus */
+    --color-highlight22: #A9E8DC;   /* hellster Akzent */
 
     /* Dieselben Namen wie im Flow-Timer (--color-button /
        --color-button-pressed), damit beide Apps gleich lesbar bleiben. Die
        Werte hier sind nur der Ausgangszustand; die Ansicht überschreibt sie
        (siehe „Drei Ansichten, drei Farben"). */
-    --color-button:          #1A736B;   /* primärer Knopf, ruhend */
-    --color-button-pressed:  #135C55;   /* primärer Knopf, gedrückt */
-    --color-button1:         #1A736B;   /* derselbe Ton, für bg-button1 in Vorlagen */
+    --color-button:          #057B6E;   /* primärer Knopf, ruhend */
+    --color-button-pressed:  #05655A;   /* primärer Knopf, gedrückt */
+    --color-button1:         #057B6E;   /* derselbe Ton, für bg-button1 in Vorlagen */
 
     /* Semantic */
-    --color-brand:    #1A736B;
-    --color-brand-2:  #5CC7BC;
-    --color-danger:   #F4495D;
+    --color-brand:    #057B6E;
+    --color-brand-2:  #5AD4C1;
+    /* Rot als Schrift auf Karten: 4.83:1 auf panel2. Das alte #F4495D lag
+       dort bei 3.89 und damit unter AA. */
+    --color-danger:   #FA6B71;
     --color-ok:       #36D399;
 
-    --gradient-brand: linear-gradient(180deg, #1A736B, #135C55);
+    --gradient-brand: linear-gradient(180deg, #057B6E, #05655A);
 
     /* Zwei Schriftgrade, die als Einzelwerte im Markup standen (text-[11px],
        text-[15px]). Als Stufe benannt sind sie eine Entscheidung statt zehn. */
@@ -345,8 +353,9 @@
     --shadow: 0 0 0;
     --shadow-k: 1;
 
-    /* Weiß auf der Akzentfläche: Knöpfe, aktive Laschen. */
-    --color-on-accent: #ECF0F6;
+    /* Weiß auf der Akzentfläche: Knöpfe, aktive Laschen. Rein weiß, nicht
+       das Textweiß: so liegt jede Ansichtsfarbe bei mindestens 5.17:1. */
+    --color-on-accent: #FFFFFF;
 
     /* Der Daumen eines Umschalters (Active/Done, Week/Month, Day/Week):
        dunkel eine hellere Fläche, hell ein weißer Knopf wie in iOS. */
@@ -366,10 +375,14 @@
     --tint-teal-bg: rgb(45 212 191 / 0.15);
     --tint-teal-fg: #5eead4;
 
+    /* Bernstein als Schrift („from Wed, Oct 28", Warnungen): Tailwinds
+       #FCD34D ist auf Tinte grell gelb. Derselbe Ton, weicher und wärmer. */
+    --color-amber-300: #F7C86F;
+
     /* Farben mit Bedeutung (Tabellenmarken, Code, XP). */
     --hue-sky: #7DD3FC;
     --hue-green: #6EE7B7;
-    --hue-amber: #FCD34D;
+    --hue-amber: #F7C86F;
     --hue-red: #FB7185;
     --hue-gold: #FCD34D;
     --code-ink: #f8a3a3;
@@ -453,9 +466,18 @@
    jede zweite neue Oberfläche trägt.
 
    Jetzt hat jede Ansicht ihre eigene: Liste kühl (Türkis), Woche warm
-   (Orange), Pläne (Bordeaux). Weit genug auseinander, um beim Umschalten
-   sofort zu sagen, wo man ist, und gedämpft genug, um den ganzen Tag
-   daneben zu arbeiten.
+   (Orange), Pläne (Himbeere), Statistik (Blau), Fokus (Lavendel). Weit
+   genug auseinander, um beim Umschalten sofort zu sagen, wo man ist.
+
+   Alle fünf sind in OKLCH aus denselben Stufen gebaut — gleiche
+   Helligkeit und Buntheit je Stufe, nur der Farbton wechselt:
+     200  L 0.885 C 0.065   hellster Akzent
+     300  L 0.795 C 0.112   Schrift auf dunklem Grund (brand-2)
+     400  L 0.690 C 0.140   Ringe, Linien
+     500  L 0.545 C 0.135   Fläche mit weisser Schrift (Knopf, Lasche)
+     600  L 0.475 C 0.120   gedrückt
+   Vorher hatte jede Farbe ihre eigene Sättigung: Lavendel und Blau
+   leuchteten, Türkis und Bordeaux wirkten stumpf, Orange war braun.
 
    Gesetzt wird die Ansicht als data-view am <html>-Element (siehe App).
    Diese Regeln stehen bewusst AUSSERHALB von @layer: Tailwinds Theme legt
@@ -466,69 +488,60 @@
    einzeln zu ersetzen: `text-indigo-300` liest in Tailwind v4
    var(--color-indigo-300), und das steht hier.
 
-   Kontraste gemessen, nicht geschätzt — an den gerenderten Farben, in
-   allen drei Ansichten. PRODUCT.md verlangt WCAG 2.1 AA, also 4.5:1 für
-   Schrift in normaler Größe, und die Beschriftungen hier sind text-sm:
+   Kontraste gemessen, nicht geschätzt. PRODUCT.md verlangt WCAG 2.1 AA,
+   also 4.5:1 für Schrift in normaler Größe, und die Beschriftungen hier
+   sind text-sm:
 
-                                 Türkis  Orange  Bordeaux
-     #ECF0F6 auf Stufe 500        4.95    4.79    5.61   .btn-primary
-     #ECF0F6 auf Stufe 600        6.83    6.57    7.40   .btn-primary:active
-     Weiß auf Stufe 500           5.66    5.48    6.42   .filter-pill + aktiver Tab
-     Stufe 300 auf Panel          7.02    6.23    5.56   brand-2 als Schrift
+                            Türkis Orange Himbeere Blau  Lavendel
+     Weiß auf Stufe 500      5.17   5.25   5.37    5.18   5.53   Knopf, Lasche
+     Weiß auf Stufe 600      6.96   7.00   7.18    6.97   7.45   gedrückt
+     Stufe 300 auf panel2    7.58   6.95   6.85    7.20   7.01   brand-2
 
-   Am knappsten ist Orange unter .btn-primary (4.79). Wer --accent-500 der
-   Woche aufhellt, rechnet zuerst hier nach.
-
-   Gedrückt liegt Stufe 600 um 7 bis 9 L* unter Stufe 500 (Türkis 43.6 →
-   34.9, Orange 44.5 → 35.9, Bordeaux 40.2 → 32.7): sichtbar dunkler, und
-   der Kontrast steigt dabei, statt zu fallen.
-
-   Zum Vergleich das alte Indigo #4F6BF6: #ECF0F6 darauf 3.85, Weiß 4.41 —
-   beides unter 4.5. Der Flow-Timer hat es deshalb auf #3B55D9 abgedunkelt
-   (5.27 / 6.02). Hier war das nicht nötig, weil die Ansichtsfarben es
-   abgelöst haben; die Namen der Tokens sind aber dieselben.
+   Türkis und Blau liegen in Stufe 500 eine Spur dunkler (L 0.525 und
+   0.535): bei gleicher Helligkeit kämen sie unter 5:1. Lavendel ist eine
+   Spur bunter (C 0.175), sonst wirkte der Fokus matt.
    ================================================================ */
 :root,
 [data-view='list'] {
-  --accent-200: #9FE3DB;
-  --accent-300: #5CC7BC;
-  --accent-400: #35A79B;
-  --accent-500: #1A736B;
-  --accent-600: #135C55;
+  --accent-200: #A9E8DC;
+  --accent-300: #5AD4C1;
+  --accent-400: #0DB3A1;
+  --accent-500: #057B6E;
+  --accent-600: #05655A;
 }
 
 [data-view='week'] {
-  --accent-200: #F5C79A;
-  --accent-300: #E89A57;
-  --accent-400: #D07F35;
-  --accent-500: #9C5820;
-  --accent-600: #7F461A;
+  --accent-200: #FFCDB2;
+  --accent-300: #FDA370;
+  --accent-400: #E67A33;
+  --accent-500: #AF5102;
+  --accent-600: #924200;
 }
 
 [data-view='plans'] {
-  --accent-200: #EFB2BB;
-  --accent-300: #DE8A98;
-  --accent-400: #C06375;
-  --accent-500: #8E4A58;
-  --accent-600: #743C48;
+  --accent-200: #FFC8D9;
+  --accent-300: #F99CBC;
+  --accent-400: #E2719B;
+  --accent-500: #AE4670;
+  --accent-600: #91385C;
 }
 
 /* Statistik: Blau — die Farbe der Zahlen, kühl neben dem Lavendel des Fokus. */
 [data-view='stats'] {
-  --accent-200: #BFD8F7;
-  --accent-300: #8DBBF2;
-  --accent-400: #5598E7;
-  --accent-500: #2A66B8;
-  --accent-600: #20539A;
+  --accent-200: #C0DCFF;
+  --accent-300: #8EBFFE;
+  --accent-400: #5B9DF0;
+  --accent-500: #2F6EB9;
+  --accent-600: #245A9B;
 }
 
 /* Fokus: Lavendel — ruhig, und weit genug weg von den anderen dreien. */
 [data-view='focus'] {
-  --accent-200: #D9CCFF;
-  --accent-300: #B9A5FB;
-  --accent-400: #9B82F3;
-  --accent-500: #6A4FD3;
-  --accent-600: #573FB4;
+  --accent-200: #D8D3FE;
+  --accent-300: #BBB0FE;
+  --accent-400: #9C84FE;
+  --accent-500: #6F54CA;
+  --accent-600: #5B43A9;
 }
 
 :root,
@@ -754,8 +767,8 @@
       box-shadow 150ms ease;
   }
 
-  /* #ECF0F6 auf der Ansichtsfarbe: ruhend 4.79 bis 5.61, gedrückt 6.57 bis
-     7.40 — gemessen, Tabelle bei „Drei Ansichten, drei Farben". */
+  /* Weiß auf der Ansichtsfarbe: ruhend 5.17 bis 5.53, gedrückt 6.96 bis
+     7.45 — gemessen, Tabelle bei „Drei Ansichten, drei Farben". */
   /* Eine Fläche, kein Leuchten. Der farbige Schein darunter und das Anheben
      beim Hover machten jeden Knopf zum lautesten Ding auf der Seite — auch
      „Add" neben einem Eingabefeld, das man ohnehin mit Enter abschickt.

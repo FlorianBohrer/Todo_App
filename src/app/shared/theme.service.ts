@@ -7,7 +7,7 @@ export type Theme = 'dark' | 'light';
 export const THEME_KEY = 'theme';
 
 /** Die Farbe der Browserleiste auf dem Telefon: der Seitengrund (--color-bg2). */
-const BAR_COLOR: Record<Theme, string> = { dark: '#171E2A', light: '#F3F2F8' };
+const BAR_COLOR: Record<Theme, string> = { dark: '#16171F', light: '#F3F2F8' };
 
 export function readThemeChoice(): ThemeChoice {
   try {

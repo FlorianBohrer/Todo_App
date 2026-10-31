@@ -190,11 +190,11 @@ export class RewardService {
 
   /**
    * Die Farbe der offenen Ansicht, frisch aus dem CSS gelesen: Türkis in der
-   * Liste, Orange in der Woche, Bordeaux in den Plänen — dieselbe
+   * Liste, Orange in der Woche, Himbeere in den Plänen — dieselbe
    * Farbentscheidung wie überall sonst.
    */
   private viewColor(): string {
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent-300').trim();
-    return accent || '#5CC7BC';
+    return accent || '#5AD4C1';
   }
 }
