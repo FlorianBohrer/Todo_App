@@ -2,19 +2,19 @@ import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, injec
 import { OverlayModule, type ConnectedPosition } from '@angular/cdk/overlay';
 import {
   Check,
-  CircleDot,
+  ChevronDown,
   Music,
   Pause,
   Play,
+  Plus,
   Square,
-  Timer,
   X,
   LucideAngularModule,
 } from 'lucide-angular';
 
 import { TodoService } from '../../services/todo';
 import { Ambience, FocusTimerService } from '../../services/focus-timer.service';
-import { FocusSessionService } from '../../services/focus-session.service';
+import { FocusSessionService, formatFocus } from '../../services/focus-session.service';
 import {
   DIAL_MAX,
   DIAL_MIN,
@@ -34,7 +34,15 @@ import { Todo } from '../../model/todo.model';
 
 /** Mittelpunkt und Radius des Rads im SVG (viewBox 300 × 300). */
 const C = 150;
-const R = 120;
+const R = 118;
+
+/** Die Minutenskala aussen am Rad: kurze Striche je Minute, lange je fünf. */
+const TICKS = Array.from({ length: 60 }, (_, i) => {
+  const major = i % 5 === 0;
+  const outer = pointAt(C, C, 146, i * 6);
+  const inner = pointAt(C, C, major ? 134 : 139, i * 6);
+  return { i, major, x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y };
+});
 
 interface Pick {
   id: string;
@@ -50,7 +58,9 @@ interface Pick {
  *
  * Ein Ring statt eines Zahlenfelds, weil Zeit sich als Anteil einer Stunde
  * besser greifen lässt als als Zahl: 25 Minuten sind ein Viertel und ein
- * bisschen. Läuft der Timer, schrumpft derselbe Ring mit der Zeit.
+ * bisschen. Läuft der Timer, schrumpft derselbe Bogen mit der Zeit. Für die
+ * üblichen Längen gibt es darunter Knöpfe, und in der Mitte steht, wann die
+ * Sitzung endet — das ist die Zahl, nach der man eigentlich plant.
  */
 @Component({
   selector: 'app-focus-view',
@@ -77,6 +87,7 @@ export class FocusView {
     return active;
   });
 
+  /** Die Uhr der Ansicht: für Flows Restzeit und für „Ends 21:15". */
   private readonly clockNow = signal(Date.now());
   protected readonly flowLeft = computed(() => {
     const session = this.flowSession();
@@ -85,10 +96,17 @@ export class FocusView {
     return clock(seconds);
   });
 
-  private readonly flowTicker = effect((onCleanup) => {
-    if (!this.flowSession()) return;
+  private readonly ticker = effect((onCleanup) => {
     const id = window.setInterval(() => this.clockNow.set(Date.now()), 1000);
     onCleanup(() => window.clearInterval(id));
+  });
+
+  /** Heute schon fokussiert — vom Server, also Flow und Webseite zusammen. */
+  protected readonly todayLine = computed(() => {
+    const today = this.sessions.today();
+    if (!today) return 'Pick a task and a length, then start.';
+    if (today.seconds < 60) return 'No focus yet today';
+    return `Today: ${formatFocus(today.seconds)} in ${today.sessions} ${today.sessions === 1 ? 'session' : 'sessions'}`;
   });
 
   protected readonly minutes = this.timer.minutes;
@@ -98,36 +116,37 @@ export class FocusView {
   /** Gestellt werden kann nur, solange nichts läuft. */
   protected readonly adjustable = computed(() => this.state() === 'idle' || this.state() === 'done');
 
-  /** Der Bogen: beim Einstellen die Dauer, beim Laufen der Rest. */
+  /**
+   * Der Bogen: beim Einstellen die Dauer, beim Laufen der Rest — beides auf
+   * derselben Stunde, wie bei einer Zeitscheibe. 45 Minuten sind drei Viertel,
+   * und von dort schrumpft der Bogen. Vorher sprang er beim Start auf voll,
+   * weil der Rest als Anteil der Dauer gezeichnet wurde.
+   */
   protected readonly angle = computed(() =>
-    this.adjustable() ? angleFor(this.minutes()) : this.timer.fraction() * 360,
+    angleFor(this.adjustable() ? this.minutes() : this.timer.left() / 60),
   );
   protected readonly arc = computed(() => arcPath(C, C, R, this.angle()));
   protected readonly knob = computed(() => pointAt(C, C, R, this.angle()));
 
   protected readonly bigText = computed(() =>
-    this.adjustable() ? String(this.minutes()) : clock(this.timer.left()),
+    this.adjustable() ? `${this.minutes()}:00` : clock(this.timer.left()),
   );
+
+  /** Unter der Zahl: wann es vorbei ist, oder warum die Uhr steht. */
   protected readonly subText = computed(() => {
-    switch (this.state()) {
-      case 'running':
-        return 'left';
-      case 'paused':
-        return 'paused';
-      case 'done':
-        return 'done · again?';
-      default:
-        return 'mins';
-    }
+    const state = this.state();
+    if (state === 'paused') return 'Paused';
+    if (state === 'done') return 'Session done · go again?';
+    const seconds = state === 'running' ? this.timer.left() : this.minutes() * 60;
+    const end = new Date(this.clockNow() + seconds * 1000);
+    return `Ends ${end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
   });
 
-  /** Die Stundenmarken im Ring, wie auf einem Zifferblatt. */
-  protected readonly marks = [
-    { label: '60', x: C, y: C - 78 },
-    { label: '15', x: C + 80, y: C },
-    { label: '30', x: C, y: C + 80 },
-    { label: '45', x: C - 80, y: C },
-  ];
+  protected readonly ticks = TICKS;
+  /** Wie viele Minutenstriche leuchten: die eingestellte oder die restliche Zeit. */
+  protected readonly litTicks = computed(() => Math.ceil(this.angle() / 6 - 0.001));
+
+  protected readonly presets = [15, 25, 45, 60];
 
   // ---- Drehen ----
 
@@ -255,21 +274,22 @@ export class FocusView {
 
   protected readonly positions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
-    { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -8 },
   ];
-  protected readonly positionsEnd: ConnectedPosition[] = [
+  /** Der Klang sitzt unten rechts: das Menü geht nach oben auf, wenn unten kein Platz ist. */
+  protected readonly positionsSound: ConnectedPosition[] = [
     { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 8 },
-    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 8 },
+    { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -8 },
   ];
 
   protected readonly formatDuration = formatDuration;
 
   protected readonly MusicIcon = Music;
-  protected readonly TimerIcon = Timer;
   protected readonly PlayIcon = Play;
   protected readonly PauseIcon = Pause;
   protected readonly StopIcon = Square;
   protected readonly CheckIcon = Check;
   protected readonly ClearIcon = X;
-  protected readonly DotIcon = CircleDot;
+  protected readonly ChevronIcon = ChevronDown;
+  protected readonly PlusIcon = Plus;
 }

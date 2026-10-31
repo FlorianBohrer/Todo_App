@@ -91,6 +91,9 @@ export class FocusSessionService {
   /** Alle Sitzungen auf dem Server, aus Flow und von der Webseite. null = unbekannt. */
   readonly sessionCount = signal<number | null>(null);
 
+  /** Fokus heute, in der eigenen Zeitzone — Flow und Webseite zusammen. null = unbekannt. */
+  readonly today = signal<{ seconds: number; sessions: number } | null>(null);
+
   private signedIn = false;
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -110,6 +113,7 @@ export class FocusSessionService {
           this.active.set(null);
           this.totals.set(new Map());
           this.sessionCount.set(null);
+          this.today.set(null);
         }
       });
 
@@ -245,6 +249,7 @@ export class FocusSessionService {
       );
       this.totals.set(new Map(stats.perTodo.map((entry) => [entry.todoId, entry.totalSeconds])));
       this.sessionCount.set(stats.perTodo.reduce((sum, entry) => sum + (entry.sessionCount ?? 0), 0));
+      this.today.set({ seconds: stats.todaySeconds ?? 0, sessions: stats.todaySessions ?? 0 });
     } catch {
       /* Eine Anzeige. Der alte Stand bleibt stehen. */
     }
