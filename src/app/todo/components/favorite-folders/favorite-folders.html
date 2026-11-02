@@ -1,5 +1,37 @@
 @if (tileCount() > 0) {
-  <section class="mx-auto mb-5 w-full max-w-3xl" aria-label="Favorite folders">
+  <section class="fav-wrap mx-auto w-full max-w-3xl" [class.is-open]="open()" aria-label="Favorite folders">
+    <!-- Die angepinnten Ordner liegen in einem Fach, das man aufklappt. Offen
+         standen sie über jeder Liste, auch wenn man gerade in keinen wechseln
+         wollte: auf dem Telefon eine ganze Reihe Kacheln vor der ersten
+         Aufgabe. Zu bleibt eine Zeile — die Pille wie über den Abschnitten der
+         Liste, daneben je Ordner ein kleiner Ring in seiner Farbe, damit man
+         den Stand auch zugeklappt sieht. Der Zustand bleibt gespeichert. -->
+    <button type="button" class="fav-head"
+      [attr.aria-expanded]="open()"
+      aria-controls="favorite-folders-body"
+      (click)="toggleOpen()">
+      <span class="fav-pill">
+        <lucide-icon [img]="StarIcon" class="h-3.5 w-3.5 fill-current" aria-hidden="true"></lucide-icon>
+        <span>Pinned</span>
+        <span class="fav-pill__count">({{ tileCount() }})</span>
+        <lucide-icon [img]="ChevronIcon" class="fav-pill__chevron h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+      </span>
+      <span class="fav-peek" aria-hidden="true">
+        @if (favoriteProgress().total > 0) {
+          <app-progress-ring class="fav-peek__ring text-amber-300" [class.is-active]="favoritesActive()"
+            arcClass="folder-progress" [trackOpacity]="0.3" [size]="20" [thickness]="3" [check]="false"
+            [completed]="favoriteProgress().completed" [total]="favoriteProgress().total" />
+        }
+        @for (label of favorites(); track label.id) {
+          <app-progress-ring class="fav-peek__ring" [class]="textClass(label.color)" [class.is-active]="activeLabelId() === label.id"
+            arcClass="folder-progress" [trackOpacity]="0.3" [size]="20" [thickness]="3" [check]="false"
+            [completed]="progress(label.id).completed" [total]="progress(label.id).total" />
+        }
+      </span>
+    </button>
+
+    <div id="favorite-folders-body" class="fav-collapse" [attr.inert]="open() ? null : ''">
+    <div class="fav-collapse__inner">
     <!-- Ab sm nebeneinander, bei vier Ordnern eine Reihe mit vier. Auf dem
          Telefon zwei Spalten: untereinander standen fuenf Kacheln je 80px, und
          die eigentliche Liste begann erst unter dem Bildschirmrand. Unter
@@ -118,6 +150,8 @@
           </span>
         </button>
       }
+    </div>
+    </div>
     </div>
   </section>
 }
