@@ -48,6 +48,10 @@ import {
 } from '../../shared/title-priority';
 import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
+import { RichText } from '../../shared/rich-text';
+import { hasBold, isBoldKey, stripBold, toggleBold } from '../../shared/rich-title';
+import { ShortcutService } from '../../../shared/shortcut.service';
+import { ClampWatch } from '../../../directives/clamp-watch.directive';
 import { Grouping, ListViewService, SortOrder } from '../../services/list-view.service';
 import { Suggestion, suggestTasks } from '../../shared/suggestions';
 import {
@@ -318,6 +322,16 @@ interface TodoRow {
   icon: TaskIcon;
   /** Tönung des Kreises: die Farbe des primären Ordners. */
   iconClass: string;
+  /**
+   * Ein Schritt ohne eigenes Bild, dessen Geschwister eins haben: er hält
+   * den Platz des Bildes frei, damit Haken und Titel in der Gruppe in einer
+   * Flucht stehen.
+   */
+  iconGap: boolean;
+  /** Der Titel hat fette Stellen (rich-title.ts) und steht ausserhalb des Bearbeitens als Text. */
+  rich: boolean;
+  /** Die erste Zeile als Klartext, für Vorlesesoftware und Tooltips. */
+  label: string;
   /** „15m", „1h 30m" — leer ohne Dauer. */
   durationText: string;
   /** Tageszeit, null = Anytime. */
@@ -358,6 +372,8 @@ interface TodoRow {
     CdkDragPlaceholder,
     TokenChip,
     DatePicker,
+    RichText,
+    ClampWatch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-list.html',
@@ -367,6 +383,7 @@ export class TodoList {
   private readonly todoService = inject(TodoService);
   private readonly rewards = inject(RewardService);
   private readonly toast = inject(ToastService);
+  private readonly shortcuts = inject(ShortcutService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Die Zeile, zu der die Suche gerade gesprungen ist — sie leuchtet kurz auf. */
@@ -451,11 +468,14 @@ export class TodoList {
     const parentOf = new Map<string, string>();
     const subCounts = new Map<string, number>();
     const lastSubs = new Set<string>();
+    // Gruppen, in denen wenigstens ein Schritt ein Bild hat.
+    const pictured = new Set<string>();
     for (const [head, ...subs] of subtaskGroups(items)) {
       if (subs.length === 0) continue;
       subCounts.set(head.id, subs.length);
       for (const sub of subs) parentOf.set(sub.id, head.id);
       lastSubs.add(subs[subs.length - 1].id);
+      if (subs.some((sub) => !taskIcon(stripPriorityPrefix(sub.title)).initial)) pictured.add(head.id);
     }
 
     const today = todayISO();
@@ -488,15 +508,19 @@ export class TodoList {
       const minutes = section ? null : durationOf(todo.title);
       const when = section ? null : timeOfDay(todo.title);
       const steps = progress.get(todo.id) ?? null;
+      const icon = taskIcon(stripped);
+      const parentId = parentOf.get(todo.id) ?? null;
 
       return {
         id: todo.id,
         todo,
         displayTitle: shown,
+        rich: !section && hasBold(shown),
         // Auch beim Bearbeiten ohne Präfix: es steht als Chip davor.
         editTitle: stripped,
-        icon: taskIcon(stripped),
+        icon,
         iconClass: this.iconClass(todo.labelIds),
+        iconGap: level === 'sub' && icon.initial && parentId !== null && pictured.has(parentId),
         durationText: minutes === null ? '' : formatDuration(minutes),
         when,
         hasMeta:
@@ -508,11 +532,12 @@ export class TodoList {
             todo.repeat !== null ||
             steps !== null),
         firstLine: first.trim(),
+        label: stripBold(first.trim()),
         detailLines: detail,
         hasDetail: detail.length > 0,
         badge,
         level,
-        parentId: parentOf.get(todo.id) ?? null,
+        parentId,
         subCount: subCounts.get(todo.id) ?? 0,
         lastOfGroup: lastSubs.has(todo.id),
         progress: steps,
@@ -555,7 +580,7 @@ export class TodoList {
     if (isSection(above.title)) return null;
     const head = byId.get(parentOf.get(above.id) ?? above.id);
     if (!head) return null;
-    return { id: head.id, title: stripPriorityPrefix(head.title).split('\n')[0].trim() };
+    return { id: head.id, title: stripBold(stripPriorityPrefix(head.title).split('\n')[0].trim()) };
   }
 
   /**
@@ -950,7 +975,7 @@ toggleFolderList(): void {
     if (!current || current.completed) return;
     const steps = this.todoService.stepsOf(head.id);
     if (steps.length === 0 || steps.some((s) => !s.completed)) return;
-    const title = stripPriorityPrefix(current.title).split('\n')[0].trim();
+    const title = stripBold(stripPriorityPrefix(current.title).split('\n')[0].trim());
     this.toast.show(`All steps done: ${title}`, {
       actionLabel: 'Complete',
       durationMs: 6000,
@@ -1374,6 +1399,19 @@ toggleFolderList(): void {
     // Der Cursor stand hinter dem getippten Leerzeichen, also ganz vorn im
     // eigentlichen Text. Dort bleibt er.
     textarea.setSelectionRange(0, 0);
+  }
+
+  /**
+   * Strg/⌘+B beim Bearbeiten: die Auswahl fett oder wieder normal, mit
+   * Sternchen wie in Markdown (rich-title.ts). Danach misst das Feld neu.
+   */
+  onEditKey(event: KeyboardEvent, id: string, textarea: HTMLTextAreaElement): void {
+    if (this.editingId() !== id || !isBoldKey(event, this.shortcuts.match(event))) return;
+    event.preventDefault();
+    const next = toggleBold(textarea.value, textarea.selectionStart, textarea.selectionEnd);
+    textarea.value = next.value;
+    textarea.setSelectionRange(next.start, next.end);
+    textarea.dispatchEvent(new Event('input'));
   }
 
   /** Backspace ganz vorn nimmt den letzten Chip weg, wie jedes Zeichen links vom Cursor. */
