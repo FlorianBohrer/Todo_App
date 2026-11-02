@@ -23,7 +23,7 @@ import {
   CdkDragPlaceholder,
   CdkDropList,
 } from '@angular/cdk/drag-drop';
-import { HOLD_TO_DRAG_MS, HoldToDrag } from '../../../shared/hold-to-drag';
+import { HoldToDrag, TODO_DRAG_START_DELAY } from '../../../shared/hold-to-drag';
 
 import { TodoService } from '../../services/todo';
 import { NgClass } from '@angular/common';
@@ -872,9 +872,8 @@ toggleFolderList(): void {
       offsetY: -4,
     },
   ];
-  /** Touch: dieselbe Haltezeit wie ueberall (hold-to-drag.ts). Maus: 200ms,
-   *  damit ein Klick in die Zeile kein Ziehen beginnt. */
-  protected readonly dragStartDelay = { touch: HOLD_TO_DRAG_MS, mouse: 200 };
+  /** Zwei Sekunden halten, mit dem Finger wie mit der Maus (hold-to-drag.ts). */
+  protected readonly dragStartDelay = TODO_DRAG_START_DELAY;
 
 
 

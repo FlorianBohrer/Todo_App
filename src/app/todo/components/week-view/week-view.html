@@ -142,7 +142,7 @@
               <!-- Ein Tipp öffnet den Kalender (moveTo), Ziehen geht weiter.
                    Per Tastatur: Tab auf die Karte, Enter. -->
               <div
-                cdkDrag [cdkDragData]="todo"
+                cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
                 (cdkDragEnded)="onDragEnded()"
                 class="week-card group relative flex items-start gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-sm text-text"
                 [class.opacity-60]="todo.completed"
@@ -271,7 +271,7 @@
           (cdkDropListDropped)="drop($event)">
           @for (todo of backlog(); track todo.id) {
             <div
-              cdkDrag [cdkDragData]="todo"
+              cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
               (cdkDragEnded)="onDragEnded()"
               class="week-card flex min-w-0 max-w-full items-center gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-sm text-text"
               [class.opacity-60]="todo.completed"
