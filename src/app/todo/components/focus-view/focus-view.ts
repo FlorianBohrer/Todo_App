@@ -29,7 +29,8 @@ import {
 import { rankForFocus } from '../../shared/focus';
 import { durationOf, formatDuration, stripPriorityPrefix, taskLevel } from '../../shared/title-priority';
 import { isSection } from '../../shared/section';
-import { splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
+import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
+import { TaskGlyph } from '../../shared/task-glyph';
 import { Todo } from '../../model/todo.model';
 
 /** Mittelpunkt und Radius des Rads im SVG (viewBox 300 × 300). */
@@ -47,8 +48,7 @@ const TICKS = Array.from({ length: 60 }, (_, i) => {
 interface Pick {
   id: string;
   title: string;
-  glyph: string;
-  initial: boolean;
+  icon: TaskIcon;
   minutes: number | null;
 }
 
@@ -64,7 +64,7 @@ interface Pick {
  */
 @Component({
   selector: 'app-focus-view',
-  imports: [LucideAngularModule, OverlayModule],
+  imports: [LucideAngularModule, OverlayModule, TaskGlyph],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './focus-view.html',
   styleUrl: './focus-view.scss',
@@ -224,12 +224,10 @@ export class FocusView {
 
   private toPick(todo: Todo): Pick {
     const text = stripPriorityPrefix(todo.title).split('\n')[0].trim();
-    const icon = taskIcon(text);
     return {
       id: todo.id,
       title: splitLeadingEmoji(text).rest,
-      glyph: icon.glyph,
-      initial: icon.initial,
+      icon: taskIcon(text),
       minutes: durationOf(todo.title),
     };
   }

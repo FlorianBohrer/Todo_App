@@ -1,11 +1,19 @@
 /**
- * Ein Bild je Aufgabe: ein Emoji im Kreis vor dem Titel.
+ * Ein Bild je Aufgabe, in einer Kachel vor dem Titel.
  *
  * Eine Liste aus lauter gleich aussehenden Zeilen liest man Wort für Wort.
  * Mit einem Bild davor findet das Auge „Zahnarzt" am Zahn, bevor es das Wort
  * gelesen hat. Gespeichert wird dafür nichts: steht vorn im Titel ein Emoji,
  * gilt das; sonst rät die App aus dem Text, und wenn sie nichts findet, steht
  * der erste Buchstabe da.
+ *
+ * Gezeichnet wird nicht das Emoji selbst, sondern ein Bild aus einem Guss
+ * (task-glyphs.ts, Phosphor Duotone) in der Farbe des Ordners. System-Emoji
+ * sahen auf jedem Gerät anders aus und standen bunt gegen die Ordnerfarbe.
+ * Das Emoji bleibt der Schlüssel: Stichwörter, Vorschläge und ein selbst
+ * vorangestelltes Emoji funktionieren wie bisher. Nur eins, für das es kein
+ * Bild gibt (🎉), steht als Emoji da. Die Bilder selbst lädt TaskGlyph
+ * nach (task-glyph.ts) — hier steht nur, welche Emoji eins haben.
  */
 
 /** Ein Emoji am Anfang, samt Variantenwahl und ZWJ-Folgen (🧑‍💻, ✈️). */
@@ -17,6 +25,13 @@ export interface TaskIcon {
   glyph: string;
   /** true, wenn `glyph` ein Buchstabe ist und kein Bild. */
   initial: boolean;
+  /** Gibt es zu `glyph` ein gezeichnetes Bild? Dann zeigt TaskGlyph das statt des Emoji. */
+  drawn: boolean;
+}
+
+/** Ein Emoji ohne Variantenwähler (U+FE0F): „✈" und „✈️" sind dasselbe Bild. */
+export function bareEmoji(emoji: string): string {
+  return emoji.replace(/\uFE0F/g, '');
 }
 
 /**
@@ -108,9 +123,12 @@ export function splitLeadingEmoji(text: string): { emoji: string | null; rest: s
  */
 export function taskIcon(text: string): TaskIcon {
   const { emoji, rest } = splitLeadingEmoji(text.trim());
-  if (emoji) return { glyph: emoji, initial: false };
-  const guessed = guessEmoji(rest);
-  if (guessed) return { glyph: guessed, initial: false };
+  const found = emoji ?? guessEmoji(rest);
+  if (found) return { glyph: found, initial: false, drawn: DRAWN.has(bareEmoji(found)) };
   const letter = /\p{L}|\p{N}/u.exec(rest)?.[0] ?? '•';
-  return { glyph: letter.toUpperCase(), initial: true };
+  return { glyph: letter.toUpperCase(), initial: true, drawn: false };
 }
+
+/** Jedes Emoji, das die App aus Stichwörtern vergibt. Für jedes gibt es ein Bild (task-icon.spec.ts prüft es). */
+export const KEYWORD_EMOJIS: readonly string[] = KEYWORDS.map(([emoji]) => emoji);
+const DRAWN = new Set(KEYWORD_EMOJIS.map(bareEmoji));

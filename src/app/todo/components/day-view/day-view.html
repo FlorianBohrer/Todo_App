@@ -85,7 +85,7 @@
             <ul class="day-cards" role="list">
               @for (card of section.cards; track card.id) {
                 <li class="day-card" [class.is-done]="card.done">
-                  <span class="todo-icon" [class]="card.iconClass" [class.todo-icon--initial]="card.icon.initial" aria-hidden="true">{{ card.icon.glyph }}</span>
+                  <span class="todo-icon" [class]="card.iconClass" [class.todo-icon--initial]="card.icon.initial" aria-hidden="true"><app-task-glyph [icon]="card.icon" /></span>
                   <div class="min-w-0 flex-1">
                     <p class="day-card__title">{{ card.title }}</p>
                     @if (card.badge || card.duration || card.late) {
