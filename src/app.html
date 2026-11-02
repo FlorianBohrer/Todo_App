@@ -79,7 +79,7 @@
              Zwischen 640 und 768px nur die Symbole: mit Wörtern brach die
              Leiste dort in zwei Zeilen um. -->
         <div class="filter-tabs hidden h-10 flex-none gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm sm:flex"
-          role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="5">
+          role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="4">
           <span class="filter-pill" aria-hidden="true"></span>
 
           <button type="button" role="tab"
@@ -111,18 +111,9 @@
           </button>
           <button type="button" role="tab"
             class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
-            [class.is-active]="view() === 'focus'"
-            [attr.aria-selected]="view() === 'focus'"
-            title="Focus timer (4)" aria-label="Focus"
-            (click)="setView('focus')">
-            <lucide-icon [img]="FocusIcon" class="h-4 w-4 flex-none"></lucide-icon>
-            <span class="hidden tabular-nums md:inline">{{ focusLabel() }}</span>
-          </button>
-          <button type="button" role="tab"
-            class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
             [class.is-active]="view() === 'stats'"
             [attr.aria-selected]="view() === 'stats'"
-            title="Stats (5)" aria-label="Stats"
+            title="Stats (4)" aria-label="Stats"
             (click)="setView('stats')">
             <lucide-icon [img]="StatsIcon" class="h-4 w-4 flex-none"></lucide-icon>
             <span class="hidden md:inline">Stats</span>
@@ -169,12 +160,6 @@
         <div class="view-swap"><app-stats-view></app-stats-view></div>
       } @placeholder {
         <p class="page-column text-sm text-subtle">Opening stats…</p>
-      }
-    } @else if (view() === 'focus') {
-      @defer (on immediate) {
-        <div class="view-swap"><app-focus-view></app-focus-view></div>
-      } @placeholder {
-        <p class="page-column text-sm text-subtle">Opening focus…</p>
       }
     } @else if (view() === 'plans') {
       @defer (on immediate) {
@@ -269,15 +254,6 @@
           (click)="setView('plans')">
           <span class="bottom-nav__icon"><lucide-icon [img]="PlansIcon" class="h-5 w-5"></lucide-icon></span>
           <span class="bottom-nav__label">Plans</span>
-        </button>
-        <button type="button" role="tab" class="bottom-nav__tab"
-          [class.is-running]="timerRunning()"
-          [class.is-active]="view() === 'focus'"
-          [attr.aria-selected]="view() === 'focus'"
-          title="Focus"
-          (click)="setView('focus')">
-          <span class="bottom-nav__icon"><lucide-icon [img]="FocusIcon" class="h-5 w-5"></lucide-icon></span>
-          <span class="bottom-nav__label">Focus</span>
         </button>
         <button type="button" role="tab" class="bottom-nav__tab"
           [class.is-active]="view() === 'stats'"
