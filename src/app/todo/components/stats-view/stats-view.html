@@ -1,6 +1,12 @@
 <section class="stats-view page-column" aria-label="Stats">
   <div class="view-head">
-    <h1 class="display-title">Stats</h1>
+    <div class="min-w-0">
+      <h1 class="display-title">Stats</h1>
+      <p class="view-sub stats-sync">
+        <span class="stats-sync__dot" aria-hidden="true"></span>
+        Synced with Flow
+      </p>
+    </div>
     <button type="button" class="view-action" (click)="exportCSV()" [disabled]="worked().length === 0"
       title="Download the focus hours of this period as a timesheet">
       <lucide-icon [img]="DownloadIcon" class="h-4 w-4" aria-hidden="true"></lucide-icon>
@@ -35,25 +41,28 @@
 
   <!-- Die eine grosse Zahl: Fokus im Zeitraum, oder am angetippten Tag. -->
   <div class="stats-card stats-hero" [class.is-loading]="loading()">
-    <p class="stats-hero__label">{{ headline().label }}</p>
+    <div class="stats-hero__top">
+      <p class="stats-hero__label">{{ headline().label }}</p>
+      @if (trend(); as t) {
+        <span class="stats-trend" [class.is-up]="t.up" [class.is-down]="!t.up" [title]="t.title">
+          <lucide-icon [img]="t.up ? UpIcon : DownIcon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+          <span class="sr-only">{{ t.title }}</span>
+          <span aria-hidden="true">{{ t.label }}</span>
+        </span>
+      }
+    </div>
     <p class="stats-hero__value">{{ formatMinutes(headline().minutes) }}</p>
     <p class="stats-hero__sub">
       @if (average() > 0) {
         <span class="stats-avg-key" aria-hidden="true"></span>
-        Ø {{ formatMinutes(average()) }} per working day · {{ worked().length }} {{ worked().length === 1 ? 'day' : 'days' }}
+        Ø {{ formatMinutes(average()) }} per active day · {{ worked().length }} {{ worked().length === 1 ? 'day' : 'days' }}
       } @else {
         No focus time yet in this {{ span() }}
       }
-      @if (trend(); as t) {
-        <span class="stats-trend" [class.is-up]="t.change > 0">{{ t.label }}</span>
-      }
-    </p>
-    <p class="stats-sync">
-      <span class="stats-sync__dot" aria-hidden="true"></span>
-      Synced with Flow
     </p>
 
-    <!-- Ein Balken je Tag, der Schnitt als Linie. Ein Tipp zeigt den Tag oben. -->
+    <!-- Ein Balken je Tag, der Schnitt als gestrichelte Linie. Der beste Tag
+         trägt seine Zahl, alle anderen zeigen sie beim Zeigen. -->
     <div class="bars" [class.bars--month]="span() === 'month'"
       role="group" [attr.aria-label]="'Focus per day, ' + title()">
       <div class="bars__grid" aria-hidden="true">
@@ -61,7 +70,9 @@
           <span class="bars__tick" [style.bottom]="focusHeight(h * 60)"><span>{{ h }}h</span></span>
         }
         @if (average() > 0) {
-          <span class="bars__avg" [style.bottom]="focusHeight(average())"></span>
+          <span class="bars__avg" [style.bottom]="focusHeight(average())">
+            <span class="bars__avg-label">Ø {{ formatMinutes(average()) }}</span>
+          </span>
         }
       </div>
       <div class="bars__plot">
@@ -69,6 +80,7 @@
           <button type="button" class="bars__col"
             [class.is-selected]="selected() === day.iso"
             [class.is-future]="day.future"
+            [class.is-today]="day.isToday"
             [disabled]="day.future"
             [attr.aria-label]="day.name + ': ' + formatMinutes(day.minutes) + ' focus'"
             [attr.aria-pressed]="selected() === day.iso"
@@ -77,7 +89,11 @@
             (pointerleave)="hover.set(null)"
             (focus)="hover.set({ chart: 'focus', iso: day.iso })"
             (blur)="hover.set(null)">
-            <span class="bars__bar bars__bar--focus" [style.height]="focusHeight(day.minutes)"></span>
+            <span class="bars__bar bars__bar--focus" [style.height]="focusHeight(day.minutes)">
+              @if (span() === 'week' && bestDay()?.iso === day.iso && hover()?.chart !== 'focus') {
+                <span class="bars__label" aria-hidden="true">{{ formatMinutes(day.minutes) }}</span>
+              }
+            </span>
             @if (hover()?.chart === 'focus' && hover()?.iso === day.iso) {
               <span class="bars__tip" role="tooltip">
                 <strong>{{ formatMinutes(day.minutes) }}</strong>
@@ -95,28 +111,86 @@
     </div>
   </div>
 
-  <!-- Drei Zahlen, die die Todo-App kennt und Flow nicht. -->
+  <!-- Vier Zahlen, jede mit ihrem Zeichen. -->
   <div class="stats-tiles">
     <div class="stats-card stats-tile">
+      <span class="stats-tile__icon stats-tile__icon--done" aria-hidden="true"><lucide-icon [img]="DoneIcon" class="h-4 w-4"></lucide-icon></span>
       <p class="stats-tile__label">Tasks done</p>
       <p class="stats-tile__value">{{ doneInPeriod() }}</p>
+      <p class="stats-tile__sub">
+        @if (bestDoneDay(); as b) { Most on {{ b.label }} · {{ b.done }} } @else { Nothing yet }
+      </p>
     </div>
     <div class="stats-card stats-tile">
+      <span class="stats-tile__icon stats-tile__icon--focus" aria-hidden="true"><lucide-icon [img]="TimerIcon" class="h-4 w-4"></lucide-icon></span>
       <p class="stats-tile__label">Focus sessions</p>
       <p class="stats-tile__value">{{ sessionsInPeriod() }}</p>
+      <p class="stats-tile__sub">
+        @if (avgSession() > 0) { Ø {{ formatMinutes(avgSession()) }} each } @else { None yet }
+      </p>
     </div>
     <div class="stats-card stats-tile">
+      <span class="stats-tile__icon stats-tile__icon--streak" [class.is-lit]="streak().today" aria-hidden="true"><lucide-icon [img]="FlameIcon" class="h-4 w-4"></lucide-icon></span>
       <p class="stats-tile__label">Day streak</p>
-      <p class="stats-tile__value">
-        <lucide-icon [img]="FlameIcon" class="stats-flame h-5 w-5" [class.is-lit]="streak().today" aria-hidden="true"></lucide-icon>
-        {{ streak().days }}
-      </p>
-      <p class="stats-tile__sub">Best here: {{ bestInPeriod() }}</p>
+      <p class="stats-tile__value">{{ streak().days }}</p>
+      <div class="stats-dots" role="img" [attr.aria-label]="'Tasks done on ' + litDays() + ' of the last 7 days. Best streak here: ' + bestInPeriod()">
+        @for (dot of streakDots(); track dot.iso) {
+          <span class="stats-dots__dot" [class.is-lit]="dot.lit" [title]="dot.letter"></span>
+        }
+      </div>
+    </div>
+    <div class="stats-card stats-tile">
+      <span class="stats-tile__icon stats-tile__icon--best" aria-hidden="true"><lucide-icon [img]="TrophyIcon" class="h-4 w-4"></lucide-icon></span>
+      <p class="stats-tile__label">Best day</p>
+      <p class="stats-tile__value">{{ bestDay() ? formatMinutes(bestDay()!.minutes) : '–' }}</p>
+      <p class="stats-tile__sub">{{ bestDay()?.name ?? 'No focus yet' }}</p>
+    </div>
+  </div>
+
+  <!-- Drei Monate auf einen Blick: ein Kästchen je Tag, je mehr Fokus, desto
+       kräftiger. Eine Farbe, hell nach kräftig — die Zahlen stehen im Tooltip
+       und in der Liste der Tage. -->
+  <div class="stats-card">
+    <div class="stats-card__head">
+      <h2 class="stats-card__title">Consistency</h2>
+      <span class="stats-card__meta">{{ heat().active }} of {{ heat().total }} days with focus</span>
+    </div>
+    <div class="heat-row">
+    <div class="heat" role="img" [attr.aria-label]="'Focus over the last 13 weeks: ' + heat().active + ' of ' + heat().total + ' days with focus'">
+      <div class="heat__weekdays" aria-hidden="true">
+        <span></span>
+        @for (label of weekdayLabels; track $index) { <span>{{ label }}</span> }
+      </div>
+      <div class="heat__weeks">
+        @for (week of heat().weeks; track week.days[0]) {
+          <div class="heat__week">
+            <span class="heat__month" aria-hidden="true">{{ week.month }}</span>
+            @for (cell of week.days; track cell.iso) {
+              <span class="heat__cell" [class]="'heat__cell--' + cell.level" [title]="cell.title"></span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+    <!-- Die drei Zahlen hinter dem Kalender. -->
+    <dl class="heat-facts">
+      <div><dt>Total focus</dt><dd>{{ formatMinutes(heat().minutes) }}</dd></div>
+      <div><dt>Per active day</dt><dd>{{ heat().perActive > 0 ? formatMinutes(heat().perActive) : '–' }}</dd></div>
+      <div><dt>Longest run</dt><dd>{{ heat().longest }} {{ heat().longest === 1 ? 'day' : 'days' }}</dd></div>
+    </dl>
+    </div>
+    <div class="heat__legend" aria-hidden="true">
+      <span>Less</span>
+      @for (level of [0, 1, 2, 3, 4]; track level) { <span class="heat__cell" [class]="'heat__cell--' + level"></span> }
+      <span>More</span>
     </div>
   </div>
 
   <div class="stats-card">
-    <h2 class="stats-card__title">Tasks done per day</h2>
+    <div class="stats-card__head">
+      <h2 class="stats-card__title">Tasks done per day</h2>
+      <span class="stats-card__meta">{{ doneInPeriod() }} in total</span>
+    </div>
     <div class="bars bars--small" [class.bars--month]="span() === 'month'" role="group" aria-label="Tasks done per day">
       <div class="bars__grid" aria-hidden="true">
         <span class="bars__tick" [style.bottom]="'0%'"><span>0</span></span>
@@ -149,27 +223,31 @@
     </div>
   </div>
 
-  <!-- Wann am Tag man etwas schafft: ein Ganzes in drei Teilen. -->
+  <!-- Wann am Tag man etwas schafft: drei Zahlen, darunter das Ganze. -->
   @if (timeShare().total > 0) {
     <div class="stats-card">
-      <h2 class="stats-card__title">When you get things done</h2>
+      <div class="stats-card__head">
+        <h2 class="stats-card__title">When you get things done</h2>
+        <span class="stats-card__meta">{{ timeShare().total }} tasks</span>
+      </div>
+      <div class="share-stats">
+        @for (part of timeShare().parts; track part.key) {
+          <div class="share-stat">
+            <span class="share-stat__icon" [class]="'share-stat__icon--' + part.key" aria-hidden="true">
+              <lucide-icon [img]="part.icon" class="h-4 w-4"></lucide-icon>
+            </span>
+            <p class="share-stat__value">{{ part.share }}%</p>
+            <p class="share-stat__label">{{ part.label }} <span class="text-subtle">· {{ part.count }}</span></p>
+          </div>
+        }
+      </div>
       <div class="share" role="img"
         [attr.aria-label]="'Morning ' + timeShare().parts[0].share + '%, afternoon ' + timeShare().parts[1].share + '%, evening ' + timeShare().parts[2].share + '%'">
         @for (part of timeShare().parts; track part.key) {
           @if (part.count > 0) {
             <span class="share__part" [class]="'share__part--' + part.key" [style.flex-grow]="part.count"
-              [title]="part.label + ': ' + part.count + ' (' + part.share + '%)'">
-              @if (part.share >= 14) { <span class="share__value">{{ part.share }}%</span> }
-            </span>
+              [title]="part.label + ' (' + part.hint + '): ' + part.count"></span>
           }
-        }
-      </div>
-      <div class="share__legend">
-        @for (part of timeShare().parts; track part.key) {
-          <span class="share__key">
-            <span class="share__swatch" [class]="'share__part--' + part.key" aria-hidden="true"></span>
-            {{ part.label }} <span class="text-subtle">{{ part.count }}</span>
-          </span>
         }
       </div>
     </div>
@@ -178,9 +256,11 @@
   <!-- Woran am meisten gearbeitet wurde — aus den Sitzungen in Flow und hier. -->
   @if (topTodos().length > 0) {
     <div class="stats-card">
-      <h2 class="stats-card__title">Most focus</h2>
-      <ul class="top" role="list">
-        @for (t of topTodos(); track t.title) {
+      <div class="stats-card__head">
+        <h2 class="stats-card__title">Most focus</h2>
+      </div>
+      <ol class="top" role="list">
+        @for (t of topTodos(); track t.title; let i = $index) {
           <li class="top__row">
             <span class="top__icon" [class.is-initial]="t.icon.initial" aria-hidden="true"><app-task-glyph [icon]="t.icon" /></span>
             <div class="min-w-0 flex-1">
@@ -192,25 +272,41 @@
             </div>
           </li>
         }
-      </ul>
+      </ol>
     </div>
   }
 
-  <!-- Die Tage als Liste, wie eine Stundenliste — zugleich die Werte hinter den Balken. -->
+  <!-- Die Tage als Zeitleiste: wann am Tag fokussiert wurde, als Balken —
+       darunter die Uhrzeiten als Text. Zugleich die Werte hinter den Balken. -->
   @if (dayList().length > 0) {
     <div class="stats-card">
-      <h2 class="stats-card__title">Days</h2>
+      <div class="stats-card__head">
+        <h2 class="stats-card__title">Days</h2>
+        <span class="stats-card__meta">{{ formatMinutes(total()) }}</span>
+      </div>
+      <div class="days__axis" aria-hidden="true">
+        @for (tick of dayAxis(); track tick.label) {
+          <span [style.left.%]="tick.left">{{ tick.label }}</span>
+        }
+      </div>
       <ul class="days" role="list">
         @for (day of dayList(); track day.iso) {
           <li class="days__row">
-            <div class="min-w-0 flex-1">
+            <div class="days__line">
               <p class="days__name">{{ day.name }}</p>
-              <p class="days__blocks">
-                {{ day.blocksText || (day.minutes > 0 ? 'Focus sessions' : 'No focus') }}
-                @if (day.done > 0) { · {{ day.done }} done }
-              </p>
+              <span class="days__time">{{ day.minutes > 0 ? day.time : '–' }}</span>
             </div>
-            <span class="days__time">{{ day.minutes > 0 ? day.time : '–' }}</span>
+            @if (day.timeline.spans.length > 0) {
+              <div class="days__track" aria-hidden="true">
+                @for (span of day.timeline.spans; track span.label) {
+                  <span class="days__block" [style.left.%]="span.left" [style.width.%]="span.width" [title]="span.label"></span>
+                }
+              </div>
+            }
+            <p class="days__blocks">
+              {{ day.blocksText || (day.minutes > 0 ? 'Focus sessions' : 'No focus') }}
+              @if (day.done > 0) { · {{ day.done }} done }
+            </p>
           </li>
         }
       </ul>

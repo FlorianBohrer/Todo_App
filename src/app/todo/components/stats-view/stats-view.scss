@@ -1,7 +1,9 @@
-// Die Statistik: Karten auf der dunklen Fläche, eine grosse Zahl, schmale
-// Balken mit runden Köpfen und eckigem Fuss, Gitter als Haarlinien, der
-// Schnitt als ruhige Linie. Farben je Aufgabe, nicht je Rang — geprüft mit
-// dem Farb-Validator (Kontrast und Farbsehschwäche) gegen die Kartenfläche.
+// Die Statistik: oben eine grosse Zahl mit Trend und Balken je Tag, darunter
+// vier Kennzahlen, drei Monate als Kalender, die Tageszeit, die Aufgaben mit
+// dem meisten Fokus und die Tage als Zeitleisten. Schmale Balken mit runden
+// Köpfen und eckigem Fuss, Gitter als Haarlinien, der Schnitt gestrichelt.
+// Farben je Aufgabe, nicht je Rang — geprüft mit dem Farb-Validator
+// (Kontrast und Farbsehschwäche) gegen die Kartenfläche.
 
 :host {
   display: block;
@@ -43,7 +45,7 @@
 .stats-card {
   margin-bottom: 0.75rem;
   border: 1px solid var(--color-line);
-  border-radius: 1.25rem;
+  border-radius: 1.375rem;
   padding: 1.125rem 1.25rem;
   background: var(--viz-surface);
   box-shadow: 0 8px 18px -14px rgb(var(--shadow) / calc(0.7 * var(--shadow-k)));
@@ -55,15 +57,57 @@
   }
 }
 
+.stats-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+
 .stats-card__title {
-  margin: 0 0 0.75rem;
+  margin: 0;
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--color-text);
 }
 
+.stats-card__meta {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-subtle);
+}
+
+// „Synced with Flow" steht im Kopf, unter dem Titel.
+.stats-sync {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stats-sync__dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--color-ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ok) 18%, transparent);
+}
+
+// ---- Die grosse Zahl ----
+.stats-hero {
+  padding-bottom: 1rem;
+}
+
 .stats-hero.is-loading .bars__plot {
   opacity: 0.5;
+}
+
+.stats-hero__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .stats-hero__label {
@@ -75,11 +119,11 @@
 // Die eine grosse Zahl der Ansicht: gross, in der Grundschrift, mit
 // proportionalen Ziffern — tabellarische stünden bei dieser Grösse locker.
 .stats-hero__value {
-  margin: 0.125rem 0 0;
-  font-size: clamp(3rem, 12vw, 3.5rem);
+  margin: 0.25rem 0 0;
+  font-size: clamp(3rem, 12vw, 3.75rem);
   font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  line-height: 1;
+  letter-spacing: -0.035em;
   color: var(--color-text);
 }
 
@@ -88,7 +132,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
-  margin: 0.375rem 0 0;
+  margin: 0.5rem 0 0;
   font-size: 0.8125rem;
   color: var(--color-muted);
 }
@@ -97,35 +141,29 @@
   display: inline-block;
   width: 0.875rem;
   height: 0;
-  border-top: 1.5px solid var(--color-text);
+  border-top: 1.5px dashed var(--color-text);
   opacity: 0.7;
 }
 
+// Der Trend als Plakette: hoch in Grün, runter ruhig grau — weniger Fokus
+// ist eine Auskunft, kein Alarm.
 .stats-trend {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.2rem;
   border-radius: 999px;
-  padding: 0.0625rem 0.5rem;
+  padding: 0.1875rem 0.5rem 0.1875rem 0.375rem;
   background: var(--color-fill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--color-muted);
 }
 
 .stats-trend.is-up {
+  background: color-mix(in srgb, var(--color-ok) 14%, transparent);
   color: var(--color-ok);
-}
-
-.stats-sync {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  margin: 0.5rem 0 0;
-  font-size: 0.75rem;
-  color: var(--color-subtle);
-}
-
-.stats-sync__dot {
-  width: 0.4375rem;
-  height: 0.4375rem;
-  border-radius: 999px;
-  background: var(--color-ok);
 }
 
 // ---- Balken ----
@@ -133,9 +171,9 @@
   position: relative;
   display: grid;
   grid-template-columns: 1.75rem 1fr;
-  grid-template-rows: 9.5rem auto;
+  grid-template-rows: 10rem auto;
   column-gap: 0.375rem;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 .bars--small {
@@ -168,13 +206,29 @@
   color: var(--color-subtle);
 }
 
+// Der Schnitt: gestrichelt, damit er nicht wie eine Gitterlinie liest, und
+// rechts mit seiner Zahl.
 .bars__avg {
   position: absolute;
   right: 0;
   left: 2.125rem;
+  z-index: 1;
   height: 0;
-  border-top: 1.5px solid var(--color-text);
-  opacity: 0.55;
+  border-top: 1.5px dashed color-mix(in srgb, var(--color-text) 60%, transparent);
+}
+
+.bars__avg-label {
+  position: absolute;
+  right: 0;
+  bottom: 0.25rem;
+  border-radius: 999px;
+  padding: 0.0625rem 0.4375rem;
+  background: var(--color-panel2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+  white-space: nowrap;
 }
 
 .bars__plot {
@@ -195,9 +249,10 @@
   flex: 1;
   align-items: flex-end;
   justify-content: center;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   outline: none;
   cursor: pointer;
+  transition: background-color 140ms ease-out;
 }
 
 .bars__col:hover,
@@ -214,7 +269,9 @@
 }
 
 // Höchstens 24 Pixel breit, runde 4px am Kopf, eckig an der Grundlinie.
+// Ein leichter Verlauf nach oben: die Fläche liest als Säule, nicht als Strich.
 .bars__bar {
+  position: relative;
   width: min(100%, 24px);
   min-height: 0;
   border-radius: 4px 4px 0 0;
@@ -222,17 +279,30 @@
 }
 
 .bars__bar--focus {
-  background: var(--viz-focus);
+  background: linear-gradient(to top, color-mix(in srgb, var(--viz-focus) 72%, var(--viz-surface)), var(--viz-focus));
 }
 
 .bars__bar--done {
-  background: var(--viz-done);
+  background: linear-gradient(to top, color-mix(in srgb, var(--viz-done) 72%, var(--viz-surface)), var(--viz-done));
+}
+
+// Der beste Tag trägt seine Zahl — nur er, sonst stünde über jedem Balken eine.
+.bars__label {
+  position: absolute;
+  bottom: calc(100% + 0.3rem);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  white-space: nowrap;
 }
 
 .bars__col:hover .bars__bar,
 .bars__col:focus-visible .bars__bar,
 .bars__col.is-selected .bars__bar {
-  filter: brightness(1.18);
+  filter: brightness(1.15);
 }
 
 .bars__col.is-selected {
@@ -295,16 +365,57 @@
   color: var(--color-muted);
 }
 
-// ---- Kacheln ----
+// ---- Kennzahlen ----
 .stats-tiles {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .stats-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .stats-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.stats-tile__icon {
+  display: grid;
+  width: 1.875rem;
+  height: 1.875rem;
+  place-items: center;
   margin-bottom: 0.75rem;
-  padding: 0.875rem 1rem;
+  border-radius: 0.625rem;
+}
+
+.stats-tile__icon--done {
+  background: color-mix(in srgb, var(--viz-done) 18%, transparent);
+  color: var(--viz-done);
+}
+
+.stats-tile__icon--focus {
+  background: color-mix(in srgb, var(--viz-focus) 18%, transparent);
+  color: var(--viz-focus);
+}
+
+.stats-tile__icon--streak {
+  background: var(--color-fill);
+  color: var(--color-subtle);
+}
+
+.stats-tile__icon--streak.is-lit {
+  background: color-mix(in srgb, var(--color-orange-400, #fb923c) 18%, transparent);
+  color: var(--color-orange-400, #fb923c);
+}
+
+.stats-tile__icon--best {
+  background: color-mix(in srgb, var(--color-amber-300) 16%, transparent);
+  color: var(--color-amber-300);
 }
 
 .stats-tile__label {
@@ -314,97 +425,220 @@
 }
 
 .stats-tile__value {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin: 0.25rem 0 0;
+  margin: 0.125rem 0 0;
   font-size: 1.75rem;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
 
 .stats-tile__sub {
-  margin: 0.125rem 0 0;
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.6875rem;
   color: var(--color-subtle);
 }
 
-.stats-flame {
-  color: rgb(251 146 60 / 0.55);
+// Die letzten sieben Tage: ein Punkt je Tag, leuchtend, wenn etwas fertig wurde.
+.stats-dots {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
 }
 
-.stats-flame.is-lit {
-  color: var(--color-orange-400, #fb923c);
+.stats-dots__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-fill-strong);
 }
 
-@media (max-width: 420px) {
-  .stats-tiles {
-    gap: 0.5rem;
-  }
+.stats-dots__dot.is-lit {
+  background: var(--color-orange-400, #fb923c);
+}
 
-  .stats-tile {
-    padding: 0.75rem;
-  }
+// ---- Heatmap: drei Monate ----
+// Links der Kalender, rechts drei Zahlen dazu; auf dem Telefon untereinander.
+.heat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.25rem 2.5rem;
+}
 
-  .stats-tile__value {
-    font-size: 1.5rem;
+.heat-facts {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  min-width: 14rem;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .heat-facts {
+    grid-template-columns: 1fr;
+    gap: 1.125rem;
+    padding-top: 1.125rem;
   }
 }
 
-// ---- Tageszeit: ein Ganzes in drei Teilen ----
+.heat-facts dt {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.heat-facts dd {
+  margin: 0.125rem 0 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+// Eine Farbe, von kaum zu kräftig — gemischt mit der Kartenfläche, damit
+// die Stufen in hell und dunkel gleich weit auseinander liegen.
+.heat {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.heat__weekdays {
+  display: grid;
+  grid-template-rows: 0.875rem repeat(7, var(--cell));
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  color: var(--color-subtle);
+}
+
+.heat__weekdays > span {
+  display: flex;
+  align-items: center;
+}
+
+.heat {
+  --cell: min(1.375rem, calc((100vw - 7.5rem) / 13 - 0.25rem));
+}
+
+.heat__weeks {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.heat__week {
+  display: grid;
+  grid-template-rows: 0.875rem repeat(7, var(--cell));
+  gap: 0.25rem;
+}
+
+.heat__month {
+  font-size: 0.625rem;
+  line-height: 0.875rem;
+  color: var(--color-subtle);
+  white-space: nowrap;
+}
+
+.heat__cell {
+  display: block;
+  width: var(--cell);
+  height: var(--cell);
+  border-radius: 0.3125rem;
+  background: rgb(var(--ink) / 0.06);
+}
+
+.heat__cell--1 { background: color-mix(in srgb, var(--viz-focus) 30%, var(--viz-surface)); }
+.heat__cell--2 { background: color-mix(in srgb, var(--viz-focus) 55%, var(--viz-surface)); }
+.heat__cell--3 { background: color-mix(in srgb, var(--viz-focus) 78%, var(--viz-surface)); }
+.heat__cell--4 { background: var(--viz-focus); }
+
+.heat__cell--\-1 {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+.heat__legend {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.875rem;
+  font-size: 0.6875rem;
+  color: var(--color-subtle);
+}
+
+.heat__legend .heat__cell {
+  --cell: 0.75rem;
+  border-radius: 0.1875rem;
+}
+
+.heat__legend > span:first-child {
+  margin-right: 0.25rem;
+}
+
+.heat__legend > span:last-child {
+  margin-left: 0.25rem;
+}
+
+// ---- Tageszeit ----
+.share-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.share-stat__icon {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 0.5625rem;
+}
+
+.share-stat__icon--morning { background: color-mix(in srgb, var(--viz-morning) 18%, transparent); color: var(--viz-morning); }
+.share-stat__icon--afternoon { background: color-mix(in srgb, var(--viz-afternoon) 18%, transparent); color: var(--viz-afternoon); }
+.share-stat__icon--evening { background: color-mix(in srgb, var(--viz-evening) 18%, transparent); color: var(--viz-evening); }
+
+.share-stat__value {
+  margin: 0.5rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.share-stat__label {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
 .share {
   display: flex;
-  height: 28px;
+  height: 10px;
   gap: 2px;
 }
 
 .share__part {
-  display: flex;
   min-width: 4px;
-  align-items: center;
-  border-radius: 4px;
-  padding-left: 0.5rem;
+  border-radius: 999px;
 }
 
 .share__part--morning { background: var(--viz-morning); }
 .share__part--afternoon { background: var(--viz-afternoon); }
 .share__part--evening { background: var(--viz-evening); }
 
-.share__value {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #fff;
-}
-
-.share__legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem 1rem;
-  margin-top: 0.75rem;
-  font-size: 0.8125rem;
-  color: var(--color-text);
-}
-
-.share__key {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.share__swatch {
-  width: 0.75rem;
-  height: 0.75rem;
-  flex: none;
-  border-radius: 3px;
-  padding: 0;
-}
-
 // ---- Meiste Fokuszeit ----
 .top {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.875rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -418,19 +652,19 @@
 
 .top__icon {
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: 2.25rem;
+  height: 2.25rem;
   flex: none;
   place-items: center;
-  border-radius: 0.625rem;
-  background: color-mix(in srgb, var(--viz-focus) 20%, transparent);
+  border-radius: 0.6875rem;
+  background: color-mix(in srgb, var(--viz-focus) 18%, transparent);
   color: var(--viz-focus);
   font-size: 1rem;
   line-height: 1;
 }
 
 .top__icon.is-initial {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 650;
 }
 
@@ -447,6 +681,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.9375rem;
+  font-weight: 500;
   color: var(--color-text);
 }
 
@@ -461,20 +696,43 @@
 // Ein Meter: die Spur ist eine hellere Stufe derselben Farbe.
 .top__meter {
   display: block;
-  height: 4px;
-  margin-top: 0.375rem;
+  height: 6px;
+  margin-top: 0.4375rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--viz-focus) 18%, transparent);
+  background: color-mix(in srgb, var(--viz-focus) 14%, transparent);
 }
 
 .top__meter > span {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--viz-focus);
+  background: linear-gradient(to right, color-mix(in srgb, var(--viz-focus) 70%, var(--viz-surface)), var(--viz-focus));
 }
 
-// ---- Tage ----
+// ---- Tage als Zeitleisten ----
+.days__axis {
+  position: relative;
+  height: 0.875rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-subtle);
+}
+
+.days__axis > span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.days__axis > span:first-child {
+  transform: none;
+}
+
+.days__axis > span:last-child {
+  transform: translateX(-100%);
+}
+
 .days {
   margin: 0;
   padding: 0;
@@ -482,16 +740,24 @@
 }
 
 .days__row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
   border-top: 1px solid var(--color-line);
-  padding: 0.625rem 0;
+  padding: 0.75rem 0;
 }
 
 .days__row:first-child {
   border-top: 0;
-  padding-top: 0;
+  padding-top: 0.25rem;
+}
+
+.days__row:last-child {
+  padding-bottom: 0;
+}
+
+.days__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .days__name {
@@ -501,19 +767,35 @@
   color: var(--color-text);
 }
 
-.days__blocks {
-  margin: 0.125rem 0 0;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-subtle);
-}
-
 .days__time {
   flex: none;
   font-size: 0.9375rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
+}
+
+.days__track {
+  position: relative;
+  height: 0.5rem;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  background: rgb(var(--ink) / 0.06);
+}
+
+.days__block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--viz-focus);
+}
+
+.days__blocks {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-subtle);
 }
 
 @media (prefers-reduced-motion: reduce) {
