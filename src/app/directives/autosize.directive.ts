@@ -57,6 +57,16 @@ export class Autosize implements AfterViewInit, OnChanges, OnDestroy {
   private static pending: Autosize[] = [];
   private static scheduled = false;
   private static fontsWatched = false;
+  private static mediaWatched = false;
+
+  /**
+   * Medienabfragen, an denen in der Liste die Schriftgrösse hängt: auf Touch
+   * stehen Schritte in 16px statt 15px (todo-list.scss). Wechselt das, ohne
+   * dass sich die Breite ändert — ein iPad, an das man die Tastatur mit
+   * Trackpad steckt —, brach der Text neu um, die Höhe aber blieb: eine
+   * leere Zeile unter dem Titel oder ein abgeschnittenes Ende.
+   */
+  private static readonly FONT_MEDIA = ['(pointer: coarse)', '(any-pointer: coarse)', '(hover: none)'];
 
   ngAfterViewInit() {
     Autosize.live.add(this);
@@ -76,6 +86,7 @@ export class Autosize implements AfterViewInit, OnChanges, OnDestroy {
     }
 
     Autosize.watchFonts();
+    Autosize.watchMedia();
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -97,13 +108,29 @@ export class Autosize implements AfterViewInit, OnChanges, OnDestroy {
     queueMicrotask(() => Autosize.flush());
   }
 
-  /** Einmal pro Seite: sobald die Schrift da ist, alle neu messen. */
+  private static remeasureAll() {
+    for (const item of Autosize.live) Autosize.queue(item);
+  }
+
+  /**
+   * Einmal pro Seite: sobald die Schrift da ist, alle neu messen — und
+   * jedes Mal, wenn später noch eine nachgeladen wird (ein Schnitt, ein
+   * Emoji), denn auch die bricht anders um als die Ersatzschrift.
+   */
   private static watchFonts() {
     if (Autosize.fontsWatched || typeof document === 'undefined' || !document.fonts) return;
     Autosize.fontsWatched = true;
-    document.fonts.ready.then(() => {
-      for (const item of Autosize.live) Autosize.queue(item);
-    });
+    document.fonts.ready.then(() => Autosize.remeasureAll());
+    document.fonts.addEventListener?.('loadingdone', () => Autosize.remeasureAll());
+  }
+
+  /** Einmal pro Seite: wechselt eine der Abfragen, an denen die Schrift hängt, alle neu messen. */
+  private static watchMedia() {
+    if (Autosize.mediaWatched || typeof window === 'undefined' || !window.matchMedia) return;
+    Autosize.mediaWatched = true;
+    for (const query of Autosize.FONT_MEDIA) {
+      window.matchMedia(query).addEventListener?.('change', () => Autosize.remeasureAll());
+    }
   }
 
   private static flush() {
