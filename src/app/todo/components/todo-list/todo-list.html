@@ -107,6 +107,8 @@
       [class.todo-sub--last]="row.lastOfGroup && !item.addFollows"
       [class.todo-main]="row.level === 'main'"
       [class.todo-parent]="row.subCount > 0"
+      [class.is-folded]="row.subCount > 0 && isCollapsed(todo.id)"
+      [class.todo-sub--unfold]="row.parentId !== null && unfoldedId() === row.parentId"
       [class.todo-target]="activeParentId() === row.id"
       [class.todo-card--revealed]="revealedId() === row.id"
       [class.is-editing]="editingId() === todo.id"
@@ -335,7 +337,6 @@
                       }
                     </svg>
                     <span>{{ p.done }}/{{ p.total }}</span>
-                    <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-3 w-3" [class.is-collapsed]="isCollapsed(todo.id)" aria-hidden="true"></lucide-icon>
                   </button>
                 }
               </div>
@@ -655,6 +656,27 @@
               (click)="unarchive(todo.id)">
               <lucide-icon [img]="RestoreIcon" class="h-3.5 w-3.5"></lucide-icon>
               Restore
+            </button>
+          }
+
+          <!-- Die Schritte ein- und ausklappen. Vorher ging das nur über die
+               kleine Zahl „0/3" in der Meta-Zeile, und die fand man nicht.
+               Jetzt ein eigener Knopf an jeder Aufgabe mit Schritten, rechts,
+               wo vorher der Haken stand; zugeklappt sagt er, wie viele
+               Schritte darunter liegen. -->
+          @if (row.subCount > 0) {
+            <button
+              type="button"
+              class="todo-fold flex-shrink-0"
+              [class.is-folded]="isCollapsed(todo.id)"
+              (click)="$event.stopPropagation(); toggleSubtasks(todo.id)"
+              [attr.aria-expanded]="!isCollapsed(todo.id)"
+              [attr.aria-label]="(isCollapsed(todo.id) ? 'Show ' : 'Hide ') + row.subCount + (row.subCount === 1 ? ' step' : ' steps')"
+              [title]="isCollapsed(todo.id) ? 'Show steps' : 'Hide steps'">
+              @if (isCollapsed(todo.id)) {
+                <span class="todo-fold__count">{{ row.subCount }}</span>
+              }
+              <lucide-icon [img]="ChevronDownIcon" class="todo-chevron h-4 w-4" [class.is-collapsed]="isCollapsed(todo.id)" aria-hidden="true"></lucide-icon>
             </button>
           }
 
