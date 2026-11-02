@@ -1325,7 +1325,20 @@ toggleFolderList(): void {
     return this.collapsedIds().has(id);
   }
 
+  /**
+   * Die Gruppe, die gerade aufgeklappt wurde: ihre Schritte gleiten einmal
+   * herein (todo-list.scss, .todo-sub--unfold). Danach wieder null, damit
+   * Ziehen oder Filtern sie nicht erneut animiert.
+   */
+  protected readonly unfoldedId = signal<string | null>(null);
+  private unfoldTimer: ReturnType<typeof setTimeout> | undefined;
+
   toggleSubtasks(id: string): void {
+    if (this.isCollapsed(id)) {
+      this.unfoldedId.set(id);
+      clearTimeout(this.unfoldTimer);
+      this.unfoldTimer = setTimeout(() => this.unfoldedId.set(null), 450);
+    }
     this.collapsedIds.update((current) => {
       const updated = new Set(current);
       if (!updated.delete(id)) updated.add(id);
