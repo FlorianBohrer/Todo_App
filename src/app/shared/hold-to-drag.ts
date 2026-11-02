@@ -11,8 +11,11 @@ import { holdArmed } from '../todo/shared/haptics';
  * Bewegung zu stoppen, oder einfach beim Lesen — und wischt dann weiter.
  * Genau das sah fuer das CDK aus wie „halten, dann ziehen".
  *
- * Zwei Sekunden passieren nicht aus Versehen. Mit der Maus bleibt alles, wie
- * es war: dort gibt es kein Scrollen mit derselben Geste.
+ * Zwei Sekunden passieren nicht aus Versehen. Mit der Maus bleibt es fuer
+ * Folder, Plaene und Bloecke, wie es war: dort gibt es kein Scrollen mit
+ * derselben Geste. Todos halten auch mit der Maus zwei Sekunden
+ * (TODO_DRAG_START_DELAY): ein Klick in die Zeile, ein kurzes Festhalten beim
+ * Lesen soll nichts verschieben.
  *
  * Die Zahl gilt app-weit (CDK_DRAG_CONFIG in app.config) und hier fuer die
  * Rueckmeldung — beide muessen dieselbe sein, sonst meldet der Rand
@@ -23,6 +26,9 @@ import { holdArmed } from '../todo/shared/haptics';
 export const HOLD_TO_DRAG_MS = 2000;
 
 export const DRAG_START_DELAY = { touch: HOLD_TO_DRAG_MS, mouse: 0 };
+
+/** Todos in Liste und Woche: zwei Sekunden halten, mit dem Finger wie mit der Maus. */
+export const TODO_DRAG_START_DELAY = { touch: HOLD_TO_DRAG_MS, mouse: HOLD_TO_DRAG_MS };
 
 /**
  * So weit darf der Finger waehrend des Haltens wandern. Daruebergehend ist es
@@ -37,6 +43,10 @@ const MOVE_TOLERANCE = 8;
  * zeichnet sich waehrend des Haltens ein Rand um das Objekt (hold-arming,
  * styles.scss), und wenn es so weit ist, wird er voll und das Telefon gibt
  * einen kurzen Impuls (hold-armed). Erst dann bewegt man den Finger.
+ *
+ * Mit der Maus dasselbe, wo das Objekt auch mit der Maus warten muss
+ * (cdkDragStartDelay mit mouse > 0): sonst wuerde der Rand bei jedem Klick
+ * aufleuchten, obwohl das CDK sofort zieht.
  *
  * Haengt an jedem cdkDrag der Komponenten, die sie importieren. Hat das
  * Objekt Griffe, zaehlt nur ein Druck auf den eigenen Griff — wie beim CDK.
@@ -56,15 +66,11 @@ export class HoldToDrag {
     const zone = inject(NgZone);
     const drag = inject(CdkDrag, { self: true });
 
-    const onStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1 || !this.ownsTouch(event.target)) {
-        this.reset();
-        return;
-      }
+    const arm = (x: number, y: number) => {
       this.reset();
       this.active = true;
-      this.startX = event.touches[0].clientX;
-      this.startY = event.touches[0].clientY;
+      this.startX = x;
+      this.startY = y;
       host.classList.add('hold-arming');
       this.timer = setTimeout(() => {
         if (!this.active) return;
@@ -73,15 +79,49 @@ export class HoldToDrag {
       }, HOLD_TO_DRAG_MS);
     };
 
-    const onMove = (event: TouchEvent) => {
+    /** Wandert der Zeiger vor dem Ende des Haltens, war es kein Halten. */
+    const track = (x: number, y: number) => {
       if (!this.active || host.classList.contains('hold-armed')) return;
-      const touch = event.touches[0];
-      if (!touch) return;
-      const moved = Math.abs(touch.clientX - this.startX) + Math.abs(touch.clientY - this.startY);
+      const moved = Math.abs(x - this.startX) + Math.abs(y - this.startY);
       if (moved > MOVE_TOLERANCE) this.reset();
     };
 
+    const onStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1 || !this.ownsTouch(event.target)) {
+        this.reset();
+        return;
+      }
+      arm(event.touches[0].clientX, event.touches[0].clientY);
+    };
+
+    const onMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (touch) track(touch.clientX, touch.clientY);
+    };
+
     const onEnd = () => this.reset();
+
+    // Maus: nur, wo auch die Maus warten muss.
+    const mouseDelay = () => {
+      const delay = drag.dragStartDelay;
+      return typeof delay === 'number' ? delay : (delay?.mouse ?? 0);
+    };
+
+    const onMouseMove = (event: MouseEvent) => track(event.clientX, event.clientY);
+    const onMouseUp = () => {
+      this.reset();
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    const onMouseDown = (event: MouseEvent) => {
+      // Ein Touch-Geraet meldet nach dem Tippen auch ein mousedown; das
+      // Halten laeuft dann schon ueber die Touch-Ereignisse.
+      if (event.button !== 0 || this.active || mouseDelay() <= 0 || !this.ownsTouch(event.target)) return;
+      arm(event.clientX, event.clientY);
+      window.addEventListener('mousemove', onMouseMove, { passive: true });
+      window.addEventListener('mouseup', onMouseUp);
+    };
 
     // Ein langes Druecken oeffnet auf Android sonst das Kontextmenue bzw. die
     // Textauswahl — und bricht damit den Zug ab, bevor er anfaengt.
@@ -95,6 +135,7 @@ export class HoldToDrag {
       host.addEventListener('touchend', onEnd, { passive: true });
       host.addEventListener('touchcancel', onEnd, { passive: true });
       host.addEventListener('contextmenu', onContextMenu);
+      host.addEventListener('mousedown', onMouseDown);
     });
 
     // Sobald der Zug laeuft, uebernimmt die Vorschau des CDK.
@@ -110,6 +151,9 @@ export class HoldToDrag {
       host.removeEventListener('touchend', onEnd);
       host.removeEventListener('touchcancel', onEnd);
       host.removeEventListener('contextmenu', onContextMenu);
+      host.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     });
   }
 
