@@ -1,5 +1,19 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { ChevronLeft, ChevronRight, Download, Flame, RefreshCw, LucideAngularModule } from 'lucide-angular';
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  CircleCheck,
+  Download,
+  Flame,
+  Moon,
+  Sun,
+  Sunrise,
+  Timer,
+  Trophy,
+  LucideAngularModule,
+} from 'lucide-angular';
 
 import { TodoService } from '../../services/todo';
 import { FocusDayTotal, FocusSessionRecord, FocusSessionService } from '../../services/focus-session.service';
@@ -12,14 +26,19 @@ import {
   doneByTimeOfDay,
   focusPerTodo,
   formatMinutes,
+  heatLevel,
+  heatmapWeeks,
+  paceChange,
   periodDays,
+  timelineSpans,
   toCSV,
 } from '../../shared/focus-stats';
 import { completionStreak } from '../../shared/streak';
-import { fromISODate, todayISO } from '../../shared/week';
+import { fromISODate, shiftISODate, todayISO } from '../../shared/week';
 import { stripPriorityPrefix } from '../../shared/title-priority';
 import { splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
+import { stripBold } from '../../shared/rich-title';
 
 /** Wie weit die Statistik zurückreicht: so viel liefert der Server je Tag. */
 const SERVER_DAYS = 90;
@@ -150,16 +169,21 @@ export class StatsView {
   );
   protected readonly doneInPeriod = computed(() => this.days().reduce((sum, d) => sum + d.done, 0));
 
-  /** Gegen den Zeitraum davor — nur für abgeschlossene: eine halbe Woche gegen eine ganze sagt nichts. */
+  /**
+   * Gegen den Zeitraum davor. Beim laufenden nur bis heute und gegen
+   * dieselben Tage davor — Mittwoch gegen Mittwoch, nicht eine halbe Woche
+   * gegen eine ganze.
+   */
   protected readonly trend = computed(() => {
-    if (this.offset() === 0 || this.total() === 0) return null;
-    const previous = periodDays(this.span(), this.offset() - 1).reduce(
-      (sum, iso) => sum + capped((this.perDay().get(iso)?.totalSeconds ?? 0) / 60),
-      0,
-    );
-    if (previous === 0) return null;
-    const change = Math.round(((this.total() - previous) / previous) * 100);
-    return { change, label: `${change > 0 ? '+' : ''}${change}% vs the ${this.span()} before` };
+    const days = this.days();
+    const minutesOf = (iso: string) => capped((this.perDay().get(iso)?.totalSeconds ?? 0) / 60);
+    const previous = periodDays(this.span(), this.offset() - 1).map(minutesOf);
+    const today = days.findIndex((d) => d.isToday);
+    const upto = this.offset() === 0 && today >= 0 ? today : days.length - 1;
+    const change = paceChange(days.map((d) => d.minutes), previous, upto);
+    if (change === null) return null;
+    const what = this.offset() === 0 ? `the same days last ${this.span()}` : `the ${this.span()} before`;
+    return { change, up: change >= 0, label: `${change > 0 ? '+' : ''}${change}%`, title: `${change > 0 ? '+' : ''}${change}% vs ${what}` };
   });
 
   protected readonly headline = computed(() => {
@@ -175,6 +199,59 @@ export class StatsView {
   protected readonly bestInPeriod = computed(() => {
     const inRange = new Map([...this.done()].filter(([iso]) => this.days().some((d) => d.iso === iso)));
     return bestStreak(inRange);
+  });
+
+  /** Die letzten sieben Tage bis heute: an welchen etwas erledigt wurde. */
+  protected readonly streakDots = computed(() => {
+    const today = todayISO();
+    return Array.from({ length: 7 }, (_, i) => {
+      const iso = shiftISODate(today, i - 6);
+      return { iso, lit: (this.done().get(iso) ?? 0) > 0, letter: fromISODate(iso).toLocaleDateString('en-US', { weekday: 'narrow' }) };
+    });
+  });
+
+  /** Der Tag mit dem meisten Fokus im Zeitraum. */
+  protected readonly bestDay = computed(() => {
+    const best = this.days().reduce<DayBar | null>((top, d) => (d.minutes > (top?.minutes ?? 0) ? d : top), null);
+    return best ? { iso: best.iso, minutes: best.minutes, name: fromISODate(best.iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) } : null;
+  });
+
+  /** Wie lang eine Sitzung im Schnitt war. */
+  protected readonly avgSession = computed(() => {
+    const sessions = this.sessionsInPeriod();
+    return sessions > 0 ? Math.round(this.total() / sessions) : 0;
+  });
+
+  /** Der Tag mit den meisten erledigten Aufgaben. */
+  protected readonly bestDoneDay = computed(() => {
+    const best = this.days().reduce<DayBar | null>((top, d) => (d.done > (top?.done ?? 0) ? d : top), null);
+    return best ? { label: fromISODate(best.iso).toLocaleDateString('en-US', { weekday: 'short' }), done: best.done } : null;
+  });
+
+  // ---- Heatmap: die letzten 13 Wochen ----
+
+  protected readonly heat = computed(() => {
+    const today = todayISO();
+    const weeks = heatmapWeeks(13, today).map((week) => ({
+      month: week.month ? fromISODate(`${week.month}-01`).toLocaleDateString('en-US', { month: 'short' }) : '',
+      days: week.days.map((iso) => {
+        const minutes = capped((this.perDay().get(iso)?.totalSeconds ?? 0) / 60);
+        const future = iso > today;
+        const name = fromISODate(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        return { iso, future, minutes, level: future ? -1 : heatLevel(minutes), title: future ? name : `${name}: ${formatMinutes(minutes)}` };
+      }),
+    }));
+    const past = weeks.flatMap((w) => w.days).filter((d) => !d.future);
+    const active = past.filter((d) => d.level > 0).length;
+    const minutes = past.reduce((sum, d) => sum + d.minutes, 0);
+    // Die längste Reihe von Tagen in Folge mit Fokus.
+    let run = 0;
+    let longest = 0;
+    for (const d of past) {
+      run = d.level > 0 ? run + 1 : 0;
+      longest = Math.max(longest, run);
+    }
+    return { weeks, active, total: past.length, minutes, longest, perActive: active > 0 ? Math.round(minutes / active) : 0 };
   });
 
   // ---- Balken ----
@@ -217,9 +294,9 @@ export class StatsView {
     const share = doneByTimeOfDay(this.todos(), this.days().map((d) => d.iso));
     const total = share.morning + share.afternoon + share.evening;
     const parts = [
-      { key: 'morning', label: 'Morning', count: share.morning },
-      { key: 'afternoon', label: 'Afternoon', count: share.afternoon },
-      { key: 'evening', label: 'Evening', count: share.evening },
+      { key: 'morning', label: 'Morning', hint: 'before 12', icon: Sunrise, count: share.morning },
+      { key: 'afternoon', label: 'Afternoon', hint: '12 to 17', icon: Sun, count: share.afternoon },
+      { key: 'evening', label: 'Evening', hint: 'after 17', icon: Moon, count: share.evening },
     ].map((p) => ({ ...p, share: total === 0 ? 0 : Math.round((p.count / total) * 100) }));
     return { total, parts };
   });
@@ -228,7 +305,7 @@ export class StatsView {
     const list = focusPerTodo(this.recent(), this.days().map((d) => d.iso)).slice(0, 5);
     const max = Math.max(1, ...list.map((t) => t.minutes));
     return list.map((t) => {
-      const text = stripPriorityPrefix(t.title).split('\n')[0].trim();
+      const text = stripBold(stripPriorityPrefix(t.title).split('\n')[0].trim());
       return {
         ...t,
         title: splitLeadingEmoji(text).rest || text,
@@ -241,20 +318,35 @@ export class StatsView {
 
   private readonly blocks = computed(() => blocksByDay(this.recent()));
 
-  /** Die Tage mit Fokus oder Erledigtem, der neueste zuerst — zugleich die Tabelle hinter den Balken. */
-  protected readonly dayList = computed(() =>
-    this.days()
+  /**
+   * Die Tage mit Fokus oder Erledigtem, der neueste zuerst — zugleich die
+   * Tabelle hinter den Balken. Jeder Tag bekommt eine Zeitleiste; alle auf
+   * derselben Achse (ab 6 Uhr, oder früher, wenn ein Block früher begann),
+   * damit man die Tage untereinander vergleichen kann.
+   */
+  protected readonly dayList = computed(() => {
+    const rows = this.days()
       .filter((d) => d.minutes > 0 || d.done > 0)
       .reverse()
-      .map((d) => {
-        const blocks = this.blocks().get(d.iso) ?? [];
-        return {
-          ...d,
-          blocksText: blocks.length > 0 ? blocks.map((b) => `${b.start}–${b.end}`).join(' · ') : '',
-          time: formatMinutes(d.minutes),
-        };
-      }),
-  );
+      .map((d) => ({ day: d, blocks: this.blocks().get(d.iso) ?? [] }));
+    const from = Math.min(6 * 60, ...rows.map((r) => timelineSpans(r.blocks).start));
+    return rows.map(({ day, blocks }) => ({
+      ...day,
+      blocksText: blocks.length > 0 ? blocks.map((b) => `${b.start}–${b.end}`).join(' · ') : '',
+      time: formatMinutes(day.minutes),
+      timeline: timelineSpans(blocks, from),
+    }));
+  });
+
+  /** Die Stunden über den Zeitleisten: Anfang, 12, 18, 24 Uhr. */
+  protected readonly dayAxis = computed(() => {
+    const start = this.dayList()[0]?.timeline.start ?? 6 * 60;
+    const range = 24 * 60 - start;
+    const hours = [start / 60, 12, 18, 24].filter((h, i, all) => all.indexOf(h) === i && h * 60 >= start);
+    return hours.map((h) => ({ label: String(h).padStart(2, '0'), left: ((h * 60 - start) / range) * 100 }));
+  });
+
+  protected readonly litDays = computed(() => this.streakDots().filter((d) => d.lit).length);
 
   protected readonly formatMinutes = formatMinutes;
 
@@ -277,5 +369,10 @@ export class StatsView {
   protected readonly NextIcon = ChevronRight;
   protected readonly DownloadIcon = Download;
   protected readonly FlameIcon = Flame;
-  protected readonly RefreshIcon = RefreshCw;
+  protected readonly DoneIcon = CircleCheck;
+  protected readonly TimerIcon = Timer;
+  protected readonly TrophyIcon = Trophy;
+  protected readonly UpIcon = ArrowUpRight;
+  protected readonly DownIcon = ArrowDownRight;
+  protected readonly weekdayLabels = ['M', '', 'W', '', 'F', '', ''];
 }

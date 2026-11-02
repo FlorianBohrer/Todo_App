@@ -9,6 +9,10 @@ import {
   formatMinutes,
   periodDays,
   toCSV,
+  heatmapWeeks,
+  heatLevel,
+  paceChange,
+  timelineSpans,
 } from './focus-stats';
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 9, d, h, m);
@@ -95,5 +99,54 @@ describe('focus stats', () => {
       'Total;;;;;1:40;1,67',
       '',
     ]);
+  });
+});
+
+describe('heatmapWeeks', () => {
+  it('ends with the running week and starts on Mondays', () => {
+    const weeks = heatmapWeeks(13, '2026-11-04');
+    expect(weeks.length).toBe(13);
+    expect(weeks[12].days[0]).toBe('2026-11-02');
+    expect(weeks[0].days[0]).toBe('2026-08-10');
+    expect(weeks.every((w) => w.days.length === 7)).toBe(true);
+  });
+
+  it('names a month above the week it begins in', () => {
+    const weeks = heatmapWeeks(13, '2026-11-04');
+    expect(weeks[0].month).toBe('2026-08');
+    const labelled = weeks.filter((w) => w.month).map((w) => w.month);
+    expect(labelled).toEqual(['2026-08', '2026-09', '2026-10', '2026-11']);
+  });
+});
+
+describe('heatLevel', () => {
+  it('steps from nothing to a full day', () => {
+    expect([0, 20, 90, 200, 400].map(heatLevel)).toEqual([0, 1, 2, 3, 4]);
+  });
+});
+
+describe('paceChange', () => {
+  it('compares the same number of days', () => {
+    // Bis Mittwoch 300 gegen 200 Minuten — der Rest der Vorwoche zählt nicht.
+    expect(paceChange([100, 100, 100, 0, 0, 0, 0], [100, 50, 50, 400, 400, 0, 0], 2)).toBe(50);
+  });
+
+  it('says nothing without a base', () => {
+    expect(paceChange([60, 0], [0, 0], 1)).toBeNull();
+    expect(paceChange([0, 0], [60, 0], 1)).toBeNull();
+  });
+});
+
+describe('timelineSpans', () => {
+  it('places blocks between six and midnight', () => {
+    const { start, spans } = timelineSpans([{ start: '15:00', end: '18:00', minutes: 180 }]);
+    expect(start).toBe(360);
+    expect(spans[0].left).toBeCloseTo(50);
+    expect(spans[0].width).toBeCloseTo((180 / 1080) * 100);
+  });
+
+  it('starts earlier when a block does', () => {
+    const { start } = timelineSpans([{ start: '04:40', end: '05:30', minutes: 50 }]);
+    expect(start).toBe(240);
   });
 });

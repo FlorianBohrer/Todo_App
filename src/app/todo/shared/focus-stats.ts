@@ -200,3 +200,80 @@ export function toCSV(days: ReadonlyArray<{ date: string; blocks: readonly Focus
   const footer = ['Total', ...Array<string>(columns * 2).fill(''), formatHours(sum), (sum / 60).toFixed(2).replace('.', ',')];
   return [header, ...rows, footer].map((cells) => cells.join(';')).join('\r\n') + '\r\n';
 }
+
+// ---- Für die Ansicht: Heatmap, Tempo, Zeitleiste ----
+
+/** Eine Woche der Heatmap: Montag bis Sonntag, dazu der Monat, wenn er hier beginnt. */
+export interface HeatWeek {
+  days: string[];
+  month: string | null;
+}
+
+/**
+ * Die letzten `weeks` Wochen bis einschliesslich der laufenden, als Spalten
+ * Montag bis Sonntag — wie ein Kalender, der quer liegt. Der Monatsname
+ * steht über der Woche mit dem Ersten, und über der ersten Spalte.
+ */
+export function heatmapWeeks(weeks = 13, today = todayISO()): HeatWeek[] {
+  const firstMonday = shiftISODate(startOfWeekISO(today), -(weeks - 1) * 7);
+  return Array.from({ length: weeks }, (_, w) => {
+    const days = Array.from({ length: 7 }, (_, i) => shiftISODate(firstMonday, w * 7 + i));
+    const first = days.find((d) => d.endsWith('-01'));
+    return { days, month: first ? first.slice(0, 7) : w === 0 ? days[0].slice(0, 7) : null };
+  });
+}
+
+/** Fokus eines Tages als Stufe 0 bis 4 — für die Heatmap, eine Farbe von hell nach kräftig. */
+export function heatLevel(minutes: number): 0 | 1 | 2 | 3 | 4 {
+  if (minutes <= 0) return 0;
+  if (minutes < 60) return 1;
+  if (minutes < 150) return 2;
+  if (minutes < 270) return 3;
+  return 4;
+}
+
+/**
+ * Wie der Zeitraum gegen den davor steht — beim laufenden nur bis heute,
+ * gegen dieselbe Zahl Tage davor: Mittwoch gegen Mittwoch, nicht eine halbe
+ * Woche gegen eine ganze. null, wenn es nichts zu vergleichen gibt.
+ */
+export function paceChange(current: readonly number[], previous: readonly number[], uptoIndex: number): number | null {
+  const n = Math.min(uptoIndex + 1, current.length);
+  const now = current.slice(0, n).reduce((a, b) => a + b, 0);
+  const before = previous.slice(0, n).reduce((a, b) => a + b, 0);
+  if (before === 0 || now === 0) return null;
+  return Math.round(((now - before) / before) * 100);
+}
+
+/** Ein Block auf der Zeitleiste eines Tages, in Prozent der Leiste. */
+export interface TimelineSpan {
+  left: number;
+  width: number;
+  label: string;
+}
+
+/**
+ * Blöcke → Lage auf einer Leiste von `from` bis 24 Uhr (in Minuten). Was
+ * vor `from` beginnt, schiebt den Anfang der Leiste nach vorn, auf die volle
+ * Stunde — damit nichts abgeschnitten wird.
+ */
+export function timelineSpans(blocks: readonly FocusBlock[], from = 6 * 60): { start: number; spans: TimelineSpan[] } {
+  const toMin = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const earliest = Math.min(from, ...blocks.map((b) => toMin(b.start)));
+  const start = Math.floor(earliest / 60) * 60;
+  const range = 24 * 60 - start;
+  const spans = blocks.map((b) => {
+    const s = toMin(b.start);
+    let e = toMin(b.end);
+    if (e <= s) e = 24 * 60; // über Mitternacht: bis zum Ende der Leiste
+    return {
+      left: ((s - start) / range) * 100,
+      width: Math.max(0.8, ((e - s) / range) * 100),
+      label: `${b.start}–${b.end}`,
+    };
+  });
+  return { start, spans };
+}
