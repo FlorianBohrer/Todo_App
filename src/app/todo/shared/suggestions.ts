@@ -19,6 +19,7 @@ import { Todo } from '../model/todo.model';
 import { durationOf, stripPriorityPrefix } from './title-priority';
 import { guessEmoji } from './task-icon';
 import { shiftISODate, todayISO, toISODate } from './week';
+import { stripBold } from './rich-title';
 
 export interface Suggestion {
   /** So wird es angelegt — mit Dauer-Präfix, wenn eine bekannt ist. */
@@ -62,7 +63,7 @@ const GERMAN = /[äöüß]|\b(und|der|die|das|mit|für|fuer|nicht|anrufen|machen
 
 /** Nur der Text, klein und ohne Präfixe — zum Vergleichen. */
 function plain(title: string): string {
-  return stripPriorityPrefix(title).split('\n')[0].trim().toLowerCase();
+  return stripBold(stripPriorityPrefix(title).split('\n')[0].trim()).toLowerCase();
 }
 
 /** Wie viele Tage zurück „in letzter Zeit" reicht. */
@@ -99,7 +100,7 @@ export function suggestTasks(
     .filter((d) => d.count >= 2)
     .sort((a, b) => b.count - a.count || b.last.localeCompare(a.last))
     .map((d) => ({
-      text: stripPriorityPrefix(d.title).split('\n')[0].trim(),
+      text: stripBold(stripPriorityPrefix(d.title).split('\n')[0].trim()),
       minutes: durationOf(d.title),
       reason: 'again' as const,
     }));

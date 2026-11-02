@@ -170,11 +170,11 @@
                      Liste, der ganze Text haengt hier am Tooltip. -->
                 <span class="week-card-title min-w-0 flex-1 break-words leading-snug"
                       [class.line-through]="todo.completed"
-                      [attr.title]="displayTitle(todo.title)">
+                      [attr.title]="plainTitle(todo.title)">
                   @if (badge(todo.title); as level) {
                     <app-token-chip class="week-badge mr-1 align-[-0.2em]" [token]="level" size="sm" />
                   }
-                  {{ displayTitle(todo.title) }}
+                  <app-rich-text [text]="displayTitle(todo.title)" />
                 </span>
 
                 <!-- Wiederkehrend. Hier wiegt das Zeichen schwerer als in der
@@ -285,7 +285,7 @@
                 @if (badge(todo.title); as level) {
                   <app-token-chip class="week-badge mr-1 align-[-0.2em]" [token]="level" size="sm" />
                 }
-                {{ displayTitle(todo.title) }}
+                <app-rich-text [text]="displayTitle(todo.title)" />
               </span>
             </div>
           } @empty {
@@ -313,11 +313,11 @@
     (overlayKeydown)="$event.key === 'Escape' && closeMover()">
     @if (moverTodo(); as todo) {
       <div class="popover week-mover" [class.action-sheet]="sheet" role="dialog"
-        [attr.aria-label]="'Change the date of ' + displayTitle(todo.title)">
+        [attr.aria-label]="'Change the date of ' + plainTitle(todo.title)">
         @if (sheet) {
           <span class="action-sheet-grabber" aria-hidden="true"></span>
         }
-        <p class="week-mover__title">{{ displayTitle(todo.title) }}</p>
+        <p class="week-mover__title"><app-rich-text [text]="displayTitle(todo.title)" /></p>
         <app-date-picker [value]="todo.scheduledDate" [autofocus]="!sheet" (picked)="moveTo($event)" />
       </div>
     }

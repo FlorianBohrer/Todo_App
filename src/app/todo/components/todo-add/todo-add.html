@@ -55,6 +55,7 @@
       (keydown.enter)="$event.preventDefault(); addTodo()"
       (keydown.escape)="onEscape()"
       (keydown.backspace)="onBackspace($event)"
+      (keydown)="onKey($event)"
       [attr.aria-label]="fieldLabel()"
     ></textarea>
 

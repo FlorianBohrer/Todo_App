@@ -78,6 +78,27 @@ li.todo-expanded-row {
   overflow-wrap: anywhere;
 }
 
+// Ein Titel mit fetten Stellen statt des Textfelds: Umbrüche wie im Feld,
+// zugeklappt dieselben zwei (Telefon: drei) Zeilen wie textarea.todo-collapsed.
+.todo-title-rich {
+  white-space: pre-wrap;
+}
+
+.todo-title-rich.todo-collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+@media (max-width: 639px) {
+  .todo-title-rich.todo-collapsed {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+}
+
 // ---- Titelspalte ----
 //
 // Titel, Unterpunkte und Meta-Zeile stehen in EINER Spalte rechts vom Bild.
@@ -1010,6 +1031,12 @@ li.todo-expanded-row {
   font-size: 0.6875rem;
 }
 
+/* Der freie Platz eines Schritts ohne Bild, so breit wie das Bild der
+   Geschwister: Haken und Titel bleiben in der Gruppe in einer Flucht. */
+.todo-icon-gap {
+  width: 1.625rem;
+}
+
 @media (max-width: 480px) {
   .todo-icon {
     width: 2.125rem;
@@ -1019,17 +1046,16 @@ li.todo-expanded-row {
   }
 }
 
-/* ---- Haken rechts ----
-   Gross genug für den Daumen am rechten Rand: ein Kreis wie ein Knopf. */
-.todo-card > .todo-checkbox {
+/* ---- Haken hinter dem Bild ----
+   Bild, Haken, Titel: ein Kreis wie ein Knopf, gross genug für den Daumen. */
+.todo-card .todo-head > .todo-checkbox {
   width: 1.625rem;
   height: 1.625rem;
-  margin-left: 0.25rem;
   border-width: 2px;
   border-color: rgb(var(--ink) / 0.32);
 }
 
-.todo-card.todo-sub > .todo-checkbox {
+.todo-card.todo-sub .todo-head > .todo-checkbox {
   width: 1.25rem;
   height: 1.25rem;
   border-width: 1.5px;

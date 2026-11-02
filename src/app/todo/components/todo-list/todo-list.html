@@ -165,6 +165,8 @@
                 [class.todo-icon--initial]="row.icon.initial"
                 [title]="row.folderDotTitle"
                 aria-hidden="true"><app-task-glyph [icon]="row.icon" /></span>
+            } @else if (showIcons() && row.iconGap) {
+              <span class="todo-icon-gap flex-none" aria-hidden="true"></span>
             } @else if (!showIcons()) {
               <span
                 class="todo-dot flex-none"
@@ -172,6 +174,21 @@
                 [title]="row.folderDotTitle"
                 aria-hidden="true">●</span>
             }
+
+            <!-- Der Haken direkt hinter dem Bild: Bild, Haken, Titel — man
+                 findet die Aufgabe am Bild und hakt sie gleich daneben ab,
+                 ohne über die Zeile zu wandern. -->
+            <button
+              type="button"
+              class="todo-checkbox"
+              [class.todo-checkbox--checked]="
+                todo.completed ||
+                completingTodoIds().has(todo.id)
+              "
+              [disabled]="leavingTodoIds().has(todo.id)"
+              [attr.aria-label]="(todo.completed ? 'Reopen ' : 'Complete ') + row.label"
+              (click)="handleToggleTodo(todo)"
+            ></button>
 
             <!-- Prioritäts-Badge (Präfix /must-have bzw. /could-have) -->
             <!-- Aus einem Plan entstanden. Nur das Zeichen, nicht der
@@ -205,10 +222,14 @@
               }
             }
 
+            <!-- Mit fetten Stellen steht der Titel ausserhalb des Bearbeitens
+                 als Text darunter (rich-title.ts): ein Textfeld kann nicht
+                 fett und normal zugleich. Beim Bearbeiten ist es wieder das
+                 Feld, mit den Sternchen; Strg/⌘+B setzt sie. -->
             <textarea
               #todoText
               [appAutosize]="row.displayTitle"
-              (autosizeOverflow)="setClamped(todo.id, $event)"
+              (autosizeOverflow)="row.rich || setClamped(todo.id, $event)"
               rows="1"
                             [readOnly]="editingId() !== todo.id"
               [class.pointer-events-none]="editingId() !== todo.id"
@@ -216,6 +237,7 @@
               (keydown.escape)="cancelEditing(todo, todoText)"
               (keydown.tab)="onEditTab($event, row, todoText, false)"
               (keydown.shift.tab)="onEditTab($event, row, todoText, true)"
+              (keydown)="onEditKey($event, todo.id, todoText)"
               (input)="onEditInput(todoText)"
               (keydown.backspace)="onEditBackspace($event, todoText)"
               class="todo-title flex-1 min-w-0 resize-none overflow-hidden rounded-lg bg-transparent text-text ring-1 ring-transparent break-words focus:outline-none focus:ring-text"
@@ -226,8 +248,18 @@
                 completingTodoIds().has(todo.id)
               "
               [value]="editingId() === todo.id ? row.editTitle : row.displayTitle"
-              [class.hidden]="showsDetail(row)"
+              [class.hidden]="showsDetail(row) || (row.rich && editingId() !== todo.id)"
             ></textarea>
+
+            @if (row.rich && editingId() !== todo.id && !showsDetail(row)) {
+              <p class="todo-title todo-title-line todo-title-rich min-w-0 flex-1 text-text"
+                 [class.todo-collapsed]="!isExpanded(todo.id)"
+                 [class.todo-title--completed]="
+                   todo.completed || completingTodoIds().has(todo.id)
+                 "
+                 [appClampWatch]="row.displayTitle"
+                 (clampChange)="setClamped(todo.id, $event)"><app-rich-text [text]="row.displayTitle" /></p>
+            }
 
             <!-- Aufgeklappt: nur die erste Zeile steht hier, die Unterpunkte
                  kommen als eigener Block unter die Kopfzeile. Das Textfeld
@@ -238,14 +270,12 @@
                  [class.todo-title--completed]="
                    todo.completed || completingTodoIds().has(todo.id)
                  "
-                 (click)="startEditing(todo, todoText)">
-                {{ row.firstLine }}
-              </p>
+                 (click)="startEditing(todo, todoText)"><app-rich-text [text]="row.firstLine" /></p>
             }
             </div>
 
             @if (showsDetail(row)) {
-              <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)">{{ row.detailLines }}</div>
+              <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)"><app-rich-text [text]="row.detailLines" /></div>
             }
 
             <!-- Was man über die Aufgabe wissen will, ohne sie zu öffnen:
@@ -640,22 +670,6 @@
             <lucide-icon [img]="OptionsIcon" class="h-5 w-5"></lucide-icon>
           </button>
 
-          <!-- Der Haken rechts aussen, wo der Daumen ist: links steht das
-             Bild der Aufgabe, an dem man sie findet, rechts das, womit man
-             sie erledigt. -->
-          <button
-            type="button"
-            class="todo-checkbox"
-            [class.todo-checkbox--checked]="
-              todo.completed ||
-              completingTodoIds().has(todo.id)
-            "
-            [disabled]="leavingTodoIds().has(todo.id)"
-            (click)="handleToggleTodo(todo)"
-          >
-            <!-- SVG -->
-          </button>
-
 
           <ng-template
             cdkConnectedOverlay
@@ -675,9 +689,9 @@
             <div
               role="menu"
               class="popover action-sheet"
-              [attr.aria-label]="'Options for ' + row.firstLine">
+              [attr.aria-label]="'Options for ' + row.label">
               <span class="action-sheet-grabber" aria-hidden="true"></span>
-              <p class="action-sheet-title">{{ row.firstLine }}</p>
+              <p class="action-sheet-title"><app-rich-text [text]="row.firstLine" /></p>
 
               <!-- Vom Datum aus geöffnet nur der Termin; sonst alles. -->
               @if (!sheetDateOnly()) {

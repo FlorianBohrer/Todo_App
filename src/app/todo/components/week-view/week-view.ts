@@ -38,6 +38,8 @@ import { isTypingTarget } from '../../shared/keyboard';
 import { pastThroughput } from '../../shared/focus';
 import { priorityBadge, stripPriorityPrefix } from '../../shared/title-priority';
 import { TitleToken } from '../../shared/title-token';
+import { RichText } from '../../shared/rich-text';
+import { stripBold } from '../../shared/rich-title';
 import { TokenChip } from '../../shared/token-chip';
 import { folderColorClass } from '../../shared/folder-color';
 
@@ -57,6 +59,7 @@ const UNSCHEDULED = '';
 @Component({
   selector: 'app-week-view',
   imports: [
+    RichText,
     LucideAngularModule,
     CdkDropListGroup,
     CdkDropList,
@@ -405,6 +408,11 @@ export class WeekView {
 
   displayTitle(title: string): string {
     return stripPriorityPrefix(title);
+  }
+
+  /** Ohne die Sternchen von fett gesetzten Stellen: für Tooltip und Vorlesesoftware. */
+  plainTitle(title: string): string {
+    return stripBold(stripPriorityPrefix(title));
   }
 
   /**

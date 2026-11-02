@@ -11,6 +11,7 @@ import {
 } from '../../shared/focus';
 import { scheduleOptions } from '../../shared/schedule';
 import { stripPriorityPrefix } from '../../shared/title-priority';
+import { stripBold } from '../../shared/rich-title';
 
 /** Wie viele Vorschläge oben stehen. Mehr als drei ist wieder eine Liste. */
 const SUGGESTIONS = 3;
@@ -76,7 +77,7 @@ export class FocusPanel {
   }
 
   title(todo: Todo): string {
-    return stripPriorityPrefix(todo.title).split('\n')[0].trim();
+    return stripBold(stripPriorityPrefix(todo.title).split('\n')[0].trim());
   }
 
   reason(todo: Todo): string {

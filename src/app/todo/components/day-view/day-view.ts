@@ -36,6 +36,8 @@ import { fromISODate, shiftISODate, todayISO } from '../../shared/week';
 import { TokenChip } from '../../shared/token-chip';
 import { WeekView } from '../week-view/week-view';
 import { tap } from '../../shared/haptics';
+import { RichText } from '../../shared/rich-text';
+import { stripBold } from '../../shared/rich-title';
 
 type Mode = 'day' | 'week';
 const MODE_KEY = 'calendar.mode';
@@ -59,6 +61,8 @@ const SLOTS: Record<DaySlot, SlotDef> = {
 interface Card {
   id: string;
   title: string;
+  /** Der Titel ohne Sternchen, für Vorlesesoftware. */
+  label: string;
   icon: TaskIcon;
   iconClass: string;
   done: boolean;
@@ -88,7 +92,7 @@ function readMode(): Mode {
  */
 @Component({
   selector: 'app-day-view',
-  imports: [LucideAngularModule, NgTemplateOutlet, OverlayModule, TaskGlyph, TokenChip, WeekView],
+  imports: [LucideAngularModule, NgTemplateOutlet, OverlayModule, RichText, TaskGlyph, TokenChip, WeekView],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './day-view.html',
   styleUrl: './day-view.scss',
@@ -181,6 +185,7 @@ export class DayView {
     return {
       id: todo.id,
       title: splitLeadingEmoji(text).rest,
+      label: stripBold(splitLeadingEmoji(text).rest),
       icon: taskIcon(text),
       iconClass: `${folderColorClass(label?.color, 'iconBox')} ${folderColorClass(label?.color, 'text')}`,
       done: todo.completed,

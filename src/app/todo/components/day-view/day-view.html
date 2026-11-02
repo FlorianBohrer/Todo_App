@@ -86,8 +86,13 @@
               @for (card of section.cards; track card.id) {
                 <li class="day-card" [class.is-done]="card.done">
                   <span class="todo-icon" [class]="card.iconClass" [class.todo-icon--initial]="card.icon.initial" aria-hidden="true"><app-task-glyph [icon]="card.icon" /></span>
+                  <!-- Der Haken direkt hinter dem Bild, wie in der Liste. -->
+                  <button type="button" class="todo-checkbox day-card__check"
+                    [class.todo-checkbox--checked]="card.done"
+                    (click)="toggle(card.id)"
+                    [attr.aria-label]="(card.done ? 'Reopen ' : 'Complete ') + card.label"></button>
                   <div class="min-w-0 flex-1">
-                    <p class="day-card__title">{{ card.title }}</p>
+                    <p class="day-card__title"><app-rich-text [text]="card.title" /></p>
                     @if (card.badge || card.duration || card.late) {
                       <p class="day-card__meta">
                         @if (card.badge) { <app-token-chip [token]="card.badge" size="sm" /> }
@@ -100,13 +105,9 @@
                     (click)="openMenu(card.id, $event)"
                     aria-haspopup="menu"
                     [attr.aria-expanded]="menuFor() === card.id"
-                    [attr.aria-label]="'Options for ' + card.title">
+                    [attr.aria-label]="'Options for ' + card.label">
                     <lucide-icon [img]="MoreIcon" class="h-5 w-5"></lucide-icon>
                   </button>
-                  <button type="button" class="todo-checkbox day-card__check"
-                    [class.todo-checkbox--checked]="card.done"
-                    (click)="toggle(card.id)"
-                    [attr.aria-label]="(card.done ? 'Reopen ' : 'Complete ') + card.title"></button>
                 </li>
               }
               @if (addingIn() === section.id) {

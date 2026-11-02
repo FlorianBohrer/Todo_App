@@ -13,6 +13,7 @@ import type { Plan, PlanBlock } from '../plan/plan.model';
 import type { Todo } from '../todo/model/todo.model';
 import type { Label } from '../todo/services/label.service';
 import { TitleToken, splitTitle } from '../todo/shared/title-token';
+import { stripBold } from '../todo/shared/rich-title';
 
 // ---------------------------------------------------------------------------
 // Vergleichen
@@ -179,7 +180,9 @@ export function searchTodos(todos: readonly Todo[], query: Query): TodoHit[] {
   const hits: Array<TodoHit & { index: number }> = [];
 
   todos.forEach((todo, index) => {
-    const { tokens, text } = splitTitle(todo.title);
+    const { tokens, text: raw } = splitTitle(todo.title);
+    // Gesucht und gezeigt wird ohne die Sternchen von fett gesetzten Stellen.
+    const text = stripBold(raw);
     if (query.token !== null && !tokens.includes(query.token)) return;
 
     const title = text.split('\n')[0].trim();

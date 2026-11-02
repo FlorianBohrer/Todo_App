@@ -27,6 +27,8 @@ import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { DatePicker } from '../date-picker/date-picker';
 import { scheduleLabel } from '../../shared/schedule';
 import { ListViewService } from '../../services/list-view.service';
+import { isBoldKey, stripBold, toggleBold } from '../../shared/rich-title';
+import { ShortcutService } from '../../../shared/shortcut.service';
 
 @Component({
   selector: 'app-todo-add',
@@ -106,7 +108,7 @@ export class TodoAdd {
   /** Ihr Titel ohne Präfix — im Feld steht nichts Technisches. */
   protected parentTitle(): string {
     const parent = this.parent();
-    return parent ? stripPriorityPrefix(parent.title).split('\n')[0] : '';
+    return parent ? stripBold(stripPriorityPrefix(parent.title).split('\n')[0]) : '';
   }
 
   newTitle = '';
@@ -140,6 +142,7 @@ export class TodoAdd {
 
   /** „+" im Kopf der Liste: ins Feld, und es in den Blick holen. */
   private readonly listView = inject(ListViewService);
+  private readonly shortcuts = inject(ShortcutService);
   private readonly focusOnRequest = effect(() => {
     if (this.listView.addRequest() === 0) return;
     untracked(() => {
@@ -203,6 +206,17 @@ export class TodoAdd {
       return;
     }
     this.newTitle = value;
+  }
+
+  /** Strg/⌘+B: die Auswahl fett oder wieder normal (rich-title.ts). */
+  onKey(event: KeyboardEvent): void {
+    if (!isBoldKey(event, this.shortcuts.match(event))) return;
+    const field = event.target as HTMLTextAreaElement;
+    event.preventDefault();
+    const next = toggleBold(field.value, field.selectionStart, field.selectionEnd);
+    field.value = next.value;
+    this.onInput(next.value);
+    field.setSelectionRange(next.start, next.end);
   }
 
   /**
