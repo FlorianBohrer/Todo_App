@@ -535,15 +535,6 @@
   --accent-600: #245A9B;
 }
 
-/* Fokus: Lavendel — ruhig, und weit genug weg von den anderen dreien. */
-[data-view='focus'] {
-  --accent-200: #D8D3FE;
-  --accent-300: #BBB0FE;
-  --accent-400: #9C84FE;
-  --accent-500: #6F54CA;
-  --accent-600: #5B43A9;
-}
-
 :root,
 [data-view] {
   --color-indigo-200: var(--accent-200);
@@ -714,14 +705,6 @@
   --accent-400: #B84D64;
   --accent-500: #8E3A4D;
   --accent-600: #74303F;
-}
-
-[data-theme='light'][data-view='focus'] {
-  --accent-200: #42279A;
-  --accent-300: #5B3FCB;
-  --accent-400: #7C63E6;
-  --accent-500: #5B3FCB;
-  --accent-600: #4A33AE;
 }
 
 [data-theme='light'][data-view='stats'] {
@@ -1822,23 +1805,6 @@ body.is-block-selecting * {
 
 .bottom-nav__tab:focus-visible {
   outline: none;
-}
-
-/* Der Fokus-Timer läuft: ein Punkt am Symbol, in jeder Ansicht. */
-.bottom-nav__tab.is-running .bottom-nav__icon {
-  position: relative;
-}
-
-.bottom-nav__tab.is-running .bottom-nav__icon::after {
-  content: '';
-  position: absolute;
-  top: 0.5rem;
-  right: 0.875rem;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 999px;
-  background: #b9a5fb;
-  box-shadow: 0 0 0 2px var(--color-panel2);
 }
 
 .bottom-nav__tab:focus-visible .bottom-nav__icon {
