@@ -12,7 +12,7 @@ import {ChangeDetectionStrategy,
 import { CdkDropListGroup, CdkDropList, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { DatePicker } from '../date-picker/date-picker';
-import { HoldToDrag } from '../../../shared/hold-to-drag';
+import { HoldToDrag, TODO_DRAG_START_DELAY } from '../../../shared/hold-to-drag';
 import {
   LucideAngularModule,
   ChevronLeft,
@@ -75,6 +75,9 @@ const UNSCHEDULED = '';
 })
 export class WeekView {
   private readonly todoService = inject(TodoService);
+
+  /** Zwei Sekunden halten, dann verschieben — wie in der Liste (hold-to-drag.ts). */
+  protected readonly dragStartDelay = TODO_DRAG_START_DELAY;
   private readonly toast = inject(ToastService);
   protected readonly labelService = inject(LabelService);
 
