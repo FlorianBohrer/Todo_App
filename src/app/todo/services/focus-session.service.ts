@@ -27,6 +27,8 @@ export interface FocusSessionRecord {
   startedAt: Date;
   endedAt: Date | null;
   elapsedSeconds: number;
+  /** Die geplante Länge — so viel zählt Flow für eine durchgelaufene Sitzung. */
+  plannedSeconds: number;
   completed: boolean;
 }
 
@@ -67,11 +69,10 @@ const POLL_MS = 60_000;
 /**
  * Was Flow gerade tut, und wie viel Fokus schon in jedem Todo steckt.
  *
- * Flow schreibt seine Sessions ins Backend (siehe focus-session im API-Repo),
- * und der Fokus-Timer der Webseite (focus-timer.service.ts) mit denselben
- * Aufrufen ebenso. Damit sieht man hier, woran man gerade sitzt — in Flow
- * oder auf der Webseite —, und an jedem Todo, wie viel Zeit es schon
- * bekommen hat. Flow sieht umgekehrt die Sitzungen der Webseite.
+ * Flow schreibt seine Sessions ins Backend (siehe focus-session im API-Repo).
+ * Einen eigenen Timer hat die Webseite nicht mehr: gemessen wird allein in
+ * Flow. Hier sieht man, woran man dort gerade sitzt, und an jedem Todo, wie
+ * viel Zeit es schon bekommen hat.
  *
  * Nachgesehen wird einmal pro Minute und beim Zurückkehren in den Tab, nie in
  * einem Hintergrund-Tab. Fällt eine Anfrage aus, bleibt der alte Stand stehen:
@@ -88,10 +89,10 @@ export class FocusSessionService {
   /** Sekunden Fokus je Todo, über alle Zeit. */
   readonly totals = signal<ReadonlyMap<string, number>>(new Map());
 
-  /** Alle Sitzungen auf dem Server, aus Flow und von der Webseite. null = unbekannt. */
+  /** Alle Sitzungen auf dem Server, aus Flow. null = unbekannt. */
   readonly sessionCount = signal<number | null>(null);
 
-  /** Fokus heute, in der eigenen Zeitzone — Flow und Webseite zusammen. null = unbekannt. */
+  /** Fokus heute aus Flow, in der eigenen Zeitzone. null = unbekannt. */
   readonly today = signal<{ seconds: number; sessions: number } | null>(null);
 
   private signedIn = false;
@@ -162,49 +163,6 @@ export class FocusSessionService {
 
   // ---- Schreiben: dieselben Aufrufe wie Flow (src/todo-link/api.ts) ----
   //
-  // Der Timer der Webseite verbucht Sitzungen mit Aufgabe genauso wie Flow.
-  // Dann zählen sie in Flow („Today"), auf der Webseite und in der Statistik
-  // gleich. Fällt eine Anfrage aus, läuft der Timer trotzdem weiter: das hier
-  // ist ein Protokoll, keine Voraussetzung.
-
-  /** Startet eine Session auf dem Server; null, wenn es nicht ging. */
-  async start(todoId: string, plannedSeconds: number): Promise<string | null> {
-    try {
-      const session = await firstValueFrom(
-        this.http.post<FocusSessionDto>(this.baseUrl, {
-          todoId,
-          plannedSeconds: Math.min(86400, Math.max(60, Math.round(plannedSeconds))),
-        }),
-      );
-      void this.refresh(false);
-      return session.id;
-    } catch {
-      return null;
-    }
-  }
-
-  async pause(id: string): Promise<void> {
-    await this.send(`${this.baseUrl}/${encodeURIComponent(id)}/pause`, {});
-  }
-
-  async resume(id: string): Promise<void> {
-    await this.send(`${this.baseUrl}/${encodeURIComponent(id)}/resume`, {});
-  }
-
-  /** completed: durchgelaufen (true) oder abgebrochen (false). */
-  async stop(id: string, completed: boolean): Promise<void> {
-    await this.send(`${this.baseUrl}/${encodeURIComponent(id)}/stop`, { completed });
-    await this.refresh(true);
-  }
-
-  private async send(url: string, body: unknown): Promise<void> {
-    try {
-      await firstValueFrom(this.http.post(url, body));
-    } catch {
-      /* Siehe oben: der Timer läuft auch ohne Protokoll. */
-    }
-  }
-
   // ---- Lesen für die Statistik ----
 
   /** Fokus je Tag der letzten `days` Tage (höchstens 90), in der eigenen Zeitzone. */
@@ -233,6 +191,7 @@ export class FocusSessionService {
         startedAt: new Date(s.startedAt),
         endedAt: s.endedAt ? new Date(s.endedAt) : null,
         elapsedSeconds: s.elapsedSeconds,
+        plannedSeconds: s.plannedSeconds,
         completed: s.completed ?? false,
       }));
     } catch {
