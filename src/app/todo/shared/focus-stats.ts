@@ -2,11 +2,12 @@
  * Die Rechnungen der Statistik — ohne DOM und ohne Netz, damit sie sich
  * direkt prüfen lassen.
  *
- * Gebaut wie die Statistik in Flow (menubar/src/views/StatsView.vue und
- * src/timer/history.ts im Flow-Repo): Woche oder Monat, die Summe, der
- * Schnitt je Arbeitstag, Zeitblöcke je Tag, höchstens acht Stunden am Tag,
- * und dieselbe CSV-Stundenliste. So zeigen beide Apps für denselben Tag
- * dieselbe Zahl.
+ * Flow ist die Quelle der Wahrheit. Die Regeln sind die aus Flow
+ * (src/timer/history.ts, menubar/src/store.ts und views/StatsView.vue im
+ * Repo „timer"): eine Sitzung zählt, wenn sie bis zum Ende gelaufen ist, mit
+ * ihrer geplanten Länge, an dem Tag, an dem sie endete; jede Sitzung ist ein
+ * eigener Block; die vor Flow notierten Stunden kommen dazu; kein Tag zählt
+ * mehr als acht Stunden. So zeigen beide Apps für denselben Tag dieselbe Zahl.
  */
 import { shiftISODate, startOfWeekISO, todayISO, toISODate } from './week';
 
@@ -15,9 +16,6 @@ export type Span = 'week' | 'month';
 /** Mehr zählt an keinem Tag — wie in Flow. */
 export const MAX_DAY_MINUTES = 8 * 60;
 
-/** Lücken bis hierhin gelten als derselbe Block: eine kurze Pause trennt nichts. */
-export const BLOCK_GAP_MINUTES = 15;
-
 /** Eine Fokus-Sitzung, wie das Backend sie liefert (GET /focus-session). */
 export interface SessionLike {
   todoId: string | null;
@@ -25,14 +23,31 @@ export interface SessionLike {
   startedAt: Date;
   endedAt: Date | null;
   elapsedSeconds: number;
+  /** Bis zum Ende gelaufen (true) oder vorher gestoppt. */
+  completed?: boolean;
+  plannedSeconds?: number;
 }
 
-/** Ein zusammenhängender Block an einem Tag. */
+/** Ein Block mit Uhrzeiten — für Zeitleisten. */
 export interface FocusBlock {
   start: string;
   end: string;
   minutes: number;
 }
+
+/**
+ * Ein Arbeitsblock wie in Flow: eine Sitzung, oder ein eingelesener Block
+ * aus der Zeit vor Flow. Uhrzeiten fehlen, wo nur die Dauer bekannt ist.
+ */
+export interface WorkBlock {
+  start: string | null;
+  end: string | null;
+  minutes: number;
+  source: 'flow' | 'import';
+}
+
+/** Datum 'YYYY-MM-DD' → Blöcke des Tages, in der Reihenfolge ihres Eintrags. */
+export type History = Readonly<Record<string, readonly WorkBlock[]>>;
 
 /** Die Tage eines Zeitraums als 'YYYY-MM-DD'. `offset` 0 = der laufende. */
 export function periodDays(span: Span, offset: number, today = todayISO()): string[] {
@@ -53,41 +68,119 @@ function clock(date: Date): string {
 }
 
 /**
- * Sitzungen → Blöcke je Tag. Nahe beieinander liegende Sitzungen werden ein
- * Block („09:00–11:10" statt vier Einzelzeiten); gezählt wird die reine
- * Laufzeit, nicht die Spanne mit den Pausen darin.
+ * Wie viel eine Sitzung in Flow zählt: nur, wenn sie bis zum Ende gelaufen
+ * ist, und dann ihre geplante Länge in ganzen Minuten (Flow: finish() in
+ * useFlowTimer). Eine vorher gestoppte Sitzung zählt nicht. null = zählt nicht.
  */
-export function blocksByDay(sessions: readonly SessionLike[], gap = BLOCK_GAP_MINUTES): Map<string, FocusBlock[]> {
-  const sorted = sessions
-    .filter((s) => s.elapsedSeconds >= 60)
-    .map((s) => ({ ...s, end: s.endedAt ?? new Date(s.startedAt.getTime() + s.elapsedSeconds * 1000) }))
-    .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
-
-  const out = new Map<string, FocusBlock[]>();
-  let last: { day: string; block: FocusBlock; endsAt: number } | null = null;
-  for (const s of sorted) {
-    const day = toISODate(s.startedAt);
-    const minutes = Math.round(s.elapsedSeconds / 60);
-    if (last && last.day === day && s.startedAt.getTime() - last.endsAt <= gap * 60_000) {
-      last.block.minutes += minutes;
-      if (s.end.getTime() > last.endsAt) {
-        last.block.end = clock(s.end);
-        last.endsAt = s.end.getTime();
-      }
-      continue;
-    }
-    const block: FocusBlock = { start: clock(s.startedAt), end: clock(s.end), minutes };
-    const list = out.get(day) ?? [];
-    list.push(block);
-    out.set(day, list);
-    last = { day, block, endsAt: s.end.getTime() };
-  }
-  return out;
+export function flowMinutes(session: SessionLike): number | null {
+  if (!session.completed || !session.endedAt) return null;
+  const minutes = Math.round((session.plannedSeconds ?? session.elapsedSeconds) / 60);
+  return minutes > 0 ? minutes : null;
 }
 
-/** Minuten je Tag, gedeckelt auf acht Stunden. */
-export function capped(minutes: number): number {
-  return Math.min(MAX_DAY_MINUTES, Math.max(0, Math.round(minutes)));
+/**
+ * Sitzungen → Blöcke je Tag, wie Flow sie einträgt: am Tag des Endes, der
+ * Block endet mit der Sitzung und beginnt ihre Länge davor.
+ */
+export function sessionHistory(sessions: readonly SessionLike[]): History {
+  const counted = sessions
+    .map((session) => ({ session, minutes: flowMinutes(session) }))
+    .filter((entry): entry is { session: SessionLike & { endedAt: Date }; minutes: number } => entry.minutes !== null)
+    .sort((a, b) => a.session.endedAt.getTime() - b.session.endedAt.getTime());
+
+  const history: Record<string, WorkBlock[]> = {};
+  for (const { session, minutes } of counted) {
+    const end = session.endedAt;
+    const start = new Date(end.getTime() - minutes * 60_000);
+    const day = toISODate(end);
+    (history[day] ??= []).push({ start: clock(start), end: clock(end), minutes, source: 'flow' });
+  }
+  return history;
+}
+
+/**
+ * Eingelesene Tage dazunehmen, vor die Sitzungen des Tages — wie
+ * mergeImport in Flow.
+ */
+export function mergeImport(history: History, imported: History): History {
+  const next: Record<string, readonly WorkBlock[]> = { ...history };
+  for (const [date, blocks] of Object.entries(imported)) {
+    const existing = next[date] ?? [];
+    if (existing.some((block) => block.source === 'import')) continue;
+    next[date] = [...blocks.map((block) => ({ ...block, source: 'import' as const })), ...existing];
+  }
+  return next;
+}
+
+/** 'HH:MM' plus Minuten, am selben Tag. */
+function addMinutes(time: string, minutes: number): string {
+  const [h = 0, m = 0] = time.split(':').map(Number);
+  const total = Math.min(24 * 60 - 1, h * 60 + m + minutes);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Ein Tag über dem Höchstwert wird gekürzt — von hinten: was zuletzt kam,
+ * fällt weg, der Block an der Grenze endet früher (capDay in Flow).
+ */
+export function capDay(blocks: readonly WorkBlock[], max = MAX_DAY_MINUTES): WorkBlock[] {
+  let left = max;
+  const kept: WorkBlock[] = [];
+  for (const block of blocks) {
+    if (left <= 0) break;
+    if (block.minutes <= left) {
+      kept.push(block);
+      left -= block.minutes;
+      continue;
+    }
+    const end = block.start ? addMinutes(block.start, left) : block.end;
+    kept.push({ ...block, minutes: left, end });
+    left = 0;
+  }
+  return kept;
+}
+
+/** Jeden Tag über dem Höchstwert kürzen; die anderen bleiben, wie sie sind. */
+export function capHistory(history: History, max = MAX_DAY_MINUTES): History {
+  const next: Record<string, readonly WorkBlock[]> = {};
+  for (const [date, blocks] of Object.entries(history)) {
+    next[date] = blocks.reduce((sum, block) => sum + block.minutes, 0) > max ? capDay(blocks, max) : blocks;
+  }
+  return next;
+}
+
+/** Die Geschichte, die Flow zeigt: Sitzungen und eingelesene Stunden, gedeckelt. */
+export function flowHistory(sessions: readonly SessionLike[], imported: History): History {
+  return capHistory(mergeImport(sessionHistory(sessions), imported));
+}
+
+export function minutesOn(blocks: readonly WorkBlock[] | undefined): number {
+  return (blocks ?? []).reduce((sum, block) => sum + block.minutes, 0);
+}
+
+/** Nur die Blöcke mit Uhrzeit — die anderen haben auf einer Zeitleiste keinen Ort. */
+export function timedBlocks(blocks: readonly WorkBlock[]): FocusBlock[] {
+  return blocks
+    .filter((block): block is WorkBlock & { start: string; end: string } => block.start !== null && block.end !== null)
+    .map(({ start, end, minutes }) => ({ start, end, minutes }));
+}
+
+/** „09:00–13:00 · 14:00–18:00" — oder „2 blocks", wenn Uhrzeiten fehlen (wie Flow). */
+export function describeBlocks(blocks: readonly WorkBlock[]): string {
+  const timed = blocks.filter((block) => block.start && block.end).map((block) => `${block.start}–${block.end}`);
+  if (timed.length > 0 && timed.length === blocks.length) return timed.join(' · ');
+  if (blocks.length === 0) return 'Focus sessions';
+  return `${blocks.length} ${blocks.length === 1 ? 'block' : 'blocks'}`;
+}
+
+/**
+ * Gegen den Zeitraum davor, wie in Flow: nur für abgeschlossene Zeiträume —
+ * eine halbe Woche gegen eine ganze sagt nichts. null, wenn es nichts zu
+ * vergleichen gibt.
+ */
+export function periodTrend(total: number, previous: number, offset: number): number | null {
+  if (offset === 0 || total === 0 || previous === 0) return null;
+  return Math.round(((total - previous) / previous) * 100);
 }
 
 /** Erledigte Todos je Tag (nach ihrem Erledigt-Zeitpunkt, lokal). */
@@ -138,7 +231,7 @@ export function bestStreak(done: ReadonlyMap<string, number>): number {
   return best;
 }
 
-/** Fokus je Todo in einem Zeitraum, die meiste zuerst. */
+/** Fokus je Todo in einem Zeitraum, die meiste zuerst — gezählt wie in Flow. */
 export function focusPerTodo(
   sessions: readonly SessionLike[],
   days: readonly string[],
@@ -146,16 +239,14 @@ export function focusPerTodo(
   const inRange = new Set(days);
   const totals = new Map<string, { todoId: string | null; title: string; minutes: number }>();
   for (const s of sessions) {
-    if (!inRange.has(toISODate(s.startedAt))) continue;
+    const minutes = flowMinutes(s);
+    if (minutes === null || !inRange.has(toISODate(s.endedAt!))) continue;
     const key = s.todoId ?? `title:${s.todoTitle}`;
     const entry = totals.get(key) ?? { todoId: s.todoId, title: s.todoTitle, minutes: 0 };
-    entry.minutes += s.elapsedSeconds / 60;
+    entry.minutes += minutes;
     totals.set(key, entry);
   }
-  return [...totals.values()]
-    .map((e) => ({ ...e, minutes: Math.round(e.minutes) }))
-    .filter((e) => e.minutes > 0)
-    .sort((a, b) => b.minutes - a.minutes);
+  return [...totals.values()].filter((e) => e.minutes > 0).sort((a, b) => b.minutes - a.minutes);
 }
 
 /** 440 → „7h 20m", 45 → „45m", 0 → „0m". */
@@ -173,12 +264,12 @@ export function formatHours(minutes: number): string {
 }
 
 /**
- * Die Tage als CSV, aufgebaut wie die Stundenliste in Flow: Tag, je Block
- * Uhrzeit und Stunden, dann die Summe, auch dezimal. Semikolon und
+ * Die Tage als CSV, dieselbe Stundenliste wie aus Flow (toCSV in Flow): Tag,
+ * je Block Uhrzeit und Stunden, dann die Summe, auch dezimal. Semikolon und
  * Dezimalkomma, damit Excel und Numbers es auf Deutsch lesen.
  */
-export function toCSV(days: ReadonlyArray<{ date: string; blocks: readonly FocusBlock[]; minutes: number }>): string {
-  const worked = days.filter((day) => day.minutes > 0);
+export function toCSV(days: ReadonlyArray<{ date: string; blocks: readonly WorkBlock[] }>): string {
+  const worked = days.filter((day) => day.blocks.length > 0);
   const columns = Math.max(1, ...worked.map((day) => day.blocks.length));
   const ordinal = ['First', 'Second', 'Third', 'Fourth', 'Fifth'];
   const header = ['Day'];
@@ -190,18 +281,19 @@ export function toCSV(days: ReadonlyArray<{ date: string; blocks: readonly Focus
     const cells = [`${d}.${m}.${y}`];
     for (let i = 0; i < columns; i++) {
       const block = day.blocks[i];
-      cells.push(block ? `${block.start}-${block.end}` : '', block ? formatHours(block.minutes) : '');
+      cells.push(block?.start && block.end ? `${block.start}-${block.end}` : '', block ? formatHours(block.minutes) : '');
     }
-    cells.push(formatHours(day.minutes), (day.minutes / 60).toFixed(2).replace('.', ','));
+    const total = minutesOn(day.blocks);
+    cells.push(formatHours(total), (total / 60).toFixed(2).replace('.', ','));
     return cells;
   });
 
-  const sum = worked.reduce((all, day) => all + day.minutes, 0);
+  const sum = worked.reduce((all, day) => all + minutesOn(day.blocks), 0);
   const footer = ['Total', ...Array<string>(columns * 2).fill(''), formatHours(sum), (sum / 60).toFixed(2).replace('.', ',')];
   return [header, ...rows, footer].map((cells) => cells.join(';')).join('\r\n') + '\r\n';
 }
 
-// ---- Für die Ansicht: Heatmap, Tempo, Zeitleiste ----
+// ---- Für die Ansicht: Heatmap und Zeitleiste ----
 
 /** Eine Woche der Heatmap: Montag bis Sonntag, dazu der Monat, wenn er hier beginnt. */
 export interface HeatWeek {
@@ -230,19 +322,6 @@ export function heatLevel(minutes: number): 0 | 1 | 2 | 3 | 4 {
   if (minutes < 150) return 2;
   if (minutes < 270) return 3;
   return 4;
-}
-
-/**
- * Wie der Zeitraum gegen den davor steht — beim laufenden nur bis heute,
- * gegen dieselbe Zahl Tage davor: Mittwoch gegen Mittwoch, nicht eine halbe
- * Woche gegen eine ganze. null, wenn es nichts zu vergleichen gibt.
- */
-export function paceChange(current: readonly number[], previous: readonly number[], uptoIndex: number): number | null {
-  const n = Math.min(uptoIndex + 1, current.length);
-  const now = current.slice(0, n).reduce((a, b) => a + b, 0);
-  const before = previous.slice(0, n).reduce((a, b) => a + b, 0);
-  if (before === 0 || now === 0) return null;
-  return Math.round(((now - before) / before) * 100);
 }
 
 /** Ein Block auf der Zeitleiste eines Tages, in Prozent der Leiste. */

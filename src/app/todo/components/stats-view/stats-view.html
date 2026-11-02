@@ -55,7 +55,7 @@
     <p class="stats-hero__sub">
       @if (average() > 0) {
         <span class="stats-avg-key" aria-hidden="true"></span>
-        Ø {{ formatMinutes(average()) }} per active day · {{ worked().length }} {{ worked().length === 1 ? 'day' : 'days' }}
+        Ø {{ formatMinutes(average()) }} per working day · {{ worked().length }} {{ worked().length === 1 ? 'day' : 'days' }}
       } @else {
         No focus time yet in this {{ span() }}
       }

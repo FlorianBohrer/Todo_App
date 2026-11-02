@@ -18,23 +18,29 @@ import {
 import { TodoService } from '../../services/todo';
 import { FocusDayTotal, FocusSessionRecord, FocusSessionService } from '../../services/focus-session.service';
 import {
+  MAX_DAY_MINUTES,
   Span,
+  WorkBlock,
   bestStreak,
-  blocksByDay,
-  capped,
+  capDay,
+  describeBlocks,
   doneByDay,
   doneByTimeOfDay,
+  flowHistory,
   focusPerTodo,
   formatMinutes,
   heatLevel,
   heatmapWeeks,
-  paceChange,
+  minutesOn,
   periodDays,
+  periodTrend,
+  timedBlocks,
   timelineSpans,
   toCSV,
 } from '../../shared/focus-stats';
+import { FLOW_IMPORT } from '../../shared/flow-import';
 import { completionStreak } from '../../shared/streak';
-import { fromISODate, shiftISODate, todayISO } from '../../shared/week';
+import { fromISODate, shiftISODate, toISODate, todayISO } from '../../shared/week';
 import { stripPriorityPrefix } from '../../shared/title-priority';
 import { splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
@@ -42,6 +48,9 @@ import { stripBold } from '../../shared/rich-title';
 
 /** Wie weit die Statistik zurückreicht: so viel liefert der Server je Tag. */
 const SERVER_DAYS = 90;
+
+/** Mehr Sitzungen gibt GET /focus-session nicht auf einmal her. */
+const RECENT_LIMIT = 200;
 
 interface DayBar {
   iso: string;
@@ -60,8 +69,10 @@ interface DayBar {
  * nicht: erledigte Aufgaben, die Reihe in Folge, wann am Tag man etwas
  * schafft.
  *
- * Die Fokuszeit kommt vom Server, auf den Flow und der Timer der Webseite
- * dieselben Sitzungen schreiben. Beide Apps zeigen deshalb dieselben Zahlen.
+ * Flow ist die Quelle der Wahrheit: gemessen wird nur dort, Flow schreibt
+ * seine Sitzungen auf den Server, und gerechnet wird hier nach Flows Regeln
+ * (focus-stats.ts) — mit den Stunden, die Flow vor seiner Statistik
+ * eingelesen hat (flow-import.ts). Beide Apps zeigen dieselben Zahlen.
  */
 @Component({
   selector: 'app-stats-view',
@@ -95,7 +106,7 @@ export class StatsView {
   }
 
   async load(): Promise<void> {
-    const [days, recent] = await Promise.all([this.sessions.loadDays(SERVER_DAYS), this.sessions.loadRecent(200)]);
+    const [days, recent] = await Promise.all([this.sessions.loadDays(SERVER_DAYS), this.sessions.loadRecent(RECENT_LIMIT)]);
     this.offline.set(days === null);
     if (days) this.perDay.set(new Map(days.map((d) => [d.date, d])));
     if (recent) this.recent.set(recent);
@@ -142,6 +153,41 @@ export class StatsView {
   private readonly todos = computed(() => this.todoService.withArchive());
   private readonly done = computed(() => doneByDay(this.todos()));
 
+  /** Was Flow zeigt: Sitzungen und eingelesene Stunden, je Tag gedeckelt. */
+  private readonly history = computed(() => flowHistory(this.recent(), FLOW_IMPORT));
+
+  /**
+   * Ab welchem Tag die geladenen Sitzungen vollständig sind. Der Server gibt
+   * höchstens 200 her; sind es so viele, kann davor etwas fehlen. null =
+   * alles geladen.
+   */
+  private readonly coveredFrom = computed(() => {
+    const list = this.recent();
+    if (list.length < RECENT_LIMIT) return null;
+    return list.reduce((first, s) => {
+      const day = toISODate(s.startedAt);
+      return day < first ? day : first;
+    }, '9999-12-31');
+  });
+
+  /**
+   * Die Blöcke eines Tages, wie Flow sie zählt. Vor dem ersten geladenen Tag
+   * (nur bei sehr vielen Sitzungen) steht statt der Sitzungen die Tagessumme
+   * des Servers, als ein Block ohne Uhrzeit.
+   */
+  protected blocksOn(iso: string): readonly WorkBlock[] {
+    const from = this.coveredFrom();
+    if (from === null || iso >= from) return this.history()[iso] ?? [];
+    const imported = FLOW_IMPORT[iso] ?? [];
+    const server = Math.round((this.perDay().get(iso)?.totalSeconds ?? 0) / 60);
+    const blocks: WorkBlock[] = server > 0 ? [...imported, { start: null, end: null, minutes: server, source: 'flow' }] : [...imported];
+    return capDay(blocks, MAX_DAY_MINUTES);
+  }
+
+  private minutesOf(iso: string): number {
+    return minutesOn(this.blocksOn(iso));
+  }
+
   protected readonly days = computed<DayBar[]>(() => {
     const today = todayISO();
     const span = this.span();
@@ -151,7 +197,7 @@ export class StatsView {
         iso,
         label: span === 'week' ? date.toLocaleDateString('en-US', { weekday: 'narrow' }) : index % 7 === 0 ? String(date.getDate()) : '',
         name: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-        minutes: capped((this.perDay().get(iso)?.totalSeconds ?? 0) / 60),
+        minutes: this.minutesOf(iso),
         done: this.done().get(iso) ?? 0,
         future: iso > today,
         isToday: iso === today,
@@ -164,26 +210,23 @@ export class StatsView {
   protected readonly average = computed(() =>
     this.worked().length === 0 ? 0 : Math.round(this.total() / this.worked().length),
   );
-  protected readonly sessionsInPeriod = computed(() =>
-    this.days().reduce((sum, d) => sum + (this.perDay().get(d.iso)?.sessionCount ?? 0), 0),
+  /** Flow-Sitzungen im Zeitraum, mit ihren Minuten — ohne die eingelesenen Blöcke. */
+  private readonly flowBlocks = computed(() =>
+    this.days().flatMap((d) => this.blocksOn(d.iso).filter((b) => b.source === 'flow' && b.start !== null)),
   );
+  protected readonly sessionsInPeriod = computed(() => this.flowBlocks().length);
   protected readonly doneInPeriod = computed(() => this.days().reduce((sum, d) => sum + d.done, 0));
 
   /**
-   * Gegen den Zeitraum davor. Beim laufenden nur bis heute und gegen
-   * dieselben Tage davor — Mittwoch gegen Mittwoch, nicht eine halbe Woche
-   * gegen eine ganze.
+   * Gegen den Zeitraum davor — wie in Flow nur für abgeschlossene Zeiträume:
+   * eine halbe Woche gegen eine ganze sagt nichts.
    */
   protected readonly trend = computed(() => {
-    const days = this.days();
-    const minutesOf = (iso: string) => capped((this.perDay().get(iso)?.totalSeconds ?? 0) / 60);
-    const previous = periodDays(this.span(), this.offset() - 1).map(minutesOf);
-    const today = days.findIndex((d) => d.isToday);
-    const upto = this.offset() === 0 && today >= 0 ? today : days.length - 1;
-    const change = paceChange(days.map((d) => d.minutes), previous, upto);
+    const previous = periodDays(this.span(), this.offset() - 1).reduce((sum, iso) => sum + this.minutesOf(iso), 0);
+    const change = periodTrend(this.total(), previous, this.offset());
     if (change === null) return null;
-    const what = this.offset() === 0 ? `the same days last ${this.span()}` : `the ${this.span()} before`;
-    return { change, up: change >= 0, label: `${change > 0 ? '+' : ''}${change}%`, title: `${change > 0 ? '+' : ''}${change}% vs ${what}` };
+    const label = `${change > 0 ? '+' : ''}${change}%`;
+    return { change, up: change >= 0, label, title: `${label} vs last ${this.span()}` };
   });
 
   protected readonly headline = computed(() => {
@@ -216,10 +259,10 @@ export class StatsView {
     return best ? { iso: best.iso, minutes: best.minutes, name: fromISODate(best.iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) } : null;
   });
 
-  /** Wie lang eine Sitzung im Schnitt war. */
+  /** Wie lang eine Flow-Sitzung im Schnitt war. */
   protected readonly avgSession = computed(() => {
-    const sessions = this.sessionsInPeriod();
-    return sessions > 0 ? Math.round(this.total() / sessions) : 0;
+    const blocks = this.flowBlocks();
+    return blocks.length > 0 ? Math.round(minutesOn(blocks) / blocks.length) : 0;
   });
 
   /** Der Tag mit den meisten erledigten Aufgaben. */
@@ -235,7 +278,7 @@ export class StatsView {
     const weeks = heatmapWeeks(13, today).map((week) => ({
       month: week.month ? fromISODate(`${week.month}-01`).toLocaleDateString('en-US', { month: 'short' }) : '',
       days: week.days.map((iso) => {
-        const minutes = capped((this.perDay().get(iso)?.totalSeconds ?? 0) / 60);
+        const minutes = this.minutesOf(iso);
         const future = iso > today;
         const name = fromISODate(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         return { iso, future, minutes, level: future ? -1 : heatLevel(minutes), title: future ? name : `${name}: ${formatMinutes(minutes)}` };
@@ -316,8 +359,6 @@ export class StatsView {
     });
   });
 
-  private readonly blocks = computed(() => blocksByDay(this.recent()));
-
   /**
    * Die Tage mit Fokus oder Erledigtem, der neueste zuerst — zugleich die
    * Tabelle hinter den Balken. Jeder Tag bekommt eine Zeitleiste; alle auf
@@ -328,13 +369,14 @@ export class StatsView {
     const rows = this.days()
       .filter((d) => d.minutes > 0 || d.done > 0)
       .reverse()
-      .map((d) => ({ day: d, blocks: this.blocks().get(d.iso) ?? [] }));
-    const from = Math.min(6 * 60, ...rows.map((r) => timelineSpans(r.blocks).start));
+      .map((d) => ({ day: d, blocks: this.blocksOn(d.iso) }));
+    const from = Math.min(6 * 60, ...rows.map((r) => timelineSpans(timedBlocks(r.blocks)).start));
     return rows.map(({ day, blocks }) => ({
       ...day,
-      blocksText: blocks.length > 0 ? blocks.map((b) => `${b.start}–${b.end}`).join(' · ') : '',
+      // Wie in Flow: die Uhrzeiten, oder „2 blocks", wo sie fehlen.
+      blocksText: blocks.length > 0 ? describeBlocks(blocks) : '',
       time: formatMinutes(day.minutes),
-      timeline: timelineSpans(blocks, from),
+      timeline: timelineSpans(timedBlocks(blocks), from),
     }));
   });
 
@@ -354,7 +396,7 @@ export class StatsView {
 
   /** Der gezeigte Zeitraum als Stundenliste — dieselbe Datei wie aus Flow. */
   exportCSV(): void {
-    const days = this.days().map((d) => ({ date: d.iso, blocks: this.blocks().get(d.iso) ?? [], minutes: d.minutes }));
+    const days = this.days().map((d) => ({ date: d.iso, blocks: this.blocksOn(d.iso) }));
     const first = days[0]?.date ?? todayISO();
     const name = this.span() === 'month' ? `Focus ${first.slice(0, 7)}.csv` : `Focus week of ${first}.csv`;
     const url = URL.createObjectURL(new Blob(['﻿', toCSV(days)], { type: 'text/csv;charset=utf-8' }));
