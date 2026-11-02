@@ -1,0 +1,92 @@
+<!-- Das Termin-Menü der Liste als Schublade von links: auf jeder Breite
+     dieselbe, sie fährt über die Liste aus und wieder zurück
+     (schedule-drawer.scss). Vorher am Rechner ein Popover an der Zeile und
+     auf dem Telefon ein Teil des Blatts von unten: zwei Orte für dieselbe
+     Frage, und das Popover sprang je nach Platz mal nach oben, mal nach
+     unten. animate.leave hält beide Flächen im DOM, bis sie draussen sind. -->
+@if (todo(); as stodo) {
+  <div class="schedule-scrim scroll-lock"
+    animate.enter="schedule-scrim-in"
+    animate.leave="schedule-scrim-out"
+    (click)="closed.emit()"></div>
+  <aside class="schedule-drawer"
+    role="dialog" aria-modal="true" aria-labelledby="schedule-title"
+    animate.enter="schedule-drawer-in"
+    animate.leave="schedule-drawer-out"
+    (keydown.escape)="closed.emit()">
+    <header class="schedule-drawer__head">
+      <div class="min-w-0 flex-1">
+        <p class="schedule-drawer__eyebrow">
+          <lucide-icon [img]="ScheduleIcon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+          Plan
+        </p>
+        <h2 id="schedule-title" class="schedule-drawer__title"><app-rich-text [text]="heading()" /></h2>
+      </div>
+      <button type="button" class="schedule-drawer__close" (click)="closed.emit()" aria-label="Close">
+        <lucide-icon [img]="ClearIcon" class="h-5 w-5" aria-hidden="true"></lucide-icon>
+      </button>
+    </header>
+
+    <div class="schedule-drawer__body">
+      <!-- Ein Blatt statt vier fester Knöpfe: die Schnellwahl steht oben im
+           Kalender, darunter jeder andere Tag (date-picker.ts). -->
+      <section class="schedule-drawer__section" aria-label="Day">
+        <app-date-picker [autofocus]="true"
+          [value]="stodo.scheduledDate"
+          (picked)="schedule(stodo.id, $event)" />
+      </section>
+
+      <!-- Wann am Tag und wie lange: dieselbe Frage wie der Termin. -->
+      <section class="schedule-drawer__section when-block">
+        <h3 class="schedule-drawer__label">Time of day</h3>
+        <div class="flex flex-wrap gap-1.5">
+          @for (t of timeChoices; track t.label) {
+            <button type="button" class="when-chip" [class.is-active]="whenOf(stodo) === t.value"
+              [attr.aria-pressed]="whenOf(stodo) === t.value"
+              (click)="setWhen(stodo, t.value)">{{ t.label }}</button>
+          }
+        </div>
+        <h3 class="schedule-drawer__label">Takes about</h3>
+        <div class="flex flex-wrap gap-1.5">
+          @for (d of durationChoices; track $index) {
+            <button type="button" class="when-chip" [class.is-active]="minutesOf(stodo) === d"
+              [attr.aria-pressed]="minutesOf(stodo) === d"
+              (click)="setMinutes(stodo, d)">{{ d === null ? 'None' : formatDurationText(d) }}</button>
+          }
+        </div>
+      </section>
+
+      <!-- Wiederholung: Termin und Rhythmus sind dieselbe Frage, wann. -->
+      <section class="schedule-drawer__section">
+        <h3 class="schedule-drawer__label">
+          <lucide-icon [img]="RepeatIcon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+          Repeats
+        </h3>
+        <div class="flex flex-wrap gap-1.5">
+          @for (option of repeatChoices; track option.key) {
+            <button type="button" class="when-chip"
+              [class.is-active]="repeatMatches(stodo, option.rule)"
+              [attr.aria-pressed]="repeatMatches(stodo, option.rule)"
+              (click)="setRepeat(stodo, option.rule)">{{ option.label }}</button>
+          }
+        </div>
+        <!-- Der Unterschied, den die meisten Apps auslassen: den Muell
+             bringt man nicht nach Kalender runter, sondern wenn er voll ist. -->
+        @if (stodo.repeat) {
+          <button type="button"
+            class="mt-3 flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-xs leading-snug text-subtle transition hover:text-muted"
+            (click)="toggleRepeatFrom(stodo)">
+            <span class="flex-none rounded border border-line-strong px-1 py-0.5 font-mono text-2xs">
+              {{ stodo.repeat.from === 'completion' ? 'ON' : 'OFF' }}
+            </span>
+            <span>Count from when I finish it, not from the plan</span>
+          </button>
+        }
+      </section>
+    </div>
+
+    <footer class="schedule-drawer__foot">
+      <button type="button" class="schedule-drawer__done" (click)="closed.emit()">Done</button>
+    </footer>
+  </aside>
+}

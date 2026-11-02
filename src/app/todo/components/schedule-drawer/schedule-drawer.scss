@@ -1,0 +1,221 @@
+/* Chips für Tageszeit, Dauer und Wiederholung. */
+.when-chip {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.625rem;
+  color: var(--color-text);
+  font-size: 0.75rem;
+  transition: border-color 140ms ease-out, color 140ms ease-out, background-color 140ms ease-out;
+}
+
+.when-chip:hover {
+  border-color: var(--color-indigo-400);
+  color: var(--color-indigo-300);
+}
+
+.when-chip.is-active {
+  border-color: var(--color-indigo-400);
+  background: color-mix(in srgb, var(--color-indigo-400) 14%, transparent);
+  color: var(--color-indigo-300);
+}
+
+/* ================================================================
+   Termin-Schublade
+   Fährt von links über die Liste aus und wieder zurück, auf jeder
+   Breite gleich. Am Telefon bleibt rechts ein Streifen der Liste
+   sichtbar: man sieht, woher man kam, und tippt dorthin zum Schliessen.
+   ================================================================ */
+.schedule-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(2px);
+}
+
+:host-context([data-theme='light']) .schedule-scrim {
+  background: rgb(20 18 40 / 0.28);
+}
+
+.schedule-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: min(24rem, calc(100vw - 3rem));
+  border-right: 1px solid var(--color-line);
+  border-radius: 0 1.5rem 1.5rem 0;
+  background: var(--color-panel1);
+  box-shadow: 24px 0 48px -24px rgb(var(--shadow) / calc(0.9 * var(--shadow-k)));
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  overscroll-behavior: contain;
+}
+
+.schedule-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem 0.75rem 1.25rem;
+}
+
+.schedule-drawer__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.25rem;
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.schedule-drawer__title {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.schedule-drawer__close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  color: var(--color-muted);
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.schedule-drawer__close:hover {
+  background: var(--color-fill);
+  color: var(--color-text);
+}
+
+.schedule-drawer__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 0.75rem 0.5rem;
+}
+
+.schedule-drawer__section {
+  padding: 0.875rem 0.5rem;
+}
+
+.schedule-drawer__section + .schedule-drawer__section {
+  border-top: 1px solid var(--color-line);
+}
+
+.schedule-drawer__label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.5rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Eine zweite Frage im selben Abschnitt (Tageszeit, dann Dauer) mit Luft davor. */
+.schedule-drawer__section > div + .schedule-drawer__label {
+  margin-top: 1.125rem;
+}
+
+.schedule-drawer .when-chip {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.schedule-drawer__foot {
+  padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-line);
+}
+
+.schedule-drawer__done {
+  width: 100%;
+  height: 2.75rem;
+  border-radius: 0.875rem;
+  background: var(--color-button1);
+  color: var(--color-on-accent);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: filter 140ms ease;
+}
+
+.schedule-drawer__done:hover {
+  filter: brightness(1.08);
+}
+
+.schedule-drawer__done:focus-visible,
+.schedule-drawer__close:focus-visible {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 2px;
+}
+
+/* Aus und ein: die Schublade gleitet von der linken Kante, der Grund
+   dunkelt mit ab. Zurück etwas schneller als hinaus. */
+.schedule-drawer-in {
+  animation: schedule-drawer-in 340ms var(--spring, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+.schedule-drawer-out {
+  animation: schedule-drawer-out 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.schedule-scrim-in {
+  animation: schedule-scrim-in 260ms ease-out both;
+}
+
+.schedule-scrim-out {
+  animation: schedule-scrim-out 220ms ease-in both;
+}
+
+@keyframes schedule-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes schedule-drawer-out {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes schedule-scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes schedule-scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schedule-drawer-in,
+  .schedule-drawer-out {
+    animation-name: schedule-scrim-in;
+    animation-duration: 120ms;
+  }
+
+  .schedule-drawer-out {
+    animation-name: schedule-scrim-out;
+  }
+}

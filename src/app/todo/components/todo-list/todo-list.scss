@@ -1353,24 +1353,3 @@ li.todo-expanded-row {
 .suggest__add:active {
   transform: scale(0.92);
 }
-
-/* Chips für Tageszeit und Dauer im Termin-Blatt und im Menü. */
-.when-chip {
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  padding: 0.25rem 0.625rem;
-  color: var(--color-text);
-  font-size: 0.75rem;
-  transition: border-color 140ms ease-out, color 140ms ease-out, background-color 140ms ease-out;
-}
-
-.when-chip:hover {
-  border-color: var(--color-indigo-400);
-  color: var(--color-indigo-300);
-}
-
-.when-chip.is-active {
-  border-color: var(--color-indigo-400);
-  background: color-mix(in srgb, var(--color-indigo-400) 14%, transparent);
-  color: var(--color-indigo-300);
-}
