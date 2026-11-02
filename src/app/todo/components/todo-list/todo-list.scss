@@ -979,13 +979,16 @@ li.todo-expanded-row {
   font-weight: 500;
 }
 
-/* ---- Bild im Kreis ---- */
+/* ---- Bild in der Kachel ----
+   Eine abgerundete Kachel in der Ordnerfarbe, das Bild darin in derselben
+   Farbe, voll (task-glyph.ts). Ein Buchstabe, wo kein Bild passt, steht
+   genauso da — in der Farbe des Ordners, nicht in Weiss. */
 .todo-icon {
   display: grid;
   place-items: center;
   width: 2.375rem;
   height: 2.375rem;
-  border-radius: 999px;
+  border-radius: 0.75rem;
   font-size: 1.1875rem;
   line-height: 1;
   user-select: none;
@@ -993,13 +996,13 @@ li.todo-expanded-row {
 
 .todo-icon--initial {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-text);
+  font-weight: 650;
 }
 
 .todo-card.todo-sub .todo-icon {
   width: 1.625rem;
   height: 1.625rem;
+  border-radius: 0.5rem;
   font-size: 0.875rem;
 }
 
@@ -1011,6 +1014,7 @@ li.todo-expanded-row {
   .todo-icon {
     width: 2.125rem;
     height: 2.125rem;
+    border-radius: 0.6875rem;
     font-size: 1.0625rem;
   }
 }
@@ -1218,6 +1222,7 @@ li.todo-expanded-row {
 
 .suggest__icon {
   background: color-mix(in srgb, var(--color-brand-2) 16%, transparent);
+  color: var(--color-brand-2);
 }
 
 .suggest__text {

@@ -32,7 +32,7 @@
         aria-haspopup="dialog"
         [attr.aria-expanded]="pickerOpen()">
         @if (task(); as t) {
-          <span class="focus-task__icon" [class.is-initial]="t.initial" aria-hidden="true">{{ t.glyph }}</span>
+          <span class="focus-task__icon" [class.is-initial]="t.icon.initial" aria-hidden="true"><app-task-glyph [icon]="t.icon" /></span>
           <span class="focus-task__text">
             <span class="focus-task__label">
               {{ taskDone() ? 'Done' : state() === 'running' ? 'Focusing on' : 'Up next' }}@if (t.minutes) { · {{ formatDuration(t.minutes) }} }
@@ -194,7 +194,7 @@
       <p class="focus-picker__title">Focus on</p>
       @for (pick of picks(); track pick.id) {
         <button type="button" class="popover-item focus-picker__item" (click)="choose(pick)">
-          <span class="focus-task__icon focus-task__icon--sm" [class.is-initial]="pick.initial" aria-hidden="true">{{ pick.glyph }}</span>
+          <span class="focus-task__icon focus-task__icon--sm" [class.is-initial]="pick.icon.initial" aria-hidden="true"><app-task-glyph [icon]="pick.icon" /></span>
           <span class="min-w-0 flex-1 truncate">{{ pick.title }}</span>
           @if (pick.minutes) { <span class="text-xs tabular-nums text-subtle">{{ formatDuration(pick.minutes) }}</span> }
         </button>

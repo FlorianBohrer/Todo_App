@@ -179,21 +179,21 @@
   filter: grayscale(0.6);
 }
 
+// Dieselbe Kachel wie in der Liste (todo-list.scss).
 .todo-icon {
   display: grid;
   width: 2.375rem;
   height: 2.375rem;
   flex: none;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 0.75rem;
   font-size: 1.1875rem;
   line-height: 1;
 }
 
 .todo-icon--initial {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-text);
+  font-weight: 650;
 }
 
 .day-card__title {
