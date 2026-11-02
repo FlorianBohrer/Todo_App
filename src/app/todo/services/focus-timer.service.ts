@@ -4,6 +4,7 @@ import { ToastService } from '../../shared/toast.service';
 import { TodoService } from './todo';
 import { stripPriorityPrefix } from '../shared/title-priority';
 import { FocusSessionService } from './focus-session.service';
+import { stripBold } from '../shared/rich-title';
 
 export type TimerState = 'idle' | 'running' | 'paused' | 'done';
 
@@ -327,7 +328,7 @@ export class FocusTimerService {
   private announce(): void {
     const task = this.todos.todoById(this.taskId());
     if (task && !task.completed) {
-      const name = stripPriorityPrefix(task.title).split('\n')[0].trim();
+      const name = stripBold(stripPriorityPrefix(task.title).split('\n')[0].trim());
       this.toast.show(`Focus done: ${name.length > 32 ? name.slice(0, 32) + '…' : name}`, {
         actionLabel: 'Mark done',
         action: () => this.todos.toggleTodo(task.id),

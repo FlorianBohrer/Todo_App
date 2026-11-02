@@ -32,6 +32,7 @@ import { isSection } from '../../shared/section';
 import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
 import { Todo } from '../../model/todo.model';
+import { stripBold } from '../../shared/rich-title';
 
 /** Mittelpunkt und Radius des Rads im SVG (viewBox 300 × 300). */
 const C = 150;
@@ -223,7 +224,7 @@ export class FocusView {
   );
 
   private toPick(todo: Todo): Pick {
-    const text = stripPriorityPrefix(todo.title).split('\n')[0].trim();
+    const text = stripBold(stripPriorityPrefix(todo.title).split('\n')[0].trim());
     return {
       id: todo.id,
       title: splitLeadingEmoji(text).rest,
