@@ -36,8 +36,6 @@ import {
   durationOf,
   durationPrefix,
   formatDuration,
-  setDuration,
-  setTimeOfDay,
   stripPriorityPrefix,
   priorityBadge,
   subtaskGroups,
@@ -49,6 +47,7 @@ import {
 import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
 import { RichText } from '../../shared/rich-text';
+import { ScheduleDrawer } from '../schedule-drawer/schedule-drawer';
 import { hasBold, isBoldKey, stripBold, toggleBold } from '../../shared/rich-title';
 import { ShortcutService } from '../../../shared/shortcut.service';
 import { ClampWatch } from '../../../directives/clamp-watch.directive';
@@ -72,7 +71,6 @@ import { LabelService, Label} from '../../services/label.service';
 import { isOverdueDate, scheduleLabel, scheduleOptions } from '../../shared/schedule';
 import { shiftISODate, todayISO } from '../../shared/week';
 import { isSection, sectionName } from '../../shared/section';
-import { DatePicker } from '../date-picker/date-picker';
 import { tap } from '../../shared/haptics';
 import { RewardService } from '../../../reward/reward.service';
 import { ToastService } from '../../../shared/toast.service';
@@ -82,6 +80,7 @@ import {
   CalendarPlus,
   CalendarDays,
   ChevronDown,
+  ChevronRight,
   ChevronsUpDown,
   EllipsisVertical,
   GripVertical,
@@ -371,9 +370,9 @@ interface TodoRow {
     
     CdkDragPlaceholder,
     TokenChip,
-    DatePicker,
     RichText,
     ClampWatch,
+    ScheduleDrawer,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './todo-list.html',
@@ -765,6 +764,7 @@ export class TodoList {
   protected readonly FolderIcon = Folder;
 
   protected readonly ChevronDownIcon = ChevronDown;
+  protected readonly ChevronRightIcon = ChevronRight;
   protected readonly GripIcon = GripVertical;
   protected readonly StarIcon = Star;
   protected readonly ExpandIcon = ChevronsUpDown;
@@ -812,10 +812,6 @@ export class TodoList {
   /** Platzhalterzeilen, damit @for etwas zu zaehlen hat. */
   protected readonly skeletonRows = [0, 1, 2];
   protected readonly folderListOpen = signal(false);
-  /** Das Monatsblatt im Telefon-Menü; zu, bis man „Pick date" tippt. */
-  protected readonly sheetCalendarOpen = signal(false);
-  /** Das Menü nur mit dem Termin, geöffnet über die Datumszeile. */
-  protected readonly sheetDateOnly = signal(false);
 
 toggleFolderList(): void {
   this.folderListOpen.update(open => !open);
@@ -824,8 +820,15 @@ toggleFolderList(): void {
   protected readonly openMenuId =
     signal<string | null>(null);
 
+  /** Die Aufgabe, deren Termin-Schublade offen ist; null = zu. */
   protected readonly openScheduleId =
     signal<string | null>(null);
+
+  /** Die Zeile zur offenen Schublade — aus `rows`, damit sie mitzieht, wenn sich die Aufgabe ändert. */
+  protected readonly scheduleRow = computed<TodoRow | null>(() => {
+    const id = this.openScheduleId();
+    return id === null ? null : (this.rows().find((row) => row.id === id) ?? null);
+  });
 
   protected readonly openOptionsId =
     signal<string | null>(null);
@@ -1464,24 +1467,12 @@ toggleFolderList(): void {
  toggleOptionsMenu(id: string): void {
   this.openOptionsId.update(current => current === id ? null : id);
   this.folderListOpen.set(false);
-  this.sheetCalendarOpen.set(false);
-  this.sheetDateOnly.set(false);
   this.sectionListOpen.set(false);
 }
 
 closeOptionsMenu(): void {
   this.openOptionsId.set(null);
   this.folderListOpen.set(false);
-  this.sheetCalendarOpen.set(false);
-  this.sheetDateOnly.set(false);
-}
-
-/** Von der Datumszeile aus: dasselbe Blatt, nur der Termin, Kalender offen. */
-openDateSheet(id: string): void {
-  this.folderListOpen.set(false);
-  this.sheetCalendarOpen.set(true);
-  this.sheetDateOnly.set(true);
-  this.openOptionsId.set(id);
 }
 
   toggleMenu(id: string): void {
@@ -1520,23 +1511,27 @@ openDateSheet(id: string): void {
   }
 
   /**
-   * Woran das Termin-Menü hängt: am Chip, wenn ein Termin steht, sonst am
-   * Kalender in der Hover-Leiste. Zwei Knöpfe, ein Menü.
+   * Die Termin-Schublade öffnen: vom Kalender in der Hover-Leiste, vom
+   * Termin in der Meta-Zeile und aus dem Menü am Telefon. Ein Menü, das
+   * immer gleich von links kommt.
    */
-  protected readonly scheduleOrigin = signal<HTMLElement>(inject<ElementRef<HTMLElement>>(ElementRef).nativeElement);
+  openSchedule(id: string): void {
+    this.openOptionsId.set(null);
+    this.openScheduleId.set(id);
+  }
 
-  toggleScheduleMenu(id: string, event: Event): void {
-    this.scheduleOrigin.set(event.currentTarget as HTMLElement);
-    this.openScheduleId.update(current => current === id ? null : id);
+  /** Was im Menü am Telefon neben „Plan" steht: Tag, Tageszeit, Dauer. */
+  planSummary(row: TodoRow): string {
+    const parts = [
+      row.todo.scheduledDate === null ? 'No day' : row.scheduleText,
+      row.when ? this.whenLabel(row.when) : '',
+      row.durationText,
+    ];
+    return parts.filter(Boolean).join(' · ');
   }
 
   closeScheduleMenu(): void {
     this.openScheduleId.set(null);
-  }
-
-  schedule(id: string, iso: string | null): void {
-    this.todoService.scheduleTodo(id, iso);
-    this.closeScheduleMenu();
   }
 
   /**
@@ -1623,56 +1618,6 @@ openDateSheet(id: string): void {
   /** Label an-/abwählen — Menü bleibt offen (Mehrfachauswahl). */
   toggleLabel(id: string, labelId: string): void {
     this.todoService.toggleLabel(id, labelId);
-  }
-
-  // ---- Wiederholung ----
-  //
-  // Vier Angebote statt eines freien Zahlenfelds: taeglich, woechentlich,
-  // monatlich decken praktisch alles ab, was man von Hand pflegt. Wer "alle
-  // drei Tage" braucht, soll es bekommen, aber nicht auf Kosten dessen, dass
-  // die haeufigen Faelle einen Klick brauchen.
-  protected readonly repeatChoices: {
-    key: string;
-    label: string;
-    rule: RepeatRule | null;
-  }[] = [
-    { key: 'none', label: 'Never', rule: null },
-    { key: 'day', label: 'Daily', rule: { every: 1, unit: 'day', from: 'due' } },
-    { key: 'week', label: 'Weekly', rule: { every: 1, unit: 'week', from: 'due' } },
-    { key: 'month', label: 'Monthly', rule: { every: 1, unit: 'month', from: 'due' } },
-  ];
-
-  /**
-   * Ist dieses Angebot das eingestellte?
-   *
-   * Vergleicht Anzahl und Einheit, NICHT den Bezugspunkt: „woechentlich" und
-   * „woechentlich ab Erledigung" sind derselbe Rhythmus, und der Umschalter
-   * darunter regelt den Rest. Sonst fiele die Auswahl heraus, sobald man ihn
-   * umlegt.
-   */
-  repeatMatches(todo: Todo, rule: RepeatRule | null): boolean {
-    if (rule === null) return todo.repeat === null;
-    return (
-      todo.repeat !== null &&
-      todo.repeat.every === rule.every &&
-      todo.repeat.unit === rule.unit
-    );
-  }
-
-  setRepeat(todo: Todo, rule: RepeatRule | null): void {
-    // Den Bezugspunkt behalten, wenn schon einer gewaehlt war: wer ihn einmal
-    // auf „ab Erledigung" gestellt hat, meint das auch beim Wechsel von
-    // woechentlich auf monatlich.
-    const from = todo.repeat?.from ?? 'due';
-    this.todoService.setRepeat(todo.id, rule ? { ...rule, from } : null);
-  }
-
-  toggleRepeatFrom(todo: Todo): void {
-    if (!todo.repeat) return;
-    this.todoService.setRepeat(todo.id, {
-      ...todo.repeat,
-      from: todo.repeat.from === 'completion' ? 'due' : 'completion',
-    });
   }
 
   /** Kurzform fuer die Zeile, etwa „weekly". */
@@ -1763,46 +1708,9 @@ openDateSheet(id: string): void {
     return TodoList.WHEN_LABEL[when];
   }
 
-  // ---- Tageszeit und Dauer ----
-
-  protected readonly timeChoices: readonly { value: TimeOfDay | null; label: string }[] = [
-    { value: null, label: 'Anytime' },
-    { value: 'morning', label: 'Morning' },
-    { value: 'afternoon', label: 'Afternoon' },
-    { value: 'evening', label: 'Evening' },
-  ];
-
-  protected readonly durationChoices: readonly (number | null)[] = [null, 5, 15, 30, 45, 60, 90];
-
-  protected whenOf(todo: Todo): TimeOfDay | null {
-    return timeOfDay(todo.title);
-  }
-
-  protected minutesOf(todo: Todo): number | null {
-    return durationOf(todo.title);
-  }
-
-  protected formatDurationText(minutes: number): string {
-    return formatDuration(minutes);
-  }
-
-  protected setWhen(todo: Todo, when: TimeOfDay | null): void {
-    const title = setTimeOfDay(todo.title, when);
-    if (title !== todo.title) this.todoService.renameTodo(todo.id, title);
-  }
-
-  protected setMinutes(todo: Todo, minutes: number | null): void {
-    const title = setDuration(todo.title, minutes);
-    if (title !== todo.title) this.todoService.renameTodo(todo.id, title);
-  }
-
-  /**
-   * Der Termin in der Meta-Zeile: am Rechner das Kalenderblatt neben der
-   * Zeile, auf dem Telefon das Blatt von unten.
-   */
-  protected openDate(id: string, event: Event): void {
-    if (window.matchMedia('(min-width: 640px)').matches) this.toggleScheduleMenu(id, event);
-    else this.openDateSheet(id);
+  /** Der Termin in der Meta-Zeile: die Schublade von links, auf jeder Breite. */
+  protected openDate(id: string, _event: Event): void {
+    this.openSchedule(id);
   }
 
   /** Der Name des primären Ordners, für den Tooltip am Punkt. */
