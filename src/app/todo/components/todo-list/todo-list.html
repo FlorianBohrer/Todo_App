@@ -354,7 +354,7 @@
                 <button
                   type="button"
                   class="row-action grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-muted/70 transition hover:bg-fill hover:text-text"
-                  (click)="toggleScheduleMenu(todo.id, $event)"
+                  (click)="openSchedule(todo.id)"
                   aria-haspopup="dialog"
                   [attr.aria-expanded]="openScheduleId() === todo.id"
                   aria-label="Schedule this todo"
@@ -500,85 +500,6 @@
             </span>
           }
 
-          <ng-template
-            cdkConnectedOverlay
-            [cdkConnectedOverlayOrigin]="scheduleOrigin()"
-            [cdkConnectedOverlayOpen]="openScheduleId() === todo.id"
-            [cdkConnectedOverlayPositions]="overlayPositions"
-            [cdkConnectedOverlayPush]="true"
-            [cdkConnectedOverlayViewportMargin]="16"
-            [cdkConnectedOverlayHasBackdrop]="true"
-            cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
-            (backdropClick)="closeScheduleMenu()"
-            (overlayKeydown)="$event.key === 'Escape' && closeScheduleMenu()">
-            <!-- Ein Blatt statt vier fester Knöpfe: die Schnellwahl steht oben im
-                 Kalender, darunter jeder andere Tag (date-picker.ts). -->
-            <div
-              role="dialog" aria-label="Plan for a day"
-              class="popover w-72">
-              <app-date-picker class="p-2.5" [autofocus]="true"
-                [value]="todo.scheduledDate"
-                (picked)="schedule(todo.id, $event)" />
-              <!-- Wiederholung. Sitzt hier und nicht in einem eigenen Menue,
-                   weil Termin und Rhythmus dieselbe Frage sind: wann. Und
-                   dieses Menue gibt es auf Desktop wie Mobil, das
-                   3-Punkte-Menue nur mobil. -->
-              <div class="border-t border-border px-3 pb-2.5 pt-2.5">
-                <div class="mb-1.5 flex items-center gap-2 text-xs text-muted">
-                  <lucide-icon [img]="RepeatIcon" class="h-3.5 w-3.5"></lucide-icon>
-                  <span>Repeats</span>
-                </div>
-
-                <div class="flex flex-wrap gap-1.5">
-                  @for (option of repeatChoices; track option.key) {
-                    <button type="button"
-                      class="rounded-full border px-2.5 py-1 text-xs transition"
-                      [class]="repeatMatches(todo, option.rule)
-                        ? 'border-indigo-400 text-indigo-300'
-                        : 'border-border text-text hover:border-indigo-400 hover:text-indigo-300'"
-                      (click)="setRepeat(todo, option.rule)">
-                      {{ option.label }}
-                    </button>
-                  }
-                </div>
-
-                <!-- Der Unterschied, den die meisten Apps auslassen: den Muell
-                     bringt man nicht nach Kalender runter, sondern wenn er
-                     voll ist. -->
-                @if (todo.repeat) {
-                  <button type="button"
-                    class="mt-2 flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left text-2xs leading-snug text-subtle transition hover:text-muted"
-                    (click)="toggleRepeatFrom(todo)">
-                    <span class="flex-none rounded border border-line-strong px-1 py-0.5 font-mono">
-                      {{ todo.repeat.from === 'completion' ? 'ON' : 'OFF' }}
-                    </span>
-                    <span>Count from when I finish it, not from the plan</span>
-                  </button>
-                }
-              </div>
-
-              <!-- Wann am Tag und wie lange: dieselbe Frage wie der Termin. -->
-              <div class="when-block border-t border-border px-3 pb-2.5 pt-2.5">
-                <div class="mb-1.5 text-xs text-muted">Time of day</div>
-                <div class="flex flex-wrap gap-1.5">
-                  @for (t of timeChoices; track t.label) {
-                    <button type="button" class="when-chip" [class.is-active]="whenOf(todo) === t.value"
-                      [attr.aria-pressed]="whenOf(todo) === t.value"
-                      (click)="setWhen(todo, t.value)">{{ t.label }}</button>
-                  }
-                </div>
-                <div class="mb-1.5 mt-2.5 text-xs text-muted">Takes about</div>
-                <div class="flex flex-wrap gap-1.5">
-                  @for (d of durationChoices; track $index) {
-                    <button type="button" class="when-chip" [class.is-active]="minutesOf(todo) === d"
-                      [attr.aria-pressed]="minutesOf(todo) === d"
-                      (click)="setMinutes(todo, d)">{{ d === null ? 'None' : formatDurationText(d) }}</button>
-                  }
-                </div>
-              </div>
-
-            </div>
-          </ng-template>
 
           <!-- Der Labels-Knopf blieb stehen, sobald ein Ordner gesetzt war
                (row-action--kept). Das war richtig, solange die Zeile die
@@ -715,8 +636,6 @@
               <span class="action-sheet-grabber" aria-hidden="true"></span>
               <p class="action-sheet-title"><app-rich-text [text]="row.firstLine" /></p>
 
-              <!-- Vom Datum aus geöffnet nur der Termin; sonst alles. -->
-              @if (!sheetDateOnly()) {
               <button
                 type="button" role="menuitem"
                 class="popover-item text-sm text-text transition"
@@ -800,75 +719,19 @@
                   </button>
                 }
               }
-              }
 
-              <!-- Termin, mobil: dieselben Angebote als Reihe -->
-              <div class="px-3 pb-2.5 pt-2.5" [class.border-t]="!sheetDateOnly()" [class.border-border]="!sheetDateOnly()">
-                <div class="mb-1.5 flex items-center gap-2.5 text-xs text-muted">
-                  <lucide-icon [img]="ScheduleIcon" class="h-3.5 w-3.5"></lucide-icon>
-                  <span>Plan for</span>
-                  @if (todo.scheduledDate !== null) {
-                    <button type="button"
-                      class="ml-auto text-xs text-muted underline transition hover:text-text"
-                      (click)="schedule(todo.id, null); closeOptionsMenu()">Clear</button>
-                  }
-                </div>
-                <div class="flex flex-wrap gap-1.5">
-                  @for (choice of scheduleChoices(); track choice.key) {
-                    <button
-                      type="button"
-                      class="rounded-full border px-2.5 py-1 text-xs transition"
-                      [class]="todo.scheduledDate === choice.iso
-                        ? 'border-indigo-400 text-indigo-300'
-                        : 'border-border text-text hover:border-indigo-400 hover:text-indigo-300'"
-                      (click)="schedule(todo.id, choice.iso); closeOptionsMenu()">
-                      {{ choice.label }}
-                    </button>
-                  }
-                  <!-- Jeder andere Tag. Steht ein eigener Termin, zeigt der
-                       Knopf ihn — sonst wäre er im Menü nirgends zu sehen. -->
-                  <button
-                    type="button"
-                    class="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition"
-                    [class]="isCustomDate(todo) || sheetCalendarOpen()
-                      ? 'border-indigo-400 text-indigo-300'
-                      : 'border-border text-text hover:border-indigo-400 hover:text-indigo-300'"
-                    [attr.aria-expanded]="sheetCalendarOpen()"
-                    (click)="sheetCalendarOpen.set(!sheetCalendarOpen())">
-                    <lucide-icon [img]="CalendarIcon" class="h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
-                    {{ isCustomDate(todo) ? row.scheduleText : 'Pick date' }}
-                  </button>
-                </div>
-                @if (sheetCalendarOpen()) {
-                  <app-date-picker class="date-in-sheet mt-3"
-                    [value]="todo.scheduledDate"
-                    [presets]="false"
-                    [clearable]="false"
-                    (picked)="schedule(todo.id, $event); closeOptionsMenu()" />
-                }
-              </div>
+              <!-- Termin, Tageszeit, Dauer und Wiederholung: in der Schublade
+                   von links, wie überall in der Liste. Hier nur der Eingang,
+                   mit dem, was schon eingestellt ist. -->
+              <button type="button" role="menuitem"
+                class="popover-item border-t border-border text-sm text-text transition"
+                (click)="closeOptionsMenu(); openSchedule(todo.id)">
+                <lucide-icon [img]="ScheduleIcon" class="h-4 w-4 flex-none"></lucide-icon>
+                <span class="flex-none">Plan</span>
+                <span class="ml-auto min-w-0 truncate text-right text-xs text-muted">{{ planSummary(row) }}</span>
+                <lucide-icon [img]="ChevronRightIcon" class="h-4 w-4 flex-none text-subtle"></lucide-icon>
+              </button>
 
-              <!-- Wann am Tag und wie lange: dieselbe Frage wie der Termin. -->
-              <div class="when-block border-t border-border px-3 pb-2.5 pt-2.5">
-                <div class="mb-1.5 text-xs text-muted">Time of day</div>
-                <div class="flex flex-wrap gap-1.5">
-                  @for (t of timeChoices; track t.label) {
-                    <button type="button" class="when-chip" [class.is-active]="whenOf(todo) === t.value"
-                      [attr.aria-pressed]="whenOf(todo) === t.value"
-                      (click)="setWhen(todo, t.value)">{{ t.label }}</button>
-                  }
-                </div>
-                <div class="mb-1.5 mt-2.5 text-xs text-muted">Takes about</div>
-                <div class="flex flex-wrap gap-1.5">
-                  @for (d of durationChoices; track $index) {
-                    <button type="button" class="when-chip" [class.is-active]="minutesOf(todo) === d"
-                      [attr.aria-pressed]="minutesOf(todo) === d"
-                      (click)="setMinutes(todo, d)">{{ d === null ? 'None' : formatDurationText(d) }}</button>
-                  }
-                </div>
-              </div>
-
-@if (!sheetDateOnly()) {
 <!-- Folders: collapsible and scrollable. Multi-select keeps the menu open. -->
 <div class="border-t border-border">
   <button
@@ -945,7 +808,6 @@
                 <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
                 <span>Delete</span>
               </button>
-}
             </div>
           </ng-template>
         </li>
@@ -1173,5 +1035,15 @@
         {{ showArchived() ? 'Hide archive' : 'Show archive' }}
       </button>
     </div>
+  }
+
+  <!-- Die Termin-Schublade (schedule-drawer.ts). Nachgeladen, sobald die
+       Seite zur Ruhe kommt: sie gehört nicht ins erste Bild, soll aber beim
+       ersten Tipp schon da sein. -->
+  @defer (on idle) {
+    <app-schedule-drawer
+      [todo]="scheduleRow()?.todo ?? null"
+      [heading]="scheduleRow()?.firstLine ?? ''"
+      (closed)="closeScheduleMenu()" />
   }
 </section>
