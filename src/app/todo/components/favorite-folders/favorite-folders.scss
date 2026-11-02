@@ -1,3 +1,141 @@
+/* ---- Das Fach ----
+   Eine Kopfzeile wie über den Abschnitten der Liste: die Pille links, daneben
+   zugeklappt die kleinen Ringe. Aufgeklappt gleiten die Kacheln darunter
+   heraus (grid-template-rows 0fr → 1fr: bis zur natürlichen Höhe, ohne
+   ausgedachten Pixelwert). */
+.fav-wrap {
+  margin-bottom: 0.875rem;
+}
+
+.fav-wrap.is-open {
+  margin-bottom: 1.25rem;
+}
+
+.fav-head {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 999px;
+  padding: 0;
+  text-align: left;
+}
+
+.fav-head:focus-visible {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 3px;
+}
+
+/* Dieselbe Form wie .todo-pill in der Liste, im Ton der Favoriten. */
+.fav-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem 0.4rem 0.75rem;
+  background: var(--tint-peach-bg);
+  color: var(--tint-peach-fg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  transition: filter 140ms ease-out;
+}
+
+.fav-head:hover .fav-pill {
+  filter: brightness(1.15);
+}
+
+.fav-pill__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.fav-pill__chevron {
+  opacity: 0.8;
+  transform: rotate(-90deg);
+  transition: transform 220ms var(--spring, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.fav-wrap.is-open .fav-pill__chevron {
+  transform: none;
+}
+
+/* Zugeklappt: je Ordner ein Ring, der aktive mit einem feinen Kreis darum. */
+.fav-peek {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.375rem;
+  overflow: hidden;
+  transition:
+    opacity 180ms ease-out,
+    transform 220ms ease-out;
+}
+
+.fav-wrap.is-open .fav-peek {
+  opacity: 0;
+  transform: translateX(-0.375rem);
+  pointer-events: none;
+}
+
+.fav-peek__ring {
+  flex: none;
+  border-radius: 999px;
+}
+
+.fav-peek__ring.is-active {
+  box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3.5px var(--color-highlight2);
+}
+
+.fav-collapse {
+  display: grid;
+  /* minmax(0, …): sonst drückt die Reihe auf dem Telefon ihre volle Breite
+     (alle Kacheln nebeneinander) in die Spalte, und die Seite wird breiter. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms var(--spring, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.fav-wrap.is-open .fav-collapse {
+  grid-template-rows: 1fr;
+}
+
+/* Senkrecht abschneiden, waagerecht nicht: die Reihe auf dem Telefon läuft
+   bis an die Bildschirmkanten. Oben und unten ein wenig Luft, damit der Ring
+   um die aktive Kachel nicht angeschnitten wird. */
+.fav-collapse__inner {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: visible;
+  overflow-y: clip;
+}
+
+.fav-collapse__inner > .favorite-strip {
+  margin-top: 0.75rem;
+  padding-block: 3px;
+  opacity: 0;
+  transform: translateY(-0.375rem);
+  transition:
+    opacity 200ms ease-out,
+    transform 260ms var(--spring, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.fav-wrap.is-open .fav-collapse__inner > .favorite-strip {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fav-collapse,
+  .fav-collapse__inner > .favorite-strip,
+  .fav-peek,
+  .fav-pill__chevron {
+    transition: none;
+  }
+}
+
 /* Der Stern zum Entfernen aus den Favoriten: eine Handlung, kein Inhalt.
    Er erscheint beim Überfahren und beim Fokus — dasselbe Muster wie die
    Knöpfe an den Listenzeilen. */

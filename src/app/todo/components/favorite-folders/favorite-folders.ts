@@ -1,11 +1,20 @@
 import {ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { LucideAngularModule, Star } from 'lucide-angular';
+import { ChevronDown, LucideAngularModule, Star } from 'lucide-angular';
 import { LabelService } from '../../services/label.service';
 import { TodoService } from '../../services/todo';
 import { splitFolderName } from '../../shared/folder-name';
 import { folderColorClass } from '../../shared/folder-color';
 import { ProgressRing } from '../progress-ring/progress-ring';
 
+const OPEN_KEY = 'favorites.open';
+
+function readOpen(): boolean {
+  try {
+    return localStorage.getItem(OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 @Component({
   selector: 'app-favorite-folders',
@@ -21,6 +30,20 @@ export class FavoriteFolders {
   protected readonly favorites = this.labelService.favoriteLabels;
   protected readonly activeLabelId = this.labelService.activeLabelId;
   protected readonly StarIcon = Star;
+  protected readonly ChevronIcon = ChevronDown;
+
+  /** Das Fach mit den Kacheln: zu, bis man es öffnet; gemerkt je Gerät. */
+  protected readonly open = signal(readOpen());
+
+  toggleOpen(): void {
+    const next = !this.open();
+    this.open.set(next);
+    try {
+      localStorage.setItem(OPEN_KEY, next ? '1' : '0');
+    } catch {
+      /* privat: dann eben nur bis zum Neuladen */
+    }
+  }
 
   /** Fortschritt aller favorisierten Todos (virtuelle "Favoriten"-Kachel). */
   protected readonly favoriteProgress = this.todoService.favoriteProgress;
