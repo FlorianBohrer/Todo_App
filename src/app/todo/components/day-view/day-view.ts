@@ -30,6 +30,7 @@ import {
   timeOfDay,
 } from '../../shared/title-priority';
 import { splitLeadingEmoji, taskIcon, TaskIcon } from '../../shared/task-icon';
+import { TaskGlyph } from '../../shared/task-glyph';
 import { folderColorClass } from '../../shared/folder-color';
 import { fromISODate, shiftISODate, todayISO } from '../../shared/week';
 import { TokenChip } from '../../shared/token-chip';
@@ -87,7 +88,7 @@ function readMode(): Mode {
  */
 @Component({
   selector: 'app-day-view',
-  imports: [LucideAngularModule, NgTemplateOutlet, OverlayModule, TokenChip, WeekView],
+  imports: [LucideAngularModule, NgTemplateOutlet, OverlayModule, TaskGlyph, TokenChip, WeekView],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './day-view.html',
   styleUrl: './day-view.scss',
@@ -181,7 +182,7 @@ export class DayView {
       id: todo.id,
       title: splitLeadingEmoji(text).rest,
       icon: taskIcon(text),
-      iconClass: folderColorClass(label?.color, 'iconBox'),
+      iconClass: `${folderColorClass(label?.color, 'iconBox')} ${folderColorClass(label?.color, 'text')}`,
       done: todo.completed,
       badge: priorityBadge(todo.title),
       duration: minutes === null ? '' : formatDuration(minutes),

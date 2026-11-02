@@ -422,16 +422,16 @@
   height: 2rem;
   flex: none;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 0.625rem;
   background: color-mix(in srgb, var(--viz-focus) 20%, transparent);
+  color: var(--viz-focus);
   font-size: 1rem;
   line-height: 1;
 }
 
 .top__icon.is-initial {
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-text);
+  font-weight: 650;
 }
 
 .top__line {

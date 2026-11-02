@@ -182,7 +182,7 @@
       <ul class="top" role="list">
         @for (t of topTodos(); track t.title) {
           <li class="top__row">
-            <span class="top__icon" [class.is-initial]="t.icon.initial" aria-hidden="true">{{ t.icon.glyph }}</span>
+            <span class="top__icon" [class.is-initial]="t.icon.initial" aria-hidden="true"><app-task-glyph [icon]="t.icon" /></span>
             <div class="min-w-0 flex-1">
               <div class="top__line">
                 <span class="top__title">{{ t.title }}</span>

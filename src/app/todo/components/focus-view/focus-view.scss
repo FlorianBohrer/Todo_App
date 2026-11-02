@@ -106,14 +106,14 @@
   place-items: center;
   border-radius: 0.875rem;
   background: color-mix(in srgb, var(--color-brand-2) 18%, transparent);
+  color: var(--color-brand-2);
   font-size: 1.1875rem;
   line-height: 1;
 }
 
 .focus-task__icon.is-initial {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-text);
+  font-weight: 650;
 }
 
 .focus-task__icon--add {

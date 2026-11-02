@@ -19,6 +19,7 @@ import { completionStreak } from '../../shared/streak';
 import { fromISODate, todayISO } from '../../shared/week';
 import { stripPriorityPrefix } from '../../shared/title-priority';
 import { splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
+import { TaskGlyph } from '../../shared/task-glyph';
 
 /** Wie weit die Statistik zurückreicht: so viel liefert der Server je Tag. */
 const SERVER_DAYS = 90;
@@ -45,7 +46,7 @@ interface DayBar {
  */
 @Component({
   selector: 'app-stats-view',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, TaskGlyph],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './stats-view.html',
   styleUrl: './stats-view.scss',

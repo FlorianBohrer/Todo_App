@@ -164,7 +164,7 @@
                 [class]="row.iconClass"
                 [class.todo-icon--initial]="row.icon.initial"
                 [title]="row.folderDotTitle"
-                aria-hidden="true">{{ row.icon.glyph }}</span>
+                aria-hidden="true"><app-task-glyph [icon]="row.icon" /></span>
             } @else if (!showIcons()) {
               <span
                 class="todo-dot flex-none"
@@ -1099,7 +1099,7 @@
       <ul class="suggest__list" role="list">
         @for (s of suggestions(); track s.text) {
           <li class="suggest__item">
-            <span class="todo-icon suggest__icon" [class.todo-icon--initial]="s.icon.initial" aria-hidden="true">{{ s.icon.glyph }}</span>
+            <span class="todo-icon suggest__icon" [class.todo-icon--initial]="s.icon.initial" aria-hidden="true"><app-task-glyph [icon]="s.icon" /></span>
             <div class="min-w-0 flex-1">
               <p class="suggest__text">{{ s.text }}</p>
               <p class="suggest__meta">

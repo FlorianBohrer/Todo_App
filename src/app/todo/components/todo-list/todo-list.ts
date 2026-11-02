@@ -47,6 +47,7 @@ import {
   withTaskLevel,
 } from '../../shared/title-priority';
 import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
+import { TaskGlyph } from '../../shared/task-glyph';
 import { Grouping, ListViewService, SortOrder } from '../../services/list-view.service';
 import { Suggestion, suggestTasks } from '../../shared/suggestions';
 import {
@@ -349,6 +350,7 @@ interface TodoRow {
     Autosize,
     LucideAngularModule,
     OverlayModule,
+    TaskGlyph,
     CdkDropList,
     CdkDrag,
     HoldToDrag,
@@ -1684,9 +1686,10 @@ openDateSheet(id: string): void {
     return folderColorClass(this.primaryLabel(labelIds)?.color, 'dot');
   }
 
-  /** Die Tönung des Kreises um das Bild: Ordnerfarbe, gedämpft. */
+  /** Die Kachel um das Bild: Fläche in der Ordnerfarbe, gedämpft, das Bild in ihr voll. */
   private iconClass(labelIds: string[]): string {
-    return folderColorClass(this.primaryLabel(labelIds)?.color, 'iconBox');
+    const color = this.primaryLabel(labelIds)?.color;
+    return `${folderColorClass(color, 'iconBox')} ${folderColorClass(color, 'text')}`;
   }
 
   private static readonly WHEN_ICON: Record<TimeOfDay, LucideIconData> = {
