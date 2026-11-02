@@ -988,6 +988,74 @@ li.todo-expanded-row {
   margin-top: 0;
 }
 
+/* ---- Schritte ein- und ausklappen ----
+   Ein runder Knopf rechts an der Karte. Zugeklappt trägt er die Zahl der
+   Schritte, und unter der Karte schaut eine zweite hervor: da liegt etwas
+   darunter, auch ohne die Zahl zu lesen. */
+.todo-fold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.todo-fold:hover {
+  background: var(--color-fill);
+  color: var(--color-text);
+}
+
+.todo-fold:focus-visible {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 2px;
+}
+
+.todo-fold.is-folded {
+  padding-left: 0.625rem;
+  background: var(--color-fill);
+  color: var(--color-muted);
+}
+
+.todo-fold__count {
+  line-height: 1;
+}
+
+.todo-card.todo-parent.is-folded {
+  margin-bottom: 0.875rem;
+  box-shadow:
+    0 6px 0 -3px var(--card-surface),
+    0 6px 0 -2px var(--color-line),
+    0 8px 18px -14px rgb(var(--shadow) / calc(0.7 * var(--shadow-k)));
+}
+
+/* Aufgeklappt gleiten die Schritte einmal herein, statt aufzuspringen. */
+.todo-card.todo-sub--unfold {
+  animation: todo-unfold 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes todo-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-0.375rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .todo-card.todo-sub--unfold {
+    animation: none;
+  }
+}
+
 /* Erledigt: die Karte tritt zurück, das Bild mit. */
 .todo-card--completed .todo-icon {
   opacity: 0.45;
