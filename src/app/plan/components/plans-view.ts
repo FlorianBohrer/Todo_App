@@ -121,13 +121,6 @@ import { markdownToBlocks, markdownToPlan, titleFromFileName } from '../markdown
 import { makeZip, readZip, ZipEntry } from '../zip';
 import { detectSlashToken } from '../slash-command';
 import { planLinkTargets, planPlainText } from '../plan-links';
-import { PlanTitleService } from '../plan-title.service';
-import {
-  UntitledSection,
-  blockText,
-  findUntitledSections,
-  needsHeading,
-} from '../untitled-sections';
 import {
   detectMarkdownShortcut,
   detectWikiToken,
@@ -2220,40 +2213,6 @@ export class PlansView {
   onProseBlur(blockId: string): void {
     if (this.slash()?.blockId === blockId) this.slash.set(null);
     if (this.wikiPick()?.blockId === blockId) this.wikiPick.set(null);
-
-    // Absatz fertig geschrieben: steht darueber keine Ueberschrift, eine setzen.
-    void this.titleUnheadedBlock(blockId);
-  }
-
-  /**
-   * Setzt eine Ueberschrift ueber den Block, wenn direkt darueber keine steht.
-   *
-   * Laeuft beim Verlassen des Absatzes, nicht beim Tippen: waehrend des
-   * Schreibens ist der Text noch keine Aussage, und jeder Tastendruck waere
-   * ein Aufruf. Verlassen heisst „fertig gedacht" — das ist der richtige
-   * Moment, und es ist genau einer pro Absatz.
-   */
-  private async titleUnheadedBlock(blockId: string): Promise<void> {
-    const plan = this.selected();
-    if (!plan || !this.suggestAvailable()) return;
-    if (!needsHeading(plan.content, blockId)) return;
-
-    const block = this.findBlock(blockId);
-    if (!block) return;
-
-    const text = blockText(block);
-    const title = await this.titles.fetchTitle(text);
-    if (!title) return;
-
-    // Zwischen Anfrage und Antwort liegen Sekunden. In der Zeit kann der Nutzer
-    // selbst eine Ueberschrift gesetzt, den Block verschoben oder weiter
-    // getippt haben — dann waere die Antwort veraltet und das Einfuegen falsch.
-    const current = this.selected();
-    if (!current || !needsHeading(current.content, blockId)) return;
-    const stillSame = this.findBlock(blockId);
-    if (!stillSame || blockText(stillSame) !== text) return;
-
-    this.acceptSuggestion(blockId, title);
   }
 
   /**
@@ -3036,55 +2995,10 @@ export class PlansView {
     },
   );
 
-  // ---- Vorschlaege fuer Abschnitte ohne Ueberschrift ----
-  //
-  // Die Outline listet Ueberschriften. Was davor oder ganz ohne steht, fehlt
-  // dort — man kann es nicht anspringen und uebersieht beim Ueberfliegen, dass
-  // es existiert. Ein Modell liest den Absatz und schlaegt eine Ueberschrift
-  // vor; uebernommen wird sie erst auf Klick.
-
-  private readonly titles = inject(PlanTitleService);
-
-  protected readonly suggestBusy = this.titles.busy;
-  protected readonly suggestAvailable = this.titles.available;
-  protected readonly suggestExhausted = this.titles.exhausted;
-
-  /** Der Grund, warum der letzte Aufruf nichts geliefert hat. */
-  protected readonly suggestLastError = this.titles.lastError;
-
-  /** Ein Satz, der sagt, warum keine Überschriften gesetzt werden. */
-  protected readonly suggestOffReason = computed(() => {
-    switch (this.titles.reason()) {
-      case 'no-key':
-        return 'Auto headings need an API key on the server.';
-      case 'storage':
-        return 'Auto headings are off: the server cannot read its usage table.';
-      case 'unreachable':
-        return 'Auto headings are off: the server did not answer.';
-      default:
-        return null;
-    }
-  });
-
-  /** Absaetze im aktuellen Plan, die in der Outline fehlen. */
-  protected readonly untitled = computed<UntitledSection[]>(() => {
-    const plan = this.selected();
-    return plan ? findUntitledSections(plan.content) : [];
-  });
-
-  /** Wie viele Absaetze noch ohne Ueberschrift darueber stehen. */
-  protected readonly pendingSuggestions = computed(() => this.untitled().length);
-
   /** Der Dokumentbereich zwischen Blindspalte und Outline. */
   private readonly docColumn = viewChild<ElementRef<HTMLElement>>('docColumn');
 
   constructor() {
-    // Erst fragen, wenn es etwas zu betiteln gibt. Ein Plan ohne unbetitelte
-    // Absätze braucht die Funktion nicht, und die Anfrage bliebe umsonst.
-    effect(() => {
-      if (this.untitled().length > 0) this.titles.checkAvailability();
-    });
-
     // Ein Vollbild ueberlebt den Planwechsel nicht: sonst oeffnet der
     // naechste Plan mit einer Tabelle vor dem Gesicht, die gar nicht zu ihm
     // gehoert.
@@ -3146,40 +3060,6 @@ export class PlansView {
       watch.observe(el);
       onCleanup(() => watch.disconnect());
     });
-  }
-
-  /**
-   * Nachtraeglich fuer alles, was schon dasteht.
-   *
-   * Beim Schreiben passiert das von selbst (siehe onProseBlur). Dieser Weg ist fuer
-   * Dokumente, die es vorher schon gab — und er SETZT genauso, statt
-   * vorzuschlagen: zwei Verhalten fuer dieselbe Sache waeren nur verwirrend.
-   * Der Reihe nach, weil jede eingefuegte Ueberschrift die Liste veraendert.
-   */
-  async addMissingHeadings(): Promise<void> {
-    for (const section of this.untitled()) {
-      const plan = this.selected();
-      if (!plan || !needsHeading(plan.content, section.id)) continue;
-
-      const title = await this.titles.fetchTitle(section.text);
-      if (title) this.acceptSuggestion(section.id, title);
-    }
-  }
-
-  /** Eine Ueberschrift ueber den Absatz setzen. */
-  acceptSuggestion(blockId: string, title: string) {
-    const heading: PlanBlock = {
-      id: this.newId(),
-      type: 'heading',
-      level: 2,
-      text: title,
-    };
-    this.updateContent((blocks) => this.insertBeforeById(blocks, blockId, heading));
-    this.titles.forget(blockId);
-  }
-
-  dismissSuggestion(blockId: string) {
-    this.titles.forget(blockId);
   }
 
   jumpTo(blockId: string) {
