@@ -2019,22 +2019,11 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
   padding: 0.25rem 0.25rem 1rem;
 }
 
-.list-head__top {
+.list-head__aside {
   display: flex;
+  flex: none;
   align-items: center;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.list-head__actions {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-line);
-  border-radius: 999px;
-  padding: 0.125rem;
-  background: color-mix(in srgb, rgb(var(--lift)) 4%, var(--color-panel1));
-  box-shadow: 0 8px 18px -12px rgb(var(--shadow) / calc(0.7 * var(--shadow-k)));
+  gap: 0.5rem;
 }
 
 .list-head__action {
@@ -2042,6 +2031,7 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
   place-items: center;
   width: 2.5rem;
   height: 2.5rem;
+  border: 1px solid var(--color-line);
   border-radius: 999px;
   color: var(--color-text);
   transition: background-color 140ms ease-out;
@@ -2053,9 +2043,13 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
 
 .list-head__title-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 1.25rem;
+  gap: 1rem;
+}
+
+.list-head__today {
+  margin-top: 0.25rem;
 }
 
 /* ---- Menü „…" ---- */
