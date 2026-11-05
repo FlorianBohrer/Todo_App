@@ -2018,31 +2018,11 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
 .list-head__top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
-.list-head__counters {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.list-head__counter {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--color-muted);
-}
-
-.list-head__counter--flame lucide-icon { color: rgb(251 146 60 / 0.55); }
-.list-head__counter--flame.is-lit lucide-icon { color: #fb923c; fill: rgb(251 146 60 / 0.35); }
-.list-head__counter--gem lucide-icon { color: #a78bfa; }
-
-/* Eine Pille, zwei Knöpfe: wie die Werkzeugleiste eines Tagesplaners. */
 .list-head__actions {
   display: inline-flex;
   align-items: center;
@@ -2168,9 +2148,6 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
 /* ================================================================
    Hell: Einzelheiten, die kein Token abdeckt
    ================================================================ */
-[data-theme='light'] .list-head__counter--flame lucide-icon { color: rgb(234 88 12 / 0.55); }
-[data-theme='light'] .list-head__counter--flame.is-lit lucide-icon { color: #EA580C; fill: rgb(234 88 12 / 0.25); }
-[data-theme='light'] .list-head__counter--gem lucide-icon { color: #7C3AED; }
 
 /* Der Daumen: weiß braucht einen Rand aus Schatten, sonst verschwindet er
    auf dem hellen Grund. */
