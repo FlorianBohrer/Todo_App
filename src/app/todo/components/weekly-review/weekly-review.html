@@ -3,7 +3,11 @@
      der GEPLANTE Tag, nicht der Tag der Erledigung. Bei allem, was verschoben
      wurde, kaeme eine andere Zahl heraus — und ihr saehe niemand an, dass sie
      eine andere ist. -->
+<!-- Und ohne Erledigtes auch nicht: „Nothing was finished that week"
+     stand sonst Woche für Woche über bzw. unter der Liste, ohne dass man
+     damit etwas anfangen konnte. -->
 @if (hasCompletionTimes() && review(); as review) {
+  @if (review.total > 0) {
   <section class="border-t border-line pt-4" aria-label="Last week in review">
     <div class="flex items-center gap-2">
       <h2 class="text-sm font-medium text-text">Last week</h2>
@@ -25,11 +29,7 @@
     </div>
 
     @if (!collapsed()) {
-      @if (review.total === 0) {
-        <!-- Eine leere Woche ist eine Aussage, und eine andere als „wir wissen
-             es nicht". Sie bekommt deshalb einen Satz und keine Null. -->
-        <p class="mt-2 text-sm/[1.6] text-muted">Nothing was finished that week.</p>
-      } @else {
+      @if (review.total > 0) {
         <p class="mt-2 text-sm/[1.6] text-muted">
           <span class="text-lg font-semibold text-text">{{ review.total }}</span>
           {{ review.total === 1 ? 'thing' : 'things' }} finished.
@@ -70,4 +70,5 @@
       }
     }
   </section>
+}
 }

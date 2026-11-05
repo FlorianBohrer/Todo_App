@@ -8,7 +8,6 @@ import {
   Eye,
   Layers,
   Pencil,
-  Plus,
   PlusCircle,
   LucideAngularModule,
 } from 'lucide-angular';
@@ -113,13 +112,7 @@ export class TodoStats {
     this.closeMenu();
   }
 
-  /** „+" oben: das Eingabefeld darunter bekommt den Fokus. */
-  add(): void {
-    this.listView.requestAdd();
-  }
-
   protected readonly MoreIcon = Ellipsis;
-  protected readonly PlusIcon = Plus;
   protected readonly NewListIcon = PlusCircle;
   protected readonly EditIcon = Pencil;
   protected readonly GroupIcon = Layers;
@@ -151,31 +144,16 @@ export class TodoStats {
     return label ? folderColorClass(label.color, 'text') : 'text-brand-2';
   });
 
-  /**
-   * Tageszeit-Begrüßung.
-   *
-   * Der ruhige Auftakt aus dem Entwurf — und der einzige Ort in der App, an
-   * dem etwas steht, das nicht über Aufgaben spricht. Das ist der Punkt: man
-   * kommt an, bevor man anfängt.
-   */
-  protected readonly greeting = computed(() => {
-    const hour = new Date().getHours();
-    if (hour < 5) return 'Still up';
-    if (hour < 11) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    if (hour < 22) return 'Good evening';
-    return 'Winding down';
-  });
-
   protected readonly load = computed(() => dailyLoad(this.todoService.scopedWithArchive()));
 
   /**
    * Was heute ansteht — oder, wenn für heute nichts geplant ist, wie der
    * ganze Ausschnitt steht.
    *
-   * Zwei Sätze für zwei verschiedene Lagen. „Nothing planned for today" ist
+   * Zwei Sätze für zwei verschiedene Lagen. „Nothing planned today" ist
    * eine Auskunft; sie durch „0 of 0" zu ersetzen wäre eine Rechnung über
-   * eine leere Menge.
+   * eine leere Menge. Kurz gehalten, damit es auf dem Telefon eine Zeile
+   * bleibt.
    */
   protected readonly todayLine = computed(() => {
     const load = this.load();
@@ -183,13 +161,10 @@ export class TodoStats {
 
     if (planned === 0) {
       const open = this.stats().active;
-      if (open === 0) return 'Nothing planned for today.';
-      return open === 1
-        ? 'Nothing planned for today: one thing is waiting.'
-        : `Nothing planned for today: ${open} things are waiting.`;
+      return open === 0 ? 'Nothing planned today' : `Nothing planned today · ${open} open`;
     }
 
-    if (load.open === 0) return 'Everything planned for today is done.';
+    if (load.open === 0) return 'Everything for today is done';
 
     const parts = [`${load.done} of ${planned} today`];
     if (load.typical !== null && load.overCommitted) {

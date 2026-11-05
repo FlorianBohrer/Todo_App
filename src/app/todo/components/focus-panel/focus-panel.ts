@@ -107,5 +107,7 @@ function readCollapsed(): boolean {
   } catch {
     /* ohne Speicher: wie beim ersten Besuch */
   }
-  return window.matchMedia?.('(max-width: 639px)').matches ?? false;
+  // Beim ersten Besuch zu, auf jeder Breite: offen standen am Rechner drei
+  // Aufgaben über der Liste, die gleich darunter noch einmal stehen.
+  return true;
 }

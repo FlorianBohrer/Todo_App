@@ -1,47 +1,44 @@
-<!-- Der Kopf der Liste, wie ein Tagesplaner ihn hat: oben rechts „…" und
-     „+", darunter der Titel gross und fett. Kein Kasten: er steht auf
-     derselben Fläche wie die Liste darunter. Flamme und Edelstein (Tage in
-     Folge, Fokus-Sitzungen) standen oben links und sind wieder weg. -->
+<!-- Der Kopf der Liste: der Titel gross, darunter in einer Zeile, was
+     heute ansteht, rechts der Ring und „…". Mehr nicht.
+
+     Vorher stand „…" mit „+" in einer eigenen Zeile über dem Titel. „+" tat
+     dasselbe wie das Eingabefeld zwei Zeilen tiefer (das „n" auf der
+     Tastatur fokussiert es weiterhin), und „…" allein war keine Zeile wert.
+     Die Begrüßung vor der Tageszeile ist ebenfalls weg: auf dem Telefon
+     machte sie aus einer Auskunft zwei Zeilen. -->
 <section class="list-head" aria-label="Today">
-  <div class="list-head__top">
-    <div class="list-head__actions">
+  <div class="list-head__title-row">
+    <h1 class="display-title min-w-0 flex-1">{{ title() }}</h1>
+
+    <div class="list-head__aside">
+      @if (stats().total > 0) {
+        <app-progress-ring
+          class="flex-none"
+          [class]="accentClass()"
+          [size]="48"
+          [thickness]="4.5"
+          [completed]="stats().completed"
+          [total]="stats().total" />
+      }
       <button type="button" class="list-head__action"
         cdkOverlayOrigin #menuOrigin="cdkOverlayOrigin"
         (click)="toggleMenu()"
         aria-haspopup="menu"
         [attr.aria-expanded]="menuOpen()"
-        aria-label="List options">
+        aria-label="List options" title="List options">
         <lucide-icon [img]="MoreIcon" class="h-5 w-5"></lucide-icon>
       </button>
-      <button type="button" class="list-head__action" (click)="add()" aria-label="New todo" title="New todo (n)">
-        <lucide-icon [img]="PlusIcon" class="h-5 w-5"></lucide-icon>
-      </button>
     </div>
   </div>
 
-  <div class="list-head__title-row">
-    <div class="min-w-0 flex-1">
-      <h1 class="display-title">{{ title() }}</h1>
-      <p class="mt-1 text-sm/[1.55] tabular-nums" [class]="todayLineClass()">
-        <span class="text-subtle">{{ greeting() }} · </span>{{ todayLine() }}
-      </p>
-      @if (scopeName()) {
-        <p class="mt-0.5 text-xs tabular-nums text-subtle">
-          {{ stats().completed }} of {{ stats().total }} done in this folder
-        </p>
-      }
-    </div>
-
-    @if (stats().total > 0) {
-      <app-progress-ring
-        class="mt-1 flex-none"
-        [class]="accentClass()"
-        [size]="56"
-        [thickness]="5"
-        [completed]="stats().completed"
-        [total]="stats().total" />
-    }
-  </div>
+  <!-- Unter Titel und Ring, über die ganze Breite: neben ihnen brach die
+       Zeile auf dem Telefon um. -->
+  <p class="list-head__today text-sm/[1.55] tabular-nums" [class]="todayLineClass()">{{ todayLine() }}</p>
+  @if (scopeName()) {
+    <p class="mt-0.5 text-xs tabular-nums text-subtle">
+      {{ stats().completed }} of {{ stats().total }} done in this folder
+    </p>
+  }
 
   <ng-template
     cdkConnectedOverlay
