@@ -6,8 +6,6 @@ import {
   ChevronRight,
   Ellipsis,
   Eye,
-  Flame,
-  Gem,
   Layers,
   Pencil,
   Plus,
@@ -15,9 +13,7 @@ import {
   LucideAngularModule,
 } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
-import { FocusSessionService } from '../../services/focus-session.service';
 import { Grouping, ListViewService, SortOrder } from '../../services/list-view.service';
-import { completionStreak } from '../../shared/streak';
 import { LabelService } from '../../services/label.service';
 import { folderColorClass } from '../../shared/folder-color';
 import { splitFolderName } from '../../shared/folder-name';
@@ -49,13 +45,6 @@ export class TodoStats {
 
   protected readonly stats = this.todoService.stats;
   protected readonly listView = inject(ListViewService);
-
-  /** Tage in Folge mit etwas Erledigtem — über alles, nicht nur den Ordner. */
-  protected readonly streak = computed(() => completionStreak(this.todoService.withArchive()));
-
-  /** Fokus-Sitzungen, wie der Server sie aus Flow kennt. */
-  private readonly sessions = inject(FocusSessionService);
-  protected readonly gems = computed(() => this.sessions.sessionCount() ?? 0);
 
   /** Der grosse Titel: der Ordner, sonst „To-do". */
   protected readonly title = computed(() => this.scopeName() ?? 'To-do');
@@ -129,8 +118,6 @@ export class TodoStats {
     this.listView.requestAdd();
   }
 
-  protected readonly FlameIcon = Flame;
-  protected readonly GemIcon = Gem;
   protected readonly MoreIcon = Ellipsis;
   protected readonly PlusIcon = Plus;
   protected readonly NewListIcon = PlusCircle;

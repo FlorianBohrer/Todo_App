@@ -1,26 +1,9 @@
-<!-- Der Kopf der Liste, wie ein Tagesplaner ihn hat: oben links, was man
-     sich verdient hat (Flamme für die Tage in Folge, Edelstein für die
-     Fokus-Sitzungen), oben rechts „…" und „+", darunter der Titel gross und
-     fett. Kein Kasten: er steht auf derselben Fläche wie die
-     Liste darunter. -->
+<!-- Der Kopf der Liste, wie ein Tagesplaner ihn hat: oben rechts „…" und
+     „+", darunter der Titel gross und fett. Kein Kasten: er steht auf
+     derselben Fläche wie die Liste darunter. Flamme und Edelstein (Tage in
+     Folge, Fokus-Sitzungen) standen oben links und sind wieder weg. -->
 <section class="list-head" aria-label="Today">
   <div class="list-head__top">
-    <div class="list-head__counters">
-      <span class="list-head__counter list-head__counter--flame"
-        [class.is-lit]="streak().today"
-        [title]="streak().days === 1 ? '1 day in a row with something done' : streak().days + ' days in a row with something done'"
-        [attr.aria-label]="streak().days + ' day streak'">
-        <lucide-icon [img]="FlameIcon" class="h-[18px] w-[18px]" aria-hidden="true"></lucide-icon>
-        <span class="tabular-nums">{{ streak().days }}</span>
-      </span>
-      <span class="list-head__counter list-head__counter--gem"
-        [title]="gems() === 1 ? '1 focus session finished' : gems() + ' focus sessions finished'"
-        [attr.aria-label]="gems() + ' focus sessions'">
-        <lucide-icon [img]="GemIcon" class="h-[17px] w-[17px]" aria-hidden="true"></lucide-icon>
-        <span class="tabular-nums">{{ gems() }}</span>
-      </span>
-    </div>
-
     <div class="list-head__actions">
       <button type="button" class="list-head__action"
         cdkOverlayOrigin #menuOrigin="cdkOverlayOrigin"
