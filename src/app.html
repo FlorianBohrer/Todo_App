@@ -195,23 +195,14 @@
 
           <app-focus-panel></app-focus-panel>
 
-          <!-- Was letzte Woche fertig wurde. Steht unter "Next up", weil ein
-               Rueckblick nach dem Ausblick kommt: zuerst wird gearbeitet,
-               dann nachgesehen.
-
-               Auf dem Telefon steht er stattdessen unter der Liste (zweite
-               Instanz unten): dort schob er die erste Aufgabe um eine weitere
-               halbe Bildschirmhoehe nach unten, und ein Rueckblick ist nichts,
-               womit man den Tag beginnt. Zwei Instanzen statt `order` in einer
-               Flex-Spalte: dort fielen die Aussenabstaende der Bausteine nicht
-               mehr zusammen, und zwischen Filter, Eingabe und Liste klafften
-               Luecken. -->
-          <app-weekly-review class="hidden sm:block"></app-weekly-review>
 
           <app-todo-filter></app-todo-filter>
           <app-todo-add></app-todo-add>
           <app-todo-list></app-todo-list>
-          <app-weekly-review class="mt-5 block empty:hidden sm:hidden"></app-weekly-review>
+          <!-- Was letzte Woche fertig wurde: unter der Liste, auf jeder Breite.
+               Ein Rückblick ist nichts, womit man den Tag beginnt; über der
+               Liste schob er am Rechner die erste Aufgabe nach unten. -->
+          <app-weekly-review class="mt-5 block empty:hidden"></app-weekly-review>
         </section>
       </div>
     }
