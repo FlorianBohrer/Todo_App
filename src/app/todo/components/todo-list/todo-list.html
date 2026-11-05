@@ -601,11 +601,13 @@
             </button>
           }
 
-          <!-- Mobil: 3-Punkte-Menü bündelt Favorit, Zeitblock und Löschen -->
+          <!-- Mobil: 3-Punkte-Menü bündelt Favorit, Zeitblock und Löschen.
+               44px Fläche um das 20px-Zeichen; vorher waren es 28px, und
+               ein knapp verfehlter Tipp öffnete die Aufgabe statt des Menüs. -->
           <button
             type="button"
             cdkOverlayOrigin #optionsTrigger="cdkOverlayOrigin"
-            class="-mr-1 sm:hidden flex-shrink-0 rounded-full p-1 text-muted/60 transition hover:text-text"
+            class="-my-3 -ml-2 -mr-3 grid h-11 w-11 flex-shrink-0 place-items-center rounded-full text-muted/60 transition hover:text-text sm:hidden"
             (click)="toggleOptionsMenu(todo.id)"
             aria-haspopup="menu"
             [attr.aria-expanded]="openOptionsId() === todo.id"

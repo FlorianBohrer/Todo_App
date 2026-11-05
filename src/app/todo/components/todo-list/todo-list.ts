@@ -933,8 +933,43 @@ toggleFolderList(): void {
         this.clearTodoAnimationState(todo.id);
       }
       if (openSteps.length > 0) this.offerUndoSteps(todo, openSteps);
-      else if (head) this.offerHeadCompletion(head);
+      else if (head && this.offerHeadCompletion(head)) return;
+      else if (!stays) this.offerUndoDone(todo);
     }, stays ? 320 : 540);
+  }
+
+  /** Die Meldung „… done · Undo", solange sie steht, und was sie zurücknimmt. */
+  private doneToast: { id: number; todoIds: string[] } | null = null;
+
+  /**
+   * Eine abgehakte Aufgabe verschwindet aus der Liste: rückgängig machen
+   * können, ohne erst auf „Done" zu wechseln und sie dort zu suchen.
+   *
+   * Wer mehrere hintereinander abhakt, bekommt eine Meldung, nicht einen
+   * Stapel: solange die vorige noch steht, zählt sie weiter, und Undo nimmt
+   * alle zurück.
+   */
+  private offerUndoDone(todo: Todo): void {
+    const previous = this.doneToast;
+    const stillShown = previous !== null && this.toast.toasts().some((t) => t.id === previous.id);
+    const todoIds = stillShown ? [...previous.todoIds, todo.id] : [todo.id];
+    if (stillShown) this.toast.dismiss(previous.id);
+
+    const title = stripBold(stripPriorityPrefix(todo.title).split('\n')[0].trim());
+    const short = title.length > 36 ? `${title.slice(0, 35).trimEnd()}…` : title;
+    const message = todoIds.length === 1 ? `Done: ${short}` : `${todoIds.length} tasks done`;
+
+    const id = this.toast.show(message, {
+      actionLabel: 'Undo',
+      durationMs: 5000,
+      action: () => {
+        this.doneToast = null;
+        for (const todoId of todoIds) {
+          if (this.todoService.todoById(todoId)?.completed) this.todoService.toggleTodo(todoId);
+        }
+      },
+    });
+    this.doneToast = { id, todoIds };
   }
 
   /** Ob eine Zeile nach dem Abhaken in der Liste bleibt. */
@@ -972,11 +1007,11 @@ toggleFolderList(): void {
    * anbieten, sie auch abzuhaken. Nicht von selbst — manchmal gehört zur
    * Aufgabe mehr als ihre Schritte, und das weiss nur, wer sie angelegt hat.
    */
-  private offerHeadCompletion(head: Todo): void {
+  private offerHeadCompletion(head: Todo): boolean {
     const current = this.todoService.todoById(head.id);
-    if (!current || current.completed) return;
+    if (!current || current.completed) return false;
     const steps = this.todoService.stepsOf(head.id);
-    if (steps.length === 0 || steps.some((s) => !s.completed)) return;
+    if (steps.length === 0 || steps.some((s) => !s.completed)) return false;
     const title = stripBold(stripPriorityPrefix(current.title).split('\n')[0].trim());
     this.toast.show(`All steps done: ${title}`, {
       actionLabel: 'Complete',
@@ -986,6 +1021,7 @@ toggleFolderList(): void {
         if (latest && !latest.completed) this.handleToggleTodo(latest);
       },
     });
+    return true;
   }
 
   // ---- Schritte direkt unter der Aufgabe anlegen ----

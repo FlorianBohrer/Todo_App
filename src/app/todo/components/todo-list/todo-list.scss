@@ -1030,6 +1030,43 @@ li.todo-expanded-row {
   line-height: 1;
 }
 
+/* ---- Trefferflächen für den Finger ----
+   Gezeichnet bleiben die Knöpfe klein, getroffen werden sie größer: ein
+   unsichtbares ::before, nur bei grobem Zeiger. Gemessen auf dem Telefon
+   waren es 32px (Einklappen), 28px (Termin) und 24px („0/3"); empfohlen
+   sind um die 44.
+
+   Termin und Fortschritt wachsen fast nur nach unten. Darüber steht der
+   Titel, und ein Tipp auf seine letzte Zeile soll ihn weiter bearbeiten
+   und nicht den Termin öffnen. Darunter ist das Polster der Karte frei. */
+@media (pointer: coarse) {
+  .todo-fold,
+  .todo-when,
+  .todo-progress {
+    position: relative;
+  }
+
+  .todo-fold::before,
+  .todo-when::before,
+  .todo-progress::before {
+    content: '';
+    position: absolute;
+  }
+
+  .todo-fold::before {
+    inset: -6px -2px;
+    border-radius: 999px;
+  }
+
+  .todo-when::before {
+    inset: -1px -3px -13px;
+  }
+
+  .todo-progress::before {
+    inset: -3px -3px -15px;
+  }
+}
+
 .todo-card.todo-parent.is-folded {
   margin-bottom: 0.875rem;
   box-shadow:
