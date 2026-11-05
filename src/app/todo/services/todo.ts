@@ -8,6 +8,7 @@ import { LabelService } from './label.service';
 import { ToastService } from '../../shared/toast.service';
 import {
   appendUnder,
+  favoriteGroups,
   moveOutOfGroup,
   moveWithSubtasks,
   openGroups,
@@ -195,7 +196,8 @@ export class TodoService {
     // aussiebt (Done, Favorites, Suche), fallen die leeren unten weg.
     if (f === 'active')    items = openGroups(items);
     if (f === 'completed') items = items.filter(i => i.completed || isSection(i.title));
-    if (f === 'favorites') items = items.filter(i => (i.isFavorite && !i.completed) || isSection(i.title));
+    // Eine favorisierte Aufgabe bringt ihre Schritte mit (favoriteGroups).
+    if (f === 'favorites') items = favoriteGroups(items);
 
     // Titel-Suche: im TEXT, nicht im Präfix.
     //
@@ -641,7 +643,7 @@ export class TodoService {
       f === 'all' ||
       (f === 'active' && !todo.completed) ||
       (f === 'completed' && todo.completed) ||
-      (f === 'favorites' && todo.isFavorite && !todo.completed);
+      (f === 'favorites' && favoriteGroups(this.todosInCategory()).some((t) => t.id === todo.id));
     if (!visible) this.filter.set('all');
 
     if (todo.archivedAt !== null && !this.showArchived()) this.toggleArchiveView();
