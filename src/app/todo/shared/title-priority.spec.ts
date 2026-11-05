@@ -3,6 +3,7 @@ import {
   MOSCOW_LABEL,
   moveOutOfGroup,
   moveWithSubtasks,
+  favoriteGroups,
   openGroups,
   orderWithSubtasks,
   setTaskLevel,
@@ -392,6 +393,30 @@ describe('setTaskLevel', () => {
     expect(setTaskLevel('/must /main Umzug', 'sub')).toBe('/must /sub Umzug');
     expect(setTaskLevel('/sub Kartons', null)).toBe('Kartons');
     expect(setTaskLevel('Kartons', 'sub')).toBe('/sub Kartons');
+  });
+});
+
+describe('favoriteGroups', () => {
+  const t = (title: string, isFavorite = false, completed = false) => ({ id: title, title, isFavorite, completed });
+
+  it('brings the steps of a favorite task along, done ones too', () => {
+    const items = [t('A', true), t('/sub a1'), t('/sub a2', false, true), t('B'), t('/sub b1')];
+    expect(favoriteGroups(items).map((i) => i.id)).toEqual(['A', '/sub a1', '/sub a2']);
+  });
+
+  it('keeps a starred step on its own when its task is no favorite', () => {
+    const items = [t('A'), t('/sub a1', true), t('/sub a2')];
+    expect(favoriteGroups(items).map((i) => i.id)).toEqual(['/sub a1']);
+  });
+
+  it('leaves out a favorite that is done, with its steps', () => {
+    const items = [t('A', true, true), t('/sub a1'), t('C', true)];
+    expect(favoriteGroups(items).map((i) => i.id)).toEqual(['C']);
+  });
+
+  it('lets section headings through', () => {
+    const items = [t('/section Diese Woche'), t('A', true), t('/sub a1')];
+    expect(favoriteGroups(items).map((i) => i.id)).toEqual(['/section Diese Woche', 'A', '/sub a1']);
   });
 });
 

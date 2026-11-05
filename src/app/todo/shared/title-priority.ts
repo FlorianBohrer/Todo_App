@@ -506,6 +506,27 @@ export function openGroups<T extends { title: string; completed: boolean }>(item
     .flat();
 }
 
+/**
+ * Was unter „Favorites" steht: die offenen Favoriten — und mit einer
+ * favorisierten Aufgabe ihre Schritte, auch ohne eigenen Stern.
+ *
+ * Vorher fehlten die Schritte: man favorisierte „Umzug", und unter Favorites
+ * stand eine Aufgabe „0/5" ohne die fünf Dinge, aus denen sie besteht. Jetzt
+ * steht die Gruppe da wie unter „Active", mit den erledigten Schritten
+ * durchgestrichen. Ein Schritt mit eigenem Stern steht wie bisher auch allein
+ * da, wenn seine Aufgabe keinen hat. Abschnitts-Überschriften laufen mit.
+ */
+export function favoriteGroups<T extends { title: string; completed: boolean; isFavorite: boolean }>(
+  items: readonly T[],
+): T[] {
+  return subtaskGroups(items).flatMap((group) => {
+    const [head] = group;
+    if (isSection(head.title)) return [head];
+    if (head.isFavorite && !head.completed) return group;
+    return group.filter((item) => item.isFavorite && !item.completed);
+  });
+}
+
 /** Anzeigetext ohne Präfixe (und ohne die folgenden Leerzeichen). */
 export function stripPriorityPrefix(title: string): string {
   return readPrefixes(title).rest;
