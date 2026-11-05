@@ -4,9 +4,12 @@
        und jede Zeile darin trug noch einen eigenen. Drei Rahmen tief für drei
        Vorschläge. Was die Abgrenzung wirklich leistet, leistet eine Linie:
        hier hört das eine auf und das andere fängt an. -->
-  <section class="border-t border-line pt-4" aria-label="What to work on next">
+  <section class="border-t border-line pt-2" aria-label="What to work on next">
 
-    <div class="flex items-center gap-2">
+    <!-- Die ganze Zeile ist mindestens 44px hoch: zugeklappt war die Vorschau
+         ein 20px hoher Streifen, der Pfeil 28px. Beides auf dem Telefon zu
+         knapp für den Daumen. -->
+    <div class="flex min-h-11 items-center gap-2">
       <lucide-icon [img]="FocusIcon" class="h-3.5 w-3.5 flex-none text-brand-2" aria-hidden="true"></lucide-icon>
       <h2 class="flex-none text-sm font-medium text-text">Next up</h2>
 
@@ -14,7 +17,7 @@
            zu etwas sagt, was als Nächstes dran ist. Ein Tipp öffnet alles. -->
       @if (collapsed()) {
         <button type="button"
-          class="flex min-w-0 flex-1 items-baseline gap-1.5 text-left text-sm text-subtle transition hover:text-text"
+          class="flex min-w-0 flex-1 items-center gap-1.5 self-stretch text-left text-sm text-subtle transition hover:text-text"
           (click)="toggleCollapsed()"
           aria-hidden="true" tabindex="-1">
           <span class="min-w-0 truncate">{{ title(suggestions()[0]) }}</span>
@@ -29,7 +32,7 @@
            dieselbe Zahl auf einem Bildschirm macht keine davon glaubwürdiger. -->
 
       <button type="button"
-        class="ml-auto grid h-7 w-7 flex-none place-items-center rounded-full text-subtle transition hover:bg-fill hover:text-text"
+        class="-mr-2 ml-auto grid h-11 w-11 flex-none place-items-center rounded-full text-subtle transition hover:bg-fill hover:text-text"
         (click)="toggleCollapsed()"
         [attr.aria-expanded]="!collapsed()"
         [attr.aria-label]="collapsed() ? 'Show suggestions' : 'Hide suggestions'">
