@@ -37,7 +37,7 @@ import { TokenChip } from '../../shared/token-chip';
 import { WeekView } from '../week-view/week-view';
 import { tap } from '../../shared/haptics';
 import { RichText } from '../../shared/rich-text';
-import { stripBold } from '../../shared/rich-title';
+import { firstLineOf, stripBold } from '../../shared/rich-title';
 
 type Mode = 'day' | 'week';
 const MODE_KEY = 'calendar.mode';
@@ -179,7 +179,7 @@ export class DayView {
   });
 
   private toCard(todo: Todo, overdue: boolean): Card {
-    const text = stripPriorityPrefix(todo.title).split('\n')[0].trim();
+    const text = firstLineOf(stripPriorityPrefix(todo.title));
     const minutes = durationOf(todo.title);
     const label = this.labelService.labelById(todo.labelIds[0] ?? '');
     return {

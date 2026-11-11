@@ -27,7 +27,7 @@ import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { DatePicker } from '../date-picker/date-picker';
 import { scheduleLabel } from '../../shared/schedule';
 import { ListViewService } from '../../services/list-view.service';
-import { isBoldKey, stripBold, toggleBold } from '../../shared/rich-title';
+import { firstLineOf, isBoldKey, stripBold, toggleBold } from '../../shared/rich-title';
 import { ShortcutService } from '../../../shared/shortcut.service';
 
 @Component({
@@ -108,7 +108,7 @@ export class TodoAdd {
   /** Ihr Titel ohne Präfix — im Feld steht nichts Technisches. */
   protected parentTitle(): string {
     const parent = this.parent();
-    return parent ? stripBold(stripPriorityPrefix(parent.title).split('\n')[0]) : '';
+    return parent ? stripBold(firstLineOf(stripPriorityPrefix(parent.title))) : '';
   }
 
   newTitle = '';
