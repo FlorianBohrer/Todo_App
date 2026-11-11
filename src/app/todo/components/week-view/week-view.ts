@@ -39,7 +39,7 @@ import { pastThroughput } from '../../shared/focus';
 import { priorityBadge, stripPriorityPrefix } from '../../shared/title-priority';
 import { TitleToken } from '../../shared/title-token';
 import { RichText } from '../../shared/rich-text';
-import { stripBold } from '../../shared/rich-title';
+import { breakAfterHeading, stripBold } from '../../shared/rich-title';
 import { TokenChip } from '../../shared/token-chip';
 import { folderColorClass } from '../../shared/folder-color';
 
@@ -409,13 +409,14 @@ export class WeekView {
     this.todoService.toggleTodo(id);
   }
 
+  /** „**Überschrift**Text" in einer Zeile wie mit Umbruch, wie in der Liste. */
   displayTitle(title: string): string {
-    return stripPriorityPrefix(title);
+    return breakAfterHeading(stripPriorityPrefix(title));
   }
 
   /** Ohne die Sternchen von fett gesetzten Stellen: für Tooltip und Vorlesesoftware. */
   plainTitle(title: string): string {
-    return stripBold(stripPriorityPrefix(title));
+    return stripBold(breakAfterHeading(stripPriorityPrefix(title)));
   }
 
   /**

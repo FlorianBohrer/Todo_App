@@ -268,7 +268,9 @@
                  bleibt im DOM, damit Bearbeiten und Autosize unveraendert
                  funktionieren. -->
             @if (showsDetail(row)) {
-              <p class="todo-title todo-title-line min-w-0 flex-1 cursor-text"
+              <!-- text-text wie Textfeld und zugeklappte Zeile: ohne erbte die
+                   Überschrift das gedämpfte Grau der Liste. -->
+              <p class="todo-title todo-title-line min-w-0 flex-1 cursor-text text-text"
                  [class.todo-title--completed]="
                    todo.completed || completingTodoIds().has(todo.id)
                  "
@@ -277,7 +279,9 @@
             </div>
 
             @if (showsDetail(row)) {
-              <div class="todo-detail cursor-text" (click)="startEditing(todo, todoText)"><app-rich-text [text]="row.detailLines" /></div>
+              <div class="todo-detail cursor-text"
+                [class.todo-detail--done]="todo.completed || completingTodoIds().has(todo.id)"
+                (click)="startEditing(todo, todoText)"><app-rich-text [text]="row.detailLines" /></div>
             }
 
             <!-- Was man über die Aufgabe wissen will, ohne sie zu öffnen:

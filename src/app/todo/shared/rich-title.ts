@@ -44,6 +44,28 @@ export function stripBold(text: string): string {
 }
 
 /**
+ * Eine fette Überschrift vorn, an die der Text ohne Umbruch anschliesst:
+ * „**Marco antworten**Account Ownership bestätigen". Gemeint ist dasselbe
+ * wie mit Umbruch, die Überschrift und darunter die Beschreibung. Ohne den
+ * Umbruch stand beides in einer Zeile, und in Klartext klebten die Wörter
+ * zusammen („antwortenAccount").
+ *
+ * Nur wenn direkt ein Buchstabe oder eine Ziffer folgt. Steht ein Leerzeichen
+ * oder ein Satzzeichen dazwischen („**Wichtig**: bitte anrufen"), ist es ein
+ * Satz mit einem betonten Wort und bleibt eine Zeile.
+ */
+const GLUED_HEADING = /^(\s*\*\*(?!\s)[^\n]*?[^\s*]\*\*)(?=[\p{L}\p{N}])/u;
+
+export function breakAfterHeading(text: string): string {
+  return text.replace(GLUED_HEADING, '$1\n');
+}
+
+/** Die erste Zeile eines Titels, eine angeklebte Überschrift mitgedacht. */
+export function firstLineOf(text: string): string {
+  return breakAfterHeading(text).split('\n')[0].trim();
+}
+
+/**
  * Ist das der Tastendruck für Fett? Strg/⌘+B, wie man es aus jedem
  * Schreibprogramm kennt, und das Kürzel aus den Einstellungen, das auch im
  * Planungsmodus fett macht (`action` ist, was ShortcutService.match meldet).

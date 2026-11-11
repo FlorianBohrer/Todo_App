@@ -44,7 +44,7 @@ import { fromISODate, shiftISODate, toISODate, todayISO } from '../../shared/wee
 import { stripPriorityPrefix } from '../../shared/title-priority';
 import { splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
-import { stripBold } from '../../shared/rich-title';
+import { firstLineOf, stripBold } from '../../shared/rich-title';
 
 /** Wie weit die Statistik zurückreicht: so viel liefert der Server je Tag. */
 const SERVER_DAYS = 90;
@@ -348,7 +348,7 @@ export class StatsView {
     const list = focusPerTodo(this.recent(), this.days().map((d) => d.iso)).slice(0, 5);
     const max = Math.max(1, ...list.map((t) => t.minutes));
     return list.map((t) => {
-      const text = stripBold(stripPriorityPrefix(t.title).split('\n')[0].trim());
+      const text = stripBold(firstLineOf(stripPriorityPrefix(t.title)));
       return {
         ...t,
         title: splitLeadingEmoji(text).rest || text,

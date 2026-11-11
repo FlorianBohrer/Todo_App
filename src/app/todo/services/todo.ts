@@ -28,7 +28,7 @@ import {
 import { TitleToken, splitTitle } from '../shared/title-token';
 import { normalize, score } from '../../search/search';
 import { scheduleLabel } from '../shared/schedule';
-import { stripBold } from '../shared/rich-title';
+import { firstLineOf, stripBold } from '../shared/rich-title';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
 
@@ -1014,7 +1014,7 @@ toggleFavorite(id: string) {
     // Ohne Präfix: „/must Steuer" ist ein Steuerzeichen, kein Name.
     const plain = isSection(removed.title)
       ? sectionName(removed.title)
-      : stripBold(stripPriorityPrefix(removed.title).split('\n')[0]);
+      : stripBold(firstLineOf(stripPriorityPrefix(removed.title)));
     const shortTitle = plain.length > 30 ? `${plain.slice(0, 30)}…` : plain;
 
     const deleteTimeout = setTimeout(() => {

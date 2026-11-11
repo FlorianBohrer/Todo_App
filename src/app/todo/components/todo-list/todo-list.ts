@@ -48,7 +48,7 @@ import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
 import { RichText } from '../../shared/rich-text';
 import { ScheduleDrawer } from '../schedule-drawer/schedule-drawer';
-import { hasBold, isBoldKey, stripBold, toggleBold } from '../../shared/rich-title';
+import { breakAfterHeading, firstLineOf, hasBold, isBoldKey, stripBold, toggleBold } from '../../shared/rich-title';
 import { ShortcutService } from '../../../shared/shortcut.service';
 import { ClampWatch } from '../../../directives/clamp-watch.directive';
 import { Grouping, ListViewService, SortOrder } from '../../services/list-view.service';
@@ -500,9 +500,15 @@ export class TodoList {
       const badge = section ? null : priorityBadge(todo.title);
       const stripped = section ? sectionName(todo.title) : stripPriorityPrefix(todo.title);
       // Ein Emoji vorn im Titel steht im Kreis, nicht noch einmal im Text.
-      const shown = section ? stripped : splitLeadingEmoji(stripped).rest;
-      const [first, ...rest] = shown.split('\n');
+      // „**Überschrift**Text" in einer Zeile wird wie mit Umbruch gezeigt.
+      const text = section ? stripped : breakAfterHeading(splitLeadingEmoji(stripped).rest);
+      const [first, ...rest] = text.split('\n');
       const detail = rest.join('\n').trim();
+      // Leerzeilen zwischen Überschrift und Text und am Ende zählen nicht:
+      // zugeklappt stand sonst unter der Überschrift eine leere Zeile und
+      // darunter nur „…". So sieht die Zeile gleich aus, wie auch immer sie
+      // getippt wurde. Absätze innerhalb des Textes bleiben.
+      const shown = detail ? `${first.trimEnd()}\n${detail}` : first.trimEnd();
       const level = taskLevel(todo.title);
       const minutes = section ? null : durationOf(todo.title);
       const when = section ? null : timeOfDay(todo.title);
@@ -579,7 +585,7 @@ export class TodoList {
     if (isSection(above.title)) return null;
     const head = byId.get(parentOf.get(above.id) ?? above.id);
     if (!head) return null;
-    return { id: head.id, title: stripBold(stripPriorityPrefix(head.title).split('\n')[0].trim()) };
+    return { id: head.id, title: stripBold(firstLineOf(stripPriorityPrefix(head.title))) };
   }
 
   /**
@@ -955,7 +961,7 @@ toggleFolderList(): void {
     const todoIds = stillShown ? [...previous.todoIds, todo.id] : [todo.id];
     if (stillShown) this.toast.dismiss(previous.id);
 
-    const title = stripBold(stripPriorityPrefix(todo.title).split('\n')[0].trim());
+    const title = stripBold(firstLineOf(stripPriorityPrefix(todo.title)));
     const short = title.length > 36 ? `${title.slice(0, 35).trimEnd()}…` : title;
     const message = todoIds.length === 1 ? `Done: ${short}` : `${todoIds.length} tasks done`;
 
@@ -1012,7 +1018,7 @@ toggleFolderList(): void {
     if (!current || current.completed) return false;
     const steps = this.todoService.stepsOf(head.id);
     if (steps.length === 0 || steps.some((s) => !s.completed)) return false;
-    const title = stripBold(stripPriorityPrefix(current.title).split('\n')[0].trim());
+    const title = stripBold(firstLineOf(stripPriorityPrefix(current.title)));
     this.toast.show(`All steps done: ${title}`, {
       actionLabel: 'Complete',
       durationMs: 6000,
@@ -1567,22 +1573,6 @@ closeOptionsMenu(): void {
 
   closeScheduleMenu(): void {
     this.openScheduleId.set(null);
-  }
-
-  /**
-   * Aufgeklappt trennt die Karte den Titel von den Unterpunkten: die erste
-   * Zeile bleibt in der Kopfzeile neben Checkbox und Bedienelementen, alles
-   * danach steht eingerueckt darunter. Zusammengeklappt bleibt der ganze Text
-   * stehen und wird per CSS auf zwei Zeilen begrenzt.
-   */
-  firstLine(title: string): string {
-    return stripPriorityPrefix(title).split('\n')[0].trim();
-  }
-
-  /** Alles nach der ersten Zeile; leer, wenn der Text einzeilig ist. */
-  detailLines(title: string): string {
-    const [, ...rest] = stripPriorityPrefix(title).split('\n');
-    return rest.join('\n').trim();
   }
 
   /**

@@ -38,6 +38,7 @@ import {
   tokenText,
 } from '../../todo/shared/title-token';
 import { TokenChip } from '../../todo/shared/token-chip';
+import { firstLineOf } from '../../todo/shared/rich-title';
 import {
   FolderHit,
   PlanHit,
@@ -180,7 +181,7 @@ export class SearchPalette {
         .slice(0, 5)
         .map((todo): TodoHit => {
           const { tokens, text } = splitTitle(todo.title);
-          return { kind: 'todo', todo, tokens, title: text.split('\n')[0].trim(), score: 0 };
+          return { kind: 'todo', todo, tokens, title: firstLineOf(text), score: 0 };
         });
       const recent = [...this.plans()]
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
