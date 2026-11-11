@@ -1,4 +1,4 @@
-import { hasBold, richParts, stripBold, toggleBold } from './rich-title';
+import { breakAfterHeading, firstLineOf, hasBold, richParts, stripBold, toggleBold } from './rich-title';
 
 describe('rich-title', () => {
   it('splits a title into bold and plain parts', () => {
@@ -51,5 +51,23 @@ describe('rich-title', () => {
 
   it('puts the cursor between two pairs without a selection', () => {
     expect(toggleBold('Call ', 5, 5)).toEqual({ value: 'Call ****', start: 7, end: 7 });
+  });
+
+  it('breaks after a bold heading the text is glued to', () => {
+    const glued = '**Marco antworten**Account Ownership bestätigen';
+    const broken = '**Marco antworten**\nAccount Ownership bestätigen';
+    expect(breakAfterHeading(glued)).toBe(broken);
+    // Mit Umbruch geschrieben bleibt es, wie es ist.
+    expect(breakAfterHeading(broken)).toBe(broken);
+    expect(firstLineOf(glued)).toBe('**Marco antworten**');
+    expect(firstLineOf(broken)).toBe('**Marco antworten**');
+    expect(firstLineOf('**Marco antworten**\n\nAccount Ownership\n')).toBe('**Marco antworten**');
+  });
+
+  it('keeps a sentence with an emphasised first word on one line', () => {
+    expect(breakAfterHeading('**Wichtig** bitte anrufen')).toBe('**Wichtig** bitte anrufen');
+    expect(breakAfterHeading('**Wichtig**: bitte anrufen')).toBe('**Wichtig**: bitte anrufen');
+    expect(breakAfterHeading('Call **mom**today')).toBe('Call **mom**today');
+    expect(breakAfterHeading('**Nur die Überschrift**')).toBe('**Nur die Überschrift**');
   });
 });

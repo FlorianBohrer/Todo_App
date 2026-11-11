@@ -11,7 +11,7 @@ import {
 import { FocusSessionService } from '../../services/focus-session.service';
 import { TodoService } from '../../services/todo';
 import { splitTitle } from '../../shared/title-token';
-import { stripBold } from '../../shared/rich-title';
+import { firstLineOf, stripBold } from '../../shared/rich-title';
 
 /**
  * Was in Flow gerade läuft — klein, in der Leiste.
@@ -86,7 +86,7 @@ export class FlowStatus {
   /** Der Titel ohne Präfix — wie überall. */
   protected readonly title = computed(() => {
     const active = this.active();
-    return active ? stripBold(splitTitle(active.title).text.split('\n')[0].trim()) : '';
+    return active ? stripBold(firstLineOf(splitTitle(active.title).text)) : '';
   });
 
   protected readonly label = computed(() => {

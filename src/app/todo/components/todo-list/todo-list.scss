@@ -123,15 +123,25 @@ li.todo-expanded-row {
 
 // Die Unterpunkte mit einer Fuehrungslinie, damit die Zugehoerigkeit zum
 // Titel lesbar bleibt.
+//
+// 85 % statt 62 %: die Beschreibung ist Inhalt, kein Hinweis. Bei 62 % war
+// sie im Dunklen kaum kräftiger als ein Platzhalter und mehrzeilig mühsam zu
+// lesen. Die Rangfolge zur Überschrift tragen jetzt Gewicht und Grösse, nicht
+// die Blässe.
 .todo-detail {
   margin-top: 0.125rem;
   padding-left: 0.875rem;
-  border-left: 1px solid rgb(var(--ink) / 12%);
+  border-left: 1px solid rgb(var(--ink) / 14%);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: rgb(var(--ink) / 62%);
+  color: rgb(var(--ink) / 85%);
+}
+
+// Abgehakt tritt sie mit dem Titel zurück.
+.todo-detail.todo-detail--done {
+  color: rgb(161 161 170);
 }
 
 // Die Meta-Zeile: Dauer, Tageszeit, Termin, Fortschritt. Leise, klein, in
