@@ -44,7 +44,9 @@
               "dayjs/plugin/advancedFormat.js",
               "dayjs/plugin/customParseFormat.js",
               "dayjs/plugin/duration.js",
-              "dayjs/plugin/isoWeek.js"
+              "dayjs/plugin/isoWeek.js",
+              "fastdom",
+              "fastdom/extensions/fastdom-promised.js"
             ]
           },
           "configurations": {
@@ -62,6 +64,14 @@
                 }
               ],
               "outputHashing": "all",
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              },
               "fileReplacements": [
                 {
                   "replace": "src/environments/enviroment.ts",
