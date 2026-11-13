@@ -1,25 +1,107 @@
 @if (account$ | async; as account) {
-  <!-- Nur das Bild.
+  <div class="relative">
+    <!-- Nur das Bild.
 
-       Vorher stand hier eine Karte mit Rahmen, Schatten, Name, E-Mail und der
-       rohen Clerk-ID. Das war das auffaelligste Element der Seite fuer die
-       Funktion, die man am seltensten braucht — und die ID musste ohnehin nie
-       jemand ablesen. Wer wissen will, als wer er angemeldet ist, faehrt
-       darueber; alles andere ist Dauerrauschen. -->
-  @if (account.avatarUrl && !avatarFailed()) {
-    <img
-      [src]="account.avatarUrl"
-      [alt]="'Signed in as ' + account.username"
+         Vorher stand hier eine Karte mit Rahmen, Schatten, Name, E-Mail und der
+         rohen Clerk-ID. Das war das auffaelligste Element der Seite fuer die
+         Funktion, die man am seltensten braucht — und die ID musste ohnehin nie
+         jemand ablesen. Wer wissen will, als wer er angemeldet ist, tippt
+         darauf; alles andere ist Dauerrauschen.
+
+         Ein Knopf und kein blosses Bild: dahinter stehen Name, E-Mail und der
+         Weg, das Konto zu loeschen. Auf dem Telefon 36px gross wie die
+         Nachbarn, das Bild darin bleibt bei 28px. -->
+    <button
+      type="button"
+      class="grid h-9 w-9 shrink-0 place-items-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight1 sm:h-7 sm:w-7"
+      [attr.aria-expanded]="open()"
+      aria-haspopup="dialog"
+      [attr.aria-label]="'Account: signed in as ' + account.username"
       [title]="account.username + ' · ' + account.email"
-      referrerpolicy="no-referrer"
-      (error)="avatarFailed.set(true)"
-      class="h-7 w-7 shrink-0 rounded-full object-cover opacity-80 transition hover:opacity-100"
-    />
-  } @else {
-    <span
-      class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-fill-strong text-xs font-semibold text-muted"
-      role="img"
-      [attr.aria-label]="'Signed in as ' + account.username"
-      [title]="account.username + ' · ' + account.email">{{ account.initial }}</span>
-  }
+      (click)="toggle()">
+      @if (account.avatarUrl && !avatarFailed()) {
+        <img
+          [src]="account.avatarUrl"
+          alt=""
+          referrerpolicy="no-referrer"
+          (error)="avatarFailed.set(true)"
+          class="h-7 w-7 rounded-full object-cover opacity-80 transition hover:opacity-100"
+        />
+      } @else {
+        <span
+          class="grid h-7 w-7 place-items-center rounded-full bg-fill-strong text-xs font-semibold text-muted"
+          aria-hidden="true">{{ account.initial }}</span>
+      }
+    </button>
+
+    @if (open()) {
+      <!-- Auf dem Telefon nicht am Bild ausgerichtet, sondern am Bildschirm-
+           rand: rechts vom Bild stehen noch drei Knoepfe, ein dort verankertes
+           Fenster ragte links ueber den Rand hinaus. -->
+      <div
+        class="fixed inset-x-4 top-14 z-30 rounded-xl border border-border bg-panel1 p-4 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80"
+        role="dialog"
+        aria-label="Account">
+        <p class="truncate text-sm font-semibold text-text">{{ account.username }}</p>
+        <p class="truncate text-xs text-muted">{{ account.email }}</p>
+
+        <div class="mt-4 border-t border-border pt-3">
+          @if (!confirming()) {
+            <button
+              type="button"
+              class="-mx-2 rounded-lg px-2 py-1.5 text-xs text-danger transition hover:bg-panel2 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+              (click)="confirming.set(true)">
+              Delete account…
+            </button>
+          } @else {
+            <p class="text-sm font-semibold text-text">Delete this account?</p>
+            <p class="mt-1 text-xs/[1.55] text-muted">
+              This removes your tasks, folders, plans, focus history and
+              connected devices, and then the account itself. It cannot be
+              undone.
+            </p>
+
+            <label class="mt-3 block text-xs text-muted" for="delete-account-confirm">
+              Type {{ confirmationWord }} to confirm
+            </label>
+            <input
+              id="delete-account-confirm"
+              type="text"
+              class="input mt-1 w-full text-sm pointer-coarse:text-base"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              [value]="typed()"
+              [disabled]="busy()"
+              (input)="typed.set($any($event.target).value)"
+              (keydown.enter)="deleteAccount()" />
+
+            @if (problem()) {
+              <p class="mt-2 text-xs/[1.5] text-danger" role="alert">{{ problem() }}</p>
+            }
+
+            <div class="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                class="rounded-lg px-3 py-2 text-xs text-muted transition hover:bg-panel2 hover:text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-highlight1"
+                [disabled]="busy()"
+                (click)="cancel()">
+                Cancel
+              </button>
+              <!-- Schrift in der Farbe der Flaeche darunter, nicht weiss: das
+                   Rot ist im dunklen Theme hell (weiss darauf 2.8:1) und im
+                   hellen dunkel. So sind es 5.6:1 und 5.0:1. -->
+              <button
+                type="button"
+                class="rounded-lg bg-danger px-3 py-2 text-xs font-semibold text-panel1 transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-panel1 disabled:pointer-events-none disabled:opacity-40"
+                [disabled]="!confirmed() || busy()"
+                (click)="deleteAccount()">
+                {{ busy() ? 'Deleting…' : 'Delete everything' }}
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
 }
