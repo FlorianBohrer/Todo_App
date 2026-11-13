@@ -10,6 +10,11 @@ export interface PairedDevice {
   name: string;
   createdAt: string;
   lastUsedAt: string | null;
+  /**
+   * Ab wann das Gerät neu gekoppelt werden muss, wenn es bis dahin ruht.
+   * Fehlt bei einem Server, der Gerätetoken noch nicht ablaufen lässt.
+   */
+  expiresAt?: string;
 }
 
 interface PairingCodeResponse {
