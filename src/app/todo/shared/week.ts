@@ -121,3 +121,18 @@ export function weekRangeLabel(days: WeekDay[]): string {
   const sameMonth = start.getMonth() === end.getMonth();
   return `${fmt(start, true)} – ${fmt(end, !sameMonth)}`;
 }
+
+/**
+ * „November 2026", über einen Monatswechsel „Nov – Dec 2026", über einen
+ * Jahreswechsel „Dec 2026 – Jan 2027". Kurz heißt: Monat abgekürzt (Telefon).
+ */
+export function monthLabel(first: Date, last: Date, short = false): string {
+  const month = (d: Date, s: boolean) => d.toLocaleDateString('en-US', { month: s ? 'short' : 'long' });
+  if (first.getFullYear() !== last.getFullYear()) {
+    return `${month(first, true)} ${first.getFullYear()} – ${month(last, true)} ${last.getFullYear()}`;
+  }
+  if (first.getMonth() !== last.getMonth()) {
+    return `${month(first, true)} – ${month(last, true)} ${last.getFullYear()}`;
+  }
+  return `${month(first, short)} ${first.getFullYear()}`;
+}

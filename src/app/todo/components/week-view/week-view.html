@@ -1,46 +1,70 @@
-<!-- Auf dem Telefon derselbe Seitenrand wie Liste und Plaene; mit px-1
-     lagen die Tageskarten 4px an der Bildschirmkante. Am Rechner galt das
-     noch: bis 1280px klebten Montag und Sonntag am Fensterrand. -->
-<section class="mx-auto w-full max-w-7xl px-3 min-[360px]:px-4 lg:px-8">
+<!-- Die Woche als Brett: ein Streifen aus Tagesspalten, durch den man
+     seitlich scrollt, statt sieben gestauchter Spalten nebeneinander. Breiter
+     als die Spalte der anderen Ansichten, weil jede Spalte lesbar breit sein
+     soll; auf dem Telefon stehen die Tage untereinander. -->
+<section class="week-view mx-auto w-full max-w-[120rem] px-3 min-[360px]:px-4 lg:px-8">
 
-  <!-- Wochen-Kopf, gebaut wie jede Ansicht (styles.scss, „Eine Spalte, ein
-       Kopf"): der Zeitraum als Titel, darunter links Day/Week (von der
-       Tagesansicht hereingereicht), rechts Blättern und der Weg zurück. -->
+  <!-- Kopf wie in jeder Ansicht (styles.scss, „Eine Spalte, ein Kopf"):
+       Titel mit Filter, darunter die Leiste mit Day/Week links und Monat,
+       Today, Blättern und dem Auge rechts. -->
   <div class="view-head">
     <div class="min-w-0">
-      <h1 class="display-title">{{ rangeLabel() }}</h1>
+      <div class="flex items-center gap-3">
+        <h1 class="display-title">Plan the week</h1>
+
+        <!-- Ein Ordner für die ganze Woche, Ungeplantes eingeschlossen. Ist
+             einer gewählt, steht er im Knopf, mit einem Weg zurück. -->
+        <button
+          type="button"
+          class="week-filter"
+          [class.is-active]="filterLabel() !== null"
+          cdkOverlayOrigin
+          #filterOrigin="cdkOverlayOrigin"
+          [attr.aria-expanded]="filterOpen()"
+          aria-haspopup="menu"
+          [attr.aria-label]="filterLabel() ? 'Filtered by ' + filterLabel()!.name + ', change filter' : 'Filter by folder'"
+          [title]="filterLabel() ? 'Showing ' + filterLabel()!.name : 'Filter by folder'"
+          (click)="filterOpen.set(!filterOpen())">
+          @if (filterLabel(); as label) {
+            <span class="h-2 w-2 flex-none rounded-full bg-current" [class]="dotClass(label.color)" aria-hidden="true"></span>
+            <span class="max-w-[9rem] truncate">{{ label.name }}</span>
+          } @else {
+            <lucide-icon [img]="FilterIcon" class="h-4 w-4"></lucide-icon>
+          }
+        </button>
+      </div>
+
+      <!-- Die Trenner als eigene Zeichen mit Luft: in Instrument Sans ist der
+           Wortabstand schmal, und „47·Nov" las sich als ein Wort. -->
       <p class="view-sub">
-        Week {{ weekNumber() }}
-        <!-- Beim Verplanen der Woche der einzige belastbare Maßstab: was an
-             einem verplanten Tag tatsächlich fertig wurde. -->
+        <span>Week {{ weekNumber() }}</span>
+        <span class="week-sep" aria-hidden="true">·</span>
+        <span>{{ rangeLabel() }}</span>
+        @if (weekProgress().total > 0) {
+          <span class="week-sep" aria-hidden="true">·</span>
+          <span>{{ weekProgress().done }} of {{ weekProgress().total }} done</span>
+        }
+        <!-- Beim Verplanen der einzige belastbare Maßstab: was an einem
+             verplanten Tag tatsächlich fertig wurde. -->
         @if (typicalPerDay() !== null) {
-          · you finish about {{ typicalPerDay() }} a day
+          <span class="week-sep" aria-hidden="true">·</span>
+          <span>you finish about {{ typicalPerDay() }} a day</span>
         }
       </p>
     </div>
-
-    <!-- Wochenbilanz: dieselbe Sprache wie die Statistik in der Liste -->
-    @if (weekProgress().total > 0) {
-      <div class="view-head__actions hidden sm:flex" [attr.aria-label]="weekProgress().done + ' of ' + weekProgress().total + ' done this week'">
-        <div class="h-1.5 w-24 overflow-hidden rounded-full bg-fill-strong">
-          <div class="progress-fill h-full rounded-full bg-emerald-400/80"
-            [style.width.%]="weekProgress().percent"></div>
-        </div>
-        <span class="tabular-nums text-xs text-muted">
-          {{ weekProgress().done }}/{{ weekProgress().total }}
-        </span>
-      </div>
-    }
   </div>
 
   <div class="view-bar">
     <ng-content />
     <div class="ml-auto flex items-center gap-2">
-      @if (!isCurrentWeek()) {
-        <button type="button" class="view-action" (click)="goToday()" title="Jump to the current week (T)">
-          Today
-        </button>
-      }
+      <span class="week-month hidden sm:inline">{{ month() }}</span>
+      <span class="week-month sm:hidden">{{ monthShort() }}</span>
+
+      <button type="button" class="view-action" (click)="goToday()"
+        [title]="isCurrentWeek() ? 'Back to today (T)' : 'Jump to the current week (T)'">
+        Today
+      </button>
+
       <div class="view-nav">
         <button type="button" class="view-nav__arrow" (click)="prevWeek()" title="Previous week (←)" aria-label="Previous week">
           <lucide-icon [img]="PrevIcon" class="h-4 w-4"></lucide-icon>
@@ -49,13 +73,24 @@
           <lucide-icon [img]="NextIcon" class="h-4 w-4"></lucide-icon>
         </button>
       </div>
+
+      <!-- Erledigtes zeigen oder nicht. Gezählt wird es weiter: „2/6" im
+           Tageskopf sagt, wie weit der Tag ist. -->
+      <button type="button" class="week-icon-button"
+        [class.is-active]="hideDone()"
+        [attr.aria-pressed]="hideDone()"
+        [attr.aria-label]="hideDone() ? 'Show completed tasks' : 'Hide completed tasks'"
+        [title]="hideDone() ? 'Show completed tasks' : 'Hide completed tasks'"
+        (click)="toggleHideDone()">
+        <lucide-icon [img]="hideDone() ? HideIcon : ShowIcon" class="h-4 w-4"></lucide-icon>
+      </button>
     </div>
   </div>
 
   <!-- Liegengebliebenes. Es still im Vergangenen versacken zu lassen ist die
        häufigste Art, wie ein Wochenplan unbrauchbar wird. -->
   @if (overdue().length > 0) {
-    <div class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+    <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2">
       <lucide-icon [img]="OverdueIcon" class="h-4 w-4 flex-none text-amber-300" aria-hidden="true"></lucide-icon>
       <span class="text-sm text-amber-100">
         {{ overdue().length }} {{ overdue().length === 1 ? 'task is' : 'tasks are' }} past their day
@@ -69,232 +104,225 @@
     </div>
   }
 
-  <!-- Alle Drop-Listen (7 Tage + Backlog) in EINER Gruppe, sonst kein Ziehen dazwischen -->
+  <!-- Alle Ablageflächen (sieben Tage + Ungeplantes) in EINER Gruppe, sonst
+       lässt sich nichts zwischen ihnen ziehen. -->
   <div cdkDropListGroup>
 
-    <!-- 7 Tage: mobil gestapelt; ab sm sieben Spalten, die bei zu wenig Platz
-         horizontal scrollen statt unleserlich schmal zu werden. Der Streifen
-         rückt beim Öffnen von selbst auf den heutigen Tag. -->
-    <div #strip class="week-strip overflow-x-auto pb-1">
-    <div class="grid grid-cols-1 gap-2 sm:grid-cols-7 sm:min-w-[980px]">
-      @for (day of days(); track day.iso) {
-        <div
-          class="week-day group/day flex flex-col rounded-xl border p-2 transition"
-          [attr.data-today]="day.isToday ? 'true' : null"
-          [class.week-day--past-empty]="day.isPast && !day.isToday && day.total === 0"
-          [class]="day.isToday
-            ? 'border-indigo-500/70 bg-indigo-500/10'
-            : (day.isWeekend ? 'border-line bg-bg3' : 'border-line bg-bg2')"
-          [class.opacity-75]="day.isPast && !day.isToday">
-
-          <!-- Tageskopf -->
-          <div class="mb-1 flex items-baseline gap-1 px-1">
-            <span class="text-xs font-medium uppercase tracking-wide"
-              [class]="day.isToday ? 'text-indigo-300' : (day.isWeekend ? 'text-subtle' : 'text-muted')">
-              {{ day.weekdayShort }}
-            </span>
-
-            @if (day.total > 0) {
-              <span class="tabular-nums text-2xs leading-none"
-                [class]="day.overdue > 0 ? 'text-amber-300' : 'text-subtle'">
-                {{ day.done }}/{{ day.total }}
-              </span>
-            }
-
-            <!-- Was der Tag nicht geschafft hat, auf morgen schieben -->
-            @if (day.total > day.done) {
-              <button
-                type="button"
-                class="week-rollover ml-auto grid h-5 w-5 flex-none place-items-center rounded-lg text-subtle opacity-0 transition hover:bg-fill-strong hover:text-text focus-visible:opacity-100 group-hover/day:opacity-100"
-                (click)="rollOver(day)"
-                [title]="'Move ' + (day.total - day.done) + ' unfinished to the next day'"
-                [attr.aria-label]="'Move unfinished tasks from ' + day.weekdayShort + ' to the next day'">
-                <lucide-icon [img]="RollOverIcon" class="h-3.5 w-3.5"></lucide-icon>
-              </button>
-            }
-
-            <span class="text-lg font-semibold leading-none"
-              [class]="day.isToday ? 'text-indigo-200' : 'text-text'"
-              [class.ml-auto]="day.total === day.done">
-              {{ day.dayNum }}
-            </span>
-          </div>
-
-          <!-- Signatur: Mini-Fortschritt pro Tag. Leere Tage bekommen keinen
-               leeren Balken — sonst zeichnet die Woche sieben graue Striche. -->
-          @if (day.total > 0) {
-            <div class="mx-1 mb-2 h-1 overflow-hidden rounded-full bg-fill-strong">
-              <div class="progress-fill h-full rounded-full bg-emerald-400/80"
-                [style.width.%]="day.percent"></div>
-            </div>
-          } @else {
-            <div class="week-day-spacer mb-2 h-1"></div>
-          }
-
-          <!-- Todos des Tages: Drop-Ziel -->
-          <div
-            class="flex min-h-0 flex-1 flex-col gap-1.5 sm:min-h-16"
+    <!-- cdkScrollable: zieht man eine Karte an den Rand des Streifens, rollt
+         er von selbst weiter, bis der Zieltag im Blick ist. -->
+    <div #strip cdkScrollable class="week-strip">
+      <div class="week-grid">
+        @for (day of days(); track day.iso) {
+          <!-- Die ganze Spalte ist Ablagefläche, nicht nur die Kartenliste:
+               auch über dem Kopf oder dem Eingabefeld losgelassen landet die
+               Karte an diesem Tag. Die Karten selbst stehen in .week-list. -->
+          <section
+            class="week-col"
+            [class.is-today]="day.isToday"
+            [class.is-past]="day.isPast && !day.isToday"
+            [class.is-drag-origin]="dragFrom() === day.iso"
+            [attr.data-today]="day.isToday ? 'true' : null"
+            [attr.aria-label]="day.weekdayShort + ' ' + day.dayNum + (day.total > 0 ? ', ' + day.done + ' of ' + day.total + ' done' : '')"
             cdkDropList
             [cdkDropListData]="day.iso"
+            cdkDropListSortingDisabled
+            cdkDropListElementContainer=".week-list"
+            [cdkDropListAutoScrollStep]="14"
             (cdkDropListDropped)="drop($event)">
 
-            @for (todo of day.todos; track todo.id) {
-              <!-- Ein Tipp öffnet den Kalender (moveTo), Ziehen geht weiter.
-                   Per Tastatur: Tab auf die Karte, Enter. -->
-              <div
-                cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
-                (cdkDragEnded)="onDragEnded()"
-                class="week-card group relative flex items-start gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-sm text-text"
-                [class.opacity-60]="todo.completed"
-                [class.is-moving]="moverTodo()?.id === todo.id"
-                tabindex="0"
-                aria-haspopup="dialog"
-                (click)="openMover(todo, $event)"
-                (keydown.enter)="openMover(todo, $event)">
-                <!-- Die Ordnerfarbe steht im Haken-Kreis, wie in Erinnerungen
-                     auf dem iPhone. Vorher war es ein farbiger Streifen links
-                     an jeder Karte: sieben Spalten voller bunter Kanten, und
-                     der Kreis daneben sagte nichts. Jetzt trägt das eine
-                     Element, das man ohnehin anschaut, beides. -->
+            <header class="week-col__head">
+              <h2 class="week-col__title">
+                {{ day.weekdayShort }}
+                <span class="week-col__num">{{ day.dayNum }}</span>
+              </h2>
+
+              <!-- Was der Tag nicht geschafft hat, auf morgen schieben -->
+              @if (day.total > day.done) {
                 <button
                   type="button"
-                  class="week-check mt-0.5 h-4 w-4 flex-none rounded-full border-2 transition hover:opacity-80"
-                  [class]="todo.completed ? 'border-emerald-400 bg-emerald-400' : borderClass(todo)"
-                  (click)="$event.stopPropagation(); toggle(todo.id)"
-                  (keydown.enter)="$event.stopPropagation()"
-                  [attr.aria-label]="todo.completed ? 'Mark as active' : 'Mark as done'"></button>
-                <!-- Auf drei Zeilen begrenzt. Eine Wochenkarte muss man
-                     wiedererkennen, nicht lesen: ungekuerzt brach ein Satz auf
-                     sechs Zeilen um, und dann passten auf einen Tag mit sechs
-                     Todos noch vier auf den Bildschirm. Gelesen wird in der
-                     Liste, der ganze Text haengt hier am Tooltip. -->
-                <span class="week-card-title min-w-0 flex-1 break-words leading-snug"
-                      [class.line-through]="todo.completed"
-                      [attr.title]="plainTitle(todo.title)">
-                  @if (badge(todo.title); as level) {
-                    <app-token-chip class="week-badge mr-1 align-[-0.2em]" [token]="level" size="sm" />
-                  }
-                  <app-rich-text [text]="displayTitle(todo.title)" />
+                  class="week-rollover"
+                  (click)="rollOver(day)"
+                  [title]="'Move ' + (day.total - day.done) + ' unfinished to the next day'"
+                  [attr.aria-label]="'Move unfinished tasks from ' + day.weekdayShort + ' to the next day'">
+                  <lucide-icon [img]="RollOverIcon" class="h-3.5 w-3.5"></lucide-icon>
+                </button>
+              }
+
+              @if (day.total > 0) {
+                <span class="week-col__count" [class.is-overdue]="day.overdue > 0">
+                  {{ day.done }}/{{ day.total }}
                 </span>
+              }
+            </header>
 
-                <!-- Wiederkehrend. Hier wiegt das Zeichen schwerer als in der
-                     Liste: die naechste Ausgabe liegt fast immer in einer
-                     ANDEREN Woche als der, die man gerade ansieht. Ohne den
-                     Hinweis sieht man eine abgehakte Aufgabe und nichts
-                     weiter, und das sieht aus, als sei sie einfach weg. -->
-                @if (todo.repeat) {
-                  <lucide-icon [img]="RepeatIcon"
-                    class="mt-0.5 h-3 w-3 flex-none text-subtle"
-                    [attr.title]="'Repeats, next one follows in a later week'"></lucide-icon>
-                }
-
-                <!-- Einen Tag vor oder zurück, ohne zu ziehen. Auf schmalen
-                     Spalten wäre dauerhaft Platz dafür zu teuer, deshalb legen
-                     sie sich beim Zeigen (oder Antippen der Tastatur) darüber. -->
-                <span class="week-shift absolute right-1 top-1 flex gap-0.5 rounded-lg bg-panel2/95 p-0.5 opacity-0 shadow-sm transition focus-within:opacity-100 group-hover:opacity-100"
-                  (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
-                  <button type="button"
-                    class="grid h-5 w-5 place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
-                    (click)="shiftTodo(todo, -1)" aria-label="Move one day earlier" title="One day earlier">
-                    <lucide-icon [img]="PrevIcon" class="h-3.5 w-3.5"></lucide-icon>
-                  </button>
-                  <button type="button"
-                    class="grid h-5 w-5 place-items-center rounded-lg text-subtle transition hover:bg-fill-strong hover:text-text"
-                    (click)="shiftTodo(todo, 1)" aria-label="Move one day later" title="One day later">
-                    <lucide-icon [img]="NextIcon" class="h-3.5 w-3.5"></lucide-icon>
-                  </button>
-                </span>
-              </div>
-            }
-
-            <!-- Schnell-Eingabe direkt in den Tag -->
+            <!-- Oben, wo es immer steht, egal wie voll der Tag ist. -->
             <input
               #q
               type="text"
-              placeholder="+ Add"
-              class="week-quick mt-auto w-full rounded-lg bg-transparent px-2 py-1 text-sm text-text pointer-coarse:text-base placeholder:text-muted/50 focus:bg-fill focus:outline-none"
+              placeholder="Add a task…"
+              class="week-add"
+              enterkeyhint="done"
               (keydown.enter)="quickAdd(day.iso, q)"
               (keydown.escape)="q.value = ''; q.blur()"
-              [attr.aria-label]="'Add todo for ' + day.weekdayShort + ' ' + day.dayNum" />
-          </div>
-        </div>
-      }
-    </div>
-    </div>
+              [attr.aria-label]="'Add a task for ' + day.weekdayShort + ' ' + day.dayNum" />
 
-    <!-- Backlog: ungeplante Todos, in Tage ziehbar. Zeigt sich, sobald es
-         überhaupt ungeplante Todos gibt (unabhängig vom Filter). -->
-    @if (hasUnscheduled()) {
-      <div class="mt-4">
-        <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h3 class="text-sm font-medium text-muted">Unscheduled</h3>
-
-          <!-- Status: All / Active -->
-          <div class="inline-flex rounded-full border border-line p-0.5 text-xs">
-            <button type="button"
-              class="rounded-full px-2.5 py-1.5 transition sm:py-1"
-              [class]="backlogStatus() === 'all' ? 'bg-text text-bg' : 'text-muted hover:text-text'"
-              [attr.aria-pressed]="backlogStatus() === 'all'"
-              (click)="setBacklogStatus('all')">All</button>
-            <button type="button"
-              class="rounded-full px-2.5 py-1.5 transition sm:py-1"
-              [class]="backlogStatus() === 'active' ? 'bg-text text-bg' : 'text-muted hover:text-text'"
-              [attr.aria-pressed]="backlogStatus() === 'active'"
-              (click)="setBacklogStatus('active')">Active</button>
-          </div>
-        </div>
-
-        <!-- Kategorie-Filter: horizontal scrollbare Chips (mobiltauglich) -->
-        @if (labels().length > 0) {
-          <div class="mb-2 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter by category">
-            <button type="button"
-              class="flex-none rounded-full border px-3 py-1.5 text-xs transition sm:py-1"
-              [class]="backlogCategory() === null ? 'border-line-strong text-text' : 'border-line text-muted hover:text-text'"
-              [attr.aria-pressed]="backlogCategory() === null"
-              (click)="setBacklogCategory(null)">All categories</button>
-            @for (label of labels(); track label.id) {
-              <button type="button"
-                class="flex flex-none items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition sm:py-1"
-                [class]="backlogCategory() === label.id ? 'border-line-strong text-text' : 'border-line text-muted hover:text-text'"
-                [attr.aria-pressed]="backlogCategory() === label.id"
-                (click)="setBacklogCategory(label.id)">
-                <span [class]="dotClass(label.color)">●</span>{{ label.name }}
-              </button>
-            }
-          </div>
-        }
-
-        <div
-          class="flex min-h-12 flex-wrap gap-1.5 rounded-xl border border-line bg-bg2 p-2"
-          cdkDropList
-          [cdkDropListData]="null"
-          (cdkDropListDropped)="drop($event)">
-          @for (todo of backlog(); track todo.id) {
-            <div
-              cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
-              (cdkDragEnded)="onDragEnded()"
-              class="week-card flex min-w-0 max-w-full items-center gap-2 rounded-lg bg-panel2 px-2 py-1.5 text-sm text-text"
-              [class.opacity-60]="todo.completed"
-              [class.is-moving]="moverTodo()?.id === todo.id"
-              tabindex="0"
-              aria-haspopup="dialog"
-              (click)="openMover(todo, $event)"
-              (keydown.enter)="openMover(todo, $event)">
-              <span class="h-2 w-2 flex-none rounded-full bg-current" [class]="folderDot(todo)" aria-hidden="true"></span>
-              <span class="min-w-0 leading-snug [overflow-wrap:anywhere]" [class.line-through]="todo.completed">
-                @if (badge(todo.title); as level) {
-                  <app-token-chip class="week-badge mr-1 align-[-0.2em]" [token]="level" size="sm" />
-                }
-                <app-rich-text [text]="displayTitle(todo.title)" />
-              </span>
+            <div class="week-list" appListInjector #list="listInjector">
+              @for (todo of day.todos; track todo.id) {
+                <ng-container *ngTemplateOutlet="card; context: { $implicit: todo }; injector: list.injector" />
+              }
             </div>
+          </section>
+        }
+      </div>
+    </div>
+
+    <!-- Ungeplantes: in jeden Tag ziehbar, und jede Karte vom Tag zurück. -->
+    @if (hasUnscheduled()) {
+      <section class="week-backlog"
+        [class.is-drag-origin]="dragFrom() === null"
+        aria-labelledby="week-backlog-title"
+        cdkDropList
+        [cdkDropListData]="null"
+        cdkDropListSortingDisabled
+        cdkDropListElementContainer=".week-list"
+        (cdkDropListDropped)="drop($event)">
+        <header class="week-backlog__head">
+          <h2 id="week-backlog-title" class="week-col__title">Unscheduled</h2>
+          <span class="week-col__count">{{ backlog().length }}</span>
+          <span class="week-backlog__hint hidden sm:inline">Drag a task onto a day to plan it</span>
+        </header>
+        <div class="week-list week-list--backlog" appListInjector #backlogList="listInjector">
+          @for (todo of backlog(); track todo.id) {
+            <ng-container *ngTemplateOutlet="card; context: { $implicit: todo }; injector: backlogList.injector" />
           } @empty {
-            <p class="px-1 py-0.5 text-xs text-muted">No unscheduled todos match this filter</p>
+            <p class="px-1 py-0.5 text-xs text-muted">Everything unscheduled is done</p>
           }
         </div>
-      </div>
+      </section>
     }
   </div>
+
+  <!-- Eine Karte, in den Tagen und im Ungeplanten dieselbe.
+
+       Ein Tipp öffnet den Kalender (moveTo); ziehen geht mit der Maus sofort,
+       mit dem Finger nach kurzem Drücken. Per Tastatur: Tab auf die Karte,
+       Enter. preventDefault, weil der Kalender beim Öffnen den Fokus auf den
+       gewählten Tag legt — das Enter löste dort sonst gleich einen Klick aus,
+       wählte denselben Tag und schloss den Kalender wieder. -->
+  <ng-template #card let-todo>
+    <article
+      cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
+      (cdkDragStarted)="onDragStarted(todo)"
+      (cdkDragEnded)="onDragEnded()"
+      class="week-card"
+      [class.is-done]="todo.completed"
+      [class.is-focus]="focusTodoId() === todo.id"
+      [class.is-moving]="moverTodo()?.id === todo.id"
+      tabindex="0"
+      aria-haspopup="dialog"
+      [attr.aria-label]="plainTitle(todo.title) + (todo.completed ? ', done' : '') + '. Press Enter to change the day.'"
+      (click)="openMover(todo, $event)"
+      (keydown.enter)="$event.preventDefault(); openMover(todo, $event)">
+      <!-- Die Ordnerfarbe als Kante: auf einen Blick, welcher Bereich wie
+           viel vom Tag nimmt. -->
+      <span class="week-card__edge" [class]="fillClass(todo)" aria-hidden="true"></span>
+
+      <!-- Auf drei Zeilen begrenzt. Eine Wochenkarte muss man
+           wiedererkennen, nicht lesen; der ganze Text hängt am Tooltip und
+           steht in der Liste. -->
+      <p class="week-card__title" [attr.title]="plainTitle(todo.title)">
+        @if (badge(todo.title); as level) {
+          <app-token-chip class="week-badge mr-1 align-[-0.2em]" [token]="level" size="sm" />
+        }
+        <app-rich-text [text]="displayTitle(todo.title)" />
+      </p>
+
+      <div class="week-card__meta">
+        <!-- Abgehakt füllt sich der Kreis in der Ordnerfarbe. Getroffen wird
+             er auf 36px (week-view.scss). -->
+        <button
+          type="button"
+          class="week-check"
+          [class]="todo.completed ? fillClass(todo) : ''"
+          (click)="$event.stopPropagation(); toggle(todo.id)"
+          (keydown.enter)="$event.stopPropagation()"
+          [attr.aria-label]="todo.completed ? 'Mark as active' : 'Mark as done'"
+          [attr.aria-pressed]="todo.completed">
+          <lucide-icon [img]="CheckIcon" class="h-3 w-3"></lucide-icon>
+        </button>
+
+        @if (folderOf(todo); as folder) {
+          <span class="week-chip">
+            <span class="week-chip__dot bg-current" [class]="dotClass(folder.color)" aria-hidden="true"></span>
+            <span class="truncate">{{ folder.name }}</span>
+            @if (folder.more > 0) {
+              <span class="text-subtle">+{{ folder.more }}</span>
+            }
+          </span>
+        }
+
+        <!-- Läuft in Flow gerade ein Block auf dieser Aufgabe, steht die
+             Restzeit an der Karte. -->
+        @if (focusTodoId() === todo.id) {
+          <span class="week-focus" [class.is-paused]="focusPaused()"
+            [attr.title]="focusPaused() ? 'Paused in Flow' : 'Focusing in Flow'">
+            @if (focusPaused()) {
+              <lucide-icon [img]="PauseIcon" class="h-3 w-3"></lucide-icon>
+            } @else {
+              <span class="week-focus__dot" aria-hidden="true"></span>
+            }
+            <span class="tabular-nums">{{ focusClock() }}</span>
+          </span>
+        }
+
+        <!-- Wiederkehrend. Die nächste Ausgabe liegt fast immer in einer
+             anderen Woche; ohne den Hinweis sähe eine abgehakte Aufgabe aus,
+             als sei sie einfach weg. -->
+        @if (todo.repeat) {
+          <lucide-icon [img]="RepeatIcon"
+            class="week-card__repeat"
+            [attr.title]="'Repeats, the next one follows on its own'"></lucide-icon>
+        }
+      </div>
+    </article>
+  </ng-template>
+
+  <!-- Ordnerfilter -->
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="filterOrigin"
+    [cdkConnectedOverlayOpen]="filterOpen()"
+    [cdkConnectedOverlayPositions]="moverPositions"
+    [cdkConnectedOverlayViewportMargin]="16"
+    [cdkConnectedOverlayHasBackdrop]="true"
+    cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+    (backdropClick)="filterOpen.set(false)"
+    (detach)="filterOpen.set(false)"
+    (overlayKeydown)="$event.key === 'Escape' && filterOpen.set(false)">
+    <div class="popover week-filter-menu max-h-[60vh] overflow-y-auto" role="menu" aria-label="Filter by folder">
+      <button type="button" role="menuitemradio" class="popover-item text-sm text-text"
+        [attr.aria-checked]="folderFilter() === null" (click)="setFolderFilter(null)">
+        <span class="week-filter-menu__mark">
+          @if (folderFilter() === null) {
+            <lucide-icon [img]="CheckIcon" class="h-3.5 w-3.5"></lucide-icon>
+          }
+        </span>
+        All folders
+      </button>
+      @for (label of labels(); track label.id) {
+        <button type="button" role="menuitemradio" class="popover-item text-sm text-text"
+          [attr.aria-checked]="folderFilter() === label.id" (click)="setFolderFilter(label.id)">
+          <span class="week-filter-menu__mark">
+            @if (folderFilter() === label.id) {
+              <lucide-icon [img]="CheckIcon" class="h-3.5 w-3.5"></lucide-icon>
+            }
+          </span>
+          <span class="h-2 w-2 flex-none rounded-full bg-current" [class]="dotClass(label.color)" aria-hidden="true"></span>
+          <span class="min-w-0 truncate">{{ label.name }}</span>
+        </button>
+      }
+    </div>
+  </ng-template>
 
   <!-- Der Kalender zum Umplanen: am Telefon ein Blatt von unten (dieselben
        Klassen wie das Zeilenmenü der Liste), am Rechner an der Karte. -->
