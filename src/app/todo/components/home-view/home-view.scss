@@ -223,6 +223,232 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- Hauptaufgaben mit Schritten ---- */
+
+/* Rechts in der Zeile: Fortschritt und Klappknopf. Steht dort ein Start,
+   nimmt er den freien Platz und beide rücken mit ihm nach rechts. */
+.home-card .task-card__meta > .home-progress {
+  margin-left: auto;
+}
+
+.home-card .task-card__meta > .home-start ~ .home-progress {
+  margin-left: 0;
+}
+
+.home-card:has(.home-progress) .task-card__repeat,
+.home-card:has(.home-progress) .home-start + .home-spent {
+  margin-left: 0;
+}
+
+.home-card__context {
+  margin: -0.25rem 0 0;
+  overflow: hidden;
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-progress {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+}
+
+.home-progress__ring {
+  width: 0.875rem;
+  height: 0.875rem;
+  rotate: -90deg;
+}
+
+.home-progress__track,
+.home-progress__fill {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.home-progress__track {
+  stroke: var(--color-fill-strong);
+}
+
+.home-progress__fill {
+  stroke: var(--color-highlight1);
+  stroke-linecap: round;
+  transition: stroke-dasharray 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.home-progress.is-complete {
+  color: var(--color-ok);
+}
+
+.home-progress.is-complete .home-progress__fill {
+  stroke: var(--color-ok);
+}
+
+/* Der Klappknopf: klein gezeichnet, gross getroffen. */
+.home-fold {
+  position: relative;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  place-items: center;
+  margin: -0.25rem -0.375rem -0.25rem -0.125rem;
+  border-radius: 999px;
+  color: var(--color-subtle);
+  transition: background-color 140ms ease-out, color 140ms ease-out;
+}
+
+.home-fold::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+}
+
+.home-fold:hover {
+  background: var(--color-fill);
+  color: var(--color-text);
+}
+
+.home-fold__chevron {
+  transition: rotate 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.home-fold__chevron.is-folded {
+  rotate: -90deg;
+}
+
+/* Auf- und zuklappen über die Zeilenhöhe: folgt dem Inhalt, lässt sich
+   mitten in der Bewegung umkehren — wie „Done today". */
+.home-steps {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin: 0 -0.25rem;
+  transition: grid-template-rows 300ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms ease-out;
+}
+
+.home-steps.is-folded {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.home-steps__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.home-steps__list {
+  margin: 0.125rem 0 0;
+  border-top: 1px solid var(--color-line);
+  padding: 0.375rem 0 0;
+  list-style: none;
+}
+
+.home-step {
+  display: flex;
+  min-height: 2.125rem;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 0.5rem;
+  padding: 0 0.25rem;
+  transition: background-color 140ms ease-out;
+}
+
+.home-step:hover {
+  background: var(--color-fill);
+}
+
+.home-step__check {
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.125rem;
+}
+
+.home-step__title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  padding: 0.3rem 0;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-step.is-done .home-step__title {
+  color: var(--color-subtle);
+  text-decoration: line-through;
+}
+
+.home-step.is-done .home-step__check {
+  border-color: transparent;
+  color: #fff;
+}
+
+.home-step.is-done .home-step__check lucide-icon {
+  opacity: 1;
+}
+
+/* Der Schritt, an dem gerade gearbeitet wird. */
+.home-step.is-focus {
+  background: color-mix(in srgb, var(--color-highlight1) 12%, transparent);
+}
+
+.home-card.has-focus-step {
+  border-color: color-mix(in srgb, var(--color-highlight1) 45%, var(--color-line));
+}
+
+/* Erfassen starten: erscheint an der Zeile, auf die man zeigt. */
+.home-step__start {
+  position: relative;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--color-brand-2);
+  opacity: 0;
+  transition: opacity 120ms ease-out, background-color 140ms ease-out;
+}
+
+.home-step:hover .home-step__start,
+.home-step__start:focus-visible {
+  opacity: 1;
+}
+
+.home-step__start:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-highlight1) 14%, transparent);
+}
+
+.home-step__start:active:not(:disabled) {
+  scale: 0.92;
+}
+
+/* Ohne Zeiger gibt es kein Zeigen: das Startzeichen steht da, und die Zeilen
+   sind hoch genug für den Daumen. */
+@media (hover: none) {
+  .home-step {
+    min-height: 2.75rem;
+  }
+
+  .home-step__start {
+    width: 2.25rem;
+    height: 2.25rem;
+    opacity: 0.8;
+  }
+
+  .home-fold {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
 .home-empty {
   margin: 0.25rem 0 0;
   border-radius: 0.75rem;
@@ -488,6 +714,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .home-steps,
+  .home-fold__chevron,
+  .home-progress__fill,
   .home-done,
   .home-divider__chevron,
   .home-score__fill {
