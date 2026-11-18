@@ -1,0 +1,226 @@
+<!-- Home: der heutige Tag. Links als Liste, rechts als Uhr. -->
+<section class="home-view mx-auto w-full max-w-6xl px-3 min-[360px]:px-4 lg:px-8">
+
+  <div class="view-head home-head">
+    <div class="min-w-0">
+      <h1 class="display-title">
+        <span class="hidden sm:inline">{{ dateTitle() }}</span>
+        <span class="sm:hidden">{{ dateTitleShort() }}</span>
+      </h1>
+      <p class="view-sub">
+        @if (running()) {
+          Focusing in Flow
+        } @else if (openCount() > 0) {
+          {{ openCount() }} left for today
+        } @else if (score().done > 0) {
+          Everything for today is done
+        } @else {
+          Nothing planned for today yet
+        }
+      </p>
+    </div>
+
+    <!-- Die Bilanz des Tages: erledigt von allem, was heute dran war. -->
+    @if (score().total > 0 || usesFlow()) {
+      <div class="home-score" [attr.aria-label]="score().done + ' of ' + score().total + ' done today'">
+        <p class="home-score__figure">
+          <span class="home-score__big">{{ score().done }}</span>
+          <span class="home-score__of">of {{ score().total }} done</span>
+        </p>
+        <div class="home-score__bar" aria-hidden="true">
+          <span class="home-score__fill" [style.width.%]="score().percent"></span>
+        </div>
+        @if (usesFlow()) {
+          <p class="home-score__caption">{{ focusToday() }} in focus today</p>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="home-grid">
+
+    <!-- ---- Der Tag als Liste ---- -->
+    <section class="home-tasks" aria-labelledby="home-today-title">
+      <header class="home-section-head">
+        <h2 id="home-today-title" class="home-label">Today</h2>
+        @if (openCount() > 0) {
+          <span class="home-count">{{ openCount() }} open</span>
+        }
+      </header>
+
+      <input
+        #q
+        type="text"
+        class="home-add"
+        placeholder="Add a task for today…"
+        enterkeyhint="done"
+        aria-label="Add a task for today"
+        (keydown.enter)="quickAdd(q)"
+        (keydown.escape)="q.value = ''; q.blur()" />
+
+      <div class="home-list">
+        @if (running(); as todo) {
+          <ng-container *ngTemplateOutlet="card; context: { $implicit: todo, role: 'running' }" />
+        } @else if (upNext(); as todo) {
+          <ng-container *ngTemplateOutlet="card; context: { $implicit: todo, role: 'next' }" />
+        }
+
+        @for (todo of rest(); track todo.id) {
+          <ng-container *ngTemplateOutlet="card; context: { $implicit: todo, role: 'open' }" />
+        }
+
+        @if (!running() && openCount() === 0) {
+          <p class="home-empty">
+            @if (score().done > 0) {
+              Nothing left for today. Anything you add above lands here.
+            } @else {
+              Nothing planned for today. Add a task above, or plan it in the week.
+            }
+          </p>
+        }
+      </div>
+
+      <!-- Erledigt heute: einklappbar, damit es nicht mit dem Offenen um den
+           Blick konkurriert, aber da, wenn man nachsehen will. -->
+      @if (done().length > 0) {
+        <button type="button" class="home-divider"
+          [attr.aria-expanded]="!doneCollapsed()"
+          aria-controls="home-done-list"
+          (click)="toggleDoneList()">
+          <span class="home-divider__label">Done today</span>
+          <span class="home-count">{{ done().length }}</span>
+          <span class="home-divider__line" aria-hidden="true"></span>
+          <span class="home-divider__action">{{ doneCollapsed() ? 'Show' : 'Collapse' }}</span>
+          <lucide-icon [img]="ChevronIcon" class="home-divider__chevron h-4 w-4" [class.is-collapsed]="doneCollapsed()"></lucide-icon>
+        </button>
+
+        <div id="home-done-list" class="home-done" [class.is-collapsed]="doneCollapsed()" [attr.inert]="doneCollapsed() ? '' : null">
+          <div class="home-done__inner">
+            <div class="home-list">
+              @for (todo of done(); track todo.id) {
+                <ng-container *ngTemplateOutlet="card; context: { $implicit: todo, role: 'done' }" />
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- ---- Der Tag als Uhr ---- -->
+    <section class="home-timeline" aria-labelledby="home-timeline-title">
+      <header class="home-section-head">
+        <h2 id="home-timeline-title" class="home-label">Timeline</h2>
+        <span class="home-count">{{ usesFlow() ? 'Focus in Flow and what you finished' : 'What you finished' }}</span>
+      </header>
+
+      <div #scroller class="home-timeline__scroll">
+        <ol class="home-track" [style.height.px]="trackHeight()" aria-label="Today, hour by hour">
+          @for (hour of hours(); track hour.label) {
+            <li class="home-hour" [style.top.px]="hour.top" aria-hidden="true">
+              <span class="home-hour__label">{{ hour.label }}</span>
+            </li>
+          }
+
+          @for (block of placed(); track block.id) {
+            <li class="home-block"
+              [class.is-done]="block.kind === 'done'"
+              [class.is-running]="block.running"
+              [class.is-tall]="block.height >= 42"
+              [class]="blockColor(block)"
+              [style.top.px]="block.top"
+              [style.height.px]="block.height"
+              [style.left]="blockLeft(block)"
+              [style.width]="blockWidth(block)"
+              [attr.title]="blockTitle(block) + ', ' + blockTime(block)">
+              @if (block.kind === 'done') {
+                <lucide-icon [img]="CheckIcon" class="home-block__check" aria-hidden="true"></lucide-icon>
+              }
+              <span class="home-block__title">{{ blockTitle(block) }}</span>
+              <span class="home-block__time">{{ blockTime(block) }}</span>
+            </li>
+          }
+
+          <li class="home-now" [style.top.px]="nowTop()" aria-label="Now">
+            <span class="home-now__label">{{ nowLabel() }}</span>
+          </li>
+        </ol>
+
+        @if (placed().length === 0) {
+          <p class="home-timeline__empty">Your day fills in here as you finish tasks{{ usesFlow() ? ' and focus in Flow' : '' }}.</p>
+        }
+      </div>
+    </section>
+  </div>
+
+  <!-- Eine Karte, in allen drei Abschnitten dieselbe — und dieselbe wie in
+       der Woche (shared/_task-card.scss). Der Name für die View Transition
+       lässt sie beim Abhaken an ihren neuen Platz gleiten. Ein Klick führt
+       zur Aufgabe in der Liste. -->
+  <ng-template #card let-todo let-role="role">
+    <article
+      class="task-card home-card"
+      [class.is-done]="todo.completed"
+      [class.is-focus]="role === 'running'"
+      [style.view-transition-name]="'task-' + todo.id"
+      tabindex="0"
+      [attr.aria-label]="plainTitle(todo.title) + (role === 'running' ? ', running in Flow' : '') + (todo.completed ? ', done' : '') + '. Press Enter to open it in the list.'"
+      (click)="show(todo)"
+      (keydown.enter)="show(todo)">
+      <span class="task-card__edge" [class]="fillClass(todo)" aria-hidden="true"></span>
+
+      <p class="task-card__title" [attr.title]="plainTitle(todo.title)">
+        @if (badge(todo.title); as level) {
+          <app-token-chip class="mr-1 align-[-0.2em]" [token]="level" size="sm" />
+        }
+        <app-rich-text [text]="displayTitle(todo.title)" />
+      </p>
+
+      <div class="task-card__meta">
+        <button
+          type="button"
+          class="task-check"
+          [class]="todo.completed ? fillClass(todo) : ''"
+          (click)="$event.stopPropagation(); toggle(todo)"
+          (keydown.enter)="$event.stopPropagation()"
+          [attr.aria-label]="todo.completed ? 'Mark as active' : 'Mark as done'"
+          [attr.aria-pressed]="todo.completed">
+          <lucide-icon [img]="CheckIcon" class="h-3 w-3"></lucide-icon>
+        </button>
+
+        @if (folderOf(todo); as folder) {
+          <span class="task-chip">
+            <span class="task-chip__dot bg-current" [class]="dotClass(folder.color)" aria-hidden="true"></span>
+            <span class="truncate">{{ folder.name }}</span>
+            @if (folder.more > 0) {
+              <span class="text-subtle">+{{ folder.more }}</span>
+            }
+          </span>
+        }
+
+        @if (role === 'running') {
+          <span class="task-focus" [class.is-paused]="paused()" [attr.title]="paused() ? 'Paused in Flow' : 'Time left in Flow'">
+            @if (paused()) {
+              <lucide-icon [img]="PauseIcon" class="h-3 w-3"></lucide-icon>
+            } @else {
+              <span class="task-focus__dot" aria-hidden="true"></span>
+            }
+            <span class="tabular-nums">{{ clock() }}</span>
+          </span>
+        } @else if (role === 'next') {
+          <span class="home-tag">Up next</span>
+        }
+
+        @if (spent(todo); as time) {
+          <span class="home-spent" [attr.title]="'Focus on this today'">
+            <lucide-icon [img]="TimerIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
+            {{ time }}
+          </span>
+        }
+
+        @if (todo.repeat) {
+          <lucide-icon [img]="RepeatIcon" class="task-card__repeat" [attr.title]="'Repeats'"></lucide-icon>
+        }
+      </div>
+    </article>
+  </ng-template>
+</section>

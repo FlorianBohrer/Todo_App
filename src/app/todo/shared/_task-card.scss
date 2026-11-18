@@ -1,0 +1,202 @@
+/* ================================================================
+   Die Aufgabenkarte — in der Woche und auf Home dieselbe
+
+   Ordnerfarbe als Kante links, der Titel auf höchstens drei Zeilen, darunter
+   Haken, Ordner-Chip und was sonst zur Aufgabe gehört (Restzeit in Flow,
+   Wiederholung, Fokuszeit). Erledigt tritt sie zurück, läuft gerade ein
+   Block in Flow, ist sie in der Ansichtsfarbe gerahmt.
+
+   Per @use in die Stylesheets der Ansichten geholt, die sie zeigen; jede
+   bekommt die Regeln in ihrem eigenen Geltungsbereich.
+   ================================================================ */
+
+
+.task-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 0.625rem;
+  padding: 0.625rem 0.75rem 0.625rem 1rem;
+  background: var(--color-panel1);
+  box-shadow: 0 1px 2px rgb(var(--shadow) / calc(0.18 * var(--shadow-k)));
+  color: var(--color-text);
+  transition: border-color 140ms ease-out, opacity 160ms ease-out, box-shadow 140ms ease-out;
+}
+
+.task-card:hover {
+  border-color: var(--color-line-strong);
+}
+
+
+.task-card:focus-visible {
+  outline: 2px solid var(--color-highlight2);
+  outline-offset: 1px;
+}
+
+.task-card__edge {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+}
+
+/* Kartentext auf drei Zeilen. Ungekuerzt brach ein langer Satz auf sechs
+   Zeilen um, und ein Tag mit sechs Todos zeigte noch vier auf dem ganzen
+   Bildschirm. Der volle Text steht im Tooltip und in der Liste. */
+.task-card__title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.task-card__meta {
+  display: flex;
+  min-width: 0;
+  min-height: 1.375rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Der Haken: 20px gross, getroffen auf 36px. Offen ein Kreis mit leisem
+   Haken darin, abgehakt in der Ordnerfarbe gefüllt. */
+.task-check {
+  position: relative;
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  place-items: center;
+  border: 1.5px solid var(--color-line-strong);
+  border-radius: 999px;
+  color: var(--color-subtle);
+  transition: border-color 140ms ease-out, color 140ms ease-out, background-color 140ms ease-out;
+}
+
+.task-check::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+}
+
+.task-check lucide-icon {
+  opacity: 0.55;
+  transition: opacity 140ms ease-out;
+}
+
+.task-check:hover {
+  border-color: var(--color-muted);
+  color: var(--color-text);
+}
+
+.task-check:hover lucide-icon {
+  opacity: 1;
+}
+
+.task-card.is-done .task-check {
+  border-color: transparent;
+  color: #fff;
+}
+
+.task-card.is-done .task-check lucide-icon {
+  opacity: 1;
+}
+
+.task-chip {
+  display: inline-flex;
+  min-width: 0;
+  height: 1.375rem;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.task-chip__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  flex: none;
+  border-radius: 999px;
+}
+
+.task-card__repeat {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: none;
+  margin-left: auto;
+  color: var(--color-subtle);
+}
+
+/* Erledigt: zurückgenommen, durchgestrichen — es bleibt lesbar, was
+   geschafft ist, ohne mit dem Offenen um den Blick zu konkurrieren. */
+.task-card.is-done {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.task-card.is-done .task-card__title {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+/* Läuft gerade ein Block in Flow: die Karte in der Ansichtsfarbe gerahmt,
+   die Restzeit im Chip. */
+.task-card.is-focus {
+  border-color: color-mix(in srgb, var(--color-highlight1) 70%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-highlight1) 30%, transparent),
+    0 8px 22px -12px color-mix(in srgb, var(--color-highlight1) 55%, transparent);
+}
+
+.task-focus {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-brand-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.task-focus.is-paused {
+  color: var(--color-muted);
+}
+
+.task-focus__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--color-highlight1);
+  animation: task-focus-pulse 2s ease-in-out infinite;
+}
+
+@keyframes task-focus-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Der Haken antwortet beim Drücken, nicht erst beim Loslassen. */
+.task-check:active {
+  scale: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-focus__dot {
+    animation: none;
+  }
+}

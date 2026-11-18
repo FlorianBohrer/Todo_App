@@ -526,6 +526,16 @@
   --accent-600: #91385C;
 }
 
+/* Home: Lavendel — die Farbe des Fokus, seit es die Fokus-Ansicht gab. Home
+   zeigt, woran man gerade sitzt; dieselben Stufen wie damals gemessen. */
+[data-view='home'] {
+  --accent-200: #D8D3FE;
+  --accent-300: #BBB0FE;
+  --accent-400: #9C84FE;
+  --accent-500: #6F54CA;
+  --accent-600: #5B43A9;
+}
+
 /* Statistik: Blau — die Farbe der Zahlen, kühl neben dem Lavendel des Fokus. */
 [data-view='stats'] {
   --accent-200: #C0DCFF;
@@ -705,6 +715,14 @@
   --accent-400: #B84D64;
   --accent-500: #8E3A4D;
   --accent-600: #74303F;
+}
+
+[data-theme='light'][data-view='home'] {
+  --accent-200: #42279A;
+  --accent-300: #5B3FCB;
+  --accent-400: #7C63E6;
+  --accent-500: #5B3FCB;
+  --accent-600: #4A33AE;
 }
 
 [data-theme='light'][data-view='stats'] {
@@ -2155,4 +2173,23 @@ body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type=
   box-shadow:
     0 0 0 0.5px rgb(var(--ink) / 0.08),
     0 1px 3px rgb(var(--shadow) / 0.12);
+}
+
+/* ---------------------------------------------------------------------------
+   Home: eine abgehakte Karte gleitet an ihren neuen Platz
+   ---------------------------------------------------------------------------
+
+   home-view.ts startet beim Abhaken eine View Transition und setzt dafür
+   home-moving am <html>. Nur die Karten bewegen sich (jede trägt ihren
+   eigenen Namen); der Rest der Seite wechselt ohne Überblendung, sonst
+   flackerten Zahlen und Zeitleiste kurz durch. Kritisch gedämpft, ohne
+   Nachschwingen: ein Haken ist ein Tipp, kein Wurf. */
+html.home-moving::view-transition-old(root),
+html.home-moving::view-transition-new(root) {
+  animation: none;
+}
+
+html.home-moving::view-transition-group(*) {
+  animation-duration: 380ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
