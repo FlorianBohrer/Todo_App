@@ -9,7 +9,7 @@
       </h1>
       <p class="view-sub">
         @if (running()) {
-          Focusing in Flow
+          Working on it since {{ runningSince() }}
         } @else if (openCount() > 0) {
           {{ openCount() }} left for today
         } @else if (score().done > 0) {
@@ -198,7 +198,7 @@
         }
 
         @if (role === 'running') {
-          <span class="task-focus" [class.is-paused]="paused()" [attr.title]="paused() ? 'Paused in Flow' : 'Time left in Flow'">
+          <span class="task-focus" [class.is-paused]="paused()" [attr.title]="paused() ? 'Paused' : 'Time spent on it so far'">
             @if (paused()) {
               <lucide-icon [img]="PauseIcon" class="h-3 w-3"></lucide-icon>
             } @else {
@@ -208,6 +208,13 @@
           </span>
         } @else if (role === 'next') {
           <span class="home-tag">Up next</span>
+          <!-- Mit einem Tipp anfangen: die Uhr oben startet auf dieser Aufgabe. -->
+          <button type="button" class="home-start" [disabled]="busy()"
+            (click)="start(todo, $event)" (keydown.enter)="$event.stopPropagation()"
+            [attr.aria-label]="'Start tracking ' + plainTitle(todo.title)">
+            <lucide-icon [img]="PlayIcon" class="h-3 w-3" aria-hidden="true"></lucide-icon>
+            Start
+          </button>
         }
 
         @if (spent(todo); as time) {

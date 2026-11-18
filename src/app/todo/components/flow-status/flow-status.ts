@@ -7,125 +7,109 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { OverlayModule } from '@angular/cdk/overlay';
+import { LucideAngularModule, Pause, Play } from 'lucide-angular';
 
-import { FocusSessionService } from '../../services/focus-session.service';
+import { FocusSessionService, elapsedNow, formatClock } from '../../services/focus-session.service';
 import { TodoService } from '../../services/todo';
 import { splitTitle } from '../../shared/title-token';
 import { firstLineOf, stripBold } from '../../shared/rich-title';
+import { TrackPicker } from '../track-picker/track-picker';
 
 /**
- * Was in Flow gerade läuft — klein, in der Leiste.
+ * Die Leiste der Zeiterfassung, oben rechts.
  *
- * Die Webseite hat keinen Timer; der lebt in Flow. Aber wer hier vorbeischaut,
- * soll sehen, dass dort gerade an etwas gearbeitet wird, und woran: ein Punkt,
- * die Restzeit, der Titel. Ein Klick zeigt das Todo in der Liste.
+ * Läuft etwas, steht dort, woran gearbeitet wird und seit wann: die Uhr zählt
+ * hoch, ohne Pausen, so wie die Zeit auch gespeichert wird. Ein Knopf
+ * pausiert direkt in der Leiste; ein Klick auf den Rest öffnet das Fenster
+ * mit Stoppen, Erledigen und dem Wechsel zu einer anderen Aufgabe
+ * (track-picker). Läuft nichts, steht dort „Track".
  *
- * Läuft nichts, ist nichts zu sehen — auch kein „Flow: idle". Eine Anzeige,
- * die meistens „nichts" sagt, lernt man zu übersehen.
+ * Die Zeit liegt auf dem Server, wie die Blöcke aus Flow — es gibt immer nur
+ * eine laufende Erfassung, egal von wo sie gestartet wurde.
  */
 @Component({
   selector: 'app-flow-status',
+  imports: [OverlayModule, LucideAngularModule, TrackPicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './flow-status.html',
-  styles: `
-    .flow-dot {
-      width: 0.5rem;
-      height: 0.5rem;
-      border-radius: 9999px;
-      background: var(--color-ok);
-      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ok) 60%, transparent);
-      animation: flow-breathe 2.4s ease-in-out infinite;
-    }
-
-    /* Pausiert: der Punkt steht, und er ist ein Ring statt einer Fläche —
-       die Form sagt es, nicht nur die Farbe. */
-    .flow-dot.is-paused {
-      background: transparent;
-      box-shadow: inset 0 0 0 1.5px var(--color-muted);
-      animation: none;
-    }
-
-    @keyframes flow-breathe {
-      50% {
-        box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-ok) 0%, transparent);
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .flow-dot {
-        animation: none;
-      }
-    }
-  `,
+  styleUrl: './flow-status.scss',
 })
 export class FlowStatus {
   private readonly focus = inject(FocusSessionService);
   private readonly todoService = inject(TodoService);
 
+  protected readonly PlayIcon = Play;
+  protected readonly PauseIcon = Pause;
+
   protected readonly active = this.focus.active;
+  protected readonly busy = this.focus.busy;
+  protected readonly open = signal(false);
 
-  /** Tickt nur, solange ein Block läuft. */
+  // ---- Die Uhr ----
+  // Tickt nur, solange etwas läuft.
   private readonly now = signal(Date.now());
-  private ticker: ReturnType<typeof setInterval> | null = null;
-  private refreshedAtZero = false;
-
-  protected readonly secondsLeft = computed(() => {
-    const active = this.active();
-    if (!active) return 0;
-    if (active.endsAt === null) return active.remainingSeconds;
-    return Math.max(0, Math.ceil((active.endsAt - this.now()) / 1000));
-  });
-
   protected readonly clock = computed(() => {
-    const total = this.secondsLeft();
-    const minutes = Math.floor(total / 60);
-    const seconds = total % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    const active = this.active();
+    return active ? formatClock(elapsedNow(active, this.now())) : '';
   });
 
-  /** Der Titel ohne Präfix — wie überall. */
   protected readonly title = computed(() => {
     const active = this.active();
-    return active ? stripBold(firstLineOf(splitTitle(active.title).text)) : '';
+    if (!active) return '';
+    const todo = this.todoService.todoById(active.todoId);
+    return stripBold(firstLineOf(splitTitle(todo?.title ?? active.title).text));
   });
 
   protected readonly label = computed(() => {
     const active = this.active();
-    if (!active) return '';
-    const state = active.paused ? 'paused' : `${this.clock()} left`;
-    return `Focusing in Flow on “${this.title()}”, ${state}. Show it in the list.`;
+    if (!active) return 'Track time on a task';
+    const state = active.paused ? 'paused at' : 'running for';
+    return `Working on “${this.title()}”, ${state} ${this.clock()}. Open to switch, pause or stop.`;
   });
 
   constructor() {
+    let ticker: ReturnType<typeof setInterval> | null = null;
     effect(() => {
       const active = this.active();
       const running = active !== null && !active.paused;
-
-      if (running && this.ticker === null) {
-        this.refreshedAtZero = false;
+      if (running && ticker === null) {
         this.now.set(Date.now());
-        this.ticker = setInterval(() => {
-          this.now.set(Date.now());
-          // Bei null nachfragen: der Block ist in Flow vermutlich eben zu Ende
-          // gegangen, und die nächste Minute zu warten sähe aus wie ein Hänger.
-          if (this.secondsLeft() === 0 && !this.refreshedAtZero) {
-            this.refreshedAtZero = true;
-            void this.focus.refresh(true);
-          }
-        }, 1000);
-      } else if (!running && this.ticker !== null) {
-        clearInterval(this.ticker);
-        this.ticker = null;
+        ticker = setInterval(() => this.now.set(Date.now()), 1000);
+      } else if (!running && ticker !== null) {
+        clearInterval(ticker);
+        ticker = null;
       }
     });
 
+    // Wer die erfasste Aufgabe abhakt, ist mit ihr fertig: die Erfassung
+    // endet mit. Nur bei einer Erfassung von der Webseite — einen Block in
+    // Flow zu beenden hiesse, Flow den Boden unter seiner eigenen Uhr
+    // wegzuziehen; dort endet er, wie Flow es vorsieht.
+    const completions = this.todoService.completions.subscribe((todo) => {
+      const active = this.active();
+      if (active?.tracked && active.todoId === todo.id) void this.focus.stop();
+    });
+
     inject(DestroyRef).onDestroy(() => {
-      if (this.ticker !== null) clearInterval(this.ticker);
+      if (ticker !== null) clearInterval(ticker);
+      completions.unsubscribe();
     });
   }
 
-  protected show(): void {
-    const todo = this.todoService.todoById(this.active()?.todoId);
-    if (todo) this.todoService.reveal(todo);
+  toggle(): void {
+    this.open.set(!this.open());
+  }
+
+  close(): void {
+    this.open.set(false);
+  }
+
+  /** Pause und weiter gleich in der Leiste, ohne das Fenster zu öffnen. */
+  pauseOrResume(event: Event): void {
+    event.stopPropagation();
+    const active = this.active();
+    if (!active?.tracked) return;
+    void (active.paused ? this.focus.resume() : this.focus.pause());
   }
 }

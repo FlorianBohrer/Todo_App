@@ -1,3 +1,4 @@
+import { OPEN_ENDED_SECONDS } from './tracking';
 /**
  * Die Rechnungen der Statistik — ohne DOM und ohne Netz, damit sie sich
  * direkt prüfen lassen.
@@ -68,12 +69,23 @@ function clock(date: Date): string {
 }
 
 /**
- * Wie viel eine Sitzung in Flow zählt: nur, wenn sie bis zum Ende gelaufen
- * ist, und dann ihre geplante Länge in ganzen Minuten (Flow: finish() in
- * useFlowTimer). Eine vorher gestoppte Sitzung zählt nicht. null = zählt nicht.
+ * Wie viel eine Sitzung zählt.
+ *
+ * Ein Block aus Flow zählt wie in Flow: nur, wenn er bis zum Ende gelaufen
+ * ist, und dann seine geplante Länge in ganzen Minuten (Flow: finish() in
+ * useFlowTimer). Ein vorher gestoppter Block zählt nicht.
+ *
+ * Eine offene Zeiterfassung von der Webseite (OPEN_ENDED_SECONDS) hat keine
+ * geplante Länge, die sie erreichen könnte: sie zählt mit ihrer echten
+ * Laufzeit, sobald sie beendet ist. null = zählt nicht.
  */
 export function flowMinutes(session: SessionLike): number | null {
-  if (!session.completed || !session.endedAt) return null;
+  if (!session.endedAt) return null;
+  if ((session.plannedSeconds ?? 0) >= OPEN_ENDED_SECONDS) {
+    const minutes = Math.round(session.elapsedSeconds / 60);
+    return minutes > 0 ? minutes : null;
+  }
+  if (!session.completed) return null;
   const minutes = Math.round((session.plannedSeconds ?? session.elapsedSeconds) / 60);
   return minutes > 0 ? minutes : null;
 }

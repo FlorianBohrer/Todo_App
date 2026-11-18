@@ -1,0 +1,120 @@
+<!-- Das Fenster der Zeiterfassung: was läuft, mit Pause, Stopp und Fertig,
+     darunter die Auswahl. Erst geladen, wenn man es öffnet (flow-status). -->
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="origin()"
+  [cdkConnectedOverlayOpen]="true"
+  [cdkConnectedOverlayPositions]="positions"
+  [cdkConnectedOverlayViewportMargin]="12"
+  [cdkConnectedOverlayPush]="!sheet"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  [cdkConnectedOverlayBackdropClass]="sheet ? 'action-sheet-backdrop' : 'cdk-overlay-transparent-backdrop'"
+  [cdkConnectedOverlayPanelClass]="sheet ? 'action-sheet-pane' : ''"
+  (attach)="onAttached()"
+  (backdropClick)="close()"
+  (detach)="close()"
+  (overlayKeydown)="$event.key === 'Escape' && close()">
+  <div class="popover track-panel" [class.action-sheet]="sheet" role="dialog" aria-label="Time tracking">
+    @if (sheet) {
+      <span class="action-sheet-grabber" aria-hidden="true"></span>
+    }
+
+    <!-- Was gerade läuft, mit den Handgriffen dazu. -->
+    @if (active(); as running) {
+      <section class="track-now" aria-label="Now">
+        <div class="track-now__head">
+          <span class="track-dot" [class.is-paused]="running.paused" aria-hidden="true"></span>
+          <span class="track-now__state">{{ running.paused ? 'Paused' : (running.tracked ? 'Tracking' : 'Focusing in Flow') }}</span>
+          <span class="track-now__clock">{{ clock() }}</span>
+        </div>
+        <button type="button" class="track-now__title" (click)="show()" title="Show it in the list">{{ title() }}</button>
+        <p class="track-now__meta">
+          Since {{ since() }}
+          @if (folderName(activeTodo()); as folder) {
+            <span class="track-now__sep" aria-hidden="true">·</span>{{ folder }}
+          }
+        </p>
+
+        @if (running.tracked) {
+          <div class="track-now__actions">
+            <button type="button" class="track-action" [disabled]="busy()" (click)="pauseOrResume()">
+              <lucide-icon [img]="running.paused ? PlayIcon : PauseIcon" class="h-3.5 w-3.5"></lucide-icon>
+              {{ running.paused ? 'Resume' : 'Pause' }}
+            </button>
+            <button type="button" class="track-action" [disabled]="busy()" (click)="stop()">
+              <lucide-icon [img]="StopIcon" class="h-3 w-3"></lucide-icon>
+              Stop
+            </button>
+            <button type="button" class="track-action track-action--done" [disabled]="busy()" (click)="finish()"
+              title="Stop tracking and check the task off">
+              <lucide-icon [img]="DoneIcon" class="h-3.5 w-3.5"></lucide-icon>
+              Done
+            </button>
+          </div>
+        } @else {
+          <p class="track-now__hint">This block runs in Flow; pause and stop it there. Picking another task below ends it.</p>
+        }
+      </section>
+    }
+
+    <!-- Wählen: tippen sucht, Pfeile wandern, Enter startet. -->
+    <div class="track-search">
+      <lucide-icon [img]="SearchIcon" class="track-search__icon h-4 w-4" aria-hidden="true"></lucide-icon>
+      <input
+        #search
+        type="text"
+        class="track-search__input"
+        [placeholder]="active() ? 'Switch to another task…' : 'What are you working on?'"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+        (keydown)="onSearchKey($event)"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="track-options"
+        [attr.aria-expanded]="rows().length > 0"
+        [attr.aria-activedescendant]="activeRowId()"
+        aria-label="Search a task to track"
+        autocomplete="off"
+        spellcheck="false"
+        enterkeyhint="go" />
+    </div>
+
+    <div id="track-options" class="track-options" role="listbox" aria-label="Tasks">
+      @for (row of rows(); track row.id; let i = $index) {
+        @if (row.section) {
+          <p class="track-options__section" role="presentation">{{ row.section }}</p>
+        }
+        <button
+          type="button"
+          class="track-option"
+          role="option"
+          [id]="row.id"
+          [class.is-highlighted]="i === index()"
+          [attr.aria-selected]="i === index()"
+          [disabled]="busy()"
+          (mouseenter)="highlighted.set(i)"
+          (click)="choose(row)">
+          @if (row.kind === 'todo') {
+            <span class="track-option__dot bg-current" [class]="dotClass(row.todo)" aria-hidden="true"></span>
+            <span class="track-option__label">{{ row.label }}</span>
+            @if (row.todo!.id === upNextId()) {
+              <span class="track-option__tag">Up next</span>
+            } @else if (spent(row.todo); as time) {
+              <span class="track-option__meta">{{ time }}</span>
+            }
+          } @else {
+            <lucide-icon [img]="AddIcon" class="track-option__add h-3.5 w-3.5" aria-hidden="true"></lucide-icon>
+            <span class="track-option__label">Add “{{ row.label }}” for today and track it</span>
+          }
+          <lucide-icon [img]="PlayIcon" class="track-option__play h-3 w-3" aria-hidden="true"></lucide-icon>
+        </button>
+      } @empty {
+        <p class="track-options__empty">No open tasks yet. Type one to add it and start tracking.</p>
+      }
+    </div>
+
+    @if (!sheet) {
+      <p class="track-panel__keys" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> choose · <kbd>Enter</kbd> start · <kbd>Esc</kbd> close</p>
+    }
+  </div>
+</ng-template>
