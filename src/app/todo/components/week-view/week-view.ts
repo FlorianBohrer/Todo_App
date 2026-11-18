@@ -35,7 +35,7 @@ import {
 } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { LabelService } from '../../services/label.service';
-import { FocusSessionService } from '../../services/focus-session.service';
+import { FocusSessionService, elapsedNow, formatClock } from '../../services/focus-session.service';
 import { ToastService } from '../../../shared/toast.service';
 import { Todo } from '../../model/todo.model';
 import {
@@ -274,20 +274,16 @@ export class WeekView {
     this.hideDone() ? this.unscheduled().filter((t) => !t.completed) : this.unscheduled(),
   );
 
-  // ---- Was in Flow gerade läuft ----
-  // Die Karte, an der man sitzt, zeigt die Restzeit. Getickt wird nur, solange
+  // ---- Woran gerade gearbeitet wird ----
+  // Die Karte, an der man sitzt, zeigt, wie lange schon. Getickt wird nur, solange
   // ein Block läuft — wie im Kopf der Seite (flow-status).
   private readonly now = signal(Date.now());
   protected readonly focusTodoId = computed(() => this.focus.active()?.todoId ?? null);
   protected readonly focusPaused = computed(() => this.focus.active()?.paused ?? false);
+  /** Wie lange schon daran gearbeitet wird, hochzählend wie in der Leiste oben. */
   protected readonly focusClock = computed(() => {
     const active = this.focus.active();
-    if (!active) return '';
-    const total =
-      active.endsAt === null
-        ? active.remainingSeconds
-        : Math.max(0, Math.ceil((active.endsAt - this.now()) / 1000));
-    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    return active ? formatClock(elapsedNow(active, this.now())) : '';
   });
 
   // ---- Heute im Blick behalten ----

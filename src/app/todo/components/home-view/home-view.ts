@@ -13,13 +13,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { LucideAngularModule, Check, ChevronDown, Pause, Repeat, Timer } from 'lucide-angular';
+import { LucideAngularModule, Check, ChevronDown, Pause, Play, Repeat, Timer } from 'lucide-angular';
 
 import { TodoService } from '../../services/todo';
 import { LabelService } from '../../services/label.service';
 import {
   FocusSessionService,
   FocusSessionRecord,
+  elapsedNow,
+  formatClock,
   formatFocus,
 } from '../../services/focus-session.service';
 import { Todo } from '../../model/todo.model';
@@ -88,6 +90,7 @@ export class HomeView {
   protected readonly CheckIcon = Check;
   protected readonly ChevronIcon = ChevronDown;
   protected readonly PauseIcon = Pause;
+  protected readonly PlayIcon = Play;
   protected readonly RepeatIcon = Repeat;
   protected readonly TimerIcon = Timer;
 
@@ -114,6 +117,10 @@ export class HomeView {
     return todo && !todo.completed ? todo : null;
   });
   protected readonly paused = computed(() => this.focus.active()?.paused ?? false);
+  protected readonly runningSince = computed(() => {
+    const active = this.focus.active();
+    return active ? clockTime(new Date(active.startedAt)) : '';
+  });
 
   /**
    * Läuft nichts, steht die wichtigste offene Aufgabe für heute oben — nach
@@ -137,15 +144,13 @@ export class HomeView {
     return { done, total, percent: total === 0 ? 0 : Math.round((done / total) * 100) };
   });
 
+  /** Wie lange schon an der aktiven Aufgabe gearbeitet wird, hochzählend. */
   protected readonly clock = computed(() => {
     const active = this.focus.active();
-    if (!active) return '';
-    const total =
-      active.endsAt === null
-        ? active.remainingSeconds
-        : Math.max(0, Math.ceil((active.endsAt - this.now()) / 1000));
-    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    return active ? formatClock(elapsedNow(active, this.now())) : '';
   });
+
+  protected readonly busy = this.focus.busy;
 
   // ---- Fokus aus Flow ----
   private readonly sessions = signal<FocusSessionRecord[]>([]);
@@ -302,6 +307,15 @@ export class HomeView {
       });
     });
     transition.finished.finally(() => root.classList.remove('home-moving'));
+  }
+
+  /**
+   * Zeit auf die vorgeschlagene Aufgabe erfassen — ein Tipp, statt sie oben
+   * erst zu suchen.
+   */
+  start(todo: Todo, event: Event): void {
+    event.stopPropagation();
+    void this.focus.track(todo.id);
   }
 
   /** Zur Aufgabe in der Liste, wo sie sich bearbeiten lässt. */

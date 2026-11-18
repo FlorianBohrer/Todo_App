@@ -700,26 +700,31 @@ toggleFavorite(id: string) {
      * sofort aus dem gefilterten Blick.
      */
     categoryId?: string | null,
-  ) {
+  ): Promise<string | null> {
     const t = title.trim();
-    if (t === '') return;
-    this.http
-      .post<TodoDto>(this.apiUrl, {
-        title: t,
-        categoryId: categoryId === undefined ? this.labelService.activeLabelId() : categoryId,
-        scheduledDate,                                  // Woche: direkt auf einen Tag
-      })
-      .subscribe({
-        next: (dto) => {
-          this.todos.update(items => [...items, this.toTodo(dto)]);
-          this.placeNew(dto.id, dto.title, parentId, sectionId);
-        },
-        error: (err) => {
-          console.error('Todo anlegen fehlgeschlagen', err);
-          this.toast.error('Could not create todo');
-        },
-      });
-
+    if (t === '') return Promise.resolve(null);
+    // Die neue ID als Ergebnis, für wen sie braucht (die Zeiterfassung legt
+    // an und erfasst in einem Zug). Alle anderen rufen einfach auf.
+    return new Promise<string | null>((resolve) => {
+      this.http
+        .post<TodoDto>(this.apiUrl, {
+          title: t,
+          categoryId: categoryId === undefined ? this.labelService.activeLabelId() : categoryId,
+          scheduledDate,                                  // Woche: direkt auf einen Tag
+        })
+        .subscribe({
+          next: (dto) => {
+            this.todos.update(items => [...items, this.toTodo(dto)]);
+            this.placeNew(dto.id, dto.title, parentId, sectionId);
+            resolve(dto.id);
+          },
+          error: (err) => {
+            console.error('Todo anlegen fehlgeschlagen', err);
+            this.toast.error('Could not create todo');
+            resolve(null);
+          },
+        });
+    });
   }
   /**
    * Ein Todo aus einem Plan heraus anlegen.
