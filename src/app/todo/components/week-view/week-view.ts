@@ -1,7 +1,11 @@
 import {ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  Directive,
+  Injector,
   ElementRef,
   HostListener,
+  NgZone,
   afterNextRender,
   computed,
   effect,
@@ -9,20 +13,29 @@ import {ChangeDetectionStrategy,
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { CdkDropListGroup, CdkDropList, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { CdkScrollable } from '@angular/cdk/scrolling';
 import { DatePicker } from '../date-picker/date-picker';
-import { HoldToDrag, TODO_DRAG_START_DELAY } from '../../../shared/hold-to-drag';
+import { BOARD_DRAG_START_DELAY, HoldToDrag } from '../../../shared/hold-to-drag';
 import {
   LucideAngularModule,
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
   CalendarClock,
+  Check,
+  Eye,
+  EyeOff,
+  ListFilter,
+  Pause,
   Repeat,
+  X,
 } from 'lucide-angular';
 import { TodoService } from '../../services/todo';
 import { LabelService } from '../../services/label.service';
+import { FocusSessionService } from '../../services/focus-session.service';
 import { ToastService } from '../../../shared/toast.service';
 import { Todo } from '../../model/todo.model';
 import {
@@ -30,6 +43,7 @@ import {
   buildWeek,
   fromISODate,
   isoWeekNumber,
+  monthLabel,
   shiftISODate,
   todayISO,
   weekRangeLabel,
@@ -45,25 +59,54 @@ import { folderColorClass } from '../../shared/folder-color';
 
 /** Ein Wochentag mit allem, was seine Spalte zeigt — in einem Rutsch gerechnet. */
 export interface DayColumn extends WeekDay {
+  /** Was die Spalte zeigt: ohne Erledigtes, wenn es ausgeblendet ist. */
   todos: Todo[];
   done: number;
   total: number;
-  percent: number;
   /** Offene Aufgaben an einem Tag, der schon vorbei ist. */
   overdue: number;
+}
+
+/**
+ * Reicht den Injector einer Kartenliste an die Karten-Vorlage weiter.
+ *
+ * Die Karte steht einmal als ng-template und wird in den Tagen und im
+ * Ungeplanten eingesetzt. Ein eingesetztes Template sucht seine Abhängigkeiten
+ * aber dort, wo es DEKLARIERT ist, nicht wo es steht — cdkDrag fände so keine
+ * Liste über sich und zöge frei über die Seite statt von Tag zu Tag. Mit dem
+ * Injector der Liste, in der die Karte gerade steht, findet es sie.
+ */
+@Directive({ selector: '[appListInjector]', exportAs: 'listInjector' })
+export class ListInjector {
+  readonly injector = inject(Injector);
 }
 
 /** Schlüssel für ungeplante Todos im Tages-Index (null taugt nicht als Map-Key-Doku). */
 const UNSCHEDULED = '';
 
+/** Ob Erledigtes in der Woche zu sehen ist — eine Vorliebe, die bleiben soll. */
+const HIDE_DONE_KEY = 'week.hideDone';
+
+function readHideDone(): boolean {
+  try {
+    return localStorage.getItem(HIDE_DONE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+
 @Component({
   selector: 'app-week-view',
   imports: [
+    ListInjector,
+    NgTemplateOutlet,
     RichText,
     LucideAngularModule,
     CdkDropListGroup,
     CdkDropList,
     CdkDrag,
+    CdkScrollable,
     HoldToDrag,
     TokenChip,
     OverlayModule,
@@ -76,16 +119,28 @@ const UNSCHEDULED = '';
 export class WeekView {
   private readonly todoService = inject(TodoService);
 
-  /** Zwei Sekunden halten, dann verschieben — wie in der Liste (hold-to-drag.ts). */
-  protected readonly dragStartDelay = TODO_DRAG_START_DELAY;
+  /**
+   * Mit der Maus sofort, mit dem Finger nach kurzem Drücken. Die Liste wartet
+   * zwei Sekunden, damit beim Lesen nichts verrutscht; in der Woche ist
+   * Verschieben der Zweck (hold-to-drag.ts).
+   */
+  protected readonly dragStartDelay = BOARD_DRAG_START_DELAY;
   private readonly toast = inject(ToastService);
   protected readonly labelService = inject(LabelService);
+  private readonly focus = inject(FocusSessionService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly PrevIcon = ChevronLeft;
   protected readonly RepeatIcon = Repeat;
   protected readonly NextIcon = ChevronRight;
   protected readonly RollOverIcon = ChevronsRight;
   protected readonly OverdueIcon = CalendarClock;
+  protected readonly CheckIcon = Check;
+  protected readonly ShowIcon = Eye;
+  protected readonly HideIcon = EyeOff;
+  protected readonly FilterIcon = ListFilter;
+  protected readonly PauseIcon = Pause;
+  protected readonly ClearIcon = X;
 
   private readonly weekOffset = signal(0);
 
@@ -93,6 +148,46 @@ export class WeekView {
   protected readonly rangeLabel = computed(() => weekRangeLabel(this.week()));
   protected readonly weekNumber = computed(() => isoWeekNumber(this.week()[0].date));
   protected readonly isCurrentWeek = computed(() => this.weekOffset() === 0);
+  protected readonly month = computed(() => {
+    const week = this.week();
+    return monthLabel(week[0].date, week[6].date);
+  });
+  protected readonly monthShort = computed(() => {
+    const week = this.week();
+    return monthLabel(week[0].date, week[6].date, true);
+  });
+
+  // ---- Filter und Ausblenden ----
+
+  /** Ein Ordner, auf den die ganze Woche samt Ungeplantem eingeschränkt ist. null = alle. */
+  protected readonly folderFilter = signal<string | null>(null);
+  protected readonly filterLabel = computed(() => this.labelService.labelById(this.folderFilter()));
+  protected readonly filterOpen = signal(false);
+
+  /** Erledigtes ausblenden: was der Tag noch verlangt, ohne das Geschaffte daneben. */
+  protected readonly hideDone = signal(readHideDone());
+
+  toggleHideDone(): void {
+    const next = !this.hideDone();
+    this.hideDone.set(next);
+    try {
+      localStorage.setItem(HIDE_DONE_KEY, String(next));
+    } catch {
+      /* privates Fenster: dann eben nur für diese Sitzung */
+    }
+  }
+
+  setFolderFilter(id: string | null): void {
+    this.folderFilter.set(id);
+    this.filterOpen.set(false);
+  }
+
+  /** Die Todos, über die die Woche spricht: alle, oder die des gefilterten Ordners. */
+  private readonly inScope = computed(() => {
+    const folder = this.folderFilter();
+    const all = this.todoService.allTodos();
+    return folder === null ? all : all.filter((t) => t.labelIds.includes(folder));
+  });
 
   /**
    * Todos einmal nach Tag einsortieren, statt pro Spalte die ganze Liste zu
@@ -101,7 +196,7 @@ export class WeekView {
    */
   private readonly byDay = computed(() => {
     const index = new Map<string, Todo[]>();
-    for (const todo of this.todoService.allTodos()) {
+    for (const todo of this.inScope()) {
       const key = todo.scheduledDate ?? UNSCHEDULED;
       const bucket = index.get(key);
       if (bucket) bucket.push(todo);
@@ -114,22 +209,27 @@ export class WeekView {
     return index;
   });
 
-  /** Die sieben Spalten samt Zählern — das Template rechnet nichts mehr. */
-  protected readonly days = computed<DayColumn[]>(() =>
-    this.week().map((day) => {
-      const todos = this.byDay().get(day.iso) ?? [];
-      const done = todos.filter((t) => t.completed).length;
-      const total = todos.length;
+  /**
+   * Die sieben Spalten samt Zählern — das Template rechnet nichts mehr.
+   *
+   * Gezählt wird immer alles, auch wenn Erledigtes ausgeblendet ist: „2/6"
+   * soll sagen, wie weit der Tag ist, nicht, wie viel gerade zu sehen ist.
+   */
+  protected readonly days = computed<DayColumn[]>(() => {
+    const hide = this.hideDone();
+    return this.week().map((day) => {
+      const all = this.byDay().get(day.iso) ?? [];
+      const done = all.filter((t) => t.completed).length;
+      const total = all.length;
       return {
         ...day,
-        todos,
+        todos: hide ? all.filter((t) => !t.completed) : all,
         done,
         total,
-        percent: total === 0 ? 0 : Math.round((done / total) * 100),
         overdue: day.isPast ? total - done : 0,
       };
-    }),
-  );
+    });
+  });
 
   /** Wochenbilanz für den Kopf: erledigt von geplant. */
   protected readonly weekProgress = computed(() => {
@@ -139,7 +239,7 @@ export class WeekView {
       done += day.done;
       total += day.total;
     }
-    return { done, total, percent: total === 0 ? 0 : Math.round((done / total) * 100) };
+    return { done, total };
   });
 
   /**
@@ -154,37 +254,41 @@ export class WeekView {
   /** Offene Aufgaben, deren Tag vorbei ist — über die ganze Zeit, nicht nur diese Woche. */
   protected readonly overdue = computed(() => {
     const today = todayISO();
-    return this.todoService
-      .allTodos()
-      .filter((t) => !t.completed && t.scheduledDate !== null && t.scheduledDate < today);
+    return this.inScope().filter(
+      (t) => !t.completed && t.scheduledDate !== null && t.scheduledDate < today,
+    );
   });
 
-  // ---- Backlog (ungeplante Todos) mit eigenen Filtern ----
+  // ---- Ungeplantes ----
+  // Dieselben Regeln wie die Tage: der Ordnerfilter oben gilt, das Auge auch.
+  // Vorher hatte der Bereich eigene Schalter (All/Active, Ordner-Chips), die
+  // nur hier wirkten — zwei Filter auf einer Seite, die sich nicht kannten.
   protected readonly labels = this.labelService.labels;
-  protected readonly backlogStatus = signal<'all' | 'active'>('all');
-  /** null = alle Kategorien. */
-  protected readonly backlogCategory = signal<string | null>(null);
 
   private readonly unscheduled = computed(() => this.byDay().get(UNSCHEDULED) ?? []);
 
-  /** Gibt es überhaupt ungeplante Todos (vor dem Filtern)? */
+  /** Gibt es überhaupt Ungeplantes (vor dem Ausblenden)? */
   protected readonly hasUnscheduled = computed(() => this.unscheduled().length > 0);
 
-  /** Gefilterter Backlog: Status + Kategorie. */
-  protected readonly backlog = computed(() => {
-    let items = this.unscheduled();
-    if (this.backlogStatus() === 'active') {
-      items = items.filter((t) => !t.completed);
-    }
-    const cat = this.backlogCategory();
-    if (cat !== null) {
-      items = items.filter((t) => t.labelIds.includes(cat));
-    }
-    return items;
-  });
+  protected readonly backlog = computed(() =>
+    this.hideDone() ? this.unscheduled().filter((t) => !t.completed) : this.unscheduled(),
+  );
 
-  setBacklogStatus(status: 'all' | 'active') { this.backlogStatus.set(status); }
-  setBacklogCategory(id: string | null) { this.backlogCategory.set(id); }
+  // ---- Was in Flow gerade läuft ----
+  // Die Karte, an der man sitzt, zeigt die Restzeit. Getickt wird nur, solange
+  // ein Block läuft — wie im Kopf der Seite (flow-status).
+  private readonly now = signal(Date.now());
+  protected readonly focusTodoId = computed(() => this.focus.active()?.todoId ?? null);
+  protected readonly focusPaused = computed(() => this.focus.active()?.paused ?? false);
+  protected readonly focusClock = computed(() => {
+    const active = this.focus.active();
+    if (!active) return '';
+    const total =
+      active.endsAt === null
+        ? active.remainingSeconds
+        : Math.max(0, Math.ceil((active.endsAt - this.now()) / 1000));
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  });
 
   // ---- Heute im Blick behalten ----
   // Sieben Spalten passen auf kein Telefon; der Streifen scrollt waagerecht.
@@ -192,7 +296,26 @@ export class WeekView {
   private readonly strip = viewChild<ElementRef<HTMLElement>>('strip');
 
   constructor() {
-    afterNextRender(() => this.scrollTodayIntoView());
+    afterNextRender(() => {
+      this.scrollTodayIntoView();
+      this.watchStripEdges();
+    });
+
+    let ticker: ReturnType<typeof setInterval> | null = null;
+    effect(() => {
+      const active = this.focus.active();
+      const running = active !== null && !active.paused;
+      if (running && ticker === null) {
+        this.now.set(Date.now());
+        ticker = setInterval(() => this.now.set(Date.now()), 1000);
+      } else if (!running && ticker !== null) {
+        clearInterval(ticker);
+        ticker = null;
+      }
+    });
+    this.destroyRef.onDestroy(() => {
+      if (ticker !== null) clearInterval(ticker);
+    });
 
     // Beim Wochenwechsel nachziehen. Der erste Lauf gehört afterNextRender —
     // hier wäre das DOM noch die alte (oder gar keine) Woche.
@@ -205,6 +328,36 @@ export class WeekView {
       }
       requestAnimationFrame(() => this.scrollTodayIntoView());
     });
+  }
+
+  private readonly zone = inject(NgZone);
+
+  /**
+   * Ob links oder rechts noch Tage liegen. Der Streifen blendet an dieser
+   * Kante aus (week-view.scss) — ohne das sieht ein angeschnittener Tag
+   * abgeschnitten aus statt fortgesetzt, und man versucht nicht zu scrollen.
+   * Am Rand, an dem nichts mehr kommt, bleibt die Kante scharf.
+   */
+  private watchStripEdges(): void {
+    const host = this.strip()?.nativeElement;
+    if (!host) return;
+
+    const update = () => {
+      const max = host.scrollWidth - host.clientWidth;
+      host.dataset['start'] = String(host.scrollLeft <= 1);
+      host.dataset['end'] = String(host.scrollLeft >= max - 1);
+    };
+
+    this.zone.runOutsideAngular(() => {
+      host.addEventListener('scroll', update, { passive: true });
+      const resize = new ResizeObserver(update);
+      resize.observe(host);
+      this.destroyRef.onDestroy(() => {
+        host.removeEventListener('scroll', update);
+        resize.disconnect();
+      });
+    });
+    update();
   }
 
   private scrollTodayIntoView() {
@@ -252,7 +405,15 @@ export class WeekView {
 
   prevWeek() { this.weekOffset.update((o) => o - 1); }
   nextWeek() { this.weekOffset.update((o) => o + 1); }
-  goToday() { this.weekOffset.set(0); }
+  /**
+   * Zur laufenden Woche, und dort zum heutigen Tag. Steht man schon in ihr,
+   * holt der Knopf den Tag zurück in den Blick — der Streifen scrollt
+   * seitlich, und dann ist „heute" schnell aus dem Bild.
+   */
+  goToday() {
+    if (this.weekOffset() === 0) this.scrollTodayIntoView();
+    else this.weekOffset.set(0);
+  }
 
   /**
    * Pfeiltasten blättern durch die Wochen, „t" holt die aktuelle zurück —
@@ -306,8 +467,22 @@ export class WeekView {
    */
   private suppressClickUntil = 0;
 
+  /**
+   * Der Tag, von dem gerade eine Karte kommt. Nur dort bleibt der Platzhalter
+   * stehen (als Lücke, woher sie kommt); in den anderen Spalten färbt sich
+   * die ganze Spalte, über der man ist. Ein Platzhalter mitten in einem
+   * fremden Tag würde eine Stelle versprechen, an der die Karte gar nicht
+   * landet: innerhalb eines Tages gilt die Reihenfolge der Liste.
+   */
+  protected readonly dragFrom = signal<string | null | undefined>(undefined);
+
+  onDragStarted(todo: Todo): void {
+    this.dragFrom.set(todo.scheduledDate);
+  }
+
   onDragEnded(): void {
     this.suppressClickUntil = Date.now() + 300;
+    this.dragFrom.set(undefined);
   }
 
   openMover(todo: Todo, event: Event): void {
@@ -360,12 +535,6 @@ export class WeekView {
     this.todoService.scheduleTodo(todo.id, targetDate);
   }
 
-  /** Eine Karte einen Tag vor oder zurück schieben — ohne Ziehen. */
-  shiftTodo(todo: Todo, days: number) {
-    if (todo.scheduledDate === null) return;
-    this.todoService.scheduleTodo(todo.id, shiftISODate(todo.scheduledDate, days));
-  }
-
   /** Was der Tag nicht geschafft hat, wandert geschlossen auf morgen. */
   rollOver(day: DayColumn) {
     const open = day.todos.filter((t) => !t.completed);
@@ -401,7 +570,10 @@ export class WeekView {
   quickAdd(iso: string, input: HTMLInputElement) {
     const value = input.value.trim();
     if (!value) return;
-    this.todoService.addTodo(value, iso);
+    // Mit Ordnerfilter landet die neue Aufgabe in diesem Ordner. Sonst wäre
+    // sie nach dem Enter sofort weg, ausgefiltert, und sähe verloren aus.
+    const folder = this.folderFilter();
+    this.todoService.addTodo(value, iso, null, undefined, folder ?? undefined);
     input.value = '';
   }
 
@@ -432,13 +604,14 @@ export class WeekView {
   }
 
 
-  borderClass(todo: Todo): string {
-    return this.labelService.borderClassFor(todo.labelIds[0] ?? null);
+  /** Die Farbe des ersten Ordners als Fläche: Kante der Karte, abgehakter Kreis. */
+  fillClass(todo: Todo): string {
+    return folderColorClass(this.labelService.labelById(todo.labelIds[0] ?? null)?.color, 'fill');
   }
 
-  /** Der Punkt vor einer Karte ohne Haken (Ungeplant) — Farbe des ersten Ordners. */
-  folderDot(todo: Todo): string {
-    const color = this.labelService.labelById(todo.labelIds[0] ?? null)?.color;
-    return color ? folderColorClass(color, 'dot') : 'text-zinc-500';
+  /** Der erste Ordner für den Chip, und wie viele es darüber hinaus sind. */
+  folderOf(todo: Todo): { name: string; color: string; more: number } | null {
+    const label = this.labelService.labelById(todo.labelIds[0] ?? null);
+    return label ? { name: label.name, color: label.color, more: todo.labelIds.length - 1 } : null;
   }
 }

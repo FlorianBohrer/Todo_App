@@ -1707,7 +1707,9 @@ body.is-block-selecting * {
 .cdk-drag.hold-arming {
   outline: 2px solid color-mix(in srgb, var(--color-highlight2) 70%, transparent) !important;
   outline-offset: -2px !important;
-  transition: outline-color 1.6s linear 0.4s !important;
+  /* Vorlauf und Fuellen setzt hold-to-drag.ts passend zur Wartezeit des
+     Objekts; ohne Angabe sind es die zwei Sekunden der Liste. */
+  transition: outline-color var(--hold-fill, 1.6s) linear var(--hold-lead, 0.4s) !important;
 }
 
 .cdk-drag.hold-armed {

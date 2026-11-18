@@ -693,13 +693,19 @@ toggleFavorite(id: string) {
     scheduledDate: string | null = null,
     parentId: string | null = null,
     sectionId?: string | null,
+    /**
+     * Der Ordner der neuen Aufgabe. Ohne Angabe der oben gewählte; die Woche
+     * gibt ihren eigenen Filter mit, sonst verschwände, was man dort tippt,
+     * sofort aus dem gefilterten Blick.
+     */
+    categoryId?: string | null,
   ) {
     const t = title.trim();
     if (t === '') return;
     this.http
       .post<TodoDto>(this.apiUrl, {
         title: t,
-        categoryId: this.labelService.activeLabelId(), // ← aktuelle Auswahl
+        categoryId: categoryId === undefined ? this.labelService.activeLabelId() : categoryId,
         scheduledDate,                                  // Woche: direkt auf einen Tag
       })
       .subscribe({
