@@ -185,6 +185,34 @@
   font-weight: 600;
 }
 
+.home-start {
+  display: inline-flex;
+  height: 1.75rem;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 0 0.75rem 0 0.625rem;
+  background: var(--color-button);
+  color: var(--color-on-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 140ms ease-out;
+}
+
+.home-start:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-button) 88%, white);
+}
+
+.home-start:active:not(:disabled) {
+  scale: 0.96;
+}
+
+.home-start:disabled {
+  opacity: 0.6;
+}
+
 .home-spent {
   display: inline-flex;
   flex: none;

@@ -261,11 +261,11 @@
           </span>
         }
 
-        <!-- Läuft in Flow gerade ein Block auf dieser Aufgabe, steht die
-             Restzeit an der Karte. -->
+        <!-- Wird gerade an dieser Aufgabe gearbeitet, steht an der Karte,
+             wie lange schon. -->
         @if (focusTodoId() === todo.id) {
           <span class="task-focus" [class.is-paused]="focusPaused()"
-            [attr.title]="focusPaused() ? 'Paused in Flow' : 'Focusing in Flow'">
+            [attr.title]="focusPaused() ? 'Paused' : 'Being worked on'">
             @if (focusPaused()) {
               <lucide-icon [img]="PauseIcon" class="h-3 w-3"></lucide-icon>
             } @else {

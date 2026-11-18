@@ -55,6 +55,11 @@ describe('focus stats', () => {
     expect(flowMinutes({ ...session('a', at(28, 9), 25), elapsedSeconds: 1490 })).toBe(25);
   });
 
+  it('counts an open-ended tracking from the website by how long it really ran', () => {
+    const tracked = { ...session('a', at(28, 9), 37, 'Bericht', false), plannedSeconds: 86_400, elapsedSeconds: 37 * 60 };
+    expect(flowMinutes(tracked)).toBe(37);
+  });
+
   it('makes every session its own block, on the day it ended', () => {
     const history = sessionHistory([
       session('b', at(28, 14), 50),

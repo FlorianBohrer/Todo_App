@@ -1,0 +1,158 @@
+/* ================================================================
+   Zeiterfassung: die Leiste oben rechts und das Fenster zur Auswahl
+   ================================================================ */
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.track-bar {
+  display: flex;
+  min-width: 0;
+}
+
+/* ---- Leiste ---- */
+
+.track-pill {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  height: 2rem;
+  align-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-text);
+  transition: border-color 140ms ease-out, background-color 140ms ease-out;
+}
+
+.track-pill:hover,
+.track-pill.is-open {
+  border-color: var(--color-line-strong);
+}
+
+.track-pill__main {
+  display: inline-flex;
+  min-width: 0;
+  height: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+}
+
+.track-pill__clock {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.track-pill.is-paused .track-pill__clock {
+  color: var(--color-muted);
+}
+
+.track-pill__title {
+  display: none;
+  min-width: 0;
+  max-width: 14rem;
+  overflow: hidden;
+  color: var(--color-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .track-pill__title {
+    display: inline;
+  }
+}
+
+/* Der Knopf rechts in der Leiste, durch eine Haarlinie abgesetzt. */
+.track-pill__toggle {
+  display: grid;
+  width: 2rem;
+  height: 100%;
+  flex: none;
+  place-items: center;
+  margin-left: -0.25rem;
+  border-left: 1px solid var(--color-line);
+  border-radius: 0 999px 999px 0;
+  color: var(--color-muted);
+  transition: color 140ms ease-out, background-color 140ms ease-out;
+}
+
+.track-pill__toggle:hover:not(:disabled) {
+  background: var(--color-fill);
+  color: var(--color-text);
+}
+
+.track-pill__toggle:active:not(:disabled),
+.track-start:active,
+.track-action:active:not(:disabled) {
+  scale: 0.96;
+}
+
+/* Ohne laufende Erfassung: ein leiser Knopf, der sagt, was er tut. */
+.track-start {
+  display: inline-flex;
+  height: 2rem;
+  flex: none;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0 0.75rem 0 0.625rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: border-color 140ms ease-out, color 140ms ease-out;
+}
+
+.track-start:hover,
+.track-start.is-open {
+  border-color: var(--color-line-strong);
+  color: var(--color-text);
+}
+
+/* Auf dem Telefon passt in die Kopfzeile ein Knopf mit Zeigerfläche. */
+@media (pointer: coarse) {
+  .track-pill,
+  .track-start {
+    height: 2.25rem;
+  }
+
+  .track-pill__toggle {
+    width: 2.25rem;
+  }
+}
+
+.track-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--color-ok);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ok) 60%, transparent);
+  animation: track-breathe 2.4s ease-in-out infinite;
+}
+
+/* Pausiert: der Punkt steht, und er ist ein Ring statt einer Fläche — die
+   Form sagt es, nicht nur die Farbe. */
+.track-dot.is-paused {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--color-muted);
+  animation: none;
+}
+
+@keyframes track-breathe {
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-ok) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track-dot {
+    animation: none;
+  }
+}
