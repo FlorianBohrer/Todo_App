@@ -601,16 +601,17 @@ export class TodoService {
     ]);
   }
 
-  // ---- Wochenansicht ----
+  // ---- Ansichten ----
   /**
-   * Liste vs. Woche vs. Pläne.
+   * Home vs. Liste vs. Woche vs. Pläne vs. Statistik.
    *
-   * Startet immer in der Liste — mit dem Filter „Active" heißt Neuladen:
-   * zeig mir, was offen ist. Vorher kam man dorthin zurück, wo man zuletzt
-   * war, und landete nach einem Reload in der Woche oder in einem Plan statt
-   * bei den eigenen Aufgaben.
+   * Startet immer auf Home: Neuladen heißt „zeig mir meinen Tag" — was heute
+   * schon geschafft ist und woran ich gerade sitze. Nicht dort, wo man
+   * zuletzt war: so landete man nach einem Reload in der Woche oder in einem
+   * Plan statt beim eigenen Tag. Eine Ordner-Adresse (my-todo.app/work)
+   * öffnet weiterhin die Liste dieses Ordners (folder-route.service.ts).
    */
-  readonly view = signal<View>('list');
+  readonly view = signal<View>('home');
 
   // ---- Hinspringen ----
 
