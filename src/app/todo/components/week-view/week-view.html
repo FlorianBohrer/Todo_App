@@ -214,7 +214,7 @@
       cdkDrag [cdkDragData]="todo" [cdkDragStartDelay]="dragStartDelay"
       (cdkDragStarted)="onDragStarted(todo)"
       (cdkDragEnded)="onDragEnded()"
-      class="week-card"
+      class="week-card task-card"
       [class.is-done]="todo.completed"
       [class.is-focus]="focusTodoId() === todo.id"
       [class.is-moving]="moverTodo()?.id === todo.id"
@@ -225,24 +225,24 @@
       (keydown.enter)="$event.preventDefault(); openMover(todo, $event)">
       <!-- Die Ordnerfarbe als Kante: auf einen Blick, welcher Bereich wie
            viel vom Tag nimmt. -->
-      <span class="week-card__edge" [class]="fillClass(todo)" aria-hidden="true"></span>
+      <span class="task-card__edge" [class]="fillClass(todo)" aria-hidden="true"></span>
 
       <!-- Auf drei Zeilen begrenzt. Eine Wochenkarte muss man
            wiedererkennen, nicht lesen; der ganze Text hängt am Tooltip und
            steht in der Liste. -->
-      <p class="week-card__title" [attr.title]="plainTitle(todo.title)">
+      <p class="task-card__title" [attr.title]="plainTitle(todo.title)">
         @if (badge(todo.title); as level) {
           <app-token-chip class="week-badge mr-1 align-[-0.2em]" [token]="level" size="sm" />
         }
         <app-rich-text [text]="displayTitle(todo.title)" />
       </p>
 
-      <div class="week-card__meta">
+      <div class="task-card__meta">
         <!-- Abgehakt füllt sich der Kreis in der Ordnerfarbe. Getroffen wird
              er auf 36px (week-view.scss). -->
         <button
           type="button"
-          class="week-check"
+          class="task-check"
           [class]="todo.completed ? fillClass(todo) : ''"
           (click)="$event.stopPropagation(); toggle(todo.id)"
           (keydown.enter)="$event.stopPropagation()"
@@ -252,8 +252,8 @@
         </button>
 
         @if (folderOf(todo); as folder) {
-          <span class="week-chip">
-            <span class="week-chip__dot bg-current" [class]="dotClass(folder.color)" aria-hidden="true"></span>
+          <span class="task-chip">
+            <span class="task-chip__dot bg-current" [class]="dotClass(folder.color)" aria-hidden="true"></span>
             <span class="truncate">{{ folder.name }}</span>
             @if (folder.more > 0) {
               <span class="text-subtle">+{{ folder.more }}</span>
@@ -264,12 +264,12 @@
         <!-- Läuft in Flow gerade ein Block auf dieser Aufgabe, steht die
              Restzeit an der Karte. -->
         @if (focusTodoId() === todo.id) {
-          <span class="week-focus" [class.is-paused]="focusPaused()"
+          <span class="task-focus" [class.is-paused]="focusPaused()"
             [attr.title]="focusPaused() ? 'Paused in Flow' : 'Focusing in Flow'">
             @if (focusPaused()) {
               <lucide-icon [img]="PauseIcon" class="h-3 w-3"></lucide-icon>
             } @else {
-              <span class="week-focus__dot" aria-hidden="true"></span>
+              <span class="task-focus__dot" aria-hidden="true"></span>
             }
             <span class="tabular-nums">{{ focusClock() }}</span>
           </span>
@@ -280,7 +280,7 @@
              als sei sie einfach weg. -->
         @if (todo.repeat) {
           <lucide-icon [img]="RepeatIcon"
-            class="week-card__repeat"
+            class="task-card__repeat"
             [attr.title]="'Repeats, the next one follows on its own'"></lucide-icon>
         }
       </div>
