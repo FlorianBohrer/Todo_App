@@ -79,8 +79,18 @@
              Zwischen 640 und 768px nur die Symbole: mit Wörtern brach die
              Leiste dort in zwei Zeilen um. -->
         <div class="filter-tabs hidden h-10 flex-none gap-2 rounded-full border border-line bg-bg3/60 p-1 text-sm sm:flex"
-          role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="4">
+          role="tablist" [style.--tab-index]="viewIndex()" [style.--tab-count]="5">
           <span class="filter-pill" aria-hidden="true"></span>
+
+          <button type="button" role="tab"
+            class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
+            [class.is-active]="view() === 'home'"
+            [attr.aria-selected]="view() === 'home'"
+            title="Home (H)" aria-label="Home"
+            (click)="setView('home')">
+            <lucide-icon [img]="HomeIcon" class="h-4 w-4 flex-none"></lucide-icon>
+            <span class="hidden md:inline">Home</span>
+          </button>
 
           <button type="button" role="tab"
             class="filter-tab flex w-11 items-center justify-center gap-1 rounded-full text-[13px] md:w-[4.75rem]"
@@ -155,7 +165,13 @@
          wurde mitten in der Bewegung durch die echte Ansicht ersetzt: erst
          „Opening plans…", dann ohne Halt der Plan, beides in einem Zug. Das
          las sich wie ein Ruckler, nicht wie ein Wechsel. -->
-    @if (view() === 'stats') {
+    @if (view() === 'home') {
+      @defer (on immediate) {
+        <div class="view-swap"><app-home-view></app-home-view></div>
+      } @placeholder {
+        <p class="page-column text-sm text-subtle">Opening today…</p>
+      }
+    } @else if (view() === 'stats') {
       @defer (on immediate) {
         <div class="view-swap"><app-stats-view></app-stats-view></div>
       } @placeholder {
@@ -222,6 +238,14 @@
          saesse sie ueber der Tastatur. Ab sm stehen die Laschen oben. -->
     <nav class="bottom-nav sm:hidden" aria-label="Views">
       <div class="bottom-nav__inner" role="tablist">
+        <button type="button" role="tab" class="bottom-nav__tab"
+          [class.is-active]="view() === 'home'"
+          [attr.aria-selected]="view() === 'home'"
+          title="Home"
+          (click)="setView('home')">
+          <span class="bottom-nav__icon"><lucide-icon [img]="HomeIcon" class="h-5 w-5"></lucide-icon></span>
+          <span class="bottom-nav__label">Home</span>
+        </button>
         <button type="button" role="tab" class="bottom-nav__tab"
           [class.is-active]="view() === 'list'"
           [attr.aria-selected]="view() === 'list'"

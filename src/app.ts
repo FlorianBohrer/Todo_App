@@ -25,6 +25,7 @@ import {
   LogOut,
   Search,
   ChartColumn,
+  House,
 } from 'lucide-angular';
 import { TodoAdd } from './app/todo/components/todo-add/todo-add';
 import { TodoFilter } from './app/todo/components/todo-filter/todo-filter';
@@ -41,6 +42,7 @@ import { splitFolderName } from './app/todo/shared/folder-name';
 import { DayView } from './app/todo/components/day-view/day-view';
 import { PlansView } from './app/plan/components/plans-view';
 import { StatsView } from './app/todo/components/stats-view/stats-view';
+import { HomeView } from './app/todo/components/home-view/home-view';
 import { UserAccount } from './app/todo/components/user-account/user-account';
 import { attachChromeTuck } from './app/shared/chrome-tuck';
 import { DevicePairing } from './app/todo/components/device-pairing/device-pairing';
@@ -74,6 +76,7 @@ import type { View } from './app/todo/services/todo';
     DayView,
     PlansView,
     StatsView,
+    HomeView,
     UserAccount,
     DevicePairing,
     LevelBadge,
@@ -134,7 +137,7 @@ export class App {
   );
 
 
-  private static readonly VIEWS: View[] = ['list', 'week', 'plans', 'stats'];
+  private static readonly VIEWS: View[] = ['home', 'list', 'week', 'plans', 'stats'];
 
   /** Treibt die gleitende Pille im Umschalter — drei gleich breite Laschen. */
   protected readonly viewIndex = computed(() => App.VIEWS.indexOf(this.view()));
@@ -185,6 +188,10 @@ export class App {
       case 'folders.toggle':
         event.preventDefault();
         this.toggleCategories();
+        return;
+      case 'view.home':
+        event.preventDefault();
+        this.setView('home');
         return;
       case 'view.list':
         event.preventDefault();
@@ -323,6 +330,7 @@ export class App {
   protected readonly ArrowDown = ArrowDown;
   protected readonly ToTopIcon = ArrowUp;
   protected readonly PlusIcon = Plus;
+  protected readonly HomeIcon = House;
   protected readonly ListIcon = LayoutList;
   protected readonly WeekIcon = CalendarDays;
   protected readonly PlansIcon = NotebookPen;

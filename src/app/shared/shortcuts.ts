@@ -13,6 +13,7 @@
 /** Alles, was sich mit einer Taste auslösen lässt und umbelegbar ist. */
 export type ShortcutAction =
   | 'search.open'
+  | 'view.home'
   | 'view.list'
   | 'view.week'
   | 'view.plans'
@@ -58,6 +59,9 @@ const APPLE =
 
 export const DEFAULT_BINDINGS: Record<ShortcutAction, Binding> = {
   'search.open': bind('k', APPLE ? { meta: true } : { ctrl: true }),
+  // Home kam nach den Ziffern dazu. Sie bleiben, wie man sie kennt; Home
+  // liegt auf H.
+  'view.home': bind('h'),
   'view.list': bind('1'),
   'view.week': bind('2'),
   'view.plans': bind('3'),
@@ -74,6 +78,7 @@ export const SHORTCUT_INFO: ShortcutInfo[] = [
   { action: 'search.open', label: 'Search everything', group: 'Anywhere' },
   { action: 'help.toggle', label: 'Show this list', group: 'Anywhere' },
   { action: 'folders.toggle', label: 'Folders, open and close', group: 'Anywhere' },
+  { action: 'view.home', label: 'Home', group: 'Anywhere' },
   { action: 'view.list', label: 'List view', group: 'Anywhere' },
   { action: 'view.week', label: 'Week view', group: 'Anywhere' },
   { action: 'view.plans', label: 'Plans view', group: 'Anywhere' },

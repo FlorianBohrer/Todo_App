@@ -1,0 +1,468 @@
+@use '../../shared/task-card';
+
+/* ================================================================
+   Home
+
+   Zwei Spalten am Rechner: links der Tag als Liste, rechts als Uhr. Die
+   Uhr klebt beim Scrollen und rollt in sich, damit „jetzt" sichtbar bleibt,
+   egal wie lang die Liste ist. Auf dem Telefon steht sie unter der Liste.
+   ================================================================ */
+
+/* ---- Kopf ---- */
+
+.home-head {
+  align-items: flex-end;
+  margin-bottom: 1.75rem;
+}
+
+.home-score {
+  display: grid;
+  min-width: 12rem;
+  justify-items: end;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+/* Auf dem Telefon steht die Bilanz unter dem Datum, linksbündig und über
+   die ganze Breite: rechts an den Rand gerückt las sie sich als Nachtrag. */
+@media (max-width: 639px) {
+  .home-score {
+    width: 100%;
+    justify-items: start;
+    margin-left: 0;
+  }
+}
+
+.home-score__figure {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.home-score__big {
+  color: var(--color-text);
+  font-size: 2rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.home-score__bar {
+  width: 100%;
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-fill-strong);
+}
+
+.home-score__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-highlight1);
+  transition: width 420ms var(--spring, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.home-score__caption {
+  margin: 0;
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Raster ---- */
+
+.home-grid {
+  display: grid;
+  gap: 1.75rem;
+}
+
+@media (min-width: 1024px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(19rem, 1fr);
+    align-items: start;
+    gap: 2rem;
+  }
+}
+
+.home-section-head {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Kleine Versalien als Abschnittsname: ein Etikett, keine Überschrift, die
+   mit dem Datum oben konkurriert. Etwas gesperrt, wie es kleine Versalien
+   brauchen. */
+.home-label {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-count {
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Liste ---- */
+
+.home-add {
+  width: 100%;
+  height: 2.75rem;
+  margin-bottom: 0.75rem;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: 0.75rem;
+  padding: 0 0.875rem;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  transition: border-color 140ms ease-out, background-color 140ms ease-out;
+}
+
+.home-add::placeholder {
+  color: var(--color-subtle);
+}
+
+.home-add:hover {
+  border-color: rgb(var(--ink) / 0.32);
+}
+
+.home-add:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--color-highlight1);
+  background: var(--color-panel1);
+}
+
+@media (pointer: coarse) {
+  .home-add {
+    font-size: 1rem;
+  }
+}
+
+.home-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Auf Home etwas mehr Luft als in der schmalen Wochenspalte. */
+.home-card {
+  padding: 0.75rem 0.875rem 0.75rem 1.125rem;
+  cursor: pointer;
+}
+
+.home-card .task-card__title {
+  font-size: 0.9375rem;
+}
+
+/* Die aktive Karte trägt den Tag: eine Spur grösser im Abstand. */
+.home-card.is-focus {
+  padding-block: 0.875rem;
+}
+
+.home-tag {
+  display: inline-flex;
+  height: 1.375rem;
+  flex: none;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  background: color-mix(in srgb, var(--color-highlight1) 14%, transparent);
+  color: var(--color-brand-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.home-spent {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-empty {
+  margin: 0.25rem 0 0;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: rgb(var(--ink) / 0.03);
+  color: var(--color-subtle);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* ---- Erledigt heute ---- */
+
+.home-divider {
+  display: flex;
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  border-radius: 0.5rem;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+.home-divider__label {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-divider__line {
+  height: 1px;
+  flex: 1;
+  background: var(--color-line);
+}
+
+.home-divider__action {
+  color: var(--color-subtle);
+  transition: color 140ms ease-out;
+}
+
+.home-divider:hover .home-divider__action,
+.home-divider:hover .home-divider__chevron {
+  color: var(--color-text);
+}
+
+.home-divider__chevron {
+  flex: none;
+  color: var(--color-subtle);
+  transition: rotate 260ms cubic-bezier(0.32, 0.72, 0, 1), color 140ms ease-out;
+}
+
+.home-divider__chevron.is-collapsed {
+  rotate: -90deg;
+}
+
+/* Auf- und zuklappen über die Zeilenhöhe des Rasters: 0fr ↔ 1fr folgt dem
+   Inhalt, wie hoch er auch ist, und lässt sich mitten in der Bewegung
+   umkehren. */
+.home-done {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 0.5rem;
+  transition: grid-template-rows 320ms cubic-bezier(0.32, 0.72, 0, 1), opacity 240ms ease-out;
+}
+
+.home-done.is-collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.home-done__inner {
+  min-height: 0;
+  overflow: hidden;
+  /* Platz für Fokusrahmen, die sonst am Rand abgeschnitten würden. */
+  margin: -3px;
+  padding: 3px;
+}
+
+/* ---- Zeitleiste ---- */
+
+.home-timeline {
+  --gutter: 3.25rem;
+}
+
+@media (min-width: 1024px) {
+  .home-timeline {
+    position: sticky;
+    top: calc(var(--chrome-h, 4rem) + 1rem);
+  }
+}
+
+.home-timeline__scroll {
+  position: relative;
+  max-height: 26rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  padding: 0.75rem 0.5rem 0.75rem 0;
+  background: rgb(var(--ink) / 0.025);
+  scrollbar-width: thin;
+}
+
+@media (min-width: 1024px) {
+  .home-timeline__scroll {
+    max-height: calc(100dvh - var(--chrome-h, 4rem) - 6rem);
+  }
+}
+
+.home-track {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-hour {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0;
+  border-top: 1px solid var(--color-line);
+  /* Die Linie beginnt nach der Spalte mit den Uhrzeiten. */
+  margin-left: var(--gutter);
+}
+
+.home-hour__label {
+  position: absolute;
+  top: -0.5rem;
+  left: calc(-1 * var(--gutter));
+  width: calc(var(--gutter) - 0.625rem);
+  color: var(--color-subtle);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1rem;
+  text-align: right;
+}
+
+/* Ein Eintrag: Fokusblock schraffiert in der Ordnerfarbe (die Klasse am
+   Element setzt `color`, alles hier rechnet mit currentColor), Erledigung
+   als schmale Zeile mit Haken. Die Schrift bleibt in der Textfarbe. */
+.home-block {
+  position: absolute;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  border-left: 3px solid currentColor;
+  border-radius: 0.375rem;
+  padding: 0 0.5rem;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, currentColor 24%, transparent) 0 2px,
+      color-mix(in srgb, currentColor 11%, transparent) 2px 9px
+    );
+}
+
+.home-block.is-tall {
+  justify-content: flex-start;
+  padding-top: 0.25rem;
+}
+
+.home-block__title {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-block__time {
+  display: none;
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1rem;
+}
+
+.home-block.is-tall .home-block__time {
+  display: block;
+}
+
+.home-block.is-done {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.375rem;
+  border-left-width: 2px;
+  background: color-mix(in srgb, currentColor 9%, var(--color-panel1));
+  opacity: 0.9;
+}
+
+.home-block.is-done .home-block__time {
+  display: block;
+  margin-left: auto;
+  flex: none;
+}
+
+.home-block__check {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
+}
+
+/* Der laufende Block: in der Ansichtsfarbe gerahmt, mit der Jetzt-Linie an
+   seinem unteren Ende. */
+.home-block.is-running {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-highlight1) 70%, transparent);
+}
+
+.home-now {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  left: var(--gutter);
+  height: 0;
+  border-top: 2px solid var(--color-highlight1);
+  pointer-events: none;
+}
+
+.home-now::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-highlight1);
+}
+
+.home-now__label {
+  position: absolute;
+  top: -0.55rem;
+  left: calc(-1 * var(--gutter));
+  width: calc(var(--gutter) - 0.75rem);
+  color: var(--color-brand-2);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1rem;
+  text-align: right;
+}
+
+.home-timeline__empty {
+  position: absolute;
+  top: 50%;
+  right: 1.5rem;
+  left: calc(var(--gutter) + 1rem);
+  margin: 0;
+  color: var(--color-subtle);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-align: center;
+  translate: 0 -50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-done,
+  .home-divider__chevron,
+  .home-score__fill {
+    transition: none;
+  }
+}
