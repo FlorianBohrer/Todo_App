@@ -11,7 +11,8 @@ export type FolderColorVariant =
   | 'text'     // Text in Folder-Farbe
   | 'iconBox'  // Hintergrund des Icon-Quadrats
   | 'dot'      // Farbpunkt
-  | 'border';  // Rahmen
+  | 'border'   // Rahmen
+  | 'fill';    // volle Fläche: Kante einer Wochenkarte, abgehakter Kreis
 
 // Getönte Flächen ('bg'), Verlaufskacheln ('tile') und Balkenfarben ('bar')
 // sind hier entfallen: die Ordnerfarbe steht nur noch an Punkt, Ring und
@@ -49,6 +50,16 @@ const CLASSES: Record<FolderColorVariant, Record<string, string>> = {
     sky:     'text-sky-400',
     fuchsia: 'text-fuchsia-400',
   },
+  fill: {
+    violet:  'bg-violet-500',
+    emerald: 'bg-emerald-500',
+    rose:    'bg-rose-500',
+    orange:  'bg-orange-500',
+    amber:   'bg-amber-500',
+    teal:    'bg-teal-500',
+    sky:     'bg-sky-500',
+    fuchsia: 'bg-fuchsia-500',
+  },
   border: {
     violet:  'border-violet-500',
     emerald: 'border-emerald-500',
@@ -66,6 +77,7 @@ const FALLBACK: Record<FolderColorVariant, string> = {
   iconBox: 'bg-zinc-500/25',
   dot:     'text-zinc-400',
   border:  'border-zinc-600',
+  fill:    'bg-zinc-500',
 };
 
 export function folderColorClass(

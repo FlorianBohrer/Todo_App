@@ -17,18 +17,28 @@ import { holdArmed } from '../todo/shared/haptics';
  * (TODO_DRAG_START_DELAY): ein Klick in die Zeile, ein kurzes Festhalten beim
  * Lesen soll nichts verschieben.
  *
- * Die Zahl gilt app-weit (CDK_DRAG_CONFIG in app.config) und hier fuer die
- * Rueckmeldung — beide muessen dieselbe sein, sonst meldet der Rand
- * „jetzt", waehrend das CDK noch wartet. Der Rand in styles.scss
- * (.hold-arming) rechnet mit 0,4 s Vorlauf + 1,6 s Fuellen = 2 s; wer die
- * Zahl hier aendert, aendert sie dort mit.
+ * Die Zahl gilt app-weit (CDK_DRAG_CONFIG in app.config). Die Rueckmeldung
+ * liest die Wartezeit am cdkDrag selbst ab, damit Rand und CDK nie
+ * auseinanderlaufen — auch dort, wo eine Ansicht kuerzer wartet
+ * (BOARD_DRAG_START_DELAY in der Woche).
  */
 export const HOLD_TO_DRAG_MS = 2000;
 
 export const DRAG_START_DELAY = { touch: HOLD_TO_DRAG_MS, mouse: 0 };
 
-/** Todos in Liste und Woche: zwei Sekunden halten, mit dem Finger wie mit der Maus. */
+/** Todos in der Liste: zwei Sekunden halten, mit dem Finger wie mit der Maus. */
 export const TODO_DRAG_START_DELAY = { touch: HOLD_TO_DRAG_MS, mouse: HOLD_TO_DRAG_MS };
+
+/**
+ * Die Woche ist ein Brett: Karten zwischen Tagen zu ziehen ist dort die
+ * Hauptsache, nicht ein Versehen, vor dem man sich schützen müsste.
+ *
+ * Mit der Maus sofort — das CDK fängt erst nach 5px Bewegung an, ein Klick
+ * bleibt ein Klick und öffnet den Kalender der Karte. Mit dem Finger ein
+ * langes Drücken, so lang wie das System selbst eines versteht (iOS und
+ * Android liegen um 0,5 s): wer sofort wischt, scrollt, wer kurz hält, zieht.
+ */
+export const BOARD_DRAG_START_DELAY = { touch: 450, mouse: 0 };
 
 /**
  * So weit darf der Finger waehrend des Haltens wandern. Daruebergehend ist es
@@ -66,17 +76,31 @@ export class HoldToDrag {
     const zone = inject(NgZone);
     const drag = inject(CdkDrag, { self: true });
 
-    const arm = (x: number, y: number) => {
+    /**
+     * Der Rand fuellt sich in genau der Zeit, die das CDK wartet: ein Fuenftel
+     * Vorlauf (ein Wischen soll nichts aufblitzen lassen), der Rest Fuellen.
+     * Bei zwei Sekunden sind das die 0,4 + 1,6 s, mit denen styles.scss
+     * rechnet, wenn nichts gesetzt ist.
+     */
+    const arm = (x: number, y: number, ms: number) => {
       this.reset();
       this.active = true;
       this.startX = x;
       this.startY = y;
+      host.style.setProperty('--hold-lead', `${Math.round(ms * 0.2)}ms`);
+      host.style.setProperty('--hold-fill', `${Math.round(ms * 0.8)}ms`);
       host.classList.add('hold-arming');
       this.timer = setTimeout(() => {
         if (!this.active) return;
         host.classList.add('hold-armed');
         holdArmed();
-      }, HOLD_TO_DRAG_MS);
+      }, ms);
+    };
+
+    /** Was das CDK fuer diese Eingabeart wartet. */
+    const delayFor = (kind: 'touch' | 'mouse') => {
+      const delay = drag.dragStartDelay;
+      return typeof delay === 'number' ? delay : (delay?.[kind] ?? 0);
     };
 
     /** Wandert der Zeiger vor dem Ende des Haltens, war es kein Halten. */
@@ -87,11 +111,12 @@ export class HoldToDrag {
     };
 
     const onStart = (event: TouchEvent) => {
-      if (event.touches.length !== 1 || !this.ownsTouch(event.target)) {
+      const ms = delayFor('touch');
+      if (event.touches.length !== 1 || ms <= 0 || !this.ownsTouch(event.target)) {
         this.reset();
         return;
       }
-      arm(event.touches[0].clientX, event.touches[0].clientY);
+      arm(event.touches[0].clientX, event.touches[0].clientY, ms);
     };
 
     const onMove = (event: TouchEvent) => {
@@ -102,11 +127,6 @@ export class HoldToDrag {
     const onEnd = () => this.reset();
 
     // Maus: nur, wo auch die Maus warten muss.
-    const mouseDelay = () => {
-      const delay = drag.dragStartDelay;
-      return typeof delay === 'number' ? delay : (delay?.mouse ?? 0);
-    };
-
     const onMouseMove = (event: MouseEvent) => track(event.clientX, event.clientY);
     const onMouseUp = () => {
       this.reset();
@@ -117,8 +137,9 @@ export class HoldToDrag {
     const onMouseDown = (event: MouseEvent) => {
       // Ein Touch-Geraet meldet nach dem Tippen auch ein mousedown; das
       // Halten laeuft dann schon ueber die Touch-Ereignisse.
-      if (event.button !== 0 || this.active || mouseDelay() <= 0 || !this.ownsTouch(event.target)) return;
-      arm(event.clientX, event.clientY);
+      const ms = delayFor('mouse');
+      if (event.button !== 0 || this.active || ms <= 0 || !this.ownsTouch(event.target)) return;
+      arm(event.clientX, event.clientY, ms);
       window.addEventListener('mousemove', onMouseMove, { passive: true });
       window.addEventListener('mouseup', onMouseUp);
     };

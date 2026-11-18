@@ -1,4 +1,5 @@
 import {
+  monthLabel,
   buildWeek,
   fromISODate,
   isoWeekNumber,
@@ -107,5 +108,23 @@ describe('weekRangeLabel', () => {
   it('names both months across a month boundary', () => {
     const days = buildWeek(0).map((d, i) => ({ ...d, date: new Date(2026, 5, 29 + i) }));
     expect(weekRangeLabel(days)).toBe('Jun 29 – Jul 5');
+  });
+});
+
+describe('monthLabel', () => {
+  it('names the month and year of a week inside one month', () => {
+    expect(monthLabel(new Date(2026, 10, 16), new Date(2026, 10, 22))).toBe('November 2026');
+  });
+
+  it('abbreviates the month when asked for the short form', () => {
+    expect(monthLabel(new Date(2026, 10, 16), new Date(2026, 10, 22), true)).toBe('Nov 2026');
+  });
+
+  it('names both months of a week that crosses into the next one', () => {
+    expect(monthLabel(new Date(2026, 10, 30), new Date(2026, 11, 6))).toBe('Nov – Dec 2026');
+  });
+
+  it('names both years of a week that crosses New Year', () => {
+    expect(monthLabel(new Date(2026, 11, 28), new Date(2027, 0, 3))).toBe('Dec 2026 – Jan 2027');
   });
 });
