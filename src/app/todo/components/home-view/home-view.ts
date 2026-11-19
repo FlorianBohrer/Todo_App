@@ -34,16 +34,20 @@ import { folderColorClass } from '../../shared/folder-color';
 import { rankForFocus } from '../../shared/focus';
 import { toISODate } from '../../shared/week';
 import {
+  HomeEntry,
   PlacedBlock,
   clockTime,
   dayRange,
   doneBlocks,
   doneOn,
+  entryHas,
   focusBlocksOn,
   focusSecondsOn,
+  homeEntries,
   layoutDay,
   offsetFor,
   openOn,
+  stepIndex,
   totalFocusOn,
 } from '../../shared/today';
 
@@ -55,6 +59,22 @@ const MIN_BLOCK = 22;
 const SESSIONS_MS = 120_000;
 
 const DONE_COLLAPSED_KEY = 'home.doneCollapsed';
+
+/**
+ * Welche Hauptaufgaben eingeklappt sind — derselbe Speicher wie in der Liste.
+ * Wer eine Aufgabe dort zuklappt, findet sie hier zugeklappt, und umgekehrt:
+ * eine Aufgabe, ein Zustand.
+ */
+const FOLDED_KEY = 'todos.collapsed';
+
+function readFolded(): ReadonlySet<string> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(FOLDED_KEY) ?? 'null');
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
 
 function readCollapsed(): boolean {
   try {
@@ -111,7 +131,7 @@ export class HomeView {
   protected readonly done = computed(() => doneOn(this.todoService.allTodos(), this.today()));
   private readonly open = computed(() => openOn(this.todoService.allTodos(), this.today()));
 
-  /** Die Aufgabe, an der Flow gerade läuft, solange sie offen ist. */
+  /** Die Aufgabe, an der gerade gearbeitet wird, solange sie offen ist. */
   protected readonly running = computed(() => {
     const todo = this.todoService.todoById(this.focus.active()?.todoId);
     return todo && !todo.completed ? todo : null;
@@ -124,17 +144,92 @@ export class HomeView {
 
   /**
    * Läuft nichts, steht die wichtigste offene Aufgabe für heute oben — nach
-   * derselben Rangfolge wie „Next up" in der Liste.
+   * derselben Rangfolge wie „Next up" in der Liste. Das kann auch ein Schritt
+   * sein; dann steht seine Hauptaufgabe oben, und er ist darin markiert.
    */
-  protected readonly upNext = computed(() =>
-    this.running() ? null : (rankForFocus(this.open(), this.today())[0] ?? null),
+  protected readonly upNextId = computed(() =>
+    this.running() ? null : (rankForFocus(this.open(), this.today())[0]?.id ?? null),
   );
 
-  /** Was unter der aktiven steht: der Rest für heute in der Reihenfolge der Liste. */
-  protected readonly rest = computed(() => {
-    const first = this.running() ?? this.upNext();
-    return this.open().filter((t) => t.id !== first?.id);
+  // ---- Hauptaufgaben mit Schritten ----
+  private readonly index = computed(() => stepIndex(this.todoService.snapshot()));
+
+  /**
+   * Der Tag als Einträge: Hauptaufgaben mit allen Schritten, der Rest
+   * einzeln. Oben, woran gerade gearbeitet wird — oder was als Nächstes dran
+   * ist —, samt der Hauptaufgabe, zu der es gehört.
+   */
+  protected readonly entries = computed<HomeEntry[]>(() => {
+    const list = homeEntries(this.open(), this.index());
+    const running = this.running();
+    const firstId = running?.id ?? this.upNextId();
+    if (!firstId) return list;
+
+    const at = list.findIndex((entry) => entryHas(entry, firstId));
+    if (at >= 0) return [list[at], ...list.slice(0, at), ...list.slice(at + 1)];
+    // Läuft eine Aufgabe, die nicht für heute geplant ist: trotzdem oben.
+    return running ? [...homeEntries([running], this.index()), ...list] : list;
   });
+
+  /**
+   * Erledigt heute, ebenso gruppiert. Ein Schritt rückt nur unter seine
+   * Hauptaufgabe, wenn die heute auch fertig wurde; sonst steht er allein da,
+   * mit dem Namen der Aufgabe darunter.
+   */
+  protected readonly doneEntries = computed<HomeEntry[]>(() => {
+    const doneIds = new Set(this.done().map((t) => t.id));
+    return homeEntries(this.done(), this.index(), (_step, head) => doneIds.has(head.id));
+  });
+
+  /** Die Rolle einer Aufgabe auf Home: läuft, ist als Nächstes dran, offen oder erledigt. */
+  roleOf(todo: Todo): 'running' | 'next' | 'open' | 'done' {
+    if (todo.id === this.running()?.id) return 'running';
+    if (todo.id === this.upNextId()) return 'next';
+    return todo.completed ? 'done' : 'open';
+  }
+
+  /** Läuft gerade einer ihrer Schritte? Dann ist die ganze Gruppe leise gerahmt. */
+  stepRunning(entry: HomeEntry): boolean {
+    const id = this.running()?.id;
+    return entry.kind === 'group' && !!id && entry.steps.some((s) => s.id === id);
+  }
+
+  stepsDone(entry: HomeEntry): number {
+    return entry.kind === 'group' ? entry.steps.filter((s) => s.completed).length : 0;
+  }
+
+  /** Der Name der Hauptaufgabe, wenn eine Aufgabe ein Schritt ist und allein steht. */
+  headTitle(todo: Todo): string {
+    const head = this.index().headOf.get(todo.id);
+    return head ? this.plainTitle(head.title) : '';
+  }
+
+  // ---- Einklappen ----
+  protected readonly folded = signal(readFolded());
+
+  toggleFold(headId: string, event: Event): void {
+    event.stopPropagation();
+    const next = new Set(this.folded());
+    if (next.has(headId)) next.delete(headId);
+    else next.add(headId);
+    this.folded.set(next);
+    try {
+      // Mit dem frischen Stand aus dem Speicher zusammenführen: die Liste
+      // schreibt denselben Schlüssel.
+      const stored = new Set(readFolded());
+      if (next.has(headId)) stored.add(headId);
+      else stored.delete(headId);
+      localStorage.setItem(FOLDED_KEY, JSON.stringify([...stored]));
+    } catch {
+      /* dann eben nur für diese Sitzung */
+    }
+  }
+
+  /** Einen Schritt abhaken: er bleibt in seiner Gruppe stehen, nur sein Haken ändert sich. */
+  toggleStep(step: Todo, event: Event): void {
+    event.stopPropagation();
+    this.todoService.toggleTodo(step.id);
+  }
 
   protected readonly openCount = computed(() => this.open().length);
 

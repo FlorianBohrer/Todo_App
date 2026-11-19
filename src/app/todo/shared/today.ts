@@ -8,6 +8,7 @@
 import type { Todo } from '../model/todo.model';
 import type { FocusSessionRecord } from '../services/focus-session.service';
 import { fromISODate, toISODate } from './week';
+import { subtaskGroups } from './title-priority';
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -221,4 +222,78 @@ export function layoutDay(
 /** „13:19" — 24 Stunden, wie eine Uhr. */
 export function clockTime(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+// ---- Hauptaufgaben mit ihren Schritten ----
+
+/**
+ * Wer zu wem gehört: die Schritte jeder Aufgabe und die Aufgabe jedes
+ * Schritts.
+ *
+ * Gerechnet auf der GANZEN Liste, Abschnitte eingeschlossen. Ein Schritt
+ * gehört zur nächsten Aufgabe darüber (subtaskGroups); ohne die Abschnitte
+ * rutschte einer hinter einer Überschrift an die Aufgabe davor.
+ */
+export interface StepIndex {
+  stepsOf: ReadonlyMap<string, Todo[]>;
+  headOf: ReadonlyMap<string, Todo>;
+}
+
+export function stepIndex(all: readonly Todo[]): StepIndex {
+  const stepsOf = new Map<string, Todo[]>();
+  const headOf = new Map<string, Todo>();
+  for (const [head, ...steps] of subtaskGroups(all)) {
+    if (steps.length === 0) continue;
+    stepsOf.set(head.id, steps);
+    for (const step of steps) headOf.set(step.id, head);
+  }
+  return { stepsOf, headOf };
+}
+
+/** Ein Eintrag auf Home: eine Aufgabe allein, oder eine Aufgabe mit allen Schritten. */
+export type HomeEntry =
+  | { kind: 'single'; key: string; todo: Todo }
+  | { kind: 'group'; key: string; head: Todo; steps: Todo[] };
+
+/**
+ * Macht aus den Aufgaben eines Abschnitts die Einträge, die Home zeigt.
+ *
+ * Eine Aufgabe mit Schritten steht mit ALLEN ihren Schritten da, nicht nur
+ * mit denen, die heute dran sind — man sieht, wie weit sie ist. Ein Schritt
+ * zieht seine Aufgabe mit herein, und die steht dann nur einmal da, auch wenn
+ * mehrere ihrer Schritte heute dran sind.
+ *
+ * `joinHead` entscheidet, ob ein Schritt unter seine Aufgabe rückt. Bei
+ * „Done today" nur, wenn die Aufgabe selbst heute fertig wurde; sonst stünde
+ * eine offene Aufgabe unter dem Erledigten.
+ */
+export function homeEntries(
+  items: readonly Todo[],
+  index: StepIndex,
+  joinHead: (step: Todo, head: Todo) => boolean = () => true,
+): HomeEntry[] {
+  const entries: HomeEntry[] = [];
+  const shownHeads = new Set<string>();
+
+  for (const item of items) {
+    const parent = index.headOf.get(item.id);
+    const head = parent && joinHead(item, parent) ? parent : index.stepsOf.has(item.id) ? item : null;
+
+    if (head) {
+      if (shownHeads.has(head.id)) continue;
+      shownHeads.add(head.id);
+      entries.push({ kind: 'group', key: head.id, head, steps: index.stepsOf.get(head.id) ?? [] });
+    } else {
+      entries.push({ kind: 'single', key: item.id, todo: item });
+    }
+  }
+
+  return entries;
+}
+
+/** Steht diese Aufgabe in dem Eintrag — als er selbst oder als einer seiner Schritte? */
+export function entryHas(entry: HomeEntry, id: string): boolean {
+  return entry.kind === 'single'
+    ? entry.todo.id === id
+    : entry.head.id === id || entry.steps.some((s) => s.id === id);
 }

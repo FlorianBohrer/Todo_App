@@ -4,6 +4,9 @@ import {
   clockTime,
   dayRange,
   doneOn,
+  entryHas,
+  homeEntries,
+  stepIndex,
   focusBlocksOn,
   focusSecondsOn,
   layoutDay,
@@ -182,5 +185,48 @@ describe('layoutDay', () => {
 
     expect(byId['second'].lane).toBe(1);
     expect(byId['long'].lanes).toBe(2);
+  });
+});
+
+describe('main tasks with their steps', () => {
+  const list = [
+    todo('head', { title: '/main Launch website' }),
+    todo('s1', { title: '/sub Write copy', completed: true, completedAt: at(9) }),
+    todo('s2', { title: '/sub Pick images', scheduledDate: DAY }),
+    todo('s3', { title: '/sub Publish', scheduledDate: DAY }),
+    todo('solo', { title: 'Call the bank', scheduledDate: DAY }),
+    todo('section', { title: '/section Later' }),
+    todo('orphan', { title: '/sub Under a heading' }),
+  ];
+  const index = stepIndex(list);
+
+  it('knows the steps of every main task and the main task of every step', () => {
+    expect(index.stepsOf.get('head')?.map((t) => t.id)).toEqual(['s1', 's2', 's3']);
+    expect(index.headOf.get('s3')?.id).toBe('head');
+    // Ein Schritt hinter einer Abschnittsüberschrift gehört keiner Aufgabe.
+    expect(index.headOf.has('orphan')).toBe(false);
+  });
+
+  it('shows a main task once, with all its steps, when any of them is due', () => {
+    const entries = homeEntries(openOn(list, DAY), index);
+
+    expect(entries.map((e) => (e.kind === 'group' ? ['group', e.head.id, e.steps.map((s) => s.id)] : ['single', e.todo.id]))).toEqual([
+      ['group', 'head', ['s1', 's2', 's3']],
+      ['single', 'solo'],
+    ]);
+  });
+
+  it('keeps a step on its own when it may not join its main task', () => {
+    const entries = homeEntries([list[1]], index, () => false);
+
+    expect(entries).toEqual([{ kind: 'single', key: 's1', todo: list[1] }]);
+  });
+
+  it('tells whether a task is part of an entry', () => {
+    const [group, single] = homeEntries(openOn(list, DAY), index);
+
+    expect(entryHas(group, 's1')).toBe(true);
+    expect(entryHas(group, 'solo')).toBe(false);
+    expect(entryHas(single, 'solo')).toBe(true);
   });
 });
