@@ -10,9 +10,13 @@ import {
   appendUnder,
   favoriteGroups,
   moveOutOfGroup,
+  type MoscowLevel,
   moveWithSubtasks,
   openGroups,
   orderWithSubtasks,
+  placeBlock,
+  priorityBadge,
+  setPriority,
   setTaskLevel,
   stripPriorityPrefix,
   subtaskGroups,
@@ -892,6 +896,37 @@ toggleFavorite(id: string) {
   moveTo(movedId: string, targetId: string) {
     const scope = orderWithSubtasks(this.todosInCategory());
     const ordered = moveWithSubtasks(scope, movedId, targetId);
+    if (!ordered) return;
+    const byId = new Map(scope.map((t) => [t.id, t]));
+    this.reorderScope(() => ordered.map((id) => byId.get(id)!));
+    this.persistOrder();
+  }
+
+  /**
+   * Ein Zug in der Liste nach Priorität: die Aufgabe bekommt die Stufe des
+   * Fachs, in das sie gezogen wurde, und steht dann vor oder hinter der
+   * Aufgabe, neben der sie losgelassen wurde.
+   *
+   * `badge` undefined heisst: Stufe bleibt (Zug innerhalb eines Fachs).
+   * `anchor` null heisst: kein Nachbar (leeres oder zugeklapptes Fach) —
+   * dann ordnet die Stufe sie ein, wie beim Anlegen.
+   *
+   * Erst der Titel, dann der Platz: orderWithSubtasks sortiert nach der
+   * Stufe, und gerechnet wird auf der Reihenfolge, in der die Liste steht.
+   */
+  placeInPriority(
+    movedId: string,
+    badge: MoscowLevel | null | undefined,
+    anchor: { id: string; side: 'before' | 'after' } | null,
+  ) {
+    const current = this.todoById(movedId);
+    if (!current) return;
+    if (badge !== undefined && priorityBadge(current.title) !== badge) {
+      this.renameTodo(movedId, setPriority(current.title, badge));
+    }
+    if (!anchor) return;
+    const scope = orderWithSubtasks(this.todosInCategory());
+    const ordered = placeBlock(scope, movedId, anchor.id, anchor.side);
     if (!ordered) return;
     const byId = new Map(scope.map((t) => [t.id, t]));
     this.reorderScope(() => ordered.map((id) => byId.get(id)!));
