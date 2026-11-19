@@ -400,6 +400,43 @@ export function moveWithSubtasks<T extends { id: string; title: string }>(
 }
 
 /**
+ * Setzt eine Aufgabe samt Schritten direkt vor oder hinter eine andere
+ * Gruppe.
+ *
+ * Für die Liste nach Priorität: dort sagt die gezeigte Reihenfolge nicht,
+ * wo etwas im Ganzen liegt — die Fächer ordnen um. „Hinter Aufgabe X" ist
+ * das, was man beim Loslassen gesehen hat, unabhängig davon, ob X im Ganzen
+ * vor oder hinter der gezogenen liegt (anders als bei moveWithSubtasks, das
+ * die Richtung aus den beiden Plätzen liest).
+ *
+ * Null, wenn sich nichts ändert oder die Anker-Gruppe die eigene ist.
+ */
+export function placeBlock<T extends { id: string; title: string }>(
+  items: readonly T[],
+  movedId: string,
+  anchorId: string,
+  side: 'before' | 'after',
+): string[] | null {
+  const from = items.findIndex((i) => i.id === movedId);
+  const anchorAt = items.findIndex((i) => i.id === anchorId);
+  if (from === -1 || anchorAt === -1 || isSection(items[from].title)) return null;
+  // Nur ganze Gruppen: ein Schritt mit Aufgabe darüber ist keine.
+  if (groupStart(items, from) !== from) return null;
+
+  const start = from;
+  const end = groupEnd(items, from);
+  if (anchorAt >= start && anchorAt < end) return null;
+
+  const moved = items.slice(start, end);
+  const rest = [...items.slice(0, start), ...items.slice(end)];
+  const anchor = rest.findIndex((i) => i.id === anchorId);
+  const at = side === 'before' ? groupStart(rest, anchor) : groupEnd(rest, anchor);
+
+  const next = [...rest.slice(0, at), ...moved, ...rest.slice(at)].map((i) => i.id);
+  return next.every((id, i) => id === items[i].id) ? null : next;
+}
+
+/**
  * Ein Abschnitt zieht alles mit, was zu ihm gehört, und rastet an den
  * Grenzen anderer Abschnitte ein — mitten in einen fremden fallen gelassen,
  * würde er dessen hintere Hälfte übernehmen. Nach oben in den Bereich ohne
