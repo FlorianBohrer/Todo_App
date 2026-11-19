@@ -6,6 +6,7 @@ import {
   favoriteGroups,
   openGroups,
   orderWithSubtasks,
+  placeBlock,
   setTaskLevel,
   priorityBadge,
   stripPriorityPrefix,
@@ -262,6 +263,36 @@ describe('moveWithSubtasks', () => {
     const out = moveWithSubtasks(items, 'C', 'A');
     expect(out).not.toBeNull();
     expect([...out!].sort()).toEqual(items.map((i) => i.id).sort());
+  });
+});
+
+describe('placeBlock', () => {
+  const list = (...titles: string[]) => titles.map((title) => ({ id: title, title }));
+
+  it('puts a task with its steps behind another group, whichever way it moves', () => {
+    const items = list('A', '/sub a1', 'B', '/sub b1', 'C');
+    // Nach unten: hinter B samt b1.
+    expect(placeBlock(items, 'A', 'B', 'after')).toEqual(['B', '/sub b1', 'A', '/sub a1', 'C']);
+    // Nach oben: hinter A samt a1 — moveWithSubtasks setzte C hier VOR A.
+    expect(placeBlock(items, 'C', 'A', 'after')).toEqual(['A', '/sub a1', 'C', 'B', '/sub b1']);
+  });
+
+  it('puts a task in front of another group', () => {
+    const items = list('A', 'B', '/sub b1', 'C');
+    expect(placeBlock(items, 'C', 'B', 'before')).toEqual(['A', 'C', 'B', '/sub b1']);
+  });
+
+  it('snaps to the edge of a group when the anchor is one of its steps', () => {
+    const items = list('A', 'B', '/sub b1', '/sub b2', 'C');
+    expect(placeBlock(items, 'A', '/sub b1', 'after')).toEqual(['B', '/sub b1', '/sub b2', 'A', 'C']);
+    expect(placeBlock(items, 'C', '/sub b2', 'before')).toEqual(['A', 'C', 'B', '/sub b1', '/sub b2']);
+  });
+
+  it('returns null when nothing changes or the anchor is its own', () => {
+    const items = list('A', '/sub a1', 'B');
+    expect(placeBlock(items, 'A', 'B', 'before')).toBeNull();
+    expect(placeBlock(items, 'A', '/sub a1', 'after')).toBeNull();
+    expect(placeBlock(items, '/sub a1', 'B', 'after')).toBeNull();
   });
 });
 

@@ -81,6 +81,7 @@
       [class.no-outline]="!hasOutline()"
       cdkDropList
       [cdkDropListDisabled]="!canDrag()"
+      [cdkDropListSortPredicate]="sortPredicate"
       (cdkDropListDropped)="drop($event)">
       @for (item of listItems(); track item.key) {
         @if (item.kind === 'row') {
@@ -840,31 +841,19 @@
           <!-- „+ Add step" am Ende einer aufgeklappten Gruppe. Trägt die Form
                eines Schritts (Einzug, Winkel), damit sie als Teil der Gruppe
                liest und die Linie dort endet. -->
-          <li class="todo-card todo-sub todo-sub--last todo-add-step">
-            @if (hasOutline()) {
-              <span class="todo-outline-spacer w-4 flex-none" aria-hidden="true"></span>
-            }
-            @if (stepInputFor() === item.headId) {
-              <lucide-icon [img]="PlusIcon" class="todo-add-step__icon h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
-              <input #stepField
-                class="todo-add-step__input"
-                [attr.data-step-for]="item.headId"
-                placeholder="New step…"
-                enterkeyhint="next"
-                autocomplete="off"
-                [attr.aria-label]="'New step for ' + item.headTitle"
-                (keydown.enter)="addStep(item.headId, stepField)"
-                (keydown.escape)="closeStepInput()"
-                (blur)="onStepBlur(stepField)" />
-            } @else {
-              <button type="button" class="todo-add-step__button"
-                (click)="openStepInput(item.headId)"
-                [attr.aria-label]="'Add a step to ' + item.headTitle">
-                <lucide-icon [img]="PlusIcon" class="h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
-                <span>Add step</span>
-              </button>
-            }
-          </li>
+          <!-- Nach Priorität gehört sie zur Liste (cdkDrag, gesperrt), damit
+               sie beim Ziehen mitrückt: stünde sie still, spränge die nächste
+               Fachüberschrift um ihre Höhe zu weit und liesse eine Lücke. Von
+               Hand bleibt sie draussen — dort zählt drop() nur die Zeilen. -->
+          @if (grouping() === 'priority') {
+            <li cdkDrag [cdkDragDisabled]="true" class="todo-card todo-sub todo-sub--last todo-add-step">
+              <ng-container *ngTemplateOutlet="addStepBody; context: { $implicit: item }" />
+            </li>
+          } @else {
+            <li class="todo-card todo-sub todo-sub--last todo-add-step">
+              <ng-container *ngTemplateOutlet="addStepBody; context: { $implicit: item }" />
+            </li>
+          }
         } @else if (item.kind === 'section') {
           @let row = item.row;
           <!-- Abschnitts-Überschrift. Ziehbar wie eine Zeile — und sie nimmt
@@ -959,8 +948,12 @@
           </li>
         } @else if (item.kind === 'bucket') {
           <!-- Fach beim Gruppieren: eine farbige Pille mit Zahl, rechts „+".
-               Eine Sicht, keine Zeile — gezogen wird hier nicht. -->
-          <li class="todo-section todo-section--virtual" [class]="'todo-section--tint-' + item.tint" [class.is-collapsed]="item.collapsed">
+               Eine Sicht, keine Zeile — selbst gezogen wird sie nicht. Sie
+               gehört aber zur Liste (cdkDrag, gesperrt): nach Priorität rückt
+               sie beim Ziehen mit, und der Platz beim Loslassen sagt, in
+               welches Fach die Zeile fiel (dropInBucket). -->
+          <li cdkDrag [cdkDragDisabled]="true"
+            class="todo-section todo-section--virtual" [class]="'todo-section--tint-' + item.tint" [class.is-collapsed]="item.collapsed">
             <button type="button" class="todo-pill"
               (click)="toggleBucket(item.id)"
               [attr.aria-expanded]="!item.collapsed"
@@ -980,14 +973,14 @@
         } @else if (item.kind === 'bucketEmpty') {
           <!-- Leeres Fach: ein gestrichelter Platzhalter, der sagt, dass hier
                nichts ist, und mit einem Tipp etwas anlegt. -->
-          <li class="todo-empty-slot">
+          <li cdkDrag [cdkDragDisabled]="true" class="todo-empty-slot">
             <button type="button" class="todo-empty-slot__button" (click)="openBucketInput(item.id)">
               <span>{{ item.hint }}</span>
               <lucide-icon [img]="PlusIcon" class="todo-empty-slot__plus h-4 w-4" aria-hidden="true"></lucide-icon>
             </button>
           </li>
         } @else if (item.kind === 'bucketAdd') {
-          <li class="todo-card todo-add-step todo-add-in-section">
+          <li cdkDrag [cdkDragDisabled]="true" class="todo-card todo-add-step todo-add-in-section">
             <lucide-icon [img]="PlusIcon" class="todo-add-step__icon h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
             <input #bucketTodo
               class="todo-add-step__input"
@@ -1003,6 +996,33 @@
         }
       }
     </ul>
+
+    <!-- Der Inhalt von „+ Add step", einmal für beide Fassungen der Zeile. -->
+    <ng-template #addStepBody let-item>
+      @if (hasOutline()) {
+        <span class="todo-outline-spacer w-4 flex-none" aria-hidden="true"></span>
+      }
+      @if (stepInputFor() === item.headId) {
+        <lucide-icon [img]="PlusIcon" class="todo-add-step__icon h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+        <input #stepField
+          class="todo-add-step__input"
+          [attr.data-step-for]="item.headId"
+          placeholder="New step…"
+          enterkeyhint="next"
+          autocomplete="off"
+          [attr.aria-label]="'New step for ' + item.headTitle"
+          (keydown.enter)="addStep(item.headId, stepField)"
+          (keydown.escape)="closeStepInput()"
+          (blur)="onStepBlur(stepField)" />
+      } @else {
+        <button type="button" class="todo-add-step__button"
+          (click)="openStepInput(item.headId)"
+          [attr.aria-label]="'Add a step to ' + item.headTitle">
+          <lucide-icon [img]="PlusIcon" class="h-4 w-4 flex-none" aria-hidden="true"></lucide-icon>
+          <span>Add step</span>
+        </button>
+      }
+    </ng-template>
   }
 
   <!-- Vorschläge aus der eigenen Liste (suggestions.ts): was man öfter

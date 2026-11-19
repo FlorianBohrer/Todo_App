@@ -1,41 +1,34 @@
 <!-- Home: der heutige Tag. Links als Liste, rechts als Uhr. -->
 <section class="home-view mx-auto w-full max-w-6xl px-3 min-[360px]:px-4 lg:px-8">
 
-  <div class="view-head home-head">
-    <div class="min-w-0">
-      <h1 class="display-title">
+  <!-- Der Kopf wie in den anderen Ansichten: rechts der Ring wie in der
+       Liste, darunter die Bilanz als eine Zeile mit Punkten wie in der Woche.
+       Vorher stand rechts eine eigene Anzeige mit grosser Zahl und Balken —
+       die einzige ihrer Art in der App. -->
+  <header class="home-head">
+    <div class="home-head__row">
+      <h1 class="display-title min-w-0">
         <span class="hidden sm:inline">{{ dateTitle() }}</span>
         <span class="sm:hidden">{{ dateTitleShort() }}</span>
       </h1>
-      <p class="view-sub">
-        @if (running()) {
-          Working on it since {{ runningSince() }}
-        } @else if (openCount() > 0) {
-          {{ openCount() }} left for today
-        } @else if (score().done > 0) {
-          Everything for today is done
-        } @else {
-          Nothing planned for today yet
-        }
-      </p>
+      @if (score().total > 0) {
+        <app-progress-ring
+          class="flex-none text-brand-2"
+          [size]="48"
+          [thickness]="4.5"
+          [completed]="score().done"
+          [total]="score().total" />
+      }
     </div>
-
-    <!-- Die Bilanz des Tages: erledigt von allem, was heute dran war. -->
-    @if (score().total > 0 || usesFlow()) {
-      <div class="home-score" [attr.aria-label]="score().done + ' of ' + score().total + ' done today'">
-        <p class="home-score__figure">
-          <span class="home-score__big">{{ score().done }}</span>
-          <span class="home-score__of">of {{ score().total }} done</span>
-        </p>
-        <div class="home-score__bar" aria-hidden="true">
-          <span class="home-score__fill" [style.width.%]="score().percent"></span>
-        </div>
-        @if (usesFlow()) {
-          <p class="home-score__caption">{{ focusToday() }} in focus today</p>
+    <p class="view-sub tabular-nums">
+      @for (part of headParts(); track $index; let first = $first) {
+        @if (!first) {
+          <span class="home-sep" aria-hidden="true">·</span>
         }
-      </div>
-    }
-  </div>
+        <span class="home-head__part">{{ part }}</span>
+      }
+    </p>
+  </header>
 
   <div class="home-grid">
 
