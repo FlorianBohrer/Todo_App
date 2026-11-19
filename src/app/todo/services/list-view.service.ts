@@ -46,7 +46,8 @@ export class ListViewService {
     read('todos.grouping', legacyGrouping(), isGrouping),
   );
   readonly sort = signal<SortOrder>(read('todos.sort', 'manual', isSort));
-  readonly showIcons = signal<boolean>(read('todos.icons', true, isBool));
+  /** Bilder vor den Aufgaben: aus, bis man sie einschaltet. Die schlichte Liste mit Farbpunkt ist der Normalfall. */
+  readonly showIcons = signal<boolean>(read('todos.icons', false, isBool));
   readonly showSuggestions = signal<boolean>(read('todos.suggestions', true, isBool));
 
   /** Zählt hoch, wenn oben „+" gedrückt wird — das Eingabefeld hört darauf. */
