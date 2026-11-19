@@ -439,6 +439,24 @@
                 aria-label="Edit text">
                 <lucide-icon [img]="PencilIcon" class="h-4 w-4"></lucide-icon>
               </button>
+              <!-- Aufklappen steht neben dem Stift, Löschen ganz aussen: die
+                   beiden Handgriffe am Text beisammen, das Kreuz am Rand, wo
+                   man es nicht auf dem Weg zum Aufklappen trifft. Am Telefon
+                   gibt es diese Leiste nicht; dort steht der Knopf weiter
+                   unten in der Zeile. -->
+              @if (clampedIds().has(todo.id) || isExpanded(todo.id)) {
+                <button
+                  type="button"
+                  class="row-action grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-muted/70 transition hover:bg-fill hover:text-text"
+                  [class.text-text]="isExpanded(todo.id)"
+                  (click)="toggleExpanded(todo.id, todoText)"
+                  [attr.aria-expanded]="isExpanded(todo.id)"
+                  [attr.aria-label]="isExpanded(todo.id)
+                    ? 'Collapse todo'
+                    : 'Expand todo to read the full text'">
+                  <lucide-icon [img]="ExpandIcon" class="h-4 w-4"></lucide-icon>
+                </button>
+              }
               @if (!todo.archivedAt) {
                 <button
                   type="button"
@@ -455,11 +473,12 @@
           <!-- Aufklappen, wenn der Text wirklich abgeschnitten ist — gemessen
                (Autosize meldet es), nicht an der Zeichenzahl geraten. Vorher
                stand der Knopf an jedem Todo über 40 Zeichen, auch wenn alles
-               in zwei Zeilen passte. -->
+               in zwei Zeilen passte. Nur am Telefon hier; ab sm steht er in
+               der Leiste oben, zwischen Stift und Kreuz. -->
           @if (clampedIds().has(todo.id) || isExpanded(todo.id)) {
             <button
               type="button"
-              class="row-action flex-shrink-0 rounded-full p-1 text-muted/60 transition hover:text-text sm:p-1.5"
+              class="row-action flex-shrink-0 rounded-full p-1 text-muted/60 transition hover:text-text sm:hidden"
               [class.row-action--kept]="isExpanded(todo.id)"
               [class.text-text]="isExpanded(todo.id)"
               (click)="toggleExpanded(todo.id, todoText)"

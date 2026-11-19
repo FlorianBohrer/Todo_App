@@ -59,14 +59,14 @@
         (keydown.escape)="q.value = ''; q.blur()" />
 
       <div class="home-list">
-        @if (running(); as todo) {
-          <ng-container *ngTemplateOutlet="card; context: { $implicit: todo, role: 'running' }" />
-        } @else if (upNext(); as todo) {
-          <ng-container *ngTemplateOutlet="card; context: { $implicit: todo, role: 'next' }" />
-        }
-
-        @for (todo of rest(); track todo.id) {
-          <ng-container *ngTemplateOutlet="card; context: { $implicit: todo, role: 'open' }" />
+        <!-- Oben, woran gerade gearbeitet wird oder was als Nächstes dran ist;
+             Hauptaufgaben mit allen ihren Schritten (entries() in home-view.ts). -->
+        @for (entry of entries(); track entry.key) {
+          @if (entry.kind === 'single') {
+            <ng-container *ngTemplateOutlet="card; context: { $implicit: entry.todo, role: roleOf(entry.todo), entry: null }" />
+          } @else {
+            <ng-container *ngTemplateOutlet="card; context: { $implicit: entry.head, role: roleOf(entry.head), entry: entry }" />
+          }
         }
 
         @if (!running() && openCount() === 0) {
@@ -97,8 +97,12 @@
         <div id="home-done-list" class="home-done" [class.is-collapsed]="doneCollapsed()" [attr.inert]="doneCollapsed() ? '' : null">
           <div class="home-done__inner">
             <div class="home-list">
-              @for (todo of done(); track todo.id) {
-                <ng-container *ngTemplateOutlet="card; context: { $implicit: todo, role: 'done' }" />
+              @for (entry of doneEntries(); track entry.key) {
+                @if (entry.kind === 'single') {
+                  <ng-container *ngTemplateOutlet="card; context: { $implicit: entry.todo, role: 'done', entry: null }" />
+                } @else {
+                  <ng-container *ngTemplateOutlet="card; context: { $implicit: entry.head, role: roleOf(entry.head), entry: entry }" />
+                }
               }
             </div>
           </div>
@@ -156,11 +160,12 @@
        der Woche (shared/_task-card.scss). Der Name für die View Transition
        lässt sie beim Abhaken an ihren neuen Platz gleiten. Ein Klick führt
        zur Aufgabe in der Liste. -->
-  <ng-template #card let-todo let-role="role">
+  <ng-template #card let-todo let-role="role" let-entry="entry">
     <article
       class="task-card home-card"
       [class.is-done]="todo.completed"
       [class.is-focus]="role === 'running'"
+      [class.has-focus-step]="entry && stepRunning(entry)"
       [style.view-transition-name]="'task-' + todo.id"
       tabindex="0"
       [attr.aria-label]="plainTitle(todo.title) + (role === 'running' ? ', running in Flow' : '') + (todo.completed ? ', done' : '') + '. Press Enter to open it in the list.'"
@@ -174,6 +179,11 @@
         }
         <app-rich-text [text]="displayTitle(todo.title)" />
       </p>
+      <!-- Ein Schritt, der allein steht (heute erledigt, seine Aufgabe noch
+           nicht): wozu er gehört. -->
+      @if (!entry && headTitle(todo); as head) {
+        <p class="home-card__context">in {{ head }}</p>
+      }
 
       <div class="task-card__meta">
         <button
@@ -227,7 +237,82 @@
         @if (todo.repeat) {
           <lucide-icon [img]="RepeatIcon" class="task-card__repeat" [attr.title]="'Repeats'"></lucide-icon>
         }
+
+        <!-- Hauptaufgabe: wie weit ihre Schritte sind, und der Knopf zum
+             Auf- und Zuklappen. Ganz rechts, wo man ihn wie in der Liste
+             sucht. -->
+        @if (entry) {
+          <span class="home-progress" [class.is-complete]="stepsDone(entry) === entry.steps.length"
+            [attr.title]="stepsDone(entry) + ' of ' + entry.steps.length + ' steps done'">
+            <svg viewBox="0 0 16 16" class="home-progress__ring" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.25" class="home-progress__track" />
+              <circle cx="8" cy="8" r="6.25" class="home-progress__fill" pathLength="100"
+                [attr.stroke-dasharray]="(stepsDone(entry) / entry.steps.length) * 100 + ' 100'" />
+            </svg>
+            <span class="tabular-nums">{{ stepsDone(entry) }}/{{ entry.steps.length }}</span>
+          </span>
+          <button type="button" class="home-fold"
+            [attr.aria-expanded]="!folded().has(todo.id)"
+            [attr.aria-controls]="'home-steps-' + todo.id"
+            [attr.aria-label]="(folded().has(todo.id) ? 'Show the steps of ' : 'Hide the steps of ') + plainTitle(todo.title)"
+            [title]="folded().has(todo.id) ? 'Show steps' : 'Hide steps'"
+            (click)="toggleFold(todo.id, $event)"
+            (keydown.enter)="$event.stopPropagation()">
+            <lucide-icon [img]="ChevronIcon" class="home-fold__chevron h-4 w-4" [class.is-folded]="folded().has(todo.id)"></lucide-icon>
+          </button>
+        }
       </div>
+
+      <!-- Alle Schritte der Hauptaufgabe, offen und erledigt, in ihrer
+           Reihenfolge. Jeder lässt sich abhaken, in der Liste öffnen und mit
+           dem Startzeichen erfassen. -->
+      @if (entry) {
+        <div class="home-steps" [class.is-folded]="folded().has(todo.id)" [id]="'home-steps-' + todo.id"
+          [attr.inert]="folded().has(todo.id) ? '' : null"
+          (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+          <div class="home-steps__inner">
+            <ul class="home-steps__list" [attr.aria-label]="'Steps of ' + plainTitle(todo.title)">
+              @for (step of entry.steps; track step.id) {
+                <li class="home-step" [class.is-done]="step.completed" [class.is-focus]="roleOf(step) === 'running'">
+                  <button type="button" class="task-check home-step__check"
+                    [class]="step.completed ? fillClass(step) : ''"
+                    (click)="toggleStep(step, $event)"
+                    [attr.aria-label]="(step.completed ? 'Reopen ' : 'Complete ') + plainTitle(step.title)"
+                    [attr.aria-pressed]="step.completed">
+                    <lucide-icon [img]="CheckIcon" class="h-2.5 w-2.5"></lucide-icon>
+                  </button>
+                  <button type="button" class="home-step__title" (click)="show(step)" [attr.title]="'Open “' + plainTitle(step.title) + '” in the list'">
+                    <app-rich-text [text]="displayTitle(step.title)" />
+                  </button>
+
+                  @if (roleOf(step) === 'running') {
+                    <span class="task-focus" [class.is-paused]="paused()">
+                      @if (paused()) {
+                        <lucide-icon [img]="PauseIcon" class="h-3 w-3"></lucide-icon>
+                      } @else {
+                        <span class="task-focus__dot" aria-hidden="true"></span>
+                      }
+                      <span class="tabular-nums">{{ clock() }}</span>
+                    </span>
+                  } @else if (roleOf(step) === 'next') {
+                    <span class="home-tag">Up next</span>
+                  } @else if (spent(step); as time) {
+                    <span class="home-spent">{{ time }}</span>
+                  }
+
+                  @if (!step.completed && roleOf(step) !== 'running') {
+                    <button type="button" class="home-step__start" [disabled]="busy()"
+                      (click)="start(step, $event)"
+                      [attr.aria-label]="'Start tracking ' + plainTitle(step.title)" title="Start tracking">
+                      <lucide-icon [img]="PlayIcon" class="h-3 w-3"></lucide-icon>
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
     </article>
   </ng-template>
 </section>
