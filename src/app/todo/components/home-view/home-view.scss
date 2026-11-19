@@ -11,67 +11,28 @@
 /* ---- Kopf ---- */
 
 .home-head {
-  align-items: flex-end;
   margin-bottom: 1.75rem;
 }
 
-.home-score {
-  display: grid;
-  min-width: 12rem;
-  justify-items: end;
-  gap: 0.375rem;
-  margin-left: auto;
-}
-
-/* Auf dem Telefon steht die Bilanz unter dem Datum, linksbündig und über
-   die ganze Breite: rechts an den Rand gerückt las sie sich als Nachtrag. */
-@media (max-width: 639px) {
-  .home-score {
-    width: 100%;
-    justify-items: start;
-    margin-left: 0;
-  }
-}
-
-.home-score__figure {
+/* Datum und Ring in einer Zeile, der Ring am rechten Rand — wie in der
+   Liste. Die Zeile darunter läuft über die ganze Breite: neben dem Ring
+   bräche sie auf dem Telefon um. */
+.home-head__row {
   display: flex;
-  align-items: baseline;
-  gap: 0.375rem;
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.875rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.home-score__big {
-  color: var(--color-text);
-  font-size: 2rem;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  line-height: 1;
+/* Umgebrochen wird zwischen den Teilen, nie mitten in „1h 35m in focus". */
+.home-head__part {
+  white-space: nowrap;
 }
 
-.home-score__bar {
-  width: 100%;
-  height: 0.25rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--color-fill-strong);
-}
-
-.home-score__fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--color-highlight1);
-  transition: width 420ms var(--spring, cubic-bezier(0.32, 0.72, 0, 1));
-}
-
-.home-score__caption {
-  margin: 0;
+/* Die Trenner wie in der Woche: eigene Zeichen mit Luft. */
+.home-sep {
+  margin-inline: 0.4em;
   color: var(--color-subtle);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Raster ---- */
@@ -718,8 +679,7 @@
   .home-fold__chevron,
   .home-progress__fill,
   .home-done,
-  .home-divider__chevron,
-  .home-score__fill {
+  .home-divider__chevron {
     transition: none;
   }
 }

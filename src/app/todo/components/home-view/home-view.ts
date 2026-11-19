@@ -27,6 +27,7 @@ import {
 import { Todo } from '../../model/todo.model';
 import { RichText } from '../../shared/rich-text';
 import { TokenChip } from '../../shared/token-chip';
+import { ProgressRing } from '../progress-ring/progress-ring';
 import { TitleToken } from '../../shared/title-token';
 import { priorityBadge, stripPriorityPrefix } from '../../shared/title-priority';
 import { breakAfterHeading, stripBold } from '../../shared/rich-title';
@@ -95,7 +96,7 @@ function readCollapsed(): boolean {
  */
 @Component({
   selector: 'app-home-view',
-  imports: [NgTemplateOutlet, LucideAngularModule, RichText, TokenChip],
+  imports: [NgTemplateOutlet, LucideAngularModule, RichText, TokenChip, ProgressRing],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-view.html',
   styleUrl: './home-view.scss',
@@ -236,7 +237,7 @@ export class HomeView {
   protected readonly score = computed(() => {
     const done = this.done().length;
     const total = done + this.open().length;
-    return { done, total, percent: total === 0 ? 0 : Math.round((done / total) * 100) };
+    return { done, total };
   });
 
   /** Wie lange schon an der aktiven Aufgabe gearbeitet wird, hochzählend. */
@@ -266,6 +267,22 @@ export class HomeView {
       seconds += Math.max(0, (this.now() - this.fetchedAt) / 1000);
     }
     return formatFocus(seconds);
+  });
+
+  /**
+   * Die Zeile unter dem Datum, in Teilen mit Punkten dazwischen — wie die
+   * Woche ihre Bilanz schreibt: woran gerade gearbeitet wird, wie viel von
+   * heute erledigt ist, wie lange im Fokus.
+   */
+  protected readonly headParts = computed(() => {
+    const parts: string[] = [];
+    const running = this.running();
+    const { done, total } = this.score();
+    if (running) parts.push(`Working on it since ${this.runningSince()}`);
+    if (total > 0) parts.push(`${done} of ${total} done`);
+    else if (!running) parts.push('Nothing planned for today yet');
+    if (this.usesFlow()) parts.push(`${this.focusToday()} in focus`);
+    return parts;
   });
 
   // ---- Zeitleiste ----
