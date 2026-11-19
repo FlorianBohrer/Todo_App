@@ -26,7 +26,7 @@ import {
 import { HoldToDrag, TODO_DRAG_START_DELAY } from '../../../shared/hold-to-drag';
 
 import { TodoService } from '../../services/todo';
-import { NgClass } from '@angular/common';
+import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { RepeatRule, Todo } from '../../model/todo.model';
 import { Autosize } from '../../../directives/autosize.directive';
 import { folderColorClass } from '../../shared/folder-color';
@@ -367,7 +367,7 @@ interface TodoRow {
     CdkDropList,
     CdkDrag,
     HoldToDrag,
-    
+    NgTemplateOutlet,
     CdkDragPlaceholder,
     TokenChip,
     RichText,
@@ -1194,8 +1194,20 @@ toggleFolderList(): void {
     tap();
   }
 
-  /** Ziehen nur, wo die gezeigte Reihenfolge die gespeicherte ist. */
-  protected readonly canDrag = computed(() => this.grouping() === 'manual' && this.sort() === 'manual');
+  /**
+   * Ziehen nur, wo die gezeigte Reihenfolge die gespeicherte ist: von Hand
+   * und nach Priorität. Nach Priorität ist die Reihenfolge in jedem Fach die
+   * eigene, und das Fach selbst ist eine Eigenschaft der Aufgabe — wer sie
+   * hinüberzieht, ändert sie (dropInBucket). Nach Termin oder Tageszeit
+   * hiesse Hinüberziehen umplanen; dafür gibt es die Woche.
+   */
+  protected readonly canDrag = computed(
+    () => (this.grouping() === 'manual' || this.grouping() === 'priority') && this.sort() === 'manual',
+  );
+
+  /** Nach Priorität nichts über das erste Fach: dort gäbe es keine Stufe. */
+  protected readonly sortPredicate = (index: number): boolean =>
+    this.grouping() !== 'priority' || index > 0;
 
   setGrouping(value: Grouping): void {
     this.listView.setGrouping(value);
@@ -1278,6 +1290,8 @@ toggleFolderList(): void {
   protected readonly dragIndent = signal<-1 | 0 | 1>(0);
 
   onDragMoved(event: CdkDragMove<unknown>, row: TodoRow): void {
+    // In den Fächern ordnet die Stufe, nicht die Gliederung: seitlich heisst dort nichts.
+    if (this.grouping() !== 'manual') return;
     const dx = event.distance.x;
     let next: -1 | 0 | 1 = 0;
     if (dx > 36 && row.level !== 'sub' && row.subCount === 0 && !row.isSection) next = 1;
@@ -1797,6 +1811,10 @@ closeOptionsMenu(): void {
   drop(event: CdkDragDrop<unknown>): void {
     const shift = this.dragIndent();
     this.dragIndent.set(0);
+    if (this.grouping() === 'priority') {
+      this.dropInBucket(event);
+      return;
+    }
     const visible = this.visibleRows();
     const moved = visible[event.previousIndex];
     const target = visible[event.currentIndex];
@@ -1818,6 +1836,77 @@ closeOptionsMenu(): void {
     } else if (shift === -1) {
       this.todoService.makeOwnTask(moved.id);
     }
+  }
+
+  /**
+   * Losgelassen in der Liste nach Priorität.
+   *
+   * Die Indizes des CDK zählen hier die Zeilen UND die Fachüberschriften:
+   * die Überschriften sind gesperrte Elemente der Liste (cdkDragDisabled),
+   * rücken beim Ziehen aber mit. So sagt der neue Platz, unter welcher
+   * Überschrift die Zeile gelandet ist — auch in einem leeren Fach, wo es
+   * keine Zeile gäbe, an der man das ablesen könnte.
+   *
+   * Ein Schritt bleibt bei seiner Aufgabe: er wechselt nur den Platz unter
+   * ihren Schritten. Seine Stufe zeigt das Fach ohnehin nicht — das richtet
+   * sich nach der Aufgabe.
+   */
+  private dropInBucket(event: CdkDragDrop<unknown>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    // Dieselben Elemente, die im Template cdkDrag tragen, in derselben Reihenfolge.
+    const items = this.listItems().filter(
+      (item) =>
+        item.kind === 'row' ||
+        item.kind === 'add' ||
+        item.kind === 'bucket' ||
+        item.kind === 'bucketEmpty' ||
+        item.kind === 'bucketAdd',
+    );
+    const movedItem = items[event.previousIndex];
+    if (movedItem?.kind !== 'row') return;
+    const moved = movedItem.row;
+
+    if (moved.parentId !== null) {
+      const target = items[event.currentIndex];
+      if (target?.kind === 'row' && target.row.parentId === moved.parentId) {
+        this.todoService.moveTo(moved.id, target.row.id);
+      }
+      return;
+    }
+
+    // Die Liste ohne die gezogene Zeile: an `at` steht sie jetzt.
+    const others = items.filter((_, i) => i !== event.previousIndex);
+    const at = event.currentIndex;
+    let bucket: string | null = null;
+    for (let i = at - 1; i >= 0; i--) {
+      const item = others[i];
+      if (item.kind === 'bucket') {
+        bucket = item.id.slice(item.id.indexOf(':') + 1);
+        break;
+      }
+    }
+    if (bucket === null) return;
+
+    // Neben wem sie liegt: hinter der Zeile darüber, sonst vor der darunter.
+    // Die eigenen Schritte zählen nicht — die ziehen mit.
+    const own = (row: TodoRow) => row.id === moved.id || row.parentId === moved.id;
+    const above = others[at - 1];
+    const below = others[at];
+    let anchor: { id: string; side: 'before' | 'after' } | null = null;
+    if (above?.kind === 'row') {
+      if (!own(above.row)) anchor = { id: above.row.parentId ?? above.row.id, side: 'after' };
+    } else if (above?.kind === 'add') {
+      // „+ Add step" schliesst eine Gruppe ab: hinter diese Gruppe.
+      if (above.headId !== moved.id) anchor = { id: above.headId, side: 'after' };
+    } else if (below?.kind === 'row' && !own(below.row)) {
+      anchor = { id: below.row.parentId ?? below.row.id, side: 'before' };
+    }
+
+    const badge = bucket === 'none' ? null : (bucket as MoscowLevel);
+    const changes = (moved.badge ?? 'none') !== bucket;
+    if (!changes && !anchor) return;
+    this.todoService.placeInPriority(moved.id, changes ? badge : undefined, anchor);
+    if (changes) tap();
   }
 
 }
