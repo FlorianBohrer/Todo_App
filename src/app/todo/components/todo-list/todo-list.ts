@@ -24,6 +24,7 @@ import {
   CdkDropList,
 } from '@angular/cdk/drag-drop';
 import { HoldToDrag, TODO_DRAG_START_DELAY } from '../../../shared/hold-to-drag';
+import { ConfirmService } from '../../../shared/confirm.service';
 
 import { TodoService } from '../../services/todo';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
@@ -434,6 +435,7 @@ interface TodoRow {
 })
 export class TodoList {
   private readonly todoService = inject(TodoService);
+  private readonly confirm = inject(ConfirmService);
   private readonly rewards = inject(RewardService);
   private readonly toast = inject(ToastService);
   private readonly shortcuts = inject(ShortcutService);
@@ -1876,8 +1878,27 @@ closeOptionsMenu(): void {
     this.todoService.renameTodo(id, title);
   }
 
-  removeTodos(id: string): void {
-    this.todoService.removeTodo(id);
+  /**
+   * Erst fragen, dann löschen. Das Kreuz sitzt neben Stift und Aufklappen,
+   * und ein Klick daneben kostete sonst ein Todo; der Dialog wächst aus dem
+   * Knopf, damit klar ist, welches gemeint ist. Danach bleibt das Undo im
+   * Toast, wie bisher.
+   */
+  async removeTodos(id: string, event?: Event): Promise<void> {
+    const todo = this.todoService.todoById(id);
+    if (!todo) return;
+    const name = this.rows().find((row) => row.id === id)?.firstLine.trim() || 'This todo';
+    const short = name.length > 60 ? `${name.slice(0, 60)}…` : name;
+    const ok = await this.confirm.ask({
+      title: 'Delete this todo?',
+      message: `“${short}” will be deleted.`,
+      confirmLabel: 'Delete',
+      from: event?.currentTarget instanceof Element ? event.currentTarget : null,
+    });
+    if (ok) {
+      this.todoService.removeTodo(id);
+      tap();
+    }
   }
 
   toggleTodo(id: string): void {
