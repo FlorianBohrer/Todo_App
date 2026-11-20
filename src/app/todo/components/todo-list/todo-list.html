@@ -92,6 +92,7 @@
 
         <li
       cdkDrag
+      [cdkDragData]="row.id"
       [cdkDragStartDelay]="dragStartDelay"
       (cdkDragStarted)="onDragStarted()"
       (cdkDragEnded)="onDragEnded()"
@@ -841,11 +842,11 @@
           <!-- „+ Add step" am Ende einer aufgeklappten Gruppe. Trägt die Form
                eines Schritts (Einzug, Winkel), damit sie als Teil der Gruppe
                liest und die Linie dort endet. -->
-          <!-- Nach Priorität gehört sie zur Liste (cdkDrag, gesperrt), damit
+          <!-- In den Fächern gehört sie zur Liste (cdkDrag, gesperrt), damit
                sie beim Ziehen mitrückt: stünde sie still, spränge die nächste
                Fachüberschrift um ihre Höhe zu weit und liesse eine Lücke. Von
                Hand bleibt sie draussen — dort zählt drop() nur die Zeilen. -->
-          @if (grouping() === 'priority') {
+          @if (grouping() !== 'manual') {
             <li cdkDrag [cdkDragDisabled]="true" class="todo-card todo-sub todo-sub--last todo-add-step">
               <ng-container *ngTemplateOutlet="addStepBody; context: { $implicit: item }" />
             </li>
@@ -949,9 +950,9 @@
         } @else if (item.kind === 'bucket') {
           <!-- Fach beim Gruppieren: eine farbige Pille mit Zahl, rechts „+".
                Eine Sicht, keine Zeile — selbst gezogen wird sie nicht. Sie
-               gehört aber zur Liste (cdkDrag, gesperrt): nach Priorität rückt
-               sie beim Ziehen mit, und der Platz beim Loslassen sagt, in
-               welches Fach die Zeile fiel (dropInBucket). -->
+               gehört aber zur Liste (cdkDrag, gesperrt): nach Priorität und
+               nach Termin rückt sie beim Ziehen mit, und der Platz beim
+               Loslassen sagt, in welches Fach die Zeile fiel (dropInBucket). -->
           <li cdkDrag [cdkDragDisabled]="true"
             class="todo-section todo-section--virtual" [class]="'todo-section--tint-' + item.tint" [class.is-collapsed]="item.collapsed">
             <button type="button" class="todo-pill"
