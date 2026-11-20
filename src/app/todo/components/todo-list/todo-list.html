@@ -463,7 +463,7 @@
                 <button
                   type="button"
                   class="row-action block flex-none rounded-lg px-2 py-1 text-muted transition hover:text-red-400"
-                  (click)="removeTodos(todo.id)"
+                  (click)="removeTodos(todo.id, $event)"
                   aria-label="Delete">
                   ✕
                 </button>
@@ -831,7 +831,7 @@
               <button
                 type="button" role="menuitem"
                 class="popover-item border-t border-border text-sm text-danger transition"
-                (click)="removeTodos(todo.id); closeOptionsMenu()">
+                (click)="removeTodos(todo.id, $event); closeOptionsMenu()">
                 <lucide-icon [img]="TrashIcon" class="h-4 w-4"></lucide-icon>
                 <span>Delete</span>
               </button>

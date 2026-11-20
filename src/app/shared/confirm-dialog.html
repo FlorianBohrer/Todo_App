@@ -1,0 +1,45 @@
+@if (request(); as req) {
+  <!-- Auf- und Zugehen: confirm-dialog.scss. animate.leave hält beide
+       Flächen im DOM, bis sie draussen sind. -->
+  <div
+    class="scroll-lock fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm"
+    animate.enter="confirm-fade-in"
+    animate.leave="confirm-fade-out"
+    (click)="answer(false)">
+  </div>
+
+  <div #card
+    class="confirm-card fixed left-1/2 top-1/2 z-[91] w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2
+           rounded-2xl border border-line bg-panel1 px-5 pb-5 pt-6 text-center shadow-lg outline-none"
+    [style.--from-x.px]="req.origin.x"
+    [style.--from-y.px]="req.origin.y"
+    animate.enter="confirm-in"
+    animate.leave="confirm-out"
+    role="alertdialog" aria-modal="true"
+    aria-labelledby="confirm-title" aria-describedby="confirm-message"
+    tabindex="-1"
+    (keydown)="onKeydown($event)">
+
+    <div class="confirm-icon mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full text-danger" aria-hidden="true">
+      <lucide-icon [img]="TrashIcon" class="confirm-icon__glyph h-[22px] w-[22px]"></lucide-icon>
+    </div>
+
+    <h2 id="confirm-title" class="text-base font-semibold text-text">{{ req.title }}</h2>
+    <p id="confirm-message" class="mt-1.5 text-sm text-muted [overflow-wrap:anywhere]">{{ req.message }}</p>
+
+    <div class="mt-5 grid grid-cols-2 gap-2">
+      <button #cancel type="button"
+        class="rounded-xl bg-fill px-3 py-2.5 text-sm font-medium text-text transition hover:bg-fill-strong
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-line-strong focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
+        (click)="answer(false)">
+        {{ req.cancelLabel ?? 'Cancel' }}
+      </button>
+      <button type="button"
+        class="rounded-xl bg-danger px-3 py-2.5 text-sm font-semibold text-panel1 transition hover:brightness-110
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
+        (click)="answer(true)">
+        {{ req.confirmLabel }}
+      </button>
+    </div>
+  </div>
+}
