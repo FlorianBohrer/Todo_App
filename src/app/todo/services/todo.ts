@@ -924,7 +924,38 @@ toggleFavorite(id: string) {
     if (badge !== undefined && priorityBadge(current.title) !== badge) {
       this.renameTodo(movedId, setPriority(current.title, badge));
     }
-    if (!anchor) return;
+    if (anchor) this.placeNextTo(movedId, anchor);
+  }
+
+  /**
+   * Ein Zug in der Liste nach Termin: die Aufgabe bekommt den Tag des Fachs,
+   * in das sie gezogen wurde, und steht neben der Aufgabe, bei der sie
+   * losgelassen wurde.
+   *
+   * `date` undefined heisst: Tag bleibt (Zug innerhalb eines Fachs), null:
+   * ohne Datum. Die offenen Schritte ziehen mit, soweit sie früher lägen
+   * als der neue Tag — sonst hielte ein Schritt die Aufgabe im alten Fach
+   * fest, denn dort zählt der früheste offene. Was später liegt, bleibt.
+   */
+  placeOnDate(
+    movedId: string,
+    date: string | null | undefined,
+    anchor: { id: string; side: 'before' | 'after' } | null,
+  ) {
+    const current = this.todoById(movedId);
+    if (!current) return;
+    if (date !== undefined) {
+      if (current.scheduledDate !== date) this.scheduleTodo(movedId, date);
+      for (const step of this.stepsOf(movedId)) {
+        if (step.completed || step.scheduledDate === null) continue;
+        if (date === null || step.scheduledDate < date) this.scheduleTodo(step.id, date);
+      }
+    }
+    if (anchor) this.placeNextTo(movedId, anchor);
+  }
+
+  /** Den Block um `movedId` vor oder hinter die Gruppe von `anchor.id`. */
+  private placeNextTo(movedId: string, anchor: { id: string; side: 'before' | 'after' }) {
     const scope = orderWithSubtasks(this.todosInCategory());
     const ordered = placeBlock(scope, movedId, anchor.id, anchor.side);
     if (!ordered) return;

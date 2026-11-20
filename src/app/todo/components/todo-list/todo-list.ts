@@ -24,6 +24,7 @@ import {
   CdkDropList,
 } from '@angular/cdk/drag-drop';
 import { HoldToDrag, TODO_DRAG_START_DELAY } from '../../../shared/hold-to-drag';
+import { ConfirmService } from '../../../shared/confirm.service';
 
 import { TodoService } from '../../services/todo';
 import { NgClass, NgTemplateOutlet } from '@angular/common';
@@ -221,6 +222,60 @@ function bucketDate(mode: Grouping, id: string): string | null {
   return null;
 }
 
+/**
+ * Der Tag, nach dem eine Aufgabe einsortiert wird: der früheste offene in
+ * der Gruppe, sonst ihr eigener. `open` sagt, ob er von etwas Offenem kommt
+ * (dann ist ein vergangener Tag „Overdue", sonst „Earlier").
+ */
+function blockDate(block: readonly TodoRow[]): { date: string | null; open: boolean } {
+  const open = block
+    .filter((row) => !row.todo.completed && row.todo.scheduledDate !== null)
+    .map((row) => row.todo.scheduledDate!)
+    .sort();
+  return { date: open[0] ?? block[0].todo.scheduledDate, open: open.length > 0 };
+}
+
+/** Das Fach über `index`, also das, in dem eine Zeile dort läge. */
+function bucketAbove(items: readonly ListItem[], index: number): string | null {
+  for (let i = Math.min(index, items.length) - 1; i >= 0; i--) {
+    const item = items[i];
+    if (item.kind === 'bucket') return item.id.slice(item.id.indexOf(':') + 1);
+  }
+  return null;
+}
+
+/**
+ * Nach Termin: in welche Fächer man hineinziehen kann. „Overdue" und
+ * „Earlier" nicht — überfällig macht man nichts von Hand, und „Earlier" ist
+ * Erledigtes von früher. Innerhalb dieser Fächer umordnen geht trotzdem.
+ */
+const DATE_DROP_TARGETS = new Set(['today', 'tomorrow', 'week', 'later', 'none']);
+
+/**
+ * Der Tag für ein Fach nach Termin. In „Next 7 days" und „Later" der Tag der
+ * Aufgabe, neben die man sie legt — wer sie neben den Freitag zieht, meint
+ * den Freitag. Ohne Nachbarn der erste Tag des Fachs.
+ */
+function dateForBucket(id: string, neighbour: string | null): string | null | undefined {
+  const today = todayISO();
+  const tomorrow = shiftISODate(today, 1);
+  const inWeek = shiftISODate(today, 7);
+  switch (id) {
+    case 'today':
+      return today;
+    case 'tomorrow':
+      return tomorrow;
+    case 'none':
+      return null;
+    case 'week':
+      return neighbour !== null && neighbour > tomorrow && neighbour <= inWeek ? neighbour : shiftISODate(today, 2);
+    case 'later':
+      return neighbour !== null && neighbour > inWeek ? neighbour : shiftISODate(today, 8);
+    default:
+      return undefined;
+  }
+}
+
 /** Fächer, in die man direkt anlegen kann. */
 function bucketTakesNew(mode: Grouping, id: string): boolean {
   if (mode === 'date') return id === 'today' || id === 'tomorrow' || id === 'none';
@@ -380,6 +435,7 @@ interface TodoRow {
 })
 export class TodoList {
   private readonly todoService = inject(TodoService);
+  private readonly confirm = inject(ConfirmService);
   private readonly rewards = inject(RewardService);
   private readonly toast = inject(ToastService);
   private readonly shortcuts = inject(ShortcutService);
@@ -684,13 +740,9 @@ export class TodoList {
       const head = block[0];
       if (mode === 'priority') return head.badge ?? 'none';
       if (mode === 'time') return head.when ?? 'anytime';
-      const open = block
-        .filter((row) => !row.todo.completed && row.todo.scheduledDate !== null)
-        .map((row) => row.todo.scheduledDate!)
-        .sort();
-      const date = open[0] ?? head.todo.scheduledDate;
+      const { date, open } = blockDate(block);
       if (date === null) return 'none';
-      if (date < today) return open.length > 0 ? 'overdue' : 'earlier';
+      if (date < today) return open ? 'overdue' : 'earlier';
       if (date === today) return 'today';
       if (date === tomorrow) return 'tomorrow';
       return date <= inWeek ? 'week' : 'later';
@@ -1195,19 +1247,54 @@ toggleFolderList(): void {
   }
 
   /**
-   * Ziehen nur, wo die gezeigte Reihenfolge die gespeicherte ist: von Hand
-   * und nach Priorität. Nach Priorität ist die Reihenfolge in jedem Fach die
+   * Ziehen nur, wo die gezeigte Reihenfolge die gespeicherte ist: von Hand,
+   * nach Priorität und nach Termin. In den Fächern ist die Reihenfolge die
    * eigene, und das Fach selbst ist eine Eigenschaft der Aufgabe — wer sie
-   * hinüberzieht, ändert sie (dropInBucket). Nach Termin oder Tageszeit
-   * hiesse Hinüberziehen umplanen; dafür gibt es die Woche.
+   * hinüberzieht, ändert sie (dropInBucket): die Stufe oder den Tag.
    */
-  protected readonly canDrag = computed(
-    () => (this.grouping() === 'manual' || this.grouping() === 'priority') && this.sort() === 'manual',
+  protected readonly canDrag = computed(() => {
+    const mode = this.grouping();
+    return (mode === 'manual' || mode === 'priority' || mode === 'date') && this.sort() === 'manual';
+  });
+
+  /**
+   * Die Elemente, die in den Fächern cdkDrag tragen — gezogen oder gesperrt
+   * —, in der Reihenfolge des Templates. Daran zählt das CDK seine Indizes.
+   */
+  private readonly dragItems = computed(() =>
+    this.listItems().filter(
+      (item) =>
+        item.kind === 'row' ||
+        item.kind === 'add' ||
+        item.kind === 'bucket' ||
+        item.kind === 'bucketEmpty' ||
+        item.kind === 'bucketAdd',
+    ),
   );
 
-  /** Nach Priorität nichts über das erste Fach: dort gäbe es keine Stufe. */
-  protected readonly sortPredicate = (index: number): boolean =>
-    this.grouping() !== 'priority' || index > 0;
+  /**
+   * Wo eine Zeile beim Ziehen hindarf. In den Fächern nichts über dem
+   * ersten — dort gäbe es keine Stufe und keinen Tag. Nach Termin nicht nach
+   * „Overdue" oder „Earlier", ausser sie stand schon dort.
+   *
+   * `index` ist ihr Platz in der Liste, wie sie gerade aussieht. Beim Ziehen
+   * verschiebt das CDK nur die gezogene Zeile; die übrigen behalten ihre
+   * Reihenfolge, und das Fach über `index` liest sich an ihnen ab.
+   */
+  protected readonly sortPredicate = (index: number, drag: CdkDrag<string>): boolean => {
+    const mode = this.grouping();
+    if (mode === 'manual') return true;
+    const items = this.dragItems();
+    const from = items.findIndex((item) => item.kind === 'row' && item.row.id === drag.data);
+    if (from === -1) return true;
+    const target = bucketAbove(
+      items.filter((_, i) => i !== from),
+      index,
+    );
+    if (target === null) return false;
+    if (mode !== 'date') return true;
+    return DATE_DROP_TARGETS.has(target) || target === bucketAbove(items, from);
+  };
 
   setGrouping(value: Grouping): void {
     this.listView.setGrouping(value);
@@ -1791,8 +1878,27 @@ closeOptionsMenu(): void {
     this.todoService.renameTodo(id, title);
   }
 
-  removeTodos(id: string): void {
-    this.todoService.removeTodo(id);
+  /**
+   * Erst fragen, dann löschen. Das Kreuz sitzt neben Stift und Aufklappen,
+   * und ein Klick daneben kostete sonst ein Todo; der Dialog wächst aus dem
+   * Knopf, damit klar ist, welches gemeint ist. Danach bleibt das Undo im
+   * Toast, wie bisher.
+   */
+  async removeTodos(id: string, event?: Event): Promise<void> {
+    const todo = this.todoService.todoById(id);
+    if (!todo) return;
+    const name = this.rows().find((row) => row.id === id)?.firstLine.trim() || 'This todo';
+    const short = name.length > 60 ? `${name.slice(0, 60)}…` : name;
+    const ok = await this.confirm.ask({
+      title: 'Delete this todo?',
+      message: `“${short}” will be deleted.`,
+      confirmLabel: 'Delete',
+      from: event?.currentTarget instanceof Element ? event.currentTarget : null,
+    });
+    if (ok) {
+      this.todoService.removeTodo(id);
+      tap();
+    }
   }
 
   toggleTodo(id: string): void {
@@ -1811,7 +1917,7 @@ closeOptionsMenu(): void {
   drop(event: CdkDragDrop<unknown>): void {
     const shift = this.dragIndent();
     this.dragIndent.set(0);
-    if (this.grouping() === 'priority') {
+    if (this.grouping() !== 'manual') {
       this.dropInBucket(event);
       return;
     }
@@ -1839,7 +1945,7 @@ closeOptionsMenu(): void {
   }
 
   /**
-   * Losgelassen in der Liste nach Priorität.
+   * Losgelassen in der Liste nach Priorität oder nach Termin.
    *
    * Die Indizes des CDK zählen hier die Zeilen UND die Fachüberschriften:
    * die Überschriften sind gesperrte Elemente der Liste (cdkDragDisabled),
@@ -1848,20 +1954,13 @@ closeOptionsMenu(): void {
    * keine Zeile gäbe, an der man das ablesen könnte.
    *
    * Ein Schritt bleibt bei seiner Aufgabe: er wechselt nur den Platz unter
-   * ihren Schritten. Seine Stufe zeigt das Fach ohnehin nicht — das richtet
+   * ihren Schritten. Sein Fach zeigt die Liste ohnehin nicht — das richtet
    * sich nach der Aufgabe.
    */
   private dropInBucket(event: CdkDragDrop<unknown>): void {
     if (event.previousIndex === event.currentIndex) return;
-    // Dieselben Elemente, die im Template cdkDrag tragen, in derselben Reihenfolge.
-    const items = this.listItems().filter(
-      (item) =>
-        item.kind === 'row' ||
-        item.kind === 'add' ||
-        item.kind === 'bucket' ||
-        item.kind === 'bucketEmpty' ||
-        item.kind === 'bucketAdd',
-    );
+    const mode = this.grouping();
+    const items = this.dragItems();
     const movedItem = items[event.previousIndex];
     if (movedItem?.kind !== 'row') return;
     const moved = movedItem.row;
@@ -1877,14 +1976,7 @@ closeOptionsMenu(): void {
     // Die Liste ohne die gezogene Zeile: an `at` steht sie jetzt.
     const others = items.filter((_, i) => i !== event.previousIndex);
     const at = event.currentIndex;
-    let bucket: string | null = null;
-    for (let i = at - 1; i >= 0; i--) {
-      const item = others[i];
-      if (item.kind === 'bucket') {
-        bucket = item.id.slice(item.id.indexOf(':') + 1);
-        break;
-      }
-    }
+    const bucket = bucketAbove(others, at);
     if (bucket === null) return;
 
     // Neben wem sie liegt: hinter der Zeile darüber, sonst vor der darunter.
@@ -1902,11 +1994,31 @@ closeOptionsMenu(): void {
       anchor = { id: below.row.parentId ?? below.row.id, side: 'before' };
     }
 
+    if (mode === 'date') {
+      const from = bucketAbove(items, event.previousIndex);
+      let date: string | null | undefined;
+      if (bucket !== from) {
+        if (!DATE_DROP_TARGETS.has(bucket)) return;
+        const neighbour = anchor ? this.blockDateOf(anchor.id) : null;
+        date = dateForBucket(bucket, neighbour);
+      }
+      if (date === undefined && !anchor) return;
+      this.todoService.placeOnDate(moved.id, date, anchor);
+      if (date !== undefined) tap();
+      return;
+    }
+
     const badge = bucket === 'none' ? null : (bucket as MoscowLevel);
     const changes = (moved.badge ?? 'none') !== bucket;
     if (!changes && !anchor) return;
     this.todoService.placeInPriority(moved.id, changes ? badge : undefined, anchor);
     if (changes) tap();
+  }
+
+  /** Der Tag, nach dem die Aufgabe `headId` mit ihren Schritten einsortiert ist. */
+  private blockDateOf(headId: string): string | null {
+    const block = this.rows().filter((row) => row.id === headId || row.parentId === headId);
+    return block.length > 0 ? blockDate(block).date : null;
   }
 
 }

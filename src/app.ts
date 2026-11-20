@@ -53,6 +53,7 @@ import { FlowStatus } from './app/todo/components/flow-status/flow-status';
 import { LabelService } from './app/todo/services/label.service';
 import { TodoService } from './app/todo/services/todo';
 import { ToastContainer } from './app/shared/toast-container';
+import { ConfirmDialog } from './app/shared/confirm-dialog';
 import { ShortcutsOverlay } from './app/shared/shortcuts-overlay';
 import { isTypingTarget } from './app/todo/shared/keyboard';
 import { ShortcutService } from './app/shared/shortcut.service';
@@ -85,6 +86,7 @@ import type { View } from './app/todo/services/todo';
     FlowStatus,
     LucideAngularModule,
     ToastContainer,
+    ConfirmDialog,
     ShortcutsOverlay,
     ThemeSwitch,
   ],

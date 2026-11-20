@@ -1,0 +1,130 @@
+/* Der Dialog wächst aus dem Knopf, der gefragt hat (--from-x/--from-y:
+   sein Abstand zur Bildschirmmitte), und schrumpft beim Schliessen dorthin
+   zurück. Dann meldet sich das Symbol: der Kreis springt auf, der Eimer
+   wackelt einmal, ein Ring läuft nach aussen. Einmal, nicht in Schleife —
+   die Frage soll auffallen, nicht nerven. */
+
+.confirm-card {
+  transform-origin: calc(50% + var(--from-x, 0px)) calc(50% + var(--from-y, 0px));
+}
+
+.confirm-in {
+  will-change: transform, opacity;
+  animation:
+    confirm-grow 420ms var(--spring) both,
+    confirm-fade-in 140ms var(--ease-out) both;
+}
+
+.confirm-out {
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation:
+    confirm-shrink 200ms cubic-bezier(0.4, 0, 1, 1) both,
+    confirm-fade-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes confirm-grow {
+  from {
+    transform: scale(0.4);
+  }
+}
+
+@keyframes confirm-shrink {
+  to {
+    transform: scale(0.5);
+  }
+}
+
+.confirm-fade-in {
+  animation: confirm-fade-in 180ms var(--ease-out) both;
+}
+
+.confirm-fade-out {
+  pointer-events: none;
+  animation: confirm-fade-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes confirm-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes confirm-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---- Das Symbol ---- */
+
+.confirm-icon {
+  position: relative;
+  background: color-mix(in oklab, var(--color-danger) 14%, transparent);
+  animation: confirm-pop 520ms 80ms var(--spring) both;
+}
+
+.confirm-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-danger) 45%, transparent);
+  animation: confirm-ring 800ms 220ms ease-out both;
+  pointer-events: none;
+}
+
+.confirm-icon__glyph {
+  display: block;
+  transform-origin: 50% 90%;
+  animation: confirm-wiggle 560ms 300ms ease-in-out both;
+}
+
+@keyframes confirm-pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes confirm-ring {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-danger) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 14px color-mix(in oklab, var(--color-danger) 0%, transparent);
+  }
+}
+
+@keyframes confirm-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20% {
+    transform: rotate(-14deg);
+  }
+  45% {
+    transform: rotate(10deg);
+  }
+  70% {
+    transform: rotate(-5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Nur Überblenden: kein Wachsen, kein Springen, kein Wackeln. */
+  .confirm-in {
+    animation: confirm-fade-in 140ms var(--ease-out) both;
+  }
+
+  .confirm-out {
+    animation: confirm-fade-out 120ms var(--ease-out) both;
+  }
+
+  .confirm-icon,
+  .confirm-icon::after,
+  .confirm-icon__glyph {
+    animation: none;
+  }
+}
