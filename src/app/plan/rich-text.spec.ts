@@ -34,6 +34,12 @@ describe('scanRich', () => {
     expect(scanRich(editor('<strike>x</strike>')).md).toBe('~~x~~');
   });
 
+  it('reads links back as they were written', () => {
+    for (const md of ['see https://x.com/a__b and [Spec](https://x.com/s?a=1&b=2)', '**[Spec](https://x.com)**']) {
+      expect(scanRich(editor(renderRich(md))).md).toBe(md);
+    }
+  });
+
   it('nests', () => {
     expect(scanRich(editor('<strong><em>x</em></strong>')).md).toBe('***x***');
   });

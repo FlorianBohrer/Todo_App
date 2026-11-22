@@ -11,9 +11,13 @@
  * einen Zeilenumbruch: Titel und Unterpunkte werden getrennt gezeigt.
  */
 
+import { findLinks, shortUrl } from '../../shared/links';
+
 export interface RichPart {
   text: string;
   bold: boolean;
+  /** Ein Link: text ist dann seine Beschriftung oder die gekürzte Adresse. */
+  href?: string;
 }
 
 const BOLD = /\*\*(?!\s)([^\n]*?[^\s*])\*\*/g;
@@ -24,17 +28,29 @@ export function hasBold(text: string): boolean {
   return BOLD.test(text);
 }
 
-/** Der Text in Stücken, fett und nicht fett, ohne die Sternchen. */
+/** Der Text in Stücken, fett und nicht fett, ohne die Sternchen, Links für sich. */
 export function richParts(text: string): RichPart[] {
   const parts: RichPart[] = [];
   let last = 0;
   for (const match of text.matchAll(BOLD)) {
     const start = match.index ?? 0;
-    if (start > last) parts.push({ text: text.slice(last, start), bold: false });
-    parts.push({ text: match[1], bold: true });
+    if (start > last) parts.push(...linkParts(text.slice(last, start), false));
+    parts.push(...linkParts(match[1], true));
     last = start + match[0].length;
   }
-  if (last < text.length) parts.push({ text: text.slice(last), bold: false });
+  if (last < text.length) parts.push(...linkParts(text.slice(last), false));
+  return parts;
+}
+
+function linkParts(text: string, bold: boolean): RichPart[] {
+  const parts: RichPart[] = [];
+  let last = 0;
+  for (const link of findLinks(text)) {
+    if (link.index > last) parts.push({ text: text.slice(last, link.index), bold });
+    parts.push({ text: link.label ?? shortUrl(link.href), bold, href: link.href });
+    last = link.index + link.length;
+  }
+  if (last < text.length) parts.push({ text: text.slice(last), bold });
   return parts;
 }
 

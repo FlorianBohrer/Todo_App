@@ -70,4 +70,24 @@ describe('rich-title', () => {
     expect(breakAfterHeading('Call **mom**today')).toBe('Call **mom**today');
     expect(breakAfterHeading('**Nur die Überschrift**')).toBe('**Nur die Überschrift**');
   });
+
+  it('turns addresses and markdown links into link parts', () => {
+    expect(richParts('See https://www.github.com/a/b?x=1. Done')).toEqual([
+      { text: 'See ', bold: false },
+      { text: 'github.com/a/b', bold: false, href: 'https://www.github.com/a/b?x=1' },
+      { text: '. Done', bold: false },
+    ]);
+    expect(richParts('**Read [the spec](https://x.com/spec)**')).toEqual([
+      { text: 'Read ', bold: true },
+      { text: 'the spec', bold: true, href: 'https://x.com/spec' },
+    ]);
+    expect(richParts('(https://x.com/a_(b))')).toEqual([
+      { text: '(', bold: false },
+      { text: 'x.com/a_(b)', bold: false, href: 'https://x.com/a_(b)' },
+      { text: ')', bold: false },
+    ]);
+    expect(richParts('javascript:alert(1) and ftp://x')).toEqual([
+      { text: 'javascript:alert(1) and ftp://x', bold: false },
+    ]);
+  });
 });

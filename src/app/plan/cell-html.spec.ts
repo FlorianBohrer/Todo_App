@@ -21,7 +21,7 @@ describe('Tabellenzelle als innerHTML', () => {
   });
 
   const through = (markdown: string) =>
-    sanitizer.sanitize(SecurityContext.HTML, formatBlock(markdown, { wikiLinks: false })) ?? '';
+    sanitizer.sanitize(SecurityContext.HTML, formatBlock(markdown, { links: false })) ?? '';
 
   it('keeps bold, italic, underline and strikethrough', () => {
     expect(through('**State**')).toBe('<strong>State</strong>');

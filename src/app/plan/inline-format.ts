@@ -1,7 +1,9 @@
+import { findLinks, type LinkMatch } from '../shared/links';
+
 /**
  * Kleines, bewusst begrenztes Inline-Markup für Plan-Texte — die Teilmenge,
  * die beim Schreiben tatsächlich benutzt wird: Code, fett, kursiv,
- * unterstrichen, durchgestrichen und Obsidian-Wikilinks.
+ * unterstrichen, durchgestrichen, Obsidian-Wikilinks und Web-Links.
  *
  * Sicherheit: Es wird IMMER zuerst escaped und erst danach die erlaubte
  * Auszeichnung eingesetzt. Aus Nutzertext kann so kein Markup entstehen.
@@ -26,14 +28,26 @@ export function wikiLinkTargets(raw: string): string[] {
 
 export interface InlineOptions {
   /**
-   * Wikilinks als Verweis darstellen.
+   * Wikilinks und Web-Links als Verweis darstellen.
    *
    * In Tabellenzellen nicht: dort faengt der Klick die Zelle zum Bearbeiten
    * ab. Ein Wort, das aussieht wie ein Verweis und beim Klick ein Textfeld
    * oeffnet, ist ein Versprechen, das nicht eingeloest wird — dann lieber
    * „[[Name]]" so stehen lassen, wie es getippt wurde.
    */
-  wikiLinks?: boolean;
+  links?: boolean;
+}
+
+/**
+ * Ein Web-Link. Eine nackte Adresse steht im Feld so, wie sie getippt wurde —
+ * der Editor liest den Text zurück. Ein Markdown-Link zeigt seine Beschriftung;
+ * data-md sagt scanRich, dass er als „[Text](Adresse)" zurückgeschrieben wird.
+ */
+function anchorHtml(link: LinkMatch): string {
+  const href = escapeHtml(link.href);
+  const md = link.label === null ? '' : ' data-md=""';
+  const text = escapeHtml(link.label ?? link.href);
+  return `<a class="plan-link" href="${href}" title="${href}"${md} target="_blank" rel="noopener noreferrer">${text}</a>`;
 }
 
 /**
@@ -44,7 +58,7 @@ export interface InlineOptions {
  */
 export function formatInline(raw: string, options: InlineOptions = {}): string {
   if (!raw) return '';
-  const { wikiLinks = true } = options;
+  const { links = true } = options;
 
   return raw
     .split(/(`[^`]+`)/g)
@@ -53,10 +67,25 @@ export function formatInline(raw: string, options: InlineOptions = {}): string {
         return `<code class="plan-code">${escapeHtml(part.slice(1, -1))}</code>`;
       }
 
-      let out = escapeHtml(part);
+      // Web-Links zuerst heraus und am Ende wieder hinein: Sternchen oder
+      // Unterstriche in einer Adresse sind keine Auszeichnung.
+      const anchors: string[] = [];
+      let text = part;
+      if (links) {
+        text = '';
+        let last = 0;
+        for (const link of findLinks(part)) {
+          text += `${part.slice(last, link.index)}\u0000${anchors.length}\u0000`;
+          anchors.push(anchorHtml(link));
+          last = link.index + link.length;
+        }
+        text += part.slice(last);
+      }
+
+      let out = escapeHtml(text);
 
       // Wikilinks vor den Betonungen: der Titel darf Sternchen enthalten.
-      if (wikiLinks) {
+      if (links) {
         out = out.replace(
           /\[\[([^\[\]]+)\]\]/g,
           (_m, name: string) =>
@@ -77,7 +106,7 @@ export function formatInline(raw: string, options: InlineOptions = {}): string {
       out = out.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
       out = out.replace(/~~([^~]+)~~/g, '<s>$1</s>');
 
-      return out;
+      return out.replace(/\u0000(\d+)\u0000/g, (_m, i: string) => anchors[Number(i)] ?? '');
     })
     .join('');
 }

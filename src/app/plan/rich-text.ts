@@ -50,7 +50,9 @@ export const ANCHOR = '​';
 function isWrapped(node: Node | null): boolean {
   if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
   const el = node as HTMLElement;
-  return WRAPPERS[el.tagName.toLowerCase()] !== undefined || el.dataset?.['plan'] !== undefined;
+  return (
+    WRAPPERS[el.tagName.toLowerCase()] !== undefined || el.dataset?.['plan'] !== undefined || el.tagName === 'A'
+  );
 }
 
 /** Stellenzahl im DOM-Text, die der Position im gelesenen Text entspricht. */
@@ -140,6 +142,14 @@ export function scanRich(root: Node): RichScan {
     if (el.dataset?.['plan'] !== undefined) {
       const name = (el.textContent ?? '').trim();
       if (name) md += `[[${name}]]`;
+      return;
+    }
+
+    // Markdown-Link: im Feld steht nur die Beschriftung, die Adresse im Attribut.
+    if (tag === 'a' && el.dataset?.['md'] !== undefined) {
+      const label = (el.textContent ?? '').replaceAll(ANCHOR, '').trim();
+      const href = el.getAttribute('href') ?? '';
+      md += label ? `[${label}](${href})` : href;
       return;
     }
 

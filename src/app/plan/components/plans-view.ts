@@ -2219,7 +2219,7 @@ export class PlansView {
    * Klick ins Feld.
    *
    * Der Cursor landet, wo man hinklickt — dafuer ist ein Schreibfeld da. Ein
-   * Wikilink oeffnet sich deshalb mit Befehls- bzw. Strg-Taste, wie in jedem
+   * Wikilink oder Web-Link oeffnet sich deshalb mit Befehls- bzw. Strg-Taste, wie in jedem
    * Editor, in dem Links auch bearbeitet werden koennen. Ein einfacher Klick
    * auf den Link wuerde sonst die Stelle anspringen, an der man gerade etwas
    * aendern wollte.
@@ -2228,12 +2228,14 @@ export class PlansView {
     if (!event.metaKey && !event.ctrlKey) return;
 
     const target = event.target as HTMLElement | null;
+    const web = target?.closest?.('a[href]') as HTMLAnchorElement | null;
     const link = target?.closest?.('[data-plan]') as HTMLElement | null;
-    if (!link) return;
+    if (!web && !link) return;
 
     event.preventDefault();
     event.stopPropagation();
-    this.openByTitle(link.textContent ?? '');
+    if (web) window.open(web.href, '_blank', 'noopener,noreferrer');
+    else if (link) this.openByTitle(link.textContent ?? '');
   }
 
   // ---- Wikilinks & Backlinks (Obsidian) ----
@@ -3812,6 +3814,6 @@ export class PlansView {
    * Feld, und dort stehen die Sternchen wieder da.
    */
   renderCell(text: string): string {
-    return cellChip(text) ?? formatBlock(text, { wikiLinks: false });
+    return cellChip(text) ?? formatBlock(text, { links: false });
   }
 }
