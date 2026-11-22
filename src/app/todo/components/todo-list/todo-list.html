@@ -226,9 +226,10 @@
               }
             }
 
-            <!-- Mit fetten Stellen steht der Titel ausserhalb des Bearbeitens
-                 als Text darunter (rich-title.ts): ein Textfeld kann nicht
-                 fett und normal zugleich. Beim Bearbeiten ist es wieder das
+            <!-- Mit fetten Stellen oder Links steht der Titel ausserhalb des
+                 Bearbeitens als Text darunter (rich-title.ts): ein Textfeld
+                 kann nicht fett und normal zugleich, und einen Link kann man
+                 darin nicht anklicken. Beim Bearbeiten ist es wieder das
                  Feld, mit den Sternchen; Strg/⌘+B setzt sie. -->
             <textarea
               #todoText
@@ -262,7 +263,7 @@
                    todo.completed || completingTodoIds().has(todo.id)
                  "
                  [appClampWatch]="row.displayTitle"
-                 (clampChange)="setClamped(todo.id, $event)"><app-rich-text [text]="row.displayTitle" /></p>
+                 (clampChange)="setClamped(todo.id, $event)"><app-rich-text [text]="row.displayTitle" links /></p>
             }
 
             <!-- Aufgeklappt: nur die erste Zeile steht hier, die Unterpunkte
@@ -276,14 +277,14 @@
                  [class.todo-title--completed]="
                    todo.completed || completingTodoIds().has(todo.id)
                  "
-                 (click)="startEditing(todo, todoText)"><app-rich-text [text]="row.firstLine" /></p>
+                 (click)="startEditing(todo, todoText)"><app-rich-text [text]="row.firstLine" links /></p>
             }
             </div>
 
             @if (showsDetail(row)) {
               <div class="todo-detail cursor-text"
                 [class.todo-detail--done]="todo.completed || completingTodoIds().has(todo.id)"
-                (click)="startEditing(todo, todoText)"><app-rich-text [text]="row.detailLines" /></div>
+                (click)="startEditing(todo, todoText)"><app-rich-text [text]="row.detailLines" links /></div>
             }
 
             <!-- Was man über die Aufgabe wissen will, ohne sie zu öffnen:

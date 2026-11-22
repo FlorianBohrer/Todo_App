@@ -13,7 +13,7 @@ import type { Plan, PlanBlock } from '../plan/plan.model';
 import type { Todo } from '../todo/model/todo.model';
 import type { Label } from '../todo/services/label.service';
 import { TitleToken, splitTitle } from '../todo/shared/title-token';
-import { breakAfterHeading, stripBold } from '../todo/shared/rich-title';
+import { breakAfterHeading, plainText as plainTitleText, stripBold } from '../todo/shared/rich-title';
 
 // ---------------------------------------------------------------------------
 // Vergleichen
@@ -181,12 +181,15 @@ export function searchTodos(todos: readonly Todo[], query: Query): TodoHit[] {
 
   todos.forEach((todo, index) => {
     const { tokens, text: raw } = splitTitle(todo.title);
-    // Gesucht und gezeigt wird ohne die Sternchen von fett gesetzten Stellen.
-    const text = stripBold(breakAfterHeading(raw));
+    // Gezeigt wird ohne die Sternchen von fett gesetzten Stellen und mit
+    // kurzen Links. Gesucht auch in der vollen Adresse: wer „FlorianBohrer"
+    // tippt, findet den Link, auch wenn die Kurzform das nicht zeigt.
+    const full = stripBold(breakAfterHeading(raw));
+    const text = plainTitleText(full);
     if (query.token !== null && !tokens.includes(query.token)) return;
 
     const title = text.split('\n')[0].trim();
-    const inText = score(text, query.terms);
+    const inText = score(text, query.terms) ?? score(full, query.terms);
     if (inText === null) return;
 
     // Treffer in der ersten Zeile wiegen mehr als in den Notizen darunter.

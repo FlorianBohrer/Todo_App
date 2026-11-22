@@ -37,7 +37,7 @@ import { TokenChip } from '../../shared/token-chip';
 import { WeekView } from '../week-view/week-view';
 import { tap } from '../../shared/haptics';
 import { RichText } from '../../shared/rich-text';
-import { firstLineOf, stripBold } from '../../shared/rich-title';
+import { firstLineOf, plainText } from '../../shared/rich-title';
 
 type Mode = 'day' | 'week';
 const MODE_KEY = 'calendar.mode';
@@ -185,7 +185,7 @@ export class DayView {
     return {
       id: todo.id,
       title: splitLeadingEmoji(text).rest,
-      label: stripBold(splitLeadingEmoji(text).rest),
+      label: plainText(splitLeadingEmoji(text).rest),
       icon: taskIcon(text),
       iconClass: `${folderColorClass(label?.color, 'iconBox')} ${folderColorClass(label?.color, 'text')}`,
       done: todo.completed,

@@ -10,8 +10,7 @@ import {
   MUST_SHARE_LIMIT,
 } from '../../shared/focus';
 import { scheduleOptions } from '../../shared/schedule';
-import { stripPriorityPrefix } from '../../shared/title-priority';
-import { firstLineOf, stripBold } from '../../shared/rich-title';
+import { plainTitle } from '../../shared/rich-title';
 
 /** Wie viele Vorschläge oben stehen. Mehr als drei ist wieder eine Liste. */
 const SUGGESTIONS = 3;
@@ -77,7 +76,7 @@ export class FocusPanel {
   }
 
   title(todo: Todo): string {
-    return stripBold(firstLineOf(stripPriorityPrefix(todo.title)));
+    return plainTitle(todo.title);
   }
 
   reason(todo: Todo): string {

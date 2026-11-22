@@ -1,11 +1,15 @@
 /**
  * Kleines, bewusst begrenztes Inline-Markup für Plan-Texte — die Teilmenge,
  * die beim Schreiben tatsächlich benutzt wird: Code, fett, kursiv,
- * unterstrichen, durchgestrichen und Obsidian-Wikilinks.
+ * unterstrichen, durchgestrichen, Obsidian-Wikilinks und Links
+ * (shared/links.ts).
  *
  * Sicherheit: Es wird IMMER zuerst escaped und erst danach die erlaubte
  * Auszeichnung eingesetzt. Aus Nutzertext kann so kein Markup entstehen.
+ * Links werden vorher als Platzhalter herausgenommen und danach als fertiges,
+ * escaptes HTML eingesetzt; als Ziel kommen nur http(s)-Adressen in Frage.
  */
+import { type FoundLink, findLinks, urlParts } from '../shared/links';
 
 const ESCAPES: Record<string, string> = {
   '&': '&amp;',
@@ -37,10 +41,55 @@ export interface InlineOptions {
 }
 
 /**
+ * Ein Link als HTML.
+ *
+ * Eine nackte Adresse steht im Feld vollständig, aufgeteilt in Stücke, die
+ * zusammen genau den getippten Text ergeben: so liest der Editor sie als den
+ * Text zurück, der dasteht (rich-text.ts). Beim Lesen blendet das Stylesheet
+ * Schema, „www.", die mittleren Pfadteile und die Abfrage aus
+ * („github.com/…/pull/52"); beim Schreiben steht alles da.
+ *
+ * Ein Markdown-Link zeigt seinen Text; die Adresse steht im data-href, damit
+ * der Editor „[Text](Adresse)" zurückschreiben kann.
+ */
+function renderLink(link: FoundLink): string {
+  const attrs =
+    `class="plan-url" href="${escapeHtml(link.href)}" title="${escapeHtml(link.href)}"` +
+    ` target="_blank" rel="noopener noreferrer"`;
+  if (link.label !== null) {
+    const target = link.raw.slice(link.label.length + 3, -1);
+    return `<a ${attrs} data-href="${escapeHtml(target)}">${escapeHtml(link.label)}</a>`;
+  }
+  const { scheme, www, host, mid, tail, rest } = urlParts(link.raw);
+  // <wbr> nach jedem „/": eine lange Adresse bricht an ihren Teilen um,
+  // nicht mitten im Wort. Der Editor liest es nicht mit (kein Text).
+  const piece = (text: string, cls?: string) => {
+    if (!text) return '';
+    const html = escapeHtml(text).replace(/\/(?=.)/g, '/<wbr>');
+    return cls ? `<span class="${cls}">${html}</span>` : html;
+  };
+  return (
+    `<a ${attrs}>` +
+    piece(scheme + www, 'plan-url__hide') +
+    piece(host) +
+    piece(mid, 'plan-url__mid') +
+    piece(tail, 'plan-url__tail') +
+    piece(rest, 'plan-url__hide') +
+    '</a>'
+  );
+}
+
+/** Platzhalter für Links: Zeichen aus dem privaten Bereich, die niemand tippt. */
+const HOLD_OPEN = '';
+const HOLD_CLOSE = '';
+const HOLD = /(\d+)/g;
+
+/**
  * Formatiert eine Zeile zu sicherem HTML.
  *
  * Code-Spans werden zuerst herausgetrennt, damit ihr Inhalt wörtlich bleibt —
- * sonst würde `**` innerhalb von Code als Fettschrift gelesen.
+ * sonst würde `**` innerhalb von Code als Fettschrift gelesen. Links danach:
+ * „__" oder „*" in einer Adresse sind keine Auszeichnung.
  */
 export function formatInline(raw: string, options: InlineOptions = {}): string {
   if (!raw) return '';
@@ -53,7 +102,18 @@ export function formatInline(raw: string, options: InlineOptions = {}): string {
         return `<code class="plan-code">${escapeHtml(part.slice(1, -1))}</code>`;
       }
 
-      let out = escapeHtml(part);
+      // Eine Adresse in „[[…]]" ist der Name eines Plans, kein Link.
+      const named = wikiLinks ? [...part.matchAll(/\[\[[^\[\]]+\]\]/g)] : [];
+      const links = findLinks(part).filter(
+        ({ start }) => !named.some((m) => start > m.index! && start < m.index! + m[0].length),
+      );
+      let held = part;
+      for (let i = links.length - 1; i >= 0; i--) {
+        const { start, end } = links[i];
+        held = held.slice(0, start) + HOLD_OPEN + i + HOLD_CLOSE + held.slice(end);
+      }
+
+      let out = escapeHtml(held);
 
       // Wikilinks vor den Betonungen: der Titel darf Sternchen enthalten.
       if (wikiLinks) {
@@ -77,7 +137,7 @@ export function formatInline(raw: string, options: InlineOptions = {}): string {
       out = out.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
       out = out.replace(/~~([^~]+)~~/g, '<s>$1</s>');
 
-      return out;
+      return links.length ? out.replace(HOLD, (_m, i: string) => renderLink(links[Number(i)])) : out;
     })
     .join('');
 }

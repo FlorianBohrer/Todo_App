@@ -144,6 +144,29 @@ describe('positionAt', () => {
   });
 });
 
+describe('links in the editor', () => {
+  it('reads a bare address back as the text it is', () => {
+    const md = 'PR https://www.github.com/a/b/pull/52?x=1 now';
+    expect(scanRich(editor(renderRich(md))).md).toBe(md);
+  });
+
+  it('reads a markdown link back with its address', () => {
+    const md = 'Send [the offer](www.shop.de/o) to Marco';
+    expect(scanRich(editor(renderRich(md))).md).toBe(md);
+  });
+
+  it('keeps the address when the label is edited or emptied', () => {
+    expect(scanRich(editor('<a data-href="https://x.de" href="https://x.de">new</a>')).md).toBe('[new](https://x.de)');
+    expect(scanRich(editor('<a data-href="https://x.de" href="https://x.de"></a>')).md).toBe('https://x.de');
+  });
+
+  it('closes a link with the space after it or its bracket', () => {
+    expect(justClosed('see https://x.de ')).toBe(true);
+    expect(justClosed('see [x](https://x.de)')).toBe(true);
+    expect(justClosed('see https://x.de')).toBe(false);
+  });
+});
+
 describe('justClosed', () => {
   it('fires on the keystroke that closes the markup', () => {
     expect(justClosed('**bold**')).toBe(true);

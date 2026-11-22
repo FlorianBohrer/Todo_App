@@ -16,7 +16,7 @@
  * nach (task-glyph.ts) — hier steht nur, welche Emoji eins haben.
  */
 
-import { stripBold } from './rich-title';
+import { plainText } from './rich-title';
 
 /** Ein Emoji am Anfang, samt Variantenwahl und ZWJ-Folgen (🧑‍💻, ✈️). */
 const LEADING_EMOJI =
@@ -125,7 +125,7 @@ export function splitLeadingEmoji(text: string): { emoji: string | null; rest: s
  */
 export function taskIcon(text: string): TaskIcon {
   // Fett gesetzt (rich-title.ts) ist dasselbe Bild: „**🦷 Zahnarzt**" wie „🦷 Zahnarzt".
-  const { emoji, rest } = splitLeadingEmoji(stripBold(text).trim());
+  const { emoji, rest } = splitLeadingEmoji(plainText(text).trim());
   const found = emoji ?? guessEmoji(rest);
   if (found) return { glyph: found, initial: false, drawn: DRAWN.has(bareEmoji(found)) };
   const letter = /\p{L}|\p{N}/u.exec(rest)?.[0] ?? '•';

@@ -17,8 +17,7 @@ import { FocusSessionService, formatFocus } from '../../services/focus-session.s
 import { TodoService } from '../../services/todo';
 import { LabelService } from '../../services/label.service';
 import { Todo } from '../../model/todo.model';
-import { firstLineOf, stripBold } from '../../shared/rich-title';
-import { stripPriorityPrefix } from '../../shared/title-priority';
+import { plainTitle } from '../../shared/rich-title';
 import { folderColorClass } from '../../shared/folder-color';
 import { searchableTitle, trackCandidates } from '../../shared/tracking';
 import { todayISO } from '../../shared/week';
@@ -239,7 +238,7 @@ export class TrackPicker {
   // ---- Darstellung ----
 
   plainTitle(title: string): string {
-    return stripBold(firstLineOf(stripPriorityPrefix(title)));
+    return plainTitle(title);
   }
 
   dotClass(todo: Todo | null): string {

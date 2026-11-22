@@ -72,6 +72,48 @@ describe('inline-format', () => {
     });
   });
 
+  describe('links', () => {
+    it('renders a bare address whole, in parts the reader can hide', () => {
+      const out = formatInline('PR https://www.github.com/a/b/pull/52?x=1 now');
+      expect(out).toBe(
+        'PR <a class="plan-url" href="https://www.github.com/a/b/pull/52?x=1" title="https://www.github.com/a/b/pull/52?x=1" target="_blank" rel="noopener noreferrer">' +
+          '<span class="plan-url__hide">https:/<wbr>/<wbr>www.</span>github.com<span class="plan-url__mid">/<wbr>a/<wbr>b</span>' +
+          '<span class="plan-url__tail">/<wbr>pull/<wbr>52</span><span class="plan-url__hide">?x=1</span></a> now',
+      );
+    });
+
+    it('shows a markdown link as its label and keeps the address as typed', () => {
+      const out = formatInline('[Offer](www.shop.de/o)');
+      expect(out).toContain('href="https://www.shop.de/o"');
+      expect(out).toContain('data-href="www.shop.de/o"');
+      expect(out).toContain('>Offer</a>');
+    });
+
+    it('does not read markup inside an address', () => {
+      const out = formatInline('https://x.de/__a__/*b*');
+      expect(out).not.toContain('<u>');
+      expect(out).not.toContain('<em>');
+    });
+
+    it('formats around a link', () => {
+      expect(formatInline('**see https://x.de**')).toMatch(/^<strong>see <a class="plan-url"[^>]*><span class="plan-url__hide">https:\/<wbr>\/<\/span>x\.de<\/a><\/strong>$/);
+    });
+
+    it('escapes the address', () => {
+      const out = formatInline('https://x.de/?q="a"<b>');
+      expect(out).not.toContain('"a"');
+      expect(out).not.toContain('<b>');
+    });
+
+    it('leaves an address inside a wikilink to the wikilink', () => {
+      expect(formatInline('[[https://x.de]]')).not.toContain('plan-url');
+    });
+
+    it('never links another scheme', () => {
+      expect(formatInline('[x](javascript:alert(1))')).not.toContain('<a');
+    });
+  });
+
   describe('wikiLinkTargets', () => {
     it('collects and trims every target', () => {
       expect(wikiLinkTargets('[[ One ]] and [[Two]]')).toEqual(['One', 'Two']);

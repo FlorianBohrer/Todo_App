@@ -50,10 +50,10 @@ import {
 } from '../../shared/week';
 import { isTypingTarget } from '../../shared/keyboard';
 import { pastThroughput } from '../../shared/focus';
-import { priorityBadge, stripPriorityPrefix } from '../../shared/title-priority';
+import { priorityBadge } from '../../shared/title-priority';
 import { TitleToken } from '../../shared/title-token';
 import { RichText } from '../../shared/rich-text';
-import { breakAfterHeading, stripBold } from '../../shared/rich-title';
+import { plainText, titleText } from '../../shared/rich-title';
 import { TokenChip } from '../../shared/token-chip';
 import { folderColorClass } from '../../shared/folder-color';
 
@@ -579,12 +579,12 @@ export class WeekView {
 
   /** „**Überschrift**Text" in einer Zeile wie mit Umbruch, wie in der Liste. */
   displayTitle(title: string): string {
-    return breakAfterHeading(stripPriorityPrefix(title));
+    return titleText(title);
   }
 
-  /** Ohne die Sternchen von fett gesetzten Stellen: für Tooltip und Vorlesesoftware. */
+  /** Als Klartext, ohne Sternchen, Links kurz: für Tooltip und Vorlesesoftware. */
   plainTitle(title: string): string {
-    return stripBold(breakAfterHeading(stripPriorityPrefix(title)));
+    return plainText(titleText(title));
   }
 
   /**

@@ -1,4 +1,14 @@
-import { breakAfterHeading, firstLineOf, hasBold, richParts, stripBold, toggleBold } from './rich-title';
+import {
+  breakAfterHeading,
+  firstLineOf,
+  hasBold,
+  isRich,
+  plainText,
+  plainTitle,
+  richParts,
+  stripBold,
+  toggleBold,
+} from './rich-title';
 
 describe('rich-title', () => {
   it('splits a title into bold and plain parts', () => {
@@ -32,6 +42,28 @@ describe('rich-title', () => {
       { text: '\n', bold: false },
       { text: 'two', bold: true },
     ]);
+  });
+
+  it('cuts links out as their own parts, inside bold too', () => {
+    expect(richParts('PR https://github.com/a/b/pull/52 now')).toEqual([
+      { text: 'PR ', bold: false },
+      { text: 'github.com/…/pull/52', bold: false, href: 'https://github.com/a/b/pull/52', title: 'https://github.com/a/b/pull/52' },
+      { text: ' now', bold: false },
+    ]);
+    expect(richParts('**[Offer](https://x.de)**')).toEqual([
+      { text: 'Offer', bold: true, href: 'https://x.de', title: 'https://x.de' },
+    ]);
+  });
+
+  it('needs the text view for bold or a link', () => {
+    expect(isRich('Buy milk')).toBe(false);
+    expect(isRich('Buy **milk**')).toBe(true);
+    expect(isRich('Buy at www.milk.de')).toBe(true);
+  });
+
+  it('names a task in plain text: no prefix, first line, short links', () => {
+    expect(plainText('**Read** https://x.de/a/b/c/d')).toBe('Read x.de/…/c/d');
+    expect(plainTitle('/must **Pay** [the bill](https://bank.de)\nIBAN below')).toBe('Pay the bill');
   });
 
   it('strips the markers for plain text', () => {

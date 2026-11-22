@@ -13,7 +13,7 @@ import { LucideAngularModule, Pause, Play } from 'lucide-angular';
 import { FocusSessionService, elapsedNow, formatClock } from '../../services/focus-session.service';
 import { TodoService } from '../../services/todo';
 import { splitTitle } from '../../shared/title-token';
-import { firstLineOf, stripBold } from '../../shared/rich-title';
+import { firstLineOf, plainText } from '../../shared/rich-title';
 import { TrackPicker } from '../track-picker/track-picker';
 
 /**
@@ -58,7 +58,7 @@ export class FlowStatus {
     const active = this.active();
     if (!active) return '';
     const todo = this.todoService.todoById(active.todoId);
-    return stripBold(firstLineOf(splitTitle(todo?.title ?? active.title).text));
+    return plainText(firstLineOf(splitTitle(todo?.title ?? active.title).text));
   });
 
   protected readonly label = computed(() => {
