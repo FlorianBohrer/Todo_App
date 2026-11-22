@@ -92,7 +92,7 @@
                     (click)="toggle(card.id)"
                     [attr.aria-label]="(card.done ? 'Reopen ' : 'Complete ') + card.label"></button>
                   <div class="min-w-0 flex-1">
-                    <p class="day-card__title"><app-rich-text [text]="card.title" /></p>
+                    <p class="day-card__title"><app-rich-text [text]="card.title" links /></p>
                     @if (card.badge || card.duration || card.late) {
                       <p class="day-card__meta">
                         @if (card.badge) { <app-token-chip [token]="card.badge" size="sm" /> }

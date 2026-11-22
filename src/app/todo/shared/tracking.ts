@@ -5,7 +5,7 @@
 import type { Todo } from '../model/todo.model';
 import { rankForFocus } from './focus';
 import { stripPriorityPrefix } from './title-priority';
-import { stripBold } from './rich-title';
+import { plainText } from './rich-title';
 
 /**
  * Die geplante Länge, an der eine offene Zeiterfassung zu erkennen ist.
@@ -33,7 +33,7 @@ const SEARCH_LIMIT = 30;
 
 /** Der Titel so, wie man ihn liest und eintippt: ohne Präfix, ohne Sternchen. */
 export function searchableTitle(title: string): string {
-  return stripBold(stripPriorityPrefix(title)).toLowerCase();
+  return plainText(stripPriorityPrefix(title)).toLowerCase();
 }
 
 /**

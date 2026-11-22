@@ -450,7 +450,7 @@
                                Zelle dasselbe heissen wie im Absatz. -->
                           <div class="plan-cell" tabindex="0" role="button"
                             [id]="view.cellId(block.id, -1, ci) + '-view'"
-                            (click)="view.startCellEdit(block.id, -1, ci)"
+                            (click)="view.fromLink($event) || view.startCellEdit(block.id, -1, ci)"
                             (keydown.enter)="$event.preventDefault(); view.startCellEdit(block.id, -1, ci)"
                             [innerHTML]="view.renderCell(col || 'Column')"></div>
                         }
@@ -493,7 +493,7 @@
                           } @else {
                             <div class="plan-cell" tabindex="0" role="button"
                               [id]="view.cellId(block.id, ri, ci) + '-view'"
-                              (click)="view.startCellEdit(block.id, ri, ci)"
+                              (click)="view.fromLink($event) || view.startCellEdit(block.id, ri, ci)"
                               (keydown.enter)="$event.preventDefault(); view.startCellEdit(block.id, ri, ci)"
                               [innerHTML]="view.renderCell(cell)"></div>
                           }

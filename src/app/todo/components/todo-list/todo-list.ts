@@ -49,7 +49,7 @@ import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
 import { RichText } from '../../shared/rich-text';
 import { ScheduleDrawer } from '../schedule-drawer/schedule-drawer';
-import { breakAfterHeading, firstLineOf, hasBold, isBoldKey, stripBold, toggleBold } from '../../shared/rich-title';
+import { breakAfterHeading, isBoldKey, isRich, plainText, plainTitle, toggleBold } from '../../shared/rich-title';
 import { ShortcutService } from '../../../shared/shortcut.service';
 import { ClampWatch } from '../../../directives/clamp-watch.directive';
 import { Grouping, ListViewService, SortOrder } from '../../services/list-view.service';
@@ -576,7 +576,7 @@ export class TodoList {
         id: todo.id,
         todo,
         displayTitle: shown,
-        rich: !section && hasBold(shown),
+        rich: !section && isRich(shown),
         // Auch beim Bearbeiten ohne Präfix: es steht als Chip davor.
         editTitle: stripped,
         icon,
@@ -593,7 +593,7 @@ export class TodoList {
             todo.repeat !== null ||
             steps !== null),
         firstLine: first.trim(),
-        label: stripBold(first.trim()),
+        label: plainText(first.trim()),
         detailLines: detail,
         hasDetail: detail.length > 0,
         badge,
@@ -641,7 +641,7 @@ export class TodoList {
     if (isSection(above.title)) return null;
     const head = byId.get(parentOf.get(above.id) ?? above.id);
     if (!head) return null;
-    return { id: head.id, title: stripBold(firstLineOf(stripPriorityPrefix(head.title))) };
+    return { id: head.id, title: plainTitle(head.title) };
   }
 
   /**
@@ -1013,7 +1013,7 @@ toggleFolderList(): void {
     const todoIds = stillShown ? [...previous.todoIds, todo.id] : [todo.id];
     if (stillShown) this.toast.dismiss(previous.id);
 
-    const title = stripBold(firstLineOf(stripPriorityPrefix(todo.title)));
+    const title = plainTitle(todo.title);
     const short = title.length > 36 ? `${title.slice(0, 35).trimEnd()}…` : title;
     const message = todoIds.length === 1 ? `Done: ${short}` : `${todoIds.length} tasks done`;
 
@@ -1070,7 +1070,7 @@ toggleFolderList(): void {
     if (!current || current.completed) return false;
     const steps = this.todoService.stepsOf(head.id);
     if (steps.length === 0 || steps.some((s) => !s.completed)) return false;
-    const title = stripBold(firstLineOf(stripPriorityPrefix(current.title)));
+    const title = plainTitle(current.title);
     this.toast.show(`All steps done: ${title}`, {
       actionLabel: 'Complete',
       durationMs: 6000,

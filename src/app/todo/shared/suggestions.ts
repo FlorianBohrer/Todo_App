@@ -16,10 +16,10 @@
  * Vorschläge.
  */
 import { Todo } from '../model/todo.model';
-import { durationOf, stripPriorityPrefix } from './title-priority';
+import { durationOf } from './title-priority';
 import { guessEmoji } from './task-icon';
 import { shiftISODate, todayISO, toISODate } from './week';
-import { firstLineOf, stripBold } from './rich-title';
+import { plainTitle } from './rich-title';
 
 export interface Suggestion {
   /** So wird es angelegt — mit Dauer-Präfix, wenn eine bekannt ist. */
@@ -63,7 +63,7 @@ const GERMAN = /[äöüß]|\b(und|der|die|das|mit|für|fuer|nicht|anrufen|machen
 
 /** Nur der Text, klein und ohne Präfixe — zum Vergleichen. */
 function plain(title: string): string {
-  return stripBold(firstLineOf(stripPriorityPrefix(title))).toLowerCase();
+  return plainTitle(title).toLowerCase();
 }
 
 /** Wie viele Tage zurück „in letzter Zeit" reicht. */
@@ -100,7 +100,7 @@ export function suggestTasks(
     .filter((d) => d.count >= 2)
     .sort((a, b) => b.count - a.count || b.last.localeCompare(a.last))
     .map((d) => ({
-      text: stripBold(firstLineOf(stripPriorityPrefix(d.title))),
+      text: plainTitle(d.title),
       minutes: durationOf(d.title),
       reason: 'again' as const,
     }));

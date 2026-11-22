@@ -7,6 +7,7 @@ import {
   Output,
   inject,
 } from '@angular/core';
+import { hasLink, linkOverSelection } from '../shared/links';
 import { ShortcutService } from '../shared/shortcut.service';
 import type { ShortcutAction } from '../shared/shortcuts';
 import { ANCHOR, caretIn, justClosed, placeCaret, renderRich, scanRich } from './rich-text';
@@ -110,10 +111,10 @@ export class RichText {
    * Nur dann: bei jedem Anschlag neu zu zeichnen wuerde Cursor, Auswahl und den
    * Rueckgaengig-Stapel des Browsers wegwerfen.
    */
-  private sync(redraw: boolean): void {
+  private sync(redraw: boolean, force = false): void {
     const { md, caret } = this.read();
 
-    if (redraw && caret >= 0 && justClosed(md.slice(0, caret))) {
+    if (force || (redraw && caret >= 0 && justClosed(md.slice(0, caret)))) {
       this.paint(md);
       placeCaret(this.host.nativeElement, caret);
     } else {
@@ -192,8 +193,46 @@ export class RichText {
 
     event.preventDefault();
     const text = event.clipboardData?.getData('text/plain') ?? '';
-    if (text) document.execCommand('insertText', false, text);
-    this.sync(true);
+    // Eine Adresse über markiertem Text macht ihn zum Link (shared/links.ts).
+    const linked = linkOverSelection(document.getSelection()?.toString() ?? '', text);
+    const inserted = linked ?? text;
+    if (inserted) document.execCommand('insertText', false, inserted);
+    // Eine eingefuegte Adresse steht sofort als Link da, nicht erst beim
+    // Verlassen des Feldes.
+    this.sync(true, hasLink(inserted));
+  }
+
+  // ---- Links ----
+  //
+  // Ein Feld, in dem gerade nicht geschrieben wird, liest man: dort oeffnet
+  // ein Klick auf einen Link ihn (in einem neuen Tab, ein Wikilink den Plan).
+  // Im Feld, in dem man schreibt, setzt ein Klick den Cursor, wie in jedem
+  // Editor; geoeffnet wird dann mit Befehls- bzw. Strg-Taste.
+
+  private linkAt(event: MouseEvent): HTMLElement | null {
+    const target = event.target as Element | null;
+    return (target?.closest?.('a[href], [data-plan]') as HTMLElement | null) ?? null;
+  }
+
+  private reading(): boolean {
+    return document.activeElement !== this.host.nativeElement;
+  }
+
+  /** Lesend: kein Cursor, kein Fokus, sonst spraenge die Anzeige vor dem Klick. */
+  @HostListener('mousedown', ['$event'])
+  onMouseDown(event: MouseEvent): void {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    if (this.reading() && this.linkAt(event)) event.preventDefault();
+  }
+
+  @HostListener('click', ['$event'])
+  onClick(event: MouseEvent): void {
+    const link = this.linkAt(event);
+    if (!(link instanceof HTMLAnchorElement)) return; // Wikilinks: plans-view
+    event.preventDefault();
+    if (!this.reading() && !event.metaKey && !event.ctrlKey) return;
+    event.stopPropagation();
+    window.open(link.href, '_blank', 'noopener,noreferrer');
   }
 
   @HostListener('keydown', ['$event'])

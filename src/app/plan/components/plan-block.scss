@@ -231,6 +231,59 @@
     color: var(--color-highlight22);
   }
 
+  // Link (inline-format.ts): dieselbe Farbe wie der Wikilink, dazu die
+  // Unterlinie und ein Pfeil, weil er die App verlässt. Beim Lesen kurz
+  // („github.com/…/pull/52"), im Feld, in dem man schreibt, vollständig —
+  // dort muss man sehen, was man ändert. Gespeichert ist immer die volle
+  // Adresse; ausgeblendet wird nur.
+  .plan-url {
+    color: var(--color-brand-2);
+    text-decoration-line: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    overflow-wrap: break-word;
+    cursor: pointer;
+    transition: color 120ms ease-out, text-decoration-color 120ms ease-out;
+  }
+
+  .plan-url:hover {
+    color: var(--color-highlight22);
+    text-decoration-color: currentColor;
+  }
+
+  .rich-text:not(:focus) .plan-url,
+  .plan-cell .plan-url {
+    .plan-url__hide,
+    .plan-url__mid {
+      display: none;
+    }
+
+    .plan-url__mid + .plan-url__tail::before {
+      content: '/…';
+    }
+
+    // Der Pfeil wie in der Liste (styles.scss, a.rich-link::after): am
+    // letzten Zeichen festgehalten, nie allein in der nächsten Zeile.
+    &::after {
+      content: '\2060';
+      padding-left: 0.85em;
+      background-color: currentColor;
+      opacity: 0.7;
+      -webkit-mask: var(--link-arrow) right center / 0.7em 0.7em no-repeat;
+      mask: var(--link-arrow) right center / 0.7em 0.7em no-repeat;
+    }
+  }
+
+  // Im Feld, in dem man schreibt, setzt der Klick den Cursor.
+  .rich-text:focus .plan-url {
+    cursor: text;
+  }
+
+  .plan-cell .plan-url {
+    cursor: pointer;
+  }
+
   strong { font-weight: 650; }
   em { font-style: italic; }
   s { opacity: 0.6; }

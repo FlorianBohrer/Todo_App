@@ -2218,14 +2218,15 @@ export class PlansView {
   /**
    * Klick ins Feld.
    *
-   * Der Cursor landet, wo man hinklickt — dafuer ist ein Schreibfeld da. Ein
-   * Wikilink oeffnet sich deshalb mit Befehls- bzw. Strg-Taste, wie in jedem
-   * Editor, in dem Links auch bearbeitet werden koennen. Ein einfacher Klick
-   * auf den Link wuerde sonst die Stelle anspringen, an der man gerade etwas
-   * aendern wollte.
+   * Im Feld, in dem man schreibt, landet der Cursor, wo man hinklickt —
+   * dafuer ist ein Schreibfeld da. Ein Wikilink oeffnet sich dort mit
+   * Befehls- bzw. Strg-Taste, wie in jedem Editor, in dem Links auch
+   * bearbeitet werden koennen. In einem Feld, das man nur liest, oeffnet ihn
+   * der einfache Klick, wie einen Link (rich-text.directive.ts).
    */
   onFieldClick(event: MouseEvent): void {
-    if (!event.metaKey && !event.ctrlKey) return;
+    const reading = document.activeElement !== event.currentTarget;
+    if (!reading && !event.metaKey && !event.ctrlKey) return;
 
     const target = event.target as HTMLElement | null;
     const link = target?.closest?.('[data-plan]') as HTMLElement | null;
@@ -3811,6 +3812,14 @@ export class PlansView {
    * Bearbeitet wird weiter der Quelltext: der Klick macht die Zelle zum
    * Feld, und dort stehen die Sternchen wieder da.
    */
+  /**
+   * Ein Klick auf einen Link in einer Zelle oeffnet den Link (er hat
+   * target=_blank) und nicht das Bearbeiten der Zelle.
+   */
+  fromLink(event: Event): boolean {
+    return !!(event.target as Element | null)?.closest?.('a[href]');
+  }
+
   renderCell(text: string): string {
     return cellChip(text) ?? formatBlock(text, { wikiLinks: false });
   }

@@ -29,8 +29,8 @@ import { RichText } from '../../shared/rich-text';
 import { TokenChip } from '../../shared/token-chip';
 import { ProgressRing } from '../progress-ring/progress-ring';
 import { TitleToken } from '../../shared/title-token';
-import { priorityBadge, stripPriorityPrefix } from '../../shared/title-priority';
-import { breakAfterHeading, stripBold } from '../../shared/rich-title';
+import { priorityBadge } from '../../shared/title-priority';
+import { plainText, titleText } from '../../shared/rich-title';
 import { folderColorClass } from '../../shared/folder-color';
 import { rankForFocus } from '../../shared/focus';
 import { toISODate } from '../../shared/week';
@@ -438,11 +438,11 @@ export class HomeView {
   // ---- Darstellung ----
 
   displayTitle(title: string): string {
-    return breakAfterHeading(stripPriorityPrefix(title));
+    return titleText(title);
   }
 
   plainTitle(title: string): string {
-    return stripBold(breakAfterHeading(stripPriorityPrefix(title)));
+    return plainText(titleText(title));
   }
 
   badge(title: string): TitleToken | null {
@@ -476,7 +476,7 @@ export class HomeView {
   }
 
   blockTitle(block: PlacedBlock): string {
-    return stripBold(breakAfterHeading(stripPriorityPrefix(block.title))).split('\n')[0];
+    return plainText(titleText(block.title)).split('\n')[0];
   }
 
   blockTime(block: PlacedBlock): string {

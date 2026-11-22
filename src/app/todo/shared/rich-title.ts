@@ -11,9 +11,16 @@
  * einen Zeilenumbruch: Titel und Unterpunkte werden getrennt gezeigt.
  */
 
+import { splitLinks, stripLinks } from '../../shared/links';
+import { stripPriorityPrefix } from './title-priority';
+
 export interface RichPart {
   text: string;
   bold: boolean;
+  /** Ein Link (shared/links.ts): `text` ist, was zu lesen ist, das hier das Ziel. */
+  href?: string;
+  /** Die volle Adresse bzw. das Ziel, für den Tooltip. */
+  title?: string;
 }
 
 const BOLD = /\*\*(?!\s)([^\n]*?[^\s*])\*\*/g;
@@ -24,23 +31,61 @@ export function hasBold(text: string): boolean {
   return BOLD.test(text);
 }
 
-/** Der Text in Stücken, fett und nicht fett, ohne die Sternchen. */
+/**
+ * Der Text in Stücken, fett und nicht fett, ohne die Sternchen; Links darin
+ * als eigene Stücke mit ihrem Ziel und kurzem Text.
+ */
 export function richParts(text: string): RichPart[] {
   const parts: RichPart[] = [];
+  const push = (piece: string, bold: boolean) => {
+    for (const { text: shown, link } of splitLinks(piece)) {
+      parts.push(link ? { text: shown, bold, href: link.href, title: link.href } : { text: shown, bold });
+    }
+  };
   let last = 0;
   for (const match of text.matchAll(BOLD)) {
     const start = match.index ?? 0;
-    if (start > last) parts.push({ text: text.slice(last, start), bold: false });
-    parts.push({ text: match[1], bold: true });
+    if (start > last) push(text.slice(last, start), false);
+    push(match[1], true);
     last = start + match[0].length;
   }
-  if (last < text.length) parts.push({ text: text.slice(last), bold: false });
+  if (last < text.length) push(text.slice(last), false);
   return parts;
+}
+
+/**
+ * Braucht der Titel mehr als ein Textfeld? Fette Stellen und Links kann ein
+ * Textfeld nicht zeigen, dann steht ausserhalb des Bearbeitens der Text.
+ */
+export function isRich(text: string): boolean {
+  return hasBold(text) || richParts(text).some((part) => part.href);
 }
 
 /** Der Text ohne die Sternchen, für Stellen, die nur Klartext zeigen. */
 export function stripBold(text: string): string {
   return text.replace(BOLD, '$1');
+}
+
+/** Klartext: ohne Sternchen, Links als ihr Text bzw. ihre Kurzform. */
+export function plainText(text: string): string {
+  return stripLinks(stripBold(text));
+}
+
+/**
+ * Der Titel, wie Karten ihn zeigen: ohne Präfixe (die stehen als Chip davor),
+ * eine angeklebte Überschrift umgebrochen. Fett und Links bleiben drin, die
+ * zeichnet app-rich-text.
+ */
+export function titleText(title: string): string {
+  return breakAfterHeading(stripPriorityPrefix(title));
+}
+
+/**
+ * Wie eine Aufgabe in einer Zeile heisst: ohne Präfixe, nur die erste Zeile,
+ * als Klartext. Für Meldungen, Menüs, Statistik und alles, was nur Text kann.
+ */
+export function plainTitle(title: string): string {
+  return plainText(firstLineOf(stripPriorityPrefix(title)));
 }
 
 /**

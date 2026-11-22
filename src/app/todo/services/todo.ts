@@ -18,7 +18,6 @@ import {
   priorityBadge,
   setPriority,
   setTaskLevel,
-  stripPriorityPrefix,
   subtaskGroups,
   taskLevel,
 } from '../shared/title-priority';
@@ -32,7 +31,7 @@ import {
 import { TitleToken, splitTitle } from '../shared/title-token';
 import { normalize, score } from '../../search/search';
 import { scheduleLabel } from '../shared/schedule';
-import { firstLineOf, stripBold } from '../shared/rich-title';
+import { plainTitle } from '../shared/rich-title';
 
 export type Filter = 'all' | 'active' | 'completed'| 'favorites';
 
@@ -1092,7 +1091,7 @@ toggleFavorite(id: string) {
     // Ohne Präfix: „/must Steuer" ist ein Steuerzeichen, kein Name.
     const plain = isSection(removed.title)
       ? sectionName(removed.title)
-      : stripBold(firstLineOf(stripPriorityPrefix(removed.title)));
+      : plainTitle(removed.title);
     const shortTitle = plain.length > 30 ? `${plain.slice(0, 30)}…` : plain;
 
     const deleteTimeout = setTimeout(() => {

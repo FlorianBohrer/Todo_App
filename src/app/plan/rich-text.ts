@@ -50,7 +50,9 @@ export const ANCHOR = '​';
 function isWrapped(node: Node | null): boolean {
   if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
   const el = node as HTMLElement;
-  return WRAPPERS[el.tagName.toLowerCase()] !== undefined || el.dataset?.['plan'] !== undefined;
+  const tag = el.tagName.toLowerCase();
+  // Auch hinter einem Link schriebe Chrome den naechsten Buchstaben hinein.
+  return WRAPPERS[tag] !== undefined || tag === 'a' || el.dataset?.['plan'] !== undefined;
 }
 
 /** Stellenzahl im DOM-Text, die der Position im gelesenen Text entspricht. */
@@ -143,6 +145,20 @@ export function scanRich(root: Node): RichScan {
       return;
     }
 
+    // Markdown-Link: der Text steht im Feld, die Adresse im Attribut. Wer im
+    // Text weiterschreibt, aendert die Beschriftung, nicht das Ziel. Ohne
+    // Text bleibt die nackte Adresse. Eine nackte Adresse selbst braucht
+    // nichts Besonderes: ihre Stuecke ergeben zusammen den getippten Text.
+    const target = el.dataset?.['href'];
+    if (target !== undefined) {
+      const before = md.length;
+      md += '[';
+      walkChildren(el);
+      if (md.length === before + 1) md = md.slice(0, before) + target;
+      else md += `](${target})`;
+      return;
+    }
+
     const wrap = WRAPPERS[tag];
     if (!wrap) {
       // Absatzartige Elemente entstehen, wenn der Browser doch einmal selbst
@@ -218,6 +234,10 @@ const CLOSERS: RegExp[] = [
   /~~[^~]+~~$/,
   /(?:^|[^*])\*[^*\s][^*]*\*$/,
   /\[\[[^[\]]+\]\]$/,
+  // Ein Link ist fertig, wenn die Klammer zu ist bzw. nach der Adresse ein
+  // Leerzeichen kommt.
+  /\[[^[\]\n]+\]\((?:https?:\/\/|www\.)\S+\)$/,
+  /(?:https?:\/\/|www\.)\S+\s$/,
 ];
 
 /**
