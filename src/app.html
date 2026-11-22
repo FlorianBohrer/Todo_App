@@ -218,8 +218,12 @@
           <app-todo-list></app-todo-list>
           <!-- Was letzte Woche fertig wurde: unter der Liste, auf jeder Breite.
                Ein Rückblick ist nichts, womit man den Tag beginnt; über der
-               Liste schob er am Rechner die erste Aufgabe nach unten. -->
-          <app-weekly-review class="mt-5 block empty:hidden"></app-weekly-review>
+               Liste schob er am Rechner die erste Aufgabe nach unten.
+               Nachgeladen, sobald die App ruht: unter der Liste sieht ihn
+               beim Start niemand, und das Startpaket bleibt unter der Grenze. -->
+          @defer (on idle) {
+            <app-weekly-review class="mt-5 block empty:hidden"></app-weekly-review>
+          }
         </section>
       </div>
     }
