@@ -535,40 +535,52 @@
                viel, also ist dies hier wieder nur eine Handlung. -->
 
 
-          <!-- Mehrfachauswahl via CDK Overlay -->
+          <!-- Mehrfachauswahl via CDK Overlay.
+               Bei vielen Ordnern lief das Menü über den Bildschirmrand und
+               liess sich nicht rollen: die untersten (oder, nach oben
+               geklappt, die obersten) Ordner waren nicht zu erreichen. Jetzt
+               bekommt es höchstens den Platz, der zum Rand bleibt
+               (FlexibleDimensions), und nur die Ordner darin rollen — Kopf
+               und „Remove all" bleiben stehen. -->
           <ng-template
             cdkConnectedOverlay
             [cdkConnectedOverlayOrigin]="trigger"
             [cdkConnectedOverlayOpen]="openMenuId() === todo.id"
             [cdkConnectedOverlayPositions]="overlayPositions"
+            [cdkConnectedOverlayFlexibleDimensions]="true"
+            [cdkConnectedOverlayMinHeight]="160"
+            [cdkConnectedOverlayViewportMargin]="8"
             [cdkConnectedOverlayHasBackdrop]="true"
             cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+            (attach)="showCheckedLabel()"
             (backdropClick)="closeMenu()"
             (overlayKeydown)="$event.key === 'Escape' && closeMenu()">
             <div
               role="listbox" aria-multiselectable="true"
-              class="popover w-52">
+              class="popover label-menu w-52">
 
-              <div class="px-3 pb-1 pt-2 text-xs text-muted">Labels (multiple allowed)</div>
+              <div class="flex-none px-3 pb-1 pt-2 text-xs text-muted">Labels (multiple allowed)</div>
 
-              @for (label of labels(); track label.id) {
-                <button
-                  type="button" role="option"
-                  [attr.aria-selected]="isLabelActive(todo.labelIds, label.id)"
-                  class="popover-item text-sm text-text transition"
-                  (click)="toggleLabel(todo.id, label.id)">
-                  <span [class]="dotClass(label.id)">●</span>
-                  <span class="flex-1 truncate">{{ label.name }}</span>
-                  @if (isLabelActive(todo.labelIds, label.id)) {
-                    <span class="text-highlight2">✓</span>
-                  }
-                </button>
-              }
+              <div class="label-scroll">
+                @for (label of labels(); track label.id) {
+                  <button
+                    type="button" role="option"
+                    [attr.aria-selected]="isLabelActive(todo.labelIds, label.id)"
+                    class="popover-item text-sm text-text transition"
+                    (click)="toggleLabel(todo.id, label.id)">
+                    <span [class]="dotClass(label.id)">●</span>
+                    <span class="flex-1 truncate">{{ label.name }}</span>
+                    @if (isLabelActive(todo.labelIds, label.id)) {
+                      <span class="text-highlight2">✓</span>
+                    }
+                  </button>
+                }
+              </div>
 
               @if (todo.labelIds.length > 0) {
                 <button
                   type="button"
-                  class="popover-item border-t border-border text-sm text-muted transition"
+                  class="popover-item flex-none border-t border-border text-sm text-muted transition"
                   (click)="clearLabels(todo.id)">
                   Remove all
                 </button>
