@@ -482,8 +482,19 @@ pickColor(id: string, color: string, event: Event) {
     this.labelService.closeOverlay();
   }
 
+  /**
+   * Einen Folder öffnen.
+   *
+   * Von Home aus geht es dabei in die Liste: nur dort wirkt der Folder. Home
+   * zeigt den ganzen Tag, über alle Folder — wer dort einen wählt, sah sonst
+   * nichts passieren, bis er selbst auf „List" ging.
+   */
   select(id: string | null) {
     this.labelService.selectLabel(id);
+    if (this.todoService.view() === 'home') {
+      this.todoService.view.set('list');
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   }
 
   toggleFavorite(id: string, event: Event) {

@@ -34,6 +34,31 @@ li.cdk-drag {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent 100%);
 }
 
+// Das Ordner-Menü an der Zeile (Rechner). Das CDK-Fenster ist höchstens so
+// hoch wie der Platz bis zum Bildschirmrand (FlexibleDimensions) und streckt
+// das Menü auf seine Höhe; Kopf und „Remove all" behalten ihre, den Rest
+// bekommt die Liste, und die rollt — mit dem Mausrad, sobald man darauf zeigt.
+.label-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.label-scroll {
+  max-height: 22rem;
+  overflow-y: auto;
+  // Am Ende der Liste rollt nicht die Seite weiter: sonst wanderte das Menü
+  // samt Zeile unter dem Zeiger weg.
+  overscroll-behavior: contain;
+  // Ein Schatten am oberen bzw. unteren Rand, solange dort noch Ordner
+  // kommen. Die beiden Flächen in Menüfarbe rollen mit (local) und decken
+  // den festen Schatten (scroll) ab, sobald man am Anfang oder Ende steht.
+  background:
+    linear-gradient(var(--color-panel1) 30%, transparent) top / 100% 1.5rem no-repeat local,
+    linear-gradient(transparent, var(--color-panel1) 70%) bottom / 100% 1.5rem no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgb(var(--shadow) / calc(0.5 * var(--shadow-k))), transparent) top / 100% 0.625rem no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgb(var(--shadow) / calc(0.5 * var(--shadow-k))), transparent) bottom / 100% 0.625rem no-repeat scroll;
+}
+
 // Zusammengeklappt zwei Zeilen statt einer: die meisten mehrzeiligen Todos
 // sind kurze Beschreibungen, eine Zeile verbirgt zu viel.
 //

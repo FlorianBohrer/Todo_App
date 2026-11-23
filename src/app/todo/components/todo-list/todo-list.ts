@@ -1627,6 +1627,20 @@ closeOptionsMenu(): void {
     this.openMenuId.set(null);
   }
 
+  /**
+   * Beim Öffnen den ersten gesetzten Ordner zeigen. Steht er weit unten in
+   * einer langen Liste, sähe man sonst keinen Haken und wüsste nicht, wo die
+   * Aufgabe gerade liegt.
+   */
+  protected showCheckedLabel(): void {
+    // „nearest": rollt nur die Liste, und nur wenn er nicht schon zu sehen
+    // ist. „center" schöbe auch die Seite, um ihn mittig ins Fenster zu holen.
+    afterNextRender(
+      () => document.querySelector('.label-menu [aria-selected="true"]')?.scrollIntoView({ block: 'nearest' }),
+      { injector: this.injector },
+    );
+  }
+
   // ---- Termin ----
   // Ein Todo trug schon immer ein Datum, nur gesetzt wurde es allein per Ziehen
   // in der Wochenansicht. Die Liste zeigt es jetzt und vergibt es auch.
