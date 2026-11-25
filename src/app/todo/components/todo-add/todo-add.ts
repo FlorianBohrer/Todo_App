@@ -17,9 +17,9 @@ import {
   tokenIcon,
   tokenText,
   TitleToken,
-  joinTitle,
-  splitTitle,
+  pullTyped,
   tokenClass,
+  typedTitle,
   withToken,
 } from '../../shared/title-token';
 import { CalendarPlus, CornerDownRight, Plus, X, LucideAngularModule } from 'lucide-angular';
@@ -176,12 +176,16 @@ export class TodoAdd {
   addTodo() {
     const parent = this.parent();
     const tokens = this.tokens();
-    const titles = this.parseTitles(this.newTitle).map((title) => {
-      // Die Chips gelten für jede Zeile — wer drei Zeilen als Must einfügt,
-      // meint drei Must-haves. Ein Präfix in der Zeile selbst gewinnt.
-      const joined = joinTitle(tokens, title);
-      return parent ? withTaskLevel(joined, 'sub') : joined;
-    });
+    const titles = this.parseTitles(this.newTitle)
+      .map((line) => {
+        // Die Chips gelten für jede Zeile — wer drei Zeilen als Must einfügt,
+        // meint drei Must-haves. Ein Zeichen in der Zeile selbst gewinnt,
+        // auch hinten angehängt („Suppe /must"); ein Gedankenstrich macht
+        // eine Überschrift (typedTitle).
+        const title = typedTitle(line, tokens);
+        return parent && title ? withTaskLevel(title, 'sub') : title;
+      })
+      .filter((title) => title !== '');
     if (titles.length === 0) return;
 
     this.todoService.addTodos(titles, parent?.id ?? null, this.date());
@@ -191,18 +195,22 @@ export class TodoAdd {
   }
 
   /**
-   * Jeder Tastendruck: steht vorn ein fertiges Präfix, wird es zum Chip. Ein
-   * neues ersetzt das derselben Achse; „/must " und dann „/sub " sind zwei.
+   * Jeder Tastendruck: steht links vom Cursor ein fertiges Zeichen — vorn,
+   * hinten oder dazwischen —, wird es zum Chip (pullTyped). Ein neues
+   * ersetzt das derselben Achse; „/must " und dann „/sub " sind zwei.
    */
   onInput(value: string): void {
-    const { tokens, text } = splitTitle(value);
-    if (tokens.length > 0) {
-      this.tokens.update((current) => tokens.reduce(withToken, current));
-      this.newTitle = text;
+    const field = this.field()?.nativeElement;
+    const pulled = pullTyped(value, field?.selectionStart ?? value.length);
+    if (pulled) {
+      this.tokens.update((current) => pulled.tokens.reduce(withToken, current));
+      this.newTitle = pulled.text;
       // Direkt ins Feld: war es vorher leer und wird „/must " eingefügt, sähe
       // ngModel keinen neuen Wert (leer bleibt leer) und liesse den Text stehen.
-      const field = this.field()?.nativeElement;
-      if (field && field.value !== text) field.value = text;
+      if (field) {
+        if (field.value !== pulled.text) field.value = pulled.text;
+        field.setSelectionRange(pulled.caret, pulled.caret);
+      }
       return;
     }
     this.newTitle = value;

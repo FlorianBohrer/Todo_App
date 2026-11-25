@@ -28,7 +28,7 @@ import { Todo } from '../../model/todo.model';
 import { RichText } from '../../shared/rich-text';
 import { TokenChip } from '../../shared/token-chip';
 import { ProgressRing } from '../progress-ring/progress-ring';
-import { TitleToken } from '../../shared/title-token';
+import { TitleToken, typedTitle } from '../../shared/title-token';
 import { priorityBadge } from '../../shared/title-priority';
 import { plainText, titleText } from '../../shared/rich-title';
 import { folderColorClass } from '../../shared/folder-color';
@@ -381,7 +381,8 @@ export class HomeView {
   quickAdd(input: HTMLInputElement): void {
     const value = input.value.trim();
     if (!value) return;
-    this.todoService.addTodo(value, this.today());
+    const title = typedTitle(value);
+    if (title) this.todoService.addTodo(title, this.today());
     input.value = '';
   }
 

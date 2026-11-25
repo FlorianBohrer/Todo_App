@@ -1,5 +1,5 @@
 import { priorityBadge, taskLevel, titlePriority } from './title-priority';
-import { joinTitle, splitTitle, tokensOf, withToken } from './title-token';
+import { joinTitle, pullTokens, pullTyped, splitTitle, tokensOf, typedTitle, withToken } from './title-token';
 
 describe('title tokens', () => {
   it('reads every prefix as a token', () => {
@@ -101,5 +101,54 @@ describe('time of day and duration as tokens', () => {
   it('writes them back in order', () => {
     expect(joinTitle(['sub', '90m', 'afternoon'], 'Bericht')).toBe('/sub /afternoon /1h30m Bericht');
     expect(joinTitle(['morning'], '/20m Wasser trinken')).toBe('/morning /20m Wasser trinken');
+  });
+});
+
+describe('tokens anywhere in what was typed', () => {
+  it('takes them from the end, the start and the middle', () => {
+    expect(pullTokens('Mittagessen /afternoon /1h /must', true)).toEqual({
+      tokens: ['must', 'afternoon', '60m'],
+      text: 'Mittagessen',
+    });
+    expect(pullTokens('/must Ship it', true)).toEqual({ tokens: ['must'], text: 'Ship it' });
+    expect(pullTokens('Ship /must it', true)).toEqual({ tokens: ['must'], text: 'Ship it' });
+    expect(pullTokens('Arzt /won’t', true)).toEqual({ tokens: ['wont'], text: 'Arzt' });
+  });
+
+  it('waits for the space while typing at the very end', () => {
+    // „/1h" kann noch „/1h30m" werden.
+    expect(pullTokens('Lesen /1h')).toEqual({ tokens: [], text: 'Lesen /1h' });
+    expect(pullTokens('Lesen /1h ')).toEqual({ tokens: ['60m'], text: 'Lesen ' });
+    expect(pullTokens('Lesen /1h30m', true)).toEqual({ tokens: ['90m'], text: 'Lesen' });
+  });
+
+  it('leaves slashes that are not tokens alone', () => {
+    const texts = ['and/or /later', 'https://x.com/must now', 'Pfad /usr/bin', '12/3 /0m', 'Lies /must,'];
+    for (const text of texts) expect(pullTokens(text, true)).toEqual({ tokens: [], text });
+  });
+
+  it('keeps the lines of a description', () => {
+    expect(pullTokens('Kopf /must\nZeile zwei /15m', true)).toEqual({
+      tokens: ['must', '15m'],
+      text: 'Kopf\nZeile zwei',
+    });
+  });
+
+  it('pulls only left of the cursor and says where it goes', () => {
+    // „/must " gerade fertig getippt, mitten im Satz.
+    expect(pullTyped('Suppe /must  Dal', 12)).toEqual({ tokens: ['must'], text: 'Suppe Dal', caret: 6 });
+    // Am Cursor wird noch getippt.
+    expect(pullTyped('Suppe /mus', 10)).toBeNull();
+    expect(pullTyped('/must ', 6)).toEqual({ tokens: ['must'], text: '', caret: 0 });
+  });
+
+  it('builds the stored title: tokens in front, dash heading, chips', () => {
+    expect(typedTitle('Mittagessen– Suppe oder Dal /afternoon /1h /must')).toBe(
+      '/must /afternoon /1h **Mittagessen**\nSuppe oder Dal',
+    );
+    // Ein getipptes Zeichen schlägt den Chip derselben Art.
+    expect(typedTitle('Bericht /could', ['must', '30m'])).toBe('/could /30m Bericht');
+    expect(typedTitle('Plan – Ideen', [], { heading: false })).toBe('Plan – Ideen');
+    expect(typedTitle('/must')).toBe('');
   });
 });

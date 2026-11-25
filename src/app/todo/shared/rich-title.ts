@@ -105,6 +105,26 @@ export function breakAfterHeading(text: string): string {
   return text.replace(GLUED_HEADING, '$1\n');
 }
 
+/**
+ * Ein Gedankenstrich macht den Text davor zur Überschrift:
+ * „Mittagessen– Suppe oder Dal" wird „**Mittagessen**" und darunter
+ * „Suppe oder Dal". Eine Zeile mit Beschreibung, ohne Strg+B und ohne
+ * Zeilenumbruch, den das Eingabefeld nicht hat (Enter legt an).
+ *
+ * Bewusst eng: nur der erste Strich der ersten Zeile; nur – und —, nie der
+ * Bindestrich („E-Mail", „Thumbnail - day in the life"); nur mit Leerzeichen
+ * dahinter, damit „10–12 Uhr" und „Mo–Fr" bleiben, wie sie sind; und nur mit
+ * Text auf beiden Seiten. Steht schon Fett davor, bleibt die Zeile, wie sie
+ * ist — zwei Überschriften ineinander wären keine.
+ */
+const DASH_HEADING = /^\s*([^\n–—]*?\S)\s*[–—]\s+(?=\S)/;
+
+export function dashHeading(text: string): string {
+  const match = DASH_HEADING.exec(text);
+  if (!match || match[1].includes('**')) return text;
+  return `**${match[1]}**\n${text.slice(match[0].length)}`;
+}
+
 /** Die erste Zeile eines Titels, eine angeklebte Überschrift mitgedacht. */
 export function firstLineOf(text: string): string {
   return breakAfterHeading(text).split('\n')[0].trim();

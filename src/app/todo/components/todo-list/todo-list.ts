@@ -49,20 +49,21 @@ import { TaskIcon, splitLeadingEmoji, taskIcon } from '../../shared/task-icon';
 import { TaskGlyph } from '../../shared/task-glyph';
 import { RichText } from '../../shared/rich-text';
 import { ScheduleDrawer } from '../schedule-drawer/schedule-drawer';
-import { breakAfterHeading, isBoldKey, isRich, plainText, plainTitle, toggleBold } from '../../shared/rich-title';
+import { breakAfterHeading, dashHeading, isBoldKey, isRich, plainText, plainTitle, toggleBold } from '../../shared/rich-title';
 import { ShortcutService } from '../../../shared/shortcut.service';
 import { ClampWatch } from '../../../directives/clamp-watch.directive';
 import { Grouping, ListViewService, SortOrder } from '../../services/list-view.service';
 import { Suggestion, suggestTasks } from '../../shared/suggestions';
 import {
   TitleToken,
-  joinTitle,
+  pullTyped,
   splitTitle,
   tokenClass,
   tokenDescription,
   tokenIcon,
   tokenText,
   tokensOf,
+  typedTitle,
   withToken,
 } from '../../shared/title-token';
 import { TokenChip } from '../../shared/token-chip';
@@ -1109,7 +1110,8 @@ toggleFolderList(): void {
       this.closeStepInput();
       return;
     }
-    this.todoService.addTodos([withTaskLevel(text, 'sub')], headId);
+    const title = typedTitle(text);
+    if (title) this.todoService.addTodos([withTaskLevel(title, 'sub')], headId);
     field.value = '';
   }
 
@@ -1161,7 +1163,8 @@ toggleFolderList(): void {
       this.closeSectionInput();
       return;
     }
-    this.todoService.addTodos([text], null, null, sectionId);
+    const title = typedTitle(text);
+    if (title) this.todoService.addTodos([title], null, null, sectionId);
     field.value = '';
   }
 
@@ -1319,7 +1322,8 @@ toggleFolderList(): void {
       return;
     }
     const mode = this.grouping();
-    this.todoService.addTodo(bucketPrefix(mode, id) + text, bucketDate(mode, id));
+    const title = typedTitle(bucketPrefix(mode, id) + text);
+    if (title) this.todoService.addTodo(title, bucketDate(mode, id));
     input.value = '';
   }
 
@@ -1531,8 +1535,11 @@ toggleFolderList(): void {
     if (this.editingId() !== todo.id) return;
     this.editingId.set(null);
     const typed = textarea.value.trim();
-    const title = joinTitle(this.editTokens(), typed);
-    if (typed && title !== todo.title) {
+    // Zeichen auch hinten im Text („Suppe /must"), ein Gedankenstrich als
+    // Überschrift — ausser der Titel hatte ihn schon: dann war er so gemeint.
+    const before = this.editText(todo);
+    const title = typedTitle(typed, this.editTokens(), { heading: dashHeading(before) === before });
+    if (title && title !== todo.title) {
       this.renameTodo(todo.id, title);
     } else {
       textarea.value = this.editText(todo);
@@ -1547,16 +1554,17 @@ toggleFolderList(): void {
     textarea.blur();
   }
 
-  /** Beim Tippen: ein fertiges Präfix ganz vorn wird zum Chip. */
+  /**
+   * Beim Tippen: ein fertiges Zeichen links vom Cursor wird zum Chip — vorn,
+   * hinten oder dazwischen (pullTyped). Der Cursor bleibt, wo getippt wurde.
+   */
   onEditInput(textarea: HTMLTextAreaElement): void {
-    const { tokens, text } = splitTitle(textarea.value);
-    if (tokens.length === 0) return;
+    const pulled = pullTyped(textarea.value, textarea.selectionStart);
+    if (!pulled) return;
 
-    this.editTokens.update((current) => tokens.reduce(withToken, current));
-    textarea.value = text;
-    // Der Cursor stand hinter dem getippten Leerzeichen, also ganz vorn im
-    // eigentlichen Text. Dort bleibt er.
-    textarea.setSelectionRange(0, 0);
+    this.editTokens.update((current) => pulled.tokens.reduce(withToken, current));
+    textarea.value = pulled.text;
+    textarea.setSelectionRange(pulled.caret, pulled.caret);
   }
 
   /**
