@@ -234,7 +234,7 @@
             <textarea
               #todoText
               [appAutosize]="row.displayTitle"
-              (autosizeOverflow)="row.rich || setClamped(todo.id, $event)"
+              (autosizeOverflow)="row.rich || editingId() === todo.id || setClamped(todo.id, $event)"
               rows="1"
                             [readOnly]="editingId() !== todo.id"
               [class.pointer-events-none]="editingId() !== todo.id"

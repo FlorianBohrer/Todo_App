@@ -146,6 +146,41 @@ li.todo-expanded-row {
   gap: 0.5rem;
 }
 
+// ---- Bearbeiten ----
+//
+// Beim Bearbeiten stehen Priorität, Tageszeit und Dauer als Chips vor dem
+// Text. Auf dem Telefon blieben dem Feld daneben rund 130px: „Suppe oder Dal"
+// brach Wort für Wort um, und die Überschrift darüber lag ausserhalb der drei
+// sichtbaren Zeilen. Jetzt rutscht das Feld unter die Chips, sobald neben
+// ihnen keine 10rem bleiben, und hat dann die ganze Breite. Am Rechner ist
+// der Platz da, dort bleibt alles in einer Zeile.
+.todo-card.is-editing .todo-line {
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+}
+
+// Etwas Luft zwischen Text und Rahmen: ohne klebte das erste Zeichen am
+// Fokusring.
+.todo-card.is-editing .todo-line > textarea {
+  flex: 1 1 10rem;
+  padding: 0.25rem 0.5rem;
+}
+
+// Am Rechner bleibt das Feld in der Zeile; dort holt der negative Rand die
+// Luft zurück, damit der Text beim Bearbeiten nicht verrutscht. Auf dem
+// Telefon rückt das Feld ohnehin in eine eigene Zeile.
+@media (min-width: 640px) {
+  .todo-card.is-editing .todo-line > textarea {
+    margin: -0.25rem -0.5rem;
+  }
+}
+
+// Und beim Bearbeiten der ganze Text, nicht zwei (Telefon: drei) Zeilen
+// davon: man schreibt in dem, was man sieht.
+.todo-card.is-editing textarea.todo-collapsed {
+  max-height: none;
+}
+
 // Die Unterpunkte mit einer Fuehrungslinie, damit die Zugehoerigkeit zum
 // Titel lesbar bleibt.
 //
