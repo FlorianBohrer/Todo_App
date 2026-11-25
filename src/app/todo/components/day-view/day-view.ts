@@ -38,6 +38,7 @@ import { WeekView } from '../week-view/week-view';
 import { tap } from '../../shared/haptics';
 import { RichText } from '../../shared/rich-text';
 import { firstLineOf, plainText } from '../../shared/rich-title';
+import { typedTitle } from '../../shared/title-token';
 
 type Mode = 'day' | 'week';
 const MODE_KEY = 'calendar.mode';
@@ -224,7 +225,8 @@ export class DayView {
       return;
     }
     const prefix = slot === 'anytime' || slot === 'overdue' ? '' : `/${slot} `;
-    this.todoService.addTodo(prefix + text, this.selected());
+    const title = typedTitle(prefix + text);
+    if (title) this.todoService.addTodo(title, this.selected());
     input.value = '';
     tap();
   }

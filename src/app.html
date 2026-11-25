@@ -288,7 +288,13 @@
 
     <app-categories-overlay></app-categories-overlay>
     <app-shortcuts-overlay #shortcuts></app-shortcuts-overlay>
-    <app-level-up />
+    <!-- Nachgeladen, sobald die App ruht: ein Level-Up gibt es frühestens
+         nach dem ersten Haken, und es steht als Zustand im RewardService —
+         wäre es schon vorher fällig, erscheint die Karte, sobald sie da ist.
+         Hält das Startpaket unter der Grenze. -->
+    @defer (on idle) {
+      <app-level-up />
+    }
     <app-search-palette />
   </main>
 } @else {

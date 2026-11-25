@@ -74,6 +74,8 @@ const PREFIXES: TitlePrefix[] = [
   { match: '/should ', priority: 1, badge: 'should' },
   { match: '/could ',  priority: 2, badge: 'could' },
   { match: "/won't ",  priority: 4, badge: 'wont' },
+  // Mit typografischem Apostroph, wie ihn die iPhone-Tastatur setzt.
+  { match: '/won’t ',  priority: 4, badge: 'wont' },
   { match: '/wont ',   priority: 4, badge: 'wont' },
   // Gliederung statt Gewichtung: beide erben die normale Priorität. Die
   // Unteraufgabe bekommt ihre Reihenfolge ohnehin von ihrer Hauptaufgabe,

@@ -36,6 +36,7 @@ import {
   taskLevel,
   timeOfDay,
 } from './title-priority';
+import { dashHeading } from './rich-title';
 
 /** Eine Dauer als Zeichen: Minuten mit „m" dahinter, „15m", „90m". */
 export type DurationToken = `${number}m`;
@@ -204,6 +205,92 @@ export function withToken(tokens: readonly TitleToken[], token: TitleToken): Tit
 export function splitTitle(title: string): { tokens: TitleToken[]; text: string } {
   const tokens = tokensOf(title);
   return { tokens, text: tokens.length === 0 ? title : stripPriorityPrefix(title) };
+}
+
+/** Ein einzelnes Wort als Zeichen („/must", „/1h"), oder null. */
+function tokenOfWord(word: string): TitleToken | null {
+  const { tokens, text } = splitTitle(`${word} `);
+  return tokens.length === 1 && text === '' ? tokens[0] : null;
+}
+
+/** Ein Wort mit Schrägstrich, allein stehend: am Zeilenanfang oder nach Leerraum. */
+const SLASH_WORD = /(^|[ \t]+)(\/\S+)(?=[ \t]|$)/g;
+
+/**
+ * Zeichen aus dem Getippten holen — von überall, nicht nur von vorn.
+ *
+ * „Mittagessen /afternoon /1h /must" meint dasselbe wie
+ * „/must /afternoon /1h Mittagessen": man schreibt erst, worum es geht, und
+ * hängt an, was die App wissen soll. Vorher zählten die Zeichen nur ganz vorn,
+ * und hinten blieben sie als Text stehen.
+ *
+ * Nur für Getipptes, nicht für gespeicherte Titel: dort stehen die Zeichen
+ * vorn (joinTitle), und ein „/must" mitten im Satz bleibt beim Lesen Text
+ * (splitTitle).
+ *
+ * `done`: der Text ist fertig (Enter, Feld verlassen). Dann zählt auch ein
+ * Zeichen ganz am Ende ohne Leerzeichen dahinter — beim Tippen nicht, „/1h"
+ * kann noch „/1h30m" werden. Je Achse gilt das letzte.
+ */
+export function pullTokens(text: string, done = false): { tokens: TitleToken[]; text: string } {
+  let tokens: TitleToken[] = [];
+  const lines = text.split('\n');
+  const out = lines.map((line, i) => {
+    const last = i === lines.length - 1;
+    let atStart = false;
+    const rest = line.replace(SLASH_WORD, (match: string, _lead: string, word: string, offset: number) => {
+      if (!done && last && offset + match.length === line.length) return match;
+      const token = tokenOfWord(word);
+      if (token === null) return match;
+      tokens = withToken(tokens, token);
+      if (offset === 0) atStart = true;
+      return '';
+    });
+    // Vorn weggenommen, bliebe das Leerzeichen dahinter als Einzug stehen.
+    return atStart ? rest.trimStart() : rest;
+  });
+  return { tokens, text: tokens.length === 0 ? text : out.join('\n') };
+}
+
+/**
+ * Beim Tippen: was links vom Cursor fertig dasteht, wird zum Chip — vorn,
+ * hinten oder dazwischen, sobald das Leerzeichen dahinter fällt. Rechts vom
+ * Cursor wird nicht getippt, das bleibt für `typedTitle` beim Anlegen.
+ *
+ * Null, wenn es nichts zu holen gab; sonst der neue Text und wo der Cursor
+ * jetzt steht.
+ */
+export function pullTyped(
+  value: string,
+  caret: number,
+): { tokens: TitleToken[]; text: string; caret: number } | null {
+  const before = pullTokens(value.slice(0, caret));
+  if (before.tokens.length === 0) return null;
+  let after = value.slice(caret);
+  // „Suppe /must | Dal": ein Leerzeichen vor und eins hinter der Lücke.
+  if (/[ \t]$/.test(before.text) && after.startsWith(' ')) after = after.slice(1);
+  return { tokens: before.tokens, text: before.text + after, caret: before.text.length };
+}
+
+/**
+ * Was jemand eingegeben hat → Titel, so wie er gespeichert wird.
+ *
+ * Die Zeichen von überall (`pullTokens`), ein Gedankenstrich als Überschrift
+ * (`dashHeading`), und die Chips des Felds dazu. Ein getipptes Zeichen
+ * gewinnt auf seiner Achse gegen den Chip, wie in joinTitle.
+ *
+ * `heading: false` lässt den Gedankenstrich stehen — beim Bearbeiten eines
+ * Titels, der ihn schon vorher hatte: der war so gemeint.
+ */
+export function typedTitle(
+  raw: string,
+  chips: readonly TitleToken[] = [],
+  { heading = true }: { heading?: boolean } = {},
+): string {
+  const pulled = pullTokens(raw.trim(), true);
+  const text = pulled.text.trim();
+  const tokens = pulled.tokens.reduce(withToken, [...chips]);
+  return joinTitle(tokens, heading ? dashHeading(text) : text);
 }
 
 /**

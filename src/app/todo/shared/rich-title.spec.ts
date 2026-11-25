@@ -1,5 +1,6 @@
 import {
   breakAfterHeading,
+  dashHeading,
   firstLineOf,
   hasBold,
   isRich,
@@ -101,5 +102,19 @@ describe('rich-title', () => {
     expect(breakAfterHeading('**Wichtig**: bitte anrufen')).toBe('**Wichtig**: bitte anrufen');
     expect(breakAfterHeading('Call **mom**today')).toBe('Call **mom**today');
     expect(breakAfterHeading('**Nur die Überschrift**')).toBe('**Nur die Überschrift**');
+  });
+});
+
+describe('dashHeading', () => {
+  it('turns the text before a dash into a heading', () => {
+    expect(dashHeading('Mittagessen– Suppe oder Dal')).toBe('**Mittagessen**\nSuppe oder Dal');
+    expect(dashHeading('Einkaufen — Milch, Brot')).toBe('**Einkaufen**\nMilch, Brot');
+    expect(dashHeading('Zahnarzt – anrufen – morgen')).toBe('**Zahnarzt**\nanrufen – morgen');
+  });
+
+  it('leaves hyphens, ranges and lone dashes alone', () => {
+    const same = ['Thumbnail - day in the life', 'E-Mail schreiben', 'Termin 10–12 Uhr', 'Mo–Fr laufen',
+      'Offen –', '– Punkt', '**Fett** – schon da', 'Kopf\nZeile – zwei'];
+    for (const text of same) expect(dashHeading(text)).toBe(text);
   });
 });

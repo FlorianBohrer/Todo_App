@@ -51,7 +51,7 @@ import {
 import { isTypingTarget } from '../../shared/keyboard';
 import { pastThroughput } from '../../shared/focus';
 import { priorityBadge } from '../../shared/title-priority';
-import { TitleToken } from '../../shared/title-token';
+import { TitleToken, typedTitle } from '../../shared/title-token';
 import { RichText } from '../../shared/rich-text';
 import { plainText, titleText } from '../../shared/rich-title';
 import { TokenChip } from '../../shared/token-chip';
@@ -569,7 +569,8 @@ export class WeekView {
     // Mit Ordnerfilter landet die neue Aufgabe in diesem Ordner. Sonst wäre
     // sie nach dem Enter sofort weg, ausgefiltert, und sähe verloren aus.
     const folder = this.folderFilter();
-    this.todoService.addTodo(value, iso, null, undefined, folder ?? undefined);
+    const title = typedTitle(value);
+    if (title) this.todoService.addTodo(title, iso, null, undefined, folder ?? undefined);
     input.value = '';
   }
 
