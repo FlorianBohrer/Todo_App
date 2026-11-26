@@ -122,6 +122,16 @@ describe('TodoService', () => {
     });
   });
 
+  it('moves a step into the steps of another task', () => {
+    seed([todo('a', 'Umzug'), todo('a1', '/sub Kartons'), todo('a2', '/sub Bus'), todo('b', 'Steuer'), todo('b1', '/sub Belege')]);
+    service.moveStepAfter('a1', 'b');
+    expect(service.stepsOf('b').map((t) => t.id)).toEqual(['a1', 'b1']);
+    service.moveStepAfter('a1', 'b1');
+    expect(service.stepsOf('b').map((t) => t.id)).toEqual(['b1', 'a1']);
+    expect(service.stepsOf('a').map((t) => t.id)).toEqual(['a2']);
+    http.match(() => true);
+  });
+
   describe('sections', () => {
     const order = () => service.filteredTodos().map((t) => t.id);
     const created = (id: string, title: string) =>

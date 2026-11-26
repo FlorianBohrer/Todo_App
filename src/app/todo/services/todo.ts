@@ -909,6 +909,23 @@ toggleFavorite(id: string) {
   }
 
   /**
+   * Einen Schritt direkt hinter eine Zeile setzen: hinter eine Aufgabe oder
+   * einen ihrer Schritte. Damit ist er Schritt dieser Aufgabe, auch einer
+   * anderen als bisher — wozu ein Schritt gehört, sagt sein Platz
+   * (subtaskGroups).
+   */
+  moveStepAfter(stepId: string, afterId: string) {
+    if (stepId === afterId) return;
+    this.reorderScope((scope) => {
+      const step = scope.find((t) => t.id === stepId);
+      const rest = scope.filter((t) => t.id !== stepId);
+      const at = rest.findIndex((t) => t.id === afterId);
+      return step && at !== -1 ? [...rest.slice(0, at + 1), step, ...rest.slice(at + 1)] : scope;
+    });
+    this.persistOrder();
+  }
+
+  /**
    * Ein Zug in der Liste nach Priorität: die Aufgabe bekommt die Stufe des
    * Fachs, in das sie gezogen wurde, und steht dann vor oder hinter der
    * Aufgabe, neben der sie losgelassen wurde.
