@@ -1996,9 +1996,9 @@ closeOptionsMenu(): void {
    * Überschrift die Zeile gelandet ist — auch in einem leeren Fach, wo es
    * keine Zeile gäbe, an der man das ablesen könnte.
    *
-   * Ein Schritt bleibt bei seiner Aufgabe: er wechselt nur den Platz unter
-   * ihren Schritten. Sein Fach zeigt die Liste ohnehin nicht — das richtet
-   * sich nach der Aufgabe.
+   * Ein Schritt bleibt Schritt: er gehört zu der Aufgabe, unter der er
+   * landet — der eigenen oder einer anderen. Sein Fach zeigt die Liste
+   * ohnehin nicht, das richtet sich nach der Aufgabe.
    */
   private dropInBucket(event: CdkDragDrop<unknown>): void {
     if (event.previousIndex === event.currentIndex) return;
@@ -2008,17 +2008,18 @@ closeOptionsMenu(): void {
     if (movedItem?.kind !== 'row') return;
     const moved = movedItem.row;
 
-    if (moved.parentId !== null) {
-      const target = items[event.currentIndex];
-      if (target?.kind === 'row' && target.row.parentId === moved.parentId) {
-        this.todoService.moveTo(moved.id, target.row.id);
-      }
-      return;
-    }
-
     // Die Liste ohne die gezogene Zeile: an `at` steht sie jetzt.
     const others = items.filter((_, i) => i !== event.previousIndex);
     const at = event.currentIndex;
+
+    if (moved.parentId !== null) {
+      // Hinter die Zeile darüber. „+ Add step" schliesst eine Gruppe ab:
+      // dann hinter deren letzte Zeile. Über einer Fachüberschrift: bleibt.
+      const above = others[others[at - 1]?.kind === 'add' ? at - 2 : at - 1];
+      if (above?.kind === 'row' && !above.row.isSection) this.todoService.moveStepAfter(moved.id, above.row.id);
+      return;
+    }
+
     const bucket = bucketAbove(others, at);
     if (bucket === null) return;
 
