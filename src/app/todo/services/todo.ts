@@ -1088,33 +1088,72 @@ toggleFavorite(id: string) {
    * alten Position wieder her — es war dann nie weg vom Server.
    */
   removeTodo(id: string) {
-    const items = this.todos();
-    const index = items.findIndex(item => item.id === id);
-    if (index === -1) return;
-    const removed = items[index];
+    this.removeWithUndo([id]);
+  }
 
-    this.todos.update(list => list.filter(item => item.id !== id));
+  /**
+   * Eine Aufgabe mit Schritten löschen — die Schritte mit oder ohne.
+   *
+   * Ohne werden sie eigene Aufgaben. Als Schritte blieben sie sonst stehen
+   * und hingen an der Aufgabe darüber (subtaskGroups), mit der sie nichts zu
+   * tun haben. Ein Undo für alles: Aufgabe und Schritte kommen an ihren Platz
+   * zurück, und behaltene Schritte werden wieder Schritte.
+   */
+  removeTask(id: string, withSteps: boolean) {
+    const steps = this.stepsOf(id);
+    if (steps.length === 0) {
+      this.removeTodo(id);
+      return;
+    }
+    if (withSteps) {
+      this.removeWithUndo([id, ...steps.map((step) => step.id)]);
+      return;
+    }
+    const kept = steps.map(({ id: stepId, title }) => ({ id: stepId, title }));
+    for (const step of kept) this.renameTodo(step.id, setTaskLevel(step.title, null));
+    this.removeWithUndo([id], () => {
+      for (const step of kept) this.renameTodo(step.id, step.title);
+    });
+  }
+
+  /** Die erste ID nennt der Toast; die übrigen zählt er als Schritte. */
+  private removeWithUndo(ids: readonly string[], onUndo?: () => void) {
+    const gone = new Set(ids);
+    const removed = this.todos()
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => gone.has(item.id));
+    const named = removed.find(({ item }) => item.id === ids[0])?.item;
+    if (!named) return;
+
+    this.todos.update(list => list.filter(item => !gone.has(item.id)));
 
     // Ohne Präfix: „/must Steuer" ist ein Steuerzeichen, kein Name.
-    const plain = isSection(removed.title)
-      ? sectionName(removed.title)
-      : plainTitle(removed.title);
+    const plain = isSection(named.title)
+      ? sectionName(named.title)
+      : plainTitle(named.title);
     const shortTitle = plain.length > 30 ? `${plain.slice(0, 30)}…` : plain;
+    const more = removed.length - 1;
+    const message = more > 0
+      ? `“${shortTitle}” and ${more} ${more === 1 ? 'step' : 'steps'} deleted`
+      : `“${shortTitle}” deleted`;
 
     const deleteTimeout = setTimeout(() => {
       this.toast.dismiss(toastId);
-      this.deleteOnServer(id);
+      for (const { item } of removed) this.deleteOnServer(item.id);
     }, 5000);
 
-    const toastId = this.toast.show(`“${shortTitle}” deleted`, {
+    const toastId = this.toast.show(message, {
       actionLabel: 'Undo',
       action: () => {
         clearTimeout(deleteTimeout);
+        // Aufsteigend an die alten Plätze: jede frühere steht schon wieder,
+        // wenn die nächste kommt, also stimmen deren Indizes.
         this.todos.update(list => {
           const next = [...list];
-          next.splice(Math.min(index, next.length), 0, removed);
+          for (const { item, index } of removed) next.splice(Math.min(index, next.length), 0, item);
           return next;
         });
+        onUndo?.();
       },
       durationMs: 5000,
     });

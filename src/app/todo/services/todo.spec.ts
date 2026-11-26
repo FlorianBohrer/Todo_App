@@ -77,6 +77,51 @@ describe('TodoService', () => {
     http.match(() => true);
   });
 
+  describe('several lines with steps, and deleting a task with steps', () => {
+    const posted = () => {
+      const req = http.expectOne((r) => r.method === 'POST' && r.url.endsWith('/todo'));
+      const title = (req.request.body as { title: string }).title;
+      req.flush({
+        id: 'n' + title.length + title.charCodeAt(title.length - 1), title, completed: false, isFavorite: false,
+        categoryIds: [], createdAt: '2026-11-25T10:00:00Z', scheduledDate: null, archivedAt: null, completedAt: null,
+      });
+    };
+
+    it('hangs the steps under the new task of the same paste, not the clicked one', () => {
+      seed([todo('k', 'Krankmelden'), todo('k1', '/sub Arzt'), todo('x', 'Milch')]);
+      service.addTodos(['/must /main Ruhetag', '/sub Spazieren', '/sub Mittagessen'], 'k');
+      posted();
+      posted();
+      posted();
+      expect(titles()).toEqual([
+        'Krankmelden', '/sub Arzt', '/must /main Ruhetag', '/sub Spazieren', '/sub Mittagessen', 'Milch',
+      ]);
+      expect(service.stepsOf('k').map((t) => t.title)).toEqual(['/sub Arzt']);
+      expect(service.stepsOf(service.snapshot()[2].id)).toHaveLength(2);
+      http.match(() => true);
+    });
+
+    it('deletes a task with its steps, and the undo brings all back in place', () => {
+      vi.useFakeTimers();
+      seed([todo('a', 'Umzug'), todo('a1', '/sub Kartons'), todo('a2', '/sub Bus'), todo('b', 'Milch')]);
+      service.removeTask('a', true);
+      expect(titles()).toEqual(['Milch']);
+      vi.advanceTimersByTime(5000);
+      const deletes = http.match((r) => r.method === 'DELETE').map((r) => r.request.url.split('/').pop());
+      expect(deletes).toEqual(['a', 'a1', 'a2']);
+      vi.useRealTimers();
+    });
+
+    it('can delete only the task and keep its steps as tasks of their own', () => {
+      seed([todo('z', 'Steuer'), todo('a', 'Umzug'), todo('a1', '/must /sub Kartons'), todo('a2', '/sub Bus')]);
+      service.removeTask('a', false);
+      // Sonst wären sie Schritte von „Steuer" geworden.
+      expect(titles()).toEqual(['Steuer', '/must Kartons', 'Bus']);
+      expect(service.stepsOf('z')).toEqual([]);
+      http.match(() => true);
+    });
+  });
+
   describe('sections', () => {
     const order = () => service.filteredTodos().map((t) => t.id);
     const created = (id: string, title: string) =>

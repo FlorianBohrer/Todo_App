@@ -1911,11 +1911,32 @@ closeOptionsMenu(): void {
     if (!todo) return;
     const name = this.rows().find((row) => row.id === id)?.firstLine.trim() || 'This todo';
     const short = name.length > 60 ? `${name.slice(0, 60)}…` : name;
+    const from = event?.currentTarget instanceof Element ? event.currentTarget : null;
+
+    // Mit Schritten: fragen, ob sie mitgehen. Nur die Aufgabe zu löschen
+    // liess die Schritte bisher stehen, und sie hingen sich an die Aufgabe
+    // darüber.
+    const steps = taskLevel(todo.title) === 'sub' ? 0 : this.todoService.stepsOf(id).length;
+    if (steps > 0) {
+      const word = steps === 1 ? 'step' : 'steps';
+      const answer = await this.confirm.choose({
+        title: 'Delete this task?',
+        message: `“${short}” has ${steps} ${word}.`,
+        confirmLabel: `Delete with ${steps} ${word}`,
+        altLabel: `Delete, keep the ${word} as tasks`,
+        from,
+      });
+      if (answer === 'cancel') return;
+      this.todoService.removeTask(id, answer === 'confirm');
+      tap();
+      return;
+    }
+
     const ok = await this.confirm.ask({
       title: 'Delete this todo?',
       message: `“${short}” will be deleted.`,
       confirmLabel: 'Delete',
-      from: event?.currentTarget instanceof Element ? event.currentTarget : null,
+      from,
     });
     if (ok) {
       this.todoService.removeTodo(id);

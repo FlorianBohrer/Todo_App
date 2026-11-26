@@ -5,6 +5,11 @@ export interface ConfirmRequest {
   message: string;
   confirmLabel: string;
   cancelLabel?: string;
+  /**
+   * Eine zweite, mildere Wahl neben dem Bestätigen — nur mit `choose`.
+   * „Mit allen Schritten löschen" oder „nur die Aufgabe, Schritte behalten".
+   */
+  altLabel?: string;
   /** Der Knopf, der gefragt hat: der Dialog wächst aus ihm heraus. */
   from?: Element | null;
 }
@@ -25,31 +30,44 @@ export interface OpenConfirm extends ConfirmRequest {
  * Fragt eine zweite Stelle, während die erste noch offen ist, gilt die erste
  * als abgelehnt — zwei Fragen übereinander beantwortet niemand richtig.
  */
+/** Was gewählt wurde: bestätigt, die zweite Wahl, oder abgebrochen. */
+export type ConfirmAnswer = 'confirm' | 'alt' | 'cancel';
+
 @Injectable({ providedIn: 'root' })
 export class ConfirmService {
   private seq = 0;
-  private resolve: ((ok: boolean) => void) | null = null;
+  private resolve: ((answer: ConfirmAnswer) => void) | null = null;
 
   readonly current = signal<OpenConfirm | null>(null);
 
+  /** Ja oder nein. */
   ask(request: ConfirmRequest): Promise<boolean> {
-    this.settle(false);
+    return this.open({ ...request, altLabel: undefined }).then((answer) => answer === 'confirm');
+  }
+
+  /** Drei Wege: bestätigen, die zweite Wahl (`altLabel`) oder abbrechen. */
+  choose(request: ConfirmRequest & { altLabel: string }): Promise<ConfirmAnswer> {
+    return this.open(request);
+  }
+
+  answer(answer: boolean | ConfirmAnswer): void {
+    this.settle(answer === true ? 'confirm' : answer === false ? 'cancel' : answer);
+  }
+
+  private open(request: ConfirmRequest): Promise<ConfirmAnswer> {
+    this.settle('cancel');
     const origin = originOf(request.from);
-    return new Promise<boolean>((resolve) => {
+    return new Promise<ConfirmAnswer>((resolve) => {
       this.resolve = resolve;
       this.current.set({ ...request, from: null, id: ++this.seq, origin });
     });
   }
 
-  answer(ok: boolean): void {
-    this.settle(ok);
-  }
-
-  private settle(ok: boolean): void {
+  private settle(answer: ConfirmAnswer): void {
     const resolve = this.resolve;
     this.resolve = null;
     this.current.set(null);
-    resolve?.(ok);
+    resolve?.(answer);
   }
 }
 

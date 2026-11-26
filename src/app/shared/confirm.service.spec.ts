@@ -46,4 +46,19 @@ describe('ConfirmService', () => {
       y: Math.round(25 - window.innerHeight / 2),
     });
   });
+
+  it('offers a second way out with choose', async () => {
+    const service = new ConfirmService();
+    const answer = service.choose({ title: 'Delete this task?', message: '“Umzug” has 2 steps.',
+      confirmLabel: 'Delete with 2 steps', altLabel: 'Delete, keep the steps as tasks' });
+    expect(service.current()?.altLabel).toBe('Delete, keep the steps as tasks');
+    service.answer('alt');
+    await expect(answer).resolves.toBe('alt');
+  });
+
+  it('shows no second way out for a plain question', () => {
+    const service = new ConfirmService();
+    service.ask({ title: 'Delete?', message: 'x', confirmLabel: 'Delete', altLabel: 'stray' });
+    expect(service.current()?.altLabel).toBeUndefined();
+  });
 });
