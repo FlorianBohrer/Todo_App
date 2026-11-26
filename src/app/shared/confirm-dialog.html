@@ -27,19 +27,45 @@
     <h2 id="confirm-title" class="text-base font-semibold text-text">{{ req.title }}</h2>
     <p id="confirm-message" class="mt-1.5 text-sm text-muted [overflow-wrap:anywhere]">{{ req.message }}</p>
 
-    <div class="mt-5 grid grid-cols-2 gap-2">
-      <button #cancel type="button"
-        class="rounded-xl bg-fill px-3 py-2.5 text-sm font-medium text-text transition hover:bg-fill-strong
-               focus:outline-none focus-visible:ring-2 focus-visible:ring-line-strong focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
-        (click)="answer(false)">
-        {{ req.cancelLabel ?? 'Cancel' }}
-      </button>
-      <button type="button"
-        class="rounded-xl bg-danger px-3 py-2.5 text-sm font-semibold text-panel1 transition hover:brightness-110
-               focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
-        (click)="answer(true)">
-        {{ req.confirmLabel }}
-      </button>
-    </div>
+    <!-- Mit einer zweiten Wahl untereinander, die schwerste zuerst: drei
+         Knöpfe nebeneinander hätten auf dem Telefon keine 100px. Der Fokus
+         steht trotzdem auf „Cancel". -->
+    @if (req.altLabel) {
+      <div class="mt-5 grid gap-2">
+        <button type="button"
+          class="rounded-xl bg-danger px-3 py-2.5 text-sm font-semibold text-panel1 transition hover:brightness-110
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
+          (click)="answer(true)">
+          {{ req.confirmLabel }}
+        </button>
+        <button type="button"
+          class="rounded-xl bg-fill-strong px-3 py-2.5 text-sm font-medium text-text transition hover:brightness-110
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-line-strong focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
+          (click)="answer('alt')">
+          {{ req.altLabel }}
+        </button>
+        <button #cancel type="button"
+          class="rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-fill hover:text-text
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-line-strong focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
+          (click)="answer(false)">
+          {{ req.cancelLabel ?? 'Cancel' }}
+        </button>
+      </div>
+    } @else {
+      <div class="mt-5 grid grid-cols-2 gap-2">
+        <button #cancel type="button"
+          class="rounded-xl bg-fill px-3 py-2.5 text-sm font-medium text-text transition hover:bg-fill-strong
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-line-strong focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
+          (click)="answer(false)">
+          {{ req.cancelLabel ?? 'Cancel' }}
+        </button>
+        <button type="button"
+          class="rounded-xl bg-danger px-3 py-2.5 text-sm font-semibold text-panel1 transition hover:brightness-110
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-panel1"
+          (click)="answer(true)">
+          {{ req.confirmLabel }}
+        </button>
+      </div>
+    }
   </div>
 }

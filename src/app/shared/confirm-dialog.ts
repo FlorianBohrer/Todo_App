@@ -50,18 +50,18 @@ export class ConfirmDialog {
     });
   });
 
-  protected answer(ok: boolean): void {
+  protected answer(answer: boolean | 'alt'): void {
     const opener = this.opener;
     this.opener = null;
-    this.confirm.answer(ok);
+    this.confirm.answer(answer);
     // Abgebrochen: zurück, wo man war. Gelöscht gibt es den Knopf nicht mehr.
-    if (!ok && opener?.isConnected) opener.focus({ preventScroll: true });
+    if (answer === false && opener?.isConnected) opener.focus({ preventScroll: true });
   }
 
   /**
    * Tasten bleiben im Dialog: die Kürzel der App (Ansicht wechseln, Ordner
    * öffnen) gälten sonst für das, was dahinter liegt. Tab läuft zwischen
-   * den beiden Knöpfen im Kreis.
+   * den Knöpfen im Kreis.
    */
   protected onKeydown(event: KeyboardEvent): void {
     event.stopPropagation();
