@@ -792,6 +792,11 @@ toggleFavorite(id: string) {
 
     const categoryId = this.labelService.activeLabelId();
     let hadError = false;
+    // Die letzte eigene Aufgabe dieser Eingabe. Ein Schritt gehört zu ihr,
+    // nicht zur angeklickten Hauptaufgabe: „Ruhetag /main" und darunter seine
+    // „/sub"-Zeilen sind eine Aufgabe mit Schritten. Sonst rutschten die
+    // Schritte vor „Ruhetag" in die Gruppe der angeklickten Aufgabe.
+    let head: string | null = null;
 
     const postNext = (index: number) => {
       if (index >= clean.length) {
@@ -808,7 +813,9 @@ toggleFavorite(id: string) {
             this.todos.update((items) => [...items, this.toTodo(dto)]);
             // Einsortieren ja, sichern erst am Ende: sonst geht fuer jede
             // eingefuegte Zeile eine eigene Reihenfolge an den Server.
-            this.placeNew(dto.id, dto.title, parentId, sectionId, false);
+            const step = taskLevel(dto.title) === 'sub';
+            this.placeNew(dto.id, dto.title, step ? (head ?? parentId) : parentId, sectionId, false);
+            if (!step) head = dto.id;
             postNext(index + 1);
           },
           error: (err) => {

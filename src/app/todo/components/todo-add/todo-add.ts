@@ -201,7 +201,13 @@ export class TodoAdd {
    */
   onInput(value: string): void {
     const field = this.field()?.nativeElement;
-    const pulled = pullTyped(value, field?.selectionStart ?? value.length);
+    // Mehrere Zeilen (eingefügt) sind mehrere Aufgaben: ihre Zeichen bleiben
+    // in ihrer Zeile und gelten beim Anlegen nur für sie. Als Chips gälten
+    // sie für alle — so wurden aus „Ruhetag /main /must" und acht Zeilen
+    // „/sub" darunter neun Schritte, alle Must.
+    const pulled = value.includes('\n')
+      ? null
+      : pullTyped(value, field?.selectionStart ?? value.length);
     if (pulled) {
       this.tokens.update((current) => pulled.tokens.reduce(withToken, current));
       this.newTitle = pulled.text;
