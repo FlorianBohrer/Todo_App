@@ -1969,6 +1969,10 @@ closeOptionsMenu(): void {
     const target = visible[event.currentIndex];
     if (!moved || !target) return;
 
+    const rest = visible.filter((row) => row.id !== moved.id);
+    const below = rest[event.currentIndex];
+    if (shift !== -1 && this.nestAmongSteps(moved, rest[event.currentIndex - 1], below?.parentId != null)) return;
+
     if (event.previousIndex !== event.currentIndex) {
       this.todoService.moveTo(moved.id, target.id);
     }
@@ -1985,6 +1989,22 @@ closeOptionsMenu(): void {
     } else if (shift === -1) {
       this.todoService.makeOwnTask(moved.id);
     }
+  }
+
+  /**
+   * Eine Aufgabe ohne Schritte, über einem Schritt losgelassen — zwischen
+   * den Schritten einer anderen oder direkt unter ihr —, wird dort ein
+   * Schritt. Vorher rastete sie am Rand der Gruppe ein und blieb eigene
+   * Aufgabe. Mit eigenen Schritten nicht: drei Ebenen gibt es nicht.
+   */
+  private nestAmongSteps(moved: TodoRow, above: TodoRow | undefined, intoSteps: boolean): boolean {
+    if (!intoSteps || !above || above.isSection) return false;
+    if (moved.parentId !== null || moved.subCount > 0 || moved.isSection) return false;
+    // Erst Schritt, dann an den Platz: andersherum hinge der Schritt darunter
+    // schon an ihr, und eine Aufgabe mit Schritten wird keiner.
+    if (!this.todoService.makeStepOf(moved.id, above.parentId ?? above.id)) return false;
+    this.todoService.moveStepAfter(moved.id, above.id);
+    return true;
   }
 
   /**
@@ -2028,6 +2048,9 @@ closeOptionsMenu(): void {
     const own = (row: TodoRow) => row.id === moved.id || row.parentId === moved.id;
     const above = others[at - 1];
     const below = others[at];
+    const intoSteps = (below?.kind === 'row' && below.row.parentId !== null) || below?.kind === 'add';
+    if (this.nestAmongSteps(moved, above?.kind === 'row' ? above.row : undefined, intoSteps)) return;
+
     let anchor: { id: string; side: 'before' | 'after' } | null = null;
     if (above?.kind === 'row') {
       if (!own(above.row)) anchor = { id: above.row.parentId ?? above.row.id, side: 'after' };
